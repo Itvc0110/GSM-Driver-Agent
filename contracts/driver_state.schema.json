@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://driver-income-os.local/contracts/driver_state.schema.json",
+  "title": "DriverStateSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "snapshot_id",
+    "driver_pseudonym",
+    "event_time",
+    "ingested_at",
+    "source_system",
+    "data_mode",
+    "is_mock",
+    "quality_status",
+    "fresh_until",
+    "market_id",
+    "service_type",
+    "trace_id",
+    "profile",
+    "preferences",
+    "vehicle",
+    "shift",
+    "economics",
+    "policy_bundle"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "snapshot_id": { "type": "string", "minLength": 1 },
+    "driver_pseudonym": { "type": "string", "minLength": 1 },
+    "event_time": { "type": "string", "format": "date-time" },
+    "ingested_at": { "type": "string", "format": "date-time" },
+    "source_system": { "type": "string", "minLength": 1 },
+    "data_mode": { "enum": ["synthetic", "replay", "shadow", "live"] },
+    "is_mock": { "type": "boolean" },
+    "quality_status": {
+      "enum": ["OK", "LATE", "STALE", "MISSING", "OUTLIER", "SCHEMA_MISMATCH", "UNTRUSTED", "MOCK_LEAK"]
+    },
+    "fresh_until": { "type": "string", "format": "date-time" },
+    "market_id": { "type": "string", "minLength": 1 },
+    "service_type": { "enum": ["BIKE", "CAR", "PREMIUM", "OTHER"] },
+    "trace_id": { "type": "string", "minLength": 1 },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_version", "engagement_model", "eligible_actions"],
+      "properties": {
+        "profile_version": { "type": "string" },
+        "engagement_model": { "enum": ["EMPLOYEE", "PARTNER", "OTHER", "UNKNOWN"] },
+        "eligible_actions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/actionType" }
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preference_version", "risk_mode", "personalization_consent"],
+      "properties": {
+        "preference_version": { "type": "string" },
+        "risk_mode": { "enum": ["STABLE", "BALANCED", "STRETCH"] },
+        "target_net_minor": { "type": ["integer", "null"], "minimum": 0 },
+        "hard_end_time": { "type": ["string", "null"], "format": "date-time" },
+        "end_zone_id": { "type": ["string", "null"] },
+        "max_extra_minutes": { "type": ["integer", "null"], "minimum": 0 },
+        "max_extra_distance_m": { "type": ["integer", "null"], "minimum": 0 },
+        "personalization_consent": { "type": "boolean" },
+        "consent_version": { "type": ["string", "null"] }
+      }
+    },
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vehicle_profile_id", "soc_percent", "soc_observed_at", "reserve_soc_percent"],
+      "properties": {
+        "vehicle_profile_id": { "type": "string" },
+        "soc_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "soc_observed_at": { "type": "string", "format": "date-time" },
+        "reserve_soc_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "estimated_range_m": { "type": ["integer", "null"], "minimum": 0 },
+        "compatible_connector_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "shift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shift_id", "status", "current_zone_id", "online_minutes", "continuous_driving_minutes"],
+      "properties": {
+        "shift_id": { "type": "string" },
+        "status": { "enum": ["OFFLINE", "PLANNING", "ACTIVE", "BREAK", "CHARGING", "HOMEWARD", "ENDED"] },
+        "current_zone_id": { "type": "string" },
+        "actual_start_time": { "type": ["string", "null"], "format": "date-time" },
+        "online_minutes": { "type": "integer", "minimum": 0 },
+        "continuous_driving_minutes": { "type": "integer", "minimum": 0 },
+        "occupied_minutes": { "type": "integer", "minimum": 0 },
+        "idle_minutes": { "type": "integer", "minimum": 0 },
+        "empty_distance_m": { "type": "integer", "minimum": 0 },
+        "completed_trip_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "economics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "net_definition_version", "gross_minor", "net_minor", "is_finalized"],
+      "properties": {
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "net_definition_version": { "type": "string" },
+        "gross_minor": { "type": "integer" },
+        "net_minor": { "type": "integer" },
+        "bonus_minor": { "type": "integer" },
+        "driver_borne_cost_minor": { "type": "integer", "minimum": 0 },
+        "is_finalized": { "type": "boolean" },
+        "active_bonus_program_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "policy_bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy_bundle_id", "version", "effective_at", "approval_status"],
+      "properties": {
+        "policy_bundle_id": { "type": "string" },
+        "version": { "type": "string" },
+        "effective_at": { "type": "string", "format": "date-time" },
+        "approval_status": { "enum": ["APPROVED", "DRAFT", "UNKNOWN", "REVOKED"] }
+      }
+    }
+  },
+  "$defs": {
+    "actionType": {
+      "enum": [
+        "START_SHIFT_AT",
+        "END_SHIFT",
+        "CONTINUE_CURRENT_PLAN",
+        "CHARGE_NOW",
+        "CHARGE_LATER",
+        "TAKE_BREAK_NOW",
+        "TAKE_BREAK_LATER",
+        "ACTIVATE_HOMEWARD",
+        "RETURN_TO_DEPOT",
+        "PURSUE_BONUS_TIER",
+        "STOP_PURSUING_BONUS",
+        "ADJUST_DAILY_TARGET",
+        "REVIEW_SHIFT_INSIGHT",
+        "NO_RECOMMENDATION",
+        "STAY_IN_ZONE",
+        "REPOSITION_TO_ZONE"
+      ]
+    }
+  }
+}
