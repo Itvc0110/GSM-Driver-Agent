@@ -1,3 +1,5 @@
+> ⚠️ **DEFERRED — 2026-07-20.** Tài liệu thuộc cách tiếp cận cũ (full multi-variable constrained optimization). Scope hiện hành: `CLAUDE.md` + `planning/SCOPE.md`. Chỉ dùng tham khảo (xem `tracking/DEFERRED.md`, mục D-001). Danh sách nguồn ở đây là input tốt cho `planning/RESEARCH.md`.
+
 # 09 — Research References and Design Evidence
 
 Ngày truy cập: `2026-07-16`. Nguồn chính thức/primary được ưu tiên; kết quả học thuật là evidence định hướng, không phải cam kết sẽ tái lập trên GSM.

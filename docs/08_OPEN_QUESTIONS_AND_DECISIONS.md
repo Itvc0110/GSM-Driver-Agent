@@ -1,3 +1,5 @@
+> ⚠️ **DEFERRED — 2026-07-20.** Tài liệu thuộc cách tiếp cận cũ (full multi-variable constrained optimization). Scope hiện hành: `CLAUDE.md` + `planning/SCOPE.md`. Chỉ dùng tham khảo (xem `tracking/DEFERRED.md`, mục D-001). Nhiều câu hỏi P0 cho GSM trong §3 vẫn còn giá trị khi research.
+
 # 08 — Decisions, Assumptions and Open Questions
 
 ## 1. Locked design decisions (v0.1)

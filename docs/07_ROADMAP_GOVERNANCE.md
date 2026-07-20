@@ -1,3 +1,5 @@
+> ⚠️ **DEFERRED — 2026-07-20.** Tài liệu thuộc cách tiếp cận cũ (full multi-variable constrained optimization). Scope hiện hành: `CLAUDE.md` + `planning/SCOPE.md`; quy trình hiện hành: `tracking/`. Chỉ dùng tham khảo (xem `tracking/DEFERRED.md`, mục D-001; lưu ý mâu thuẫn đánh số phase với MASTER_PROMPT §13 — mục D-005).
+
 # 07 — Roadmap and Governance
 
 ## 1. Phase roadmap

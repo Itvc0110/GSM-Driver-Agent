@@ -1,4 +1,6 @@
-# Instructions for AI Coding Agents
+> ⚠️ **SUPERSEDED — 2026-07-20.** File này thuộc pack cũ và đã bị thay thế bởi **`CLAUDE.md`** (harness hiện hành — đọc file đó trước tiên và làm theo nó khi có xung đột). Scope hiện hành: `planning/SCOPE.md`; quy trình: `tracking/`. Mục "Tách việc cho hai developer" bên dưới KHÔNG áp dụng — team dùng cơ chế tự nhận việc (self-claim, không ai giao việc) trong `tracking/ASSIGNMENTS.md`. Các ranh giới sản phẩm (LLM không tính số, không chạm dispatch, mock labeling…) đã được kế thừa trong CLAUDE.md §5.
+
+# Instructions for AI Coding Agents (pack cũ — tham khảo)
 
 ## Mission
 

@@ -1,3 +1,5 @@
+> ⚠️ **DEFERRED — 2026-07-20.** Đây KHÔNG còn là master prompt hiện hành. Harness hiện hành cho AI coding agent là `CLAUDE.md`; scope hiện hành là `planning/SCOPE.md`. Chỉ dùng tham khảo (xem `tracking/DEFERRED.md`, mục D-001; mâu thuẫn đánh số phase §13 vs docs/07 — mục D-005). Phân chia Dev A/Dev B trong §10 KHÔNG áp dụng — xem `tracking/ASSIGNMENTS.md`.
+
 # Master Prompt — Driver Income OS
 
 Sao chép toàn bộ prompt này cho AI coding ở root của repository.

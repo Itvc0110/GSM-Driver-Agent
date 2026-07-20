@@ -1,0 +1,61 @@
+# CLAUDE.md — Harness cho AI coding agent (GSM Driver Income Agent)
+
+Cập nhật: 2026-07-20. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
+
+## 1. Dự án là gì
+
+Hệ thống AI hỗ trợ tài xế Xanh SM (GSM) cải thiện thu nhập: trả lời chính sách/thưởng phạt theo hồ sơ tài xế, tư vấn trước ca – trong ca – sau ca. Team 2 người: **Cường** và **Khánh**.
+
+**CỐ ĐỊNH (không được tự thay đổi):** problem statement, mục tiêu, và định hướng giải pháp — bản chất là bài toán tối ưu đa biến có ràng buộc, nhưng tiếp cận **top-down** (flow-first): mọi số tài chính/policy do rule/analytics tính (agent không tự bịa số), **agent chủ yếu tổng hợp, so sánh, giải thích**; agent **có thể đảm nhiệm một vài bước reasoning** khi sub-problem chưa có cách tối ưu hóa hoặc mô hình hóa quá phức tạp so với reasoning thuần — nhưng phải log, gắn độ tin cậy, tắt được về rule/template (tinh chỉnh được Cường duyệt 2026-07-20). Chưa mô hình hóa từ atomic features.
+**LINH HOẠT (được đề xuất thay đổi qua plan mode):** kiến trúc, stack, chi tiết feature, UI.
+
+Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image/GSM_Driver_Income_AI_Agentv2.drawio` (bản hiện hành — 7 trang: L0–L2 tổng quan/thành phần/luồng + F0–F3 chi tiết; nét đứt = tính năng tương lai); `...v1.drawio` giữ để đối chiếu. Luồng giải trình vi phạm thuộc **dự án khác** — file drawio đã xóa khỏi repo theo yêu cầu Cường (D-006).
+
+## 2. Bản đồ repo
+
+| Đường dẫn | Vai trò |
+| --- | --- |
+| `CLAUDE.md` | Harness này — đọc đầu tiên |
+| `planning/` | SCOPE (scope hiện hành), USER_STORIES, PERSONAS (5 hồ sơ mock), RESEARCH (kế hoạch nghiên cứu) |
+| `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
+| `specs/` | Đặc tả kỹ thuật để code (vd `mock-order-distribution.md`) |
+| `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###) |
+| `flow image/` | drawio luồng dự kiến — `...v2.drawio` hiện hành (7 trang), `...v1.drawio` đối chiếu (source of truth về flow) |
+| `docs/`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` | **DEFERRED** — pack cũ theo hướng full optimization scaffold; chỉ dùng tham khảo, không phải scope hiện hành |
+
+## 3. Quy trình BẮT BUỘC trước khi làm bất kỳ việc gì
+
+1. **Đọc lại docs trước khi thực thi** — tối thiểu: `planning/SCOPE.md`, `tracking/TODO.md`, `tracking/DEFERRED.md`, `tracking/ASSIGNMENTS.md`, và 2–3 file UPDATE mới nhất trong `tracking/updates/`. Task chạm vào phần nào thì đọc thêm docs liên quan phần đó. Không được bỏ qua bước này kể cả khi task "có vẻ nhỏ".
+2. **Vào plan mode trước** (EnterPlanMode) với mọi thay đổi code, cấu trúc, contract hoặc docs quan trọng. Trong plan mode, **phải hỏi lại** (AskUserQuestion) những điểm chưa rõ hoặc quan trọng (ảnh hưởng scope, dữ liệu, ranh giới sản phẩm, phân công) trước khi chốt plan. Không tự đoán rồi làm.
+3. **Tôn trọng bảng tự nhận việc** `tracking/ASSIGNMENTS.md`: không có ai là người giao việc — Cường/Khánh **tự claim** việc đầu mỗi session. Agent làm việc **dưới claim của người đang điều khiển nó**: kiểm tra bảng claim trước khi sửa file, không tự claim, không làm ngoài phạm vi claim, không đụng files trong claim đang hoạt động của người kia.
+4. **Defer thay vì phình scope**: ý tưởng/việc ngoài minimum scope → ghi vào `tracking/DEFERRED.md` (kèm lý do + điều kiện mở lại), không tự triển khai.
+
+## 4. Quy trình BẮT BUỘC sau khi thay đổi
+
+Sau mỗi thay đổi có ý nghĩa (code, docs, data, cấu trúc), tạo file `tracking/updates/UPDATE-###-<slug>.md` theo `tracking/updates/UPDATE_TEMPLATE.md`. Các trường bắt buộc phải điền đủ, đặc biệt:
+
+- **Files bị ảnh hưởng** (đường dẫn cụ thể, tạo/sửa/xóa);
+- **Chi tiết cập nhật** (cái gì đổi, vì sao);
+- **Docs đã cập nhật kèm theo** (SCOPE/TODO/DEFERRED/USER_STORIES có đổi không);
+- **Kiểm chứng** (đã test/chạy thử gì, cái gì chưa kiểm chứng);
+- **Follow-up/defer** phát sinh.
+
+Đồng thời cập nhật trạng thái mục tương ứng trong `tracking/TODO.md`. Thay đổi không có UPDATE đi kèm được coi là chưa hoàn thành.
+
+## 5. Ranh giới sản phẩm (giữ nguyên từ pack cũ — vẫn có hiệu lực)
+
+- Agent/LLM **không tự tính** số liệu tài chính/xác suất — mọi con số hiển thị cho tài xế đến từ rule/analytics component có thể kiểm chứng; agent chỉ diễn giải.
+- **Không** khuyên nhận/từ chối/hủy một đơn cụ thể; không can thiệp matching, dispatch, pricing, routing.
+- **Không hứa chắc** mức thu nhập; luôn nêu bất định/điều kiện. Không dạy lách chính sách/phạt.
+- Trả lời chính sách phải dựa trên **nguồn có trích dẫn** (policy đã lưu trong knowledge base, có version); không bịa chính sách.
+- **Mock data phải gắn nhãn mock** (seed, nguồn, ngày tạo); không trình bày số mock như số thật của GSM; không trộn mock với dữ liệu thật.
+- Hệ thống **không tự thực thi** thay tài xế; tài xế luôn là người quyết định.
+- **Reasoning của agent** (khi được phép) phải để lại log + mức tin cậy và có đường **fallback về rule/template** khi tắt; không để reasoning tạo ra số tài chính/policy.
+- **Nguồn cộng đồng** (group tài xế, websearch kinh nghiệm — tính năng tương lai) phải qua bước **kiểm chứng & lọc rủi ro** (`specs/community-source-risk-control.md`): ưu tiên nguồn official, chống tin sai/lỗi thời/PII/nguồn giả; không dùng cho số tài chính/policy.
+
+## 6. Quy ước làm việc
+
+- Ngôn ngữ tài liệu và giao tiếp: **tiếng Việt** (thuật ngữ kỹ thuật giữ tiếng Anh).
+- Tên file/folder: tiếng Anh, kebab-case hoặc như cấu trúc sẵn có.
+- Commit khi được yêu cầu; message tiếng Anh ngắn gọn, thân tiếng Việt nếu cần.
+- Ưu tiên mobile-first cho mọi UI (tài xế dùng app trên điện thoại).
