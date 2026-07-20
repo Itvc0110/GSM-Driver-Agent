@@ -1,34 +1,37 @@
-# RESEARCH — Kế hoạch nghiên cứu thực tế
+# RESEARCH — Kế hoạch & trạng thái nghiên cứu thực tế
 
-Cập nhật: 2026-07-20 · Trạng thái: **CHƯA CHẠY** — đây là việc ưu tiên cao nhất song song với xây khung.
+Cập nhật: 2026-07-20 · Trạng thái: **HOÀN TẤT ĐỢT 1 + ĐỢT 2** (T-001, T-012). Findings hiện nằm trong `research/`, chia theo loại; gap cần người thật đọc group Facebook là T-013.
 
 ## 1. Mục tiêu nghiên cứu
 
-1. **Features thực tế ảnh hưởng thu nhập** của một tài xế Xanh SM: cấu trúc thu nhập (cước, thưởng, phụ phí, phần chia cho app, chi phí tự chịu: xăng→điện/sạc, thuê xe, khấu hao, phạt).
-2. **Các cách tài xế có thể tăng thu nhập**: chương trình thưởng (theo chuyến/doanh thu/khung giờ), khung giờ cao điểm, khu vực, duy trì tỷ lệ nhận/hoàn thành, tier.
-3. **Lý do tài xế chưa tối ưu được thu nhập** (root cause của pain point): không nắm chính sách, sạc sai thời điểm, từ chối đơn ảnh hưởng hồ sơ, chạy giờ thấp điểm, không đủ điều kiện thưởng, v.v.
-4. **Số liệu để mock sát thực**: phân phối đơn theo khung giờ/ngày trong tuần/khu vực; thu nhập trung bình theo loại tài xế.
+1. **Features thực tế ảnh hưởng thu nhập**: cước/doanh số, thưởng, phần chia nền tảng, chi phí tự chịu (sạc, thuê xe, khấu hao), ngưỡng policy.
+2. **Các cách tài xế có thể tăng thu nhập**: chương trình thưởng theo chuyến/điểm/khung giờ, sắp xếp thời gian chạy–nghỉ–sạc, duy trì điều kiện profile.
+3. **Root cause của pain point**: không nắm policy đúng track/version, sạc sai thời điểm, chạy giờ thấp điểm, thiếu điều kiện thưởng, nhầm gross/payout/net.
+4. **Số liệu để mock**: hình dạng demand theo giờ/ngày/khu vực và dải thu nhập tự khai để sanity-check — luôn phân biệt FACT / PROXY / MOCK.
 
-## 2. Nguồn cần tra cứu (tất cả trang/nguồn liên quan tài xế Xanh SM)
+## 2. Nguồn đã tra cứu
 
-- Trang chính sách chính thức greensm.com, ví dụ seed: <https://www.greensm.com/vn-vi/news/chinh-sach-dam-bao-thu-nhap-cho-green-bike-platform> (chính sách đảm bảo thu nhập Green Bike platform).
-- Các trang news/chính sách khác của greensm.com: tuyển dụng tài xế (car/bike, thuê xe vs xe cá nhân), chính sách thưởng, chương trình đối tác.
-- App/Google Play listing (Green SM Driver) — mô tả tính năng phía tài xế.
-- Cộng đồng tài xế: nhóm Facebook, YouTube review, diễn đàn — pain point và con số thực tế do tài xế tự chia sẻ (đánh dấu độ tin cậy thấp hơn nguồn chính thức).
-- Báo chí về thu nhập tài xế công nghệ VN (Xanh SM, so sánh Grab/Be) — mức thu nhập, giờ chạy điển hình.
-- Nghiên cứu/thống kê về phân phối đơn ride-hailing theo giờ/ngày (để mock phân phối).
+- Nguồn official: `greensm.com`/`xanhsm.com`, policy/news tuyển dụng, bộ quy tắc ứng xử, Q&A/chương trình thưởng.
+- Press: VnExpress, Tuổi Trẻ, CafeF/CafeBiz, VietnamNet, VOV, báo chuyên ngành.
+- Community: VOZ, diễn đàn VinFast, YouTube/tài xế tự khai; tối đa medium confidence và không là authority policy/số tài chính.
+- Market/research proxy: Mordor, Rakuten Insight, Q&Me; Didi/NYC/Chicago/Haikou chỉ dùng cho hình dạng/hệ số, không làm fact GSM.
+- Facebook groups: mới định danh tên/URL do login wall; cần Cường/Khánh join tay nếu tiếp tục T-013.
 
-## 3. Câu hỏi nghiên cứu cụ thể
+## 3. Câu hỏi đã trả lời một phần
 
-- Cơ cấu chia app/tài xế của Xanh SM theo từng hình thức (xe cá nhân platform vs thuê xe công ty vs nhân viên)?
-- Các mốc thưởng hiện hành: điều kiện (số chuyến, doanh thu, tỷ lệ nhận đơn, khung giờ), giá trị, chu kỳ (ngày/tuần)?
-- Tỷ lệ nhận đơn / hoàn thành ảnh hưởng gì (ưu tiên phân đơn, thưởng, phạt, khóa app)?
-- Chính sách phạt phổ biến và quy trình giải trình?
-- Giờ/khu vực cao điểm thực tế ở Hà Nội (thị trường thử nghiệm) và hình dạng phân phối đơn trong ngày/tuần?
-- Chi phí sạc/đổi pin (bike), thuê xe theo ngày/tháng — ai chịu, bao nhiêu?
+- Đã lập timeline policy/chia sẻ doanh số và bảng thưởng có version/effective date; vẫn thiếu tỷ lệ chi tiết từng khung giờ cho policy hiện hành.
+- Đã xác nhận policy khác nhau theo track/cohort/market; không được trộn Platform, RTO và employee.
+- Đã xác định các pain point lặp lại: sạc/đổi pin, giờ chạy dài, áp lực điều kiện nhận/hoàn thành, policy đổi nhanh.
+- Đã xây demand proxy v1 cho Bike Hà Nội tại `specs/mock-order-distribution.md`; chưa có dữ liệu GSM theo giờ/khu vực để hiệu chỉnh mức tuyệt đối.
+- Quy trình khiếu nại/giải trình đã defer sang D-007 (dự án khác).
 
 ## 4. Đầu ra & nơi lưu
 
-- Findings lưu vào `research/` (chia theo loại, xem `research/README.md`): `research/policy/`, `research/economics/`, `research/community/`, `research/market/`; mỗi claim kèm **nguồn + ngày truy cập + độ tin cậy** (chính thức / cộng đồng / báo chí / suy luận).
-- Kết quả dùng để: xác nhận pain point & root cause, thiết kế 2–3 hồ sơ mock, tham số hóa mock phân phối đơn, viết knowledge base chính sách cho F0.
-- Số chưa xác nhận được phải đánh dấu `TBD`/giả định — không đưa vào sản phẩm như fact.
+- `research/00_SUMMARY.md` — tổng hợp đọc trước.
+- `research/policy/` — chính sách, thưởng/phạt, version/effective date.
+- `research/economics/` — cấu trúc Gross / Driver payout / Estimated net và chi phí theo track.
+- `research/community/` — pain points, kinh nghiệm, findings tự khai, danh sách group.
+- `research/market/` — market/demand distribution research + proxy.
+- `specs/` — đặc tả kỹ thuật để code; không trộn với raw findings.
+
+Kết quả đang được dùng để: xác nhận pain point/root cause, thiết kế **5 persona mock**, tham số hóa mock demand proxy, và chuẩn bị policy KB F0. Mọi số chưa xác nhận đánh dấu `TBD`/`MOCK`; không đưa vào sản phẩm như fact.

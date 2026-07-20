@@ -35,8 +35,8 @@ Chi phí năng lượng Bike rất thấp: ~1.000đ sạc/chuyến, ~10.000đ/ng
 ### Community (cẩn trọng — nhiều domain giả official)
 
 10. **Tính lương taxi HN**: thưởng doanh số 25–60% doanh thu/ngày theo mốc, giờ cao điểm tỷ lệ cao hơn; thưởng ý thức chất lượng 940k–1.340k/tháng (Premium, hiệu lực đến 25/05/2025); thưởng nóng tới 3tr (HN)/6tr (HCM); thu nhập thực tế 15–25tr/tháng. — [hamireview.com](https://www.hamireview.com/tinh-luong-chi-tiet-cho-tai-xe-taxi-sm), n.d., **community/medium**.
-11. **Phí gia nhập taxi nhân viên**: tổng 8tr (2tr ngày đầu + 6tr trừ dần lương 2 tháng). — [taixexanhsm.com](https://taixexanhsm.com/danh-cho-tai-xe-taxi/), n.d., **community/medium**.
-12. **Bike theo trang tuyển dụng trung gian (ghi cập nhật 12/2025)**: tài xế nhận 73% doanh số (chiết khấu 27%); điều kiện thưởng: online ≥8h/ngày, ≥2,5h giờ cao điểm, tỷ lệ nhận chuyến ≥90%, hoàn thành ≥90%, ≥12 chuyến/ngày; thưởng giờ cao điểm chỉ có ở Hà Nội. — [bike-xanhsm.com](https://www.bike-xanhsm.com/chinh-sach-luong-xanh-sm-bike), **community/medium** (domain không thuộc greensm.com).
+11. **Lead bị chặn — phí gia nhập taxi nhân viên**: trang nhái official nêu tổng 8tr (2tr ngày đầu + 6tr trừ dần lương 2 tháng). — `taixexanhsm.com`, **T4/blocked lead**; không dùng làm economic/policy fact cho tới khi T1/T2 xác nhận.
+12. **Lead bị chặn — Bike 12/2025**: trang nhái official nêu tài xế nhận 73% doanh số và các điều kiện online/tỷ lệ/chuyến. — `bike-xanhsm.com`, **T4/blocked lead**; không dùng làm policy/financial config hoặc output.
 13. **RTO Evo 2026**: 60k/ngày (gồm VAT), cọc 3tr (2tr xe + 1tr pin), 24 tháng, chia 90%/85%, sau 24 tháng sở hữu xe; miễn phí đổi pin 5 lần/ngày đến 06/2028; miễn phí thuê pin tháng khi đạt 250+ chuyến và 10tr doanh thu/tháng. Đảm bảo thu nhập 3 tháng đầu HN/HCM: full-time 600k/ngày (≥17 chuyến, ≥10h online), part-time 360k/ngày (≥10 chuyến, ≥6h). — [vinfastvietnam3s.com.vn](https://vinfastvietnam3s.com.vn/chinh-sach-thue-so-huu-rto-xe-may-dien-vinfast-evo-cung-xanh-sm-gsm-moi-nhat-2026/), 2026, **community/medium**.
 14. **Thuê ô tô điện chạy platform**: VF5 ~15,5tr/tháng qua HTX Bạn Hữu Đường Xa. — [banhuuduongxa.com](https://banhuuduongxa.com/san-pham/cho-thue-xe-dien-vinfast-vf5-chay-app-be-car-xanh-sm-flatform/), n.d., **community/low**.
 
@@ -54,4 +54,4 @@ Chi phí năng lượng Bike rất thấp: ~1.000đ sạc/chuyến, ~10.000đ/ng
 
 - Chiết khấu/tỷ lệ chia = **policy có version + effective date + scope (thành phố, hình thức, loại xe)**.
 - Cảnh giác domain giả official: `bike-xanhsm.com`, `xanhsmbike.com`, `taixexanhsm.com`, `xanhsmcar.com` — chỉ `xanhsm.com`/`greensm.com` là chính thức (xanhsm.com redirect sang greensm.com).
-- Nhiều chính sách quan trọng công bố dạng **ảnh** → knowledge base F0 cần OCR hoặc nhập tay có kiểm tra, kèm link ảnh gốc.
+- Theo quyết định 2026-07-20, **không OCR/nhập tay ảnh official** trong giai đoạn này. Chính sách không xác minh được từ nguồn text phải để `TBD`, hoặc mock có provenance riêng; không dùng làm fact trong F0.

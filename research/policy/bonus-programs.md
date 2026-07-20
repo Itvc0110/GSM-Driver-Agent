@@ -5,7 +5,7 @@ Ghi chú chung: xanhsm.com đã redirect 301 sang greensm.com (rebrand Green SM)
 
 ## Bảng số verify đợt 2 (2026-07-20, đã trích trực tiếp)
 
-> Đây là các con số dạng TEXT lấy được, thay cho phần "trong ảnh" của đợt 1. Vẫn nên đối chiếu app tài xế cho bản mới nhất (T-013).
+> Đây là các con số dạng TEXT lấy được, thay cho phần "trong ảnh" của đợt 1. Mỗi con số chỉ có hiệu lực trong market/profile/time window được nguồn nêu. T-013 là việc join Facebook groups, không phải bước xác minh policy trong app.
 
 ### Timeline tỷ lệ chia sẻ doanh số (gỡ mâu thuẫn 91/75/70/73)
 
@@ -32,7 +32,7 @@ Hoàn thành **2 chuyến trong khung → thưởng 30.000đ/ngày**; khung **6h
 
 ### Thưởng vượt mốc chuyến/ngày (trang vệ tinh)
 
-Từ chuyến 16–20: **5.000đ/chuyến** + thưởng chuyến chốt mốc (vd 20 cuốc ≈ 31k/ngày). — bike-xanhsm.com, **community/medium**.
+Từ chuyến 16–20: **5.000đ/chuyến** + thưởng chuyến chốt mốc (vd 20 cuốc ≈ 31k/ngày). — `bike-xanhsm.com`, **T4/blocked lead** theo `specs/community-source-risk-control.md`; không dùng cho policy/financial output cho tới khi tìm được nguồn T1/T2 xác nhận.
 
 ## Findings chi tiết (đợt 1)
 
@@ -81,20 +81,21 @@ Các tham số quan trọng nhất cho hệ thống AI gợi ý (Bike, Hà Nội
 15. **Thưởng tuần tích điểm theo nhóm khu vực + "cuốc Điểm Vàng" 16h–19h59 T2–T6 (từ 04/05/2026, HN & HCM cũ)**; mỗi khu vực bảng điểm khác nhau. — [dangkyxanhsm.vn](https://www.dangkyxanhsm.vn/2026/06/cap-nhat-chuong-trinh-thuong-danh-cho.html), 06/2026, **community/medium**.
 16. **Mô hình thuê/mua xe độc quyền ("Vào Xanh, Tặng Xe")**: nhận tới 90% doanh thu năm 1 / 85% năm sau — khác mức 75% của Bike Platform (2 policy track khác nhau). — [VietnamNet](https://vietnamnet.vn/chinh-sach-uu-dai-cua-xanh-sm-bike-giup-tai-xe-lai-nguyen-chiec-xe-2501406.html), 29/03/2026, **press/medium**.
 
-## Gaps (TBD)
+## Gaps còn lại (TBD)
 
-1. **Bảng mốc thưởng tuần chi tiết Bike Hà Nội** (điểm/chuyến ↔ mức thưởng đến 1,2tr/tuần) — chỉ có ảnh/PDF/in-app; cần chụp màn hình app tài xế hoặc OCR.
-2. Tỷ lệ chia doanh số cụ thể theo **từng khung giờ** (dưới mức trần 75%) — không có text công khai.
-3. Ngưỡng điểm sao/chất lượng cho Bike (chỉ Mini công bố 90%/90%).
-4. Quy trình khiếu nại/giải trình chính thức (biểu mẫu, SLA, kháng nghị khi trừ tiền/khóa app).
-5. Định nghĩa chính thức full-time vs part-time trong chính sách ĐBTN.
-6. Mâu thuẫn ngày hiệu lực Bộ quy tắc ứng xử (15/12/2025 vs 05/06/2026) — xác minh qua app.
-7. ĐBTN 600k/ngày còn áp dụng cho cohort mới sau 07/2026 không.
-8. Mức phạt vi phạm đồng phục cụ thể.
+1. Tỷ lệ chia doanh số cụ thể theo **từng khung giờ** dưới mức trần 75% cho policy hiện hành.
+2. Policy Bike về thâm niên/Loyalty: mức Car không được dùng làm fact Bike.
+3. Ngưỡng điểm sao/chất lượng cho Bike theo policy hiện hành.
+4. Định nghĩa chính thức full-time vs part-time và cohort đủ điều kiện ĐBTN.
+5. Ngày hiệu lực Bộ quy tắc ứng xử trên page/title còn mâu thuẫn (15/12/2025 vs 05/06/2026).
+6. ĐBTN 600k/ngày còn áp dụng cho cohort mới sau 07/2026 không.
+7. Mức phạt vi phạm đồng phục cụ thể.
+
+Quy trình khiếu nại/giải trình không tiếp tục research trong repo này (D-007). Theo quyết định 2026-07-20, **không OCR/nhập tay ảnh official**; phần không xác minh được phải để TBD hoặc mock có provenance, không biến thành policy fact.
 
 ## Ghi ý cho thiết kế hệ thống
 
-- Lời khuyên của agent phải bám **ngưỡng kỷ luật**: giữ tỷ lệ nhận/hoàn thành ≥70% (cảnh báo sớm khi tiến gần), không bao giờ gợi ý hành vi Nhóm 1–2.
-- F1 "tối ưu để đạt thưởng" cần model: khoán tuần tích điểm + cuốc Điểm Vàng (16h–19h59 T2–T6) + ĐBTN 3 tháng đầu + thưởng sự kiện.
-- Policy có ít nhất 2 track: **Bike Platform (75%)** vs **thuê/mua xe độc quyền (90/85%)** — hồ sơ mock phải ghi track.
-- Bảng thưởng dạng ảnh → knowledge base cần bước OCR/nhập tay + xác minh trong app (việc cho Cường/Khánh).
+- Mọi threshold/mốc thưởng phải lấy từ **Policy KB/config theo profile + market + effective date**; không hard-code 70%, 85%, 90% hoặc bảng điểm như universal rule.
+- F1 cần model policy bundle versioned: khoán tuần, chương trình theo khung giờ, ĐBTN/cohort, event ngắn hạn.
+- Policy có nhiều track (Bike Platform, RTO/thuê-mua, employee); hồ sơ mock phải map đúng track và không trộn benefit.
+- T4/blocked source chỉ là lead; không được đi vào policy/financial output.

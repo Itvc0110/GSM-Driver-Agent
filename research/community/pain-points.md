@@ -29,7 +29,7 @@ Lưu ý: số tự khai từ cộng đồng (VOZ, diễn đàn VinFast, YouTube)
 6. **Thưởng tuần theo điểm gắn khung giờ** (official 29/07/2025): cuốc giờ cao điểm 6–8h & 16–18h = **10 điểm**, giờ thường (9–15h, 19–21h) = **5 điểm**; mốc HN (khu vực 1): 400–699đ=200k, 700–1.099đ=400k, 1.100–1.399đ=800k, **1.400+đ=1,2tr/tuần**; thưởng tài xế mới: 250 chuyến/30 ngày=1tr. Chiến lược cộng đồng: dồn cuốc vào khung nhân đôi điểm. — [greensm.com](https://www.greensm.com/vn-vi/news/kinh-nghiem-san-thuong-nong-hap-dan-cho-tai-xe-xanh-sm-bike), **official/high**.
 7. **ĐBTN 150k/ngày một số tỉnh** (Huế, Vinh, Hải Phòng…): online ≥5h/ngày, ≥5 cuốc/ngày, tỷ lệ nhận/hoàn thành tuần **≥90%**. — [greensm.com](https://www.greensm.com/news/dang-ky-tai-xe-xanh-sm-bike-dam-bao-thu-nhap), 31/07/2025, **official/high**.
 8. **Auto-accept & phạt tỷ lệ** (từ 15/07/2025): <50% acceptance → ép bật nhận tự động tới 23h59; <70% (3+ ngày/tuần) → phạt 100k/tuần (≥5 đơn/ngày) hoặc 200k/tuần (<5 đơn/ngày); 3 tuần liên tiếp → khóa tài khoản. Tài xế phản ứng "bị phạt như nhân viên nhưng thiếu chế độ". — [VOZ đăng lại thông báo](https://voz.vn/t/xanh-sm-manh-tay-voi-tai-xe-luoi-nhan-cuoc-he-thong-se-tu-dong-bat-nhan-chuyen-den-23h59.1124690/), **community/medium** (khớp official).
-9. **Quy tắc ứng xử 19/05/2025**: lỗi nhỏ 200k/lần + mất thưởng tuần; "hủy cuốc vẫn chở khách" → chấm dứt HĐ + ≥2tr; có tính năng "Hủy chuyến hợp lệ" không tính vào tỷ lệ hủy. — [Người Quan Sát](https://nguoiquansat.vn/xanh-sm-se-khong-nhan-nhuong-voi-tai-xe-huy-chuyen-nhung-van-lam-viec-sau-218554.html), **press/high**.
+9. **Quy tắc ứng xử 19/05/2025**: lỗi nhỏ 200k/lần + mất thưởng tuần; "hủy cuốc vẫn chở khách" → chấm dứt HĐ + ≥2tr. Tính năng **"Hủy chuyến hợp lệ" chỉ có nguồn official công khai cho Taxi/Car Platform; chưa xác nhận cho Bike**, nên không được dùng như policy Bike. — [Người Quan Sát](https://nguoiquansat.vn/xanh-sm-se-khong-nhan-nhuong-voi-tai-xe-huy-chuyen-nhung-van-lam-viec-sau-218554.html), **press/high**; xem đối chiếu `community-insights.md`.
 
 ## Kinh nghiệm tăng thu nhập được chia sẻ
 
@@ -55,6 +55,6 @@ Lưu ý: số tự khai từ cộng đồng (VOZ, diễn đàn VinFast, YouTube)
 
 ## Ghi ý cho thiết kế hệ thống
 
-- **3 hồ sơ mock đề xuất từ dữ liệu này**: (a) part-time ~4h/ngày mục tiêu ~8tr/tháng; (b) full-time 8–10h mục tiêu 15–20tr; (c) full-time xe cá nhân >10h mục tiêu 22tr+ — mỗi hồ sơ kèm track chiết khấu khác nhau.
-- F3 phải phát hiện được: sạc giờ cao điểm (mất cuốc 10 điểm), thiếu điểm tới mốc thưởng tuần kế tiếp, tỷ lệ nhận đơn tiến gần ngưỡng 70%/90%.
-- F2 nên khuyên "cụm sạc + nghỉ ăn trưa" (pattern thực tế của tài xế top: sạc ~3h trưa).
+- Findings này là input calibration cho **5 persona mock** tại `planning/PERSONAS.md`; dải thu nhập tự khai không thống nhất gross/payout/net nên không dùng làm cam kết hay cùng một money definition.
+- F3 có thể phát hiện: sạc trong khung demand cao; thiếu tiến độ tới mốc thưởng **theo policy bundle versioned**; tỷ lệ nhận/hoàn thành tiến gần ngưỡng hiện hành. Không hard-code điểm/ngưỡng lịch sử.
+- F2 có thể gợi ý **thời điểm** kết hợp sạc + nghỉ ăn trưa (pattern lặp lại), nhưng không khuyên reposition/chọn khu vực.

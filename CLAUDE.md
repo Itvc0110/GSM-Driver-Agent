@@ -44,7 +44,7 @@ Sau mỗi thay đổi có ý nghĩa (code, docs, data, cấu trúc), tạo file 
 
 ## 5. Ranh giới sản phẩm (giữ nguyên từ pack cũ — vẫn có hiệu lực)
 
-- Agent/LLM **không tự tính** số liệu tài chính/xác suất — mọi con số hiển thị cho tài xế đến từ rule/analytics component có thể kiểm chứng; agent chỉ diễn giải.
+- Agent/LLM **không tự tính** số liệu tài chính/xác suất — mọi con số hiển thị cho tài xế đến từ rule/analytics component có thể kiểm chứng; agent chỉ diễn giải. Tiền phải tách `gross revenue` / `driver payout` / `estimated net income`; payout là mục tiêu mặc định, estimated net chỉ khi đủ known costs + definition/version.
 - **Không** khuyên nhận/từ chối/hủy một đơn cụ thể; không can thiệp matching, dispatch, pricing, routing.
 - **Không hứa chắc** mức thu nhập; luôn nêu bất định/điều kiện. Không dạy lách chính sách/phạt.
 - Trả lời chính sách phải dựa trên **nguồn có trích dẫn** (policy đã lưu trong knowledge base, có version); không bịa chính sách.

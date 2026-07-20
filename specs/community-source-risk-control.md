@@ -15,7 +15,7 @@ Nguồn cộng đồng = thông tin từ group Facebook tài xế, YouTube/TikTo
 | T1 official | greensm.com / xanhsm.com, app tài xế, văn bản pháp luật | Số tài chính/policy, câu trả lời F0 có trích dẫn |
 | T2 press | báo uy tín (VnExpress, Tuổi Trẻ, CafeF…) | Ngữ cảnh, đối chiếu; số chỉ khi khớp T1 |
 | T3 community | group FB, forum, video tài xế, blog tuyển dụng | **Chỉ** gợi ý định tính (khu đứng, dead hours, mẹo pin), gắn nhãn "kinh nghiệm cộng đồng — chưa kiểm chứng" |
-| T4 blocked | nguồn giả official (`bike-xanhsm.com`, `xanhsmbike.com`, `taixexanhsm.com`, `xanhsmcar.com`…), nội dung ẩn danh không truy vết | Không dùng làm nguồn; chỉ lead để tìm nguồn T1/T2 |
+| T4 blocked | nguồn giả official (`bike-xanhsm.com`, `xanhsmbike.com`, `taixexanhsm.com`, `xanhsmcar.com`…), nội dung ẩn danh không truy vết | Không đi vào product output/Policy KB/config; chỉ lưu như lead để tìm nguồn T1/T2, gắn `blocked=true` |
 
 ## 3. Pipeline lọc (khối FILTER-F1)
 
@@ -30,8 +30,8 @@ Mỗi mẩu thông tin cộng đồng đi qua 6 bước, fail bất kỳ bước
 
 ## 4. Ranh giới sử dụng sau lọc
 
-- Được phép: gợi ý định tính cho **F2** (khu vực/khung giờ tham khảo, trạm pin lệch đỉnh), bổ sung ngữ cảnh cho **F3** (đối chiếu hành vi), làm **lead nghiên cứu** để tìm nguồn official.
-- Không được: thay số trong Policy KB; làm căn cứ tính thưởng/phạt/chỉ tiêu; trình bày không kèm nhãn "kinh nghiệm cộng đồng — chưa kiểm chứng".
+- Được phép: gợi ý định tính cho **F2** về **khung thời gian** tham khảo/trạm pin lệch đỉnh, bổ sung ngữ cảnh cho **F3**, làm lead nghiên cứu để tìm nguồn official. Insight khu vực chỉ dùng trong research/simulation; minimum scope không khuyên reposition/chọn khu vực cụ thể.
+- Không được: thay số trong Policy KB/config; làm căn cứ tính thưởng/phạt/chỉ tiêu; trở thành money/policy authority; trình bày không kèm nhãn "kinh nghiệm cộng đồng — chưa kiểm chứng".
 - Agent khi dùng insight cộng đồng phải **nói rõ đây là kinh nghiệm cộng đồng**, không phải chính sách chính thức, và (nếu có) chỉ ra nguồn official liên quan.
 
 ## 5. Con người & kiểm toán

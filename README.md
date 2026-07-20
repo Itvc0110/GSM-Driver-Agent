@@ -1,6 +1,6 @@
 # GSM Driver Income Agent
 
-Hệ thống AI hỗ trợ tài xế Xanh SM (GSM) cải thiện thu nhập thực nhận: hỏi đáp chính sách/thưởng phạt theo hồ sơ, tư vấn **trước ca – trong ca – sau ca**. Team 2 người: **Cường** & **Khánh**.
+Hệ thống AI hỗ trợ tài xế Xanh SM (GSM) cải thiện thu nhập: hỏi đáp chính sách/thưởng phạt theo hồ sơ, tư vấn **trước ca – trong ca – sau ca**. Sản phẩm tách rõ `gross revenue`, `driver payout` (mục tiêu mặc định) và `estimated net income` (chỉ khi đủ chi phí). Team 2 người: **Cường** & **Khánh**.
 
 Trạng thái: 2026-07-20 · scope v2 (top-down, flow-first) · chưa có code — đang ở giai đoạn xây khung + nghiên cứu thực tế.
 
@@ -23,4 +23,4 @@ Trạng thái: 2026-07-20 · scope v2 (top-down, flow-first) · chưa có code �
 
 ## Pack cũ (DEFERRED)
 
-`docs/00–09`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` là AI-coding pack theo hướng full multi-variable constrained optimization (v0.1, 2026-07-16) — đã **defer** ngày 2026-07-20 (xem `tracking/DEFERRED.md` D-001). Giữ làm tài liệu tham khảo; nhiều nguyên tắc ranh giới sản phẩm được kế thừa trong `CLAUDE.md`. File nguồn: `driver-income-os-ai-pack.zip`.
+`docs/00–09`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` là AI-coding pack theo hướng full multi-variable constrained optimization (v0.1, 2026-07-16) — đã **defer** ngày 2026-07-20 (xem `tracking/DEFERRED.md` D-001). Giữ các file đã giải nén làm tài liệu tham khảo; nhiều nguyên tắc ranh giới sản phẩm được kế thừa trong `CLAUDE.md`. Archive ZIP nguồn đã bỏ khỏi Git; lịch sử commit vẫn lưu snapshot trước đó.

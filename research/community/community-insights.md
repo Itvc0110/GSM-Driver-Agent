@@ -30,7 +30,7 @@ Ngày nghiên cứu: 2026-07-20 · Trạng thái: đợt 2 (T-012) · Ghi chú: 
 
 - 72h/tuần → 4,3tr (~60k/h); 10–11h/ngày → 700–800k/ngày, 20–25tr/tháng (sạc ~15k×2 lần/ngày); "tuần 4 củ tháng 15 củ"; 8–10h/ngày → >5tr/tuần cả thưởng+tip, điện ~20k/ngày; chiết khấu "20–22%" được khen.
 - Quản lý kiểu nhân viên (community/low, có thể lẫn Bike/Taxi): bị gọi điện nhắc nếu lâu không có cuốc, "1 ngày phải chạy tối thiểu 1tr"; trả xe bị trừ hao mòn ~1,5tr (+vỏ 800k/cặp, tút xe 400k).
-- Thưởng vượt mốc chuyến/ngày (trang vệ tinh bike-xanhsm.com, **community/medium**): từ chuyến 16–20 được 5k/chuyến + thưởng chuyến chốt mốc (vd 20 cuốc → ~31k thưởng ngày).
+- Thưởng vượt mốc chuyến/ngày (`bike-xanhsm.com`): đây là **T4/blocked lead**, không phải `community/medium` được phép dùng; số 5k/chuyến và ví dụ 31k/ngày chỉ để tìm nguồn T1/T2 xác nhận, không đi vào policy/financial output.
 
 ## Group Facebook đã định danh (không đọc được nội dung — cần join thủ công)
 
@@ -45,9 +45,11 @@ Ngày nghiên cứu: 2026-07-20 · Trạng thái: đợt 2 (T-012) · Ghi chú: 
 
 → Việc cho Cường/Khánh: join 1–2 group đầu để đọc mẹo thực chiến + số thành viên (không crawler được).
 
-## Mock đề xuất cho phần KHÔNG tìm được (reasoning — dùng cho F2/T-003)
+## Mock đề xuất cho phần KHÔNG tìm được (reasoning — dùng cho simulation, không phải policy/recommendation fact)
 
-1. **Điểm đứng theo khung giờ HN** (ghép POI + khung điểm official): 5–7h cổng BV lớn (Bạch Mai, Việt Đức, 108, Nhi TW) + bến xe; 6–8h cụm văn phòng/trường; 11h30 & 17h tan học (Bách Khoa–KTQD–Xây dựng, làng ĐH Cầu Giấy); 17–19h cụm văn phòng (Duy Tân–Cầu Giấy, Keangnam, Times City); tối + cuối tuần TTTM (Vincom, Aeon Long Biên, Royal City) + rìa phố đi bộ (đỉnh 21h–24h). **Sân bay Nội Bài KHÔNG phù hợp Bike** (>25km, chiều về rỗng) — chỉ dành cho taxi.
-2. **Trạm pin quá tải**: đỉnh hàng chờ 11h–13h (nghỉ trưa) & 17h–19h tại trạm gần bến xe/khu trọ → agent khuyên đổi lệch đỉnh (9–10h, 14–15h, sau 20h) và giữ pin >30% trước khung cao điểm.
-3. **Dead hours Bike HN**: 13h–16h ngày thường (đáy ~14h) và sau 21h (trừ khu ăn đêm) — suy từ khung tính điểm official (ngoài khung không có điểm) + pattern "trưa về sạc". Hành động khuyên: sạc/đổi pin, ăn nghỉ, hoặc dạt về BV/bến xe (còn cầu giữa trưa).
-4. **"Hủy chuyến hợp lệ" cho Bike** (mock theo bản Taxi): lý do hợp lệ = khách không xuất hiện sau X phút, sai điểm đón, yêu cầu chở quá số người/hàng cấm, sự cố xe; giới hạn giả định 2–3 lần/ngày; luôn cảnh báo chọn đúng lý do trong app.
+Các giả định dưới đây chỉ để tạo **demand scenarios** và kiểm tra UX. F2 minimum scope chỉ tư vấn theo thời gian; không dùng danh sách POI để khuyên reposition/chọn khu vực.
+
+1. **POI/time patterns HN** (research input cho distribution): 5–7h BV lớn/bến xe; 6–8h văn phòng/trường; 11h30 & 17h trường; 17–19h văn phòng; tối/cuối tuần TTTM + rìa phố đi bộ. **Nội Bài không đưa vào Bike mock** (>25km, chiều về rỗng); chỉ là Car/taxi context.
+2. **Trạm pin quá tải**: giả định queue cao 11h–13h và 17h–19h; agent có thể khuyên **thời điểm** đổi lệch đỉnh nếu có dữ liệu pin/queue được phép. State pin hiện vẫn future (D-002).
+3. **Dead hours Bike HN**: scenario giả định 13h–16h ngày thường và sau 21h (trừ khu ăn đêm), dựa khung policy lịch sử + pattern "trưa về sạc". Chỉ dùng để gợi ý nghỉ/sạc theo thời gian.
+4. **Không mock policy "Hủy chuyến hợp lệ" cho Bike.** Official hiện chỉ xác nhận Taxi/Car; thiếu Bike policy phải trả `unknown`/fallback official, không suy từ bản Car.

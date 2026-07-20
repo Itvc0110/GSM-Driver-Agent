@@ -1,26 +1,46 @@
-# MOCK SPEC — Phân phối đơn Bike Hà Nội (nháp v1, T-003)
+# MOCK SPEC — Demand proxy Bike Hà Nội (nháp v1, T-003)
 
-Cập nhật: 2026-07-20 · Căn cứ: `research/market/order-distribution.md` (+ `research/policy/bonus-programs.md`, `research/community/`) · Trạng thái: spec để code generator; mọi output phải gắn `is_mock=true`, `seed` deterministic.
+Cập nhật: 2026-07-20 · Căn cứ: `research/market/order-distribution.md`, `research/policy/bonus-programs.md`, `research/community/` · Trạng thái: **SPEC READY / CODE CHƯA CLAIM**. Mọi output gắn `is_mock=true`, provenance và deterministic seed.
 
-## Mô hình
+## 0. Ranh giới
 
+Generator này mô phỏng **placed-order demand proxy** theo thời gian/khu vực. Nó **không** mô phỏng matching/dispatch, không tạo pool đơn chắc chắn đủ điều kiện cho một tài xế, và không ước tính xác suất một đơn cụ thể được phân cho họ.
+
+Minimum scope F2 chỉ dùng proxy để tư vấn **khi nào chạy/nghỉ/sạc**. Không dùng output để khuyên reposition/chọn khu vực, nhận/từ chối/hủy cuốc.
+
+## 1. Mô hình
+
+```text
+raw_demand(zone, hour, dow, weather)
+  = BASE_HN
+  × zone_share(zone)
+  × normalized_hour_weight(hour, dow_type)
+  × dow_factor(dow)
+  × weather_factor(rain_mm_per_hour)
+
+normalized_hour_weight(h) = raw_hour_weight[h] / Σ(raw_hour_weight[0..23])
 ```
-orders(zone, hour, dow, weather) = BASE_HN × zone_share(zone) × hour_shape(hour, dow_type) × dow_factor(dow) × weather_factor(rain)
-```
 
-## 1. Mức tuyệt đối `BASE_HN` (suy luận — đánh dấu rõ từng bước)
+Khi cần mô phỏng `eligible/available pool`, phải có model/contract riêng với dispatch owner; không suy từ `raw_demand`.
+
+## 2. Mức tuyệt đối `BASE_HN` (MOCK, sai số cao)
 
 - FACT: Xanh SM ~1.000.000 chuyến/ngày toàn quốc, >100.000 xe (8/2025, press/high).
-- ASSUMPTION A1: Hà Nội chiếm ~28% số chuyến (`TBD` — không có số công bố; HN & HCM là 2 thị trường chính, HCM lớn hơn).
-- FACT: 2 bánh chiếm 61,36% chuyến toàn thị trường VN (Mordor).
-- → BASE_HN (bike) ≈ 1.000.000 × 0,28 × 0,6 ≈ **170.000 đơn bike/ngày** cho toàn Hà Nội (MOCK, sai số lớn).
-- Sanity check bắt buộc khi code: tài xế full-time mock (online 9–10h, khu tier A/B) phải nhận được **15–30 cuốc/ngày**, doanh thu 300–700k/ngày (khớp số tự khai). Nếu lệch → chỉnh A1, không chỉnh số sanity.
+- ASSUMPTION A1: Hà Nội chiếm ~28% số chuyến (`TBD`).
+- FACT/market proxy: 2 bánh chiếm 61,36% chuyến ride-hailing VN (Mordor).
+- MOCK: `1.000.000 × 0,28 × 0,6 ≈ 170.000` placed-order demand/ngày toàn Hà Nội.
 
-## 2. `hour_shape` — hình dạng 24h, ngày thường (tổng chuẩn hóa = 1)
+Con số này chỉ là scenario scale. Không được chia cho số tài xế để suy ra đơn/tài xế vì thiếu supply, eligibility, service mix, online hours và dispatch behavior.
 
-Anchor VN: 2 khung cao điểm 6–9h & 17–20h (Grab official + quy định HN + khung nhân điểm của chính Xanh SM 6–8h, 16h–19h59). Hình dạng chi tiết: [PROXY] Didi (peak chiều > sáng ~1.3×, trưa không tụt sâu), [PROXY] NYC FHV (tối 20–24h giữ cao).
+Sanity-check tham khảo: nguồn tự khai full-time Bike thường nói 15–30 cuốc/ngày và 300–700k revenue/ngày, nhưng định nghĩa gross/payout/net không đồng nhất; không dùng các số đó làm constraint bắt buộc.
 
-| Giờ | Trọng số | Giờ | Trọng số | Giờ | Trọng số | Giờ | Trọng số |
+## 3. Relative hour weights — ngày thường
+
+Bảng dưới là **relative raw weights**, tổng hiện tại = **15,45**; generator bắt buộc chuẩn hóa bằng công thức ở §1.
+
+Anchor VN: peak 6–9h và 17–20h (Grab official + giờ giao thông HN). Hình dạng chi tiết dùng [PROXY] Didi/NYC, không phải số GSM.
+
+| Giờ | Weight | Giờ | Weight | Giờ | Weight | Giờ | Weight |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 00 | 0.25 | 06 | 0.80 | 12 | 0.65 | 18 | **1.30** |
 | 01 | 0.15 | 07 | **1.00** | 13 | 0.55 | 19 | 1.10 |
@@ -29,54 +49,65 @@ Anchor VN: 2 khung cao điểm 6–9h & 17–20h (Grab official + quy định HN
 | 04 | 0.15 | 10 | 0.60 | 16 | 0.90 | 22 | 0.60 |
 | 05 | 0.35 | 11 | 0.65 | 17 | **1.20** | 23 | 0.40 |
 
-Lý do từng đoạn: 6–9h commute sáng (đỉnh 7–8h); 12h nhích nhẹ (ăn trưa + đơn Ngon); 16h bắt đầu leo (trường học tan + đầu khung điểm vàng 16h); 17–19h đỉnh ngày (Didi: chiều > sáng); 20–23h giảm dần nhưng không rơi thẳng (app-hailing lệch tối); 1–4h đáy.
+Rationale: 6–9h commute sáng; 12h nhích nhẹ; 16h bắt đầu leo; 17–19h peak chiều; 20–23h giảm dần; 1–4h đáy. Các policy reward windows chỉ là evidence phụ có version, không quyết định trực tiếp demand.
 
-## 3. `dow_factor` và biến thể cuối tuần
+## 4. `dow_factor` và cuối tuần
 
 | Thứ | Hệ số | Ghi chú |
 | --- | --- | --- |
-| T2 | 0.95 | đầu tuần trầm |
-| T3–T4 | 0.97–1.00 | chuẩn |
-| T5 | 1.03 | [PROXY] NYC: Thứ Năm cao |
-| T6 | **1.10** | commute + tối mạnh ([PROXY] Chicago/NYC) |
-| T7 | 1.05 | tổng ≥ ngày thường ([PROXY] CMAP) |
-| CN | 0.90 | sáng rất chậm |
+| T2 | 0.95 | MOCK |
+| T3–T4 | 0.97–1.00 | baseline |
+| T5 | 1.03 | [PROXY] NYC |
+| T6 | 1.10 | commute + tối ([PROXY]) |
+| T7 | 1.05 | [PROXY] CMAP |
+| CN | 0.90 | sáng chậm ([PROXY]) |
 
-Biến thể `hour_shape` cuối tuần (T7/CN): đỉnh sáng 6–9h giảm còn ~60% giá trị bảng; khung 10–16h tăng +15% (mua sắm/chơi — Rakuten: social/dining/shopping là use case lớn); khung 20h–01h tăng +30% (T6/T7). Tối T6 cũng áp boost 20h–01h dù là ngày thường.
+Cuối tuần: giảm 6–9h còn ~60%, tăng 10–16h +15%, tăng 20h–01h +30%. Các multiplier được áp vào raw weights rồi **chuẩn hóa lại theo ngày** nếu muốn giữ daily total cố định; hoặc không chuẩn hóa lại nếu scenario muốn thay total demand — config phải ghi rõ mode.
 
-## 4. `weather_factor`
+## 5. Weather factor
 
-- Không mưa: 1.0. Mưa: **1.2** cơ bản ([PROXY] Chicago: Uber +22%).
-- Scale cường độ: `1 + 0.006 × mm_per_hour`, trần 1.5 ([PROXY] Hải Khẩu +0,59%/mm·h; mưa to HN 20–50mm/h → +12–30%).
-- Lưu ý chiều nghịch cho tài xế bike: mưa tăng đơn nhưng giảm cung bike (nguy hiểm, tài nghỉ) — generator v1 chỉ mô phỏng demand; supply để v2.
+Dùng một công thức duy nhất, không nhân chồng với “1.2”:
 
-## 5. `zone_share` — chia khu vực Hà Nội (MOCK hoàn toàn, chờ dữ liệu thật)
+```text
+weather_factor = clamp(1 + 0.006 × rain_mm_per_hour, 1.0, 1.5)
+```
 
-| Tier | Khu vực | Share tổng | Ghi chú |
+- Nguồn proxy: Haikou ~+0,59%/mm·h; Chicago app-hailing +19–22% trong mưa.
+- Scenario default `RAIN_MODERATE` có thể đặt `rain_mm_per_hour≈33`, cho factor≈1.20.
+- Mưa có thể tăng passenger demand nhưng giảm supply Bike; spec v1 chỉ mô phỏng demand, không suy availability/safety.
+
+## 6. Zone shares — MOCK distribution only
+
+| Tier | Khu vực | Share | Ghi chú |
 | --- | --- | --- | --- |
-| A | Hoàn Kiếm, Ba Đình, Đống Đa, Cầu Giấy | 40% | văn phòng + du lịch + trường |
-| B | Hai Bà Trưng, Thanh Xuân, Tây Hồ, Nam/Bắc Từ Liêm, Long Biên, Hà Đông | 45% | dân cư dày |
-| C | Ngoại thành còn lại | 15% | thưa, cuốc dài |
+| A | Hoàn Kiếm, Ba Đình, Đống Đa, Cầu Giấy | 40% | MOCK |
+| B | Hai Bà Trưng, Thanh Xuân, Tây Hồ, Nam/Bắc Từ Liêm, Long Biên, Hà Đông | 45% | MOCK |
+| C | Ngoại thành còn lại | 15% | MOCK |
 
-Node đặc biệt (cộng thêm theo sự kiện/giờ): sân bay Nội Bài (đều 24h, cuốc dài), bến xe Mỹ Đình/Giáp Bát/Nước Ngầm (đỉnh cuối tuần + lễ), phố đi bộ Hồ Gươm (tối T6–CN), cổng bệnh viện lớn (sáng sớm), làng đại học (theo lịch học). Event boost kiểu K-PULSE: ×1.5–2 tại zone sự kiện trong khung giờ sự kiện.
+POI/event inputs có thể điều chỉnh **distribution trong simulator**, không biến thành recommendation: bến xe, phố đi bộ, bệnh viện, trường/đại học, TTTM. **Nội Bài loại khỏi Bike scenario**; nếu cần Car/taxi scenario phải tách service config.
 
-## 6. Giá cuốc & doanh thu (để tính thu nhập mock)
+## 7. Money outputs (optional simulation layer)
 
-- Giá trị cuốc bike: lognormal, median ~25k, P10 ~15k, P90 ~55k (`TBD` — hiệu chỉnh từ bảng giá công khai; sanity: 15–30 cuốc/ngày × giá này ≈ 300–700k doanh thu/ngày ✓).
-- Net tài xế = doanh thu × (1 − chiết khấu theo track trong `planning/PERSONAS.md`) + thưởng (bảng thưởng theo research/bonus-programs) − chi phí (sạc ~10k/ngày hoặc đổi pin 9k/lần; thuê xe 60k/ngày nếu RTO).
+- `gross_revenue`: giá trị cuốc trước platform share; distribution hiện `TBD`.
+- `driver_payout`: gross sau platform share + eligible bonus/adjustment theo **policy bundle versioned đúng track**.
+- `estimated_net_income`: payout trừ known driver-borne costs; kèm `money_definition_version`, `cost_completeness`, `unknown_costs`. Thiếu chi phí → `partial/unknown`, không tự bịa.
 
-## 7. Yêu cầu generator (khi code)
+Không dùng T4/blocked source (`bike-xanhsm.com`, domain nhái) làm policy/financial config. Xem `research/policy/bonus-programs.md` và `specs/community-source-risk-control.md`.
 
-1. Deterministic theo `seed` + `scenario_id`; output gắn `is_mock=true`, `generated_at`, `spec_version: mock-dist-v1`.
-2. Tham số trên là config (JSON/YAML), không hard-code — chờ research đợt 2/dữ liệu thật để hiệu chỉnh.
-3. Scenario tối thiểu: ngày thường nắng, T6 mưa giờ tan tầm, CN sáng vắng, ngày có sự kiện lớn, tuần mưa dài.
-4. Không bao giờ trình bày số mock như số thật — UI phải hiển thị nhãn dữ liệu mô phỏng.
+## 8. Yêu cầu generator khi code
 
-## Assumption log
+1. Deterministic theo `seed` + `scenario_id`; output: `is_mock=true`, `generated_at`, `source_refs`, `assumption_ids`, `spec_version=mock-demand-v1`.
+2. Tất cả tham số ở config JSON/YAML; không hard-code trong domain logic.
+3. Scenario tối thiểu: weekday dry, Friday rain peak, Sunday low morning, event day, prolonged rain.
+4. Invariants: normalized hourly probabilities sum≈1 trong mode normalized; zone shares sum=1; all counts non-negative; same seed/config → same output.
+5. UI luôn hiển thị “Dữ liệu mô phỏng”; không trình bày scale 170k như fact GSM.
+
+## 9. Assumption log
 
 | ID | Giả định | Căn cứ | Rủi ro |
 | --- | --- | --- | --- |
-| A1 | HN = 28% chuyến toàn quốc | suy luận (không có số công bố) | cao — chỉ ảnh hưởng mức tuyệt đối, không ảnh hưởng hình dạng |
-| A2 | Hình dạng giờ Didi áp được cho HN | cùng châu Á, app-hailing | trung bình |
-| A3 | Bike share HN ≈ bike share toàn quốc (61%) | Mordor toàn quốc | trung bình |
-| A4 | zone_share 40/45/15 | thuần suy luận từ mật độ đô thị | cao — cần dữ liệu thật/khảo sát |
+| A1 | HN = 28% chuyến toàn quốc | suy luận | cao |
+| A2 | Didi/NYC hour shape áp được cho HN | proxy quốc tế | trung bình |
+| A3 | Bike share HN ≈ 61% toàn quốc | market proxy | trung bình |
+| A4 | zone shares 40/45/15 | suy luận mật độ đô thị | cao |
+| A5 | weather response áp được cho Bike HN | proxy app-hailing, chưa có supply | cao |
