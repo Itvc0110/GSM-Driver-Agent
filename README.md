@@ -1,44 +1,26 @@
-# Driver Income OS — AI Coding Pack
+# GSM Driver Income Agent
 
-Phiên bản: `0.1.0-discovery`  
-Ngày: `2026-07-16`  
-Trạng thái: tài liệu khám phá và đặc tả ban đầu; chưa phải đặc tả chính thức của GSM.
+Hệ thống AI hỗ trợ tài xế Xanh SM (GSM) cải thiện thu nhập: hỏi đáp chính sách/thưởng phạt theo hồ sơ, tư vấn **trước ca – trong ca – sau ca**. Sản phẩm tách rõ `gross revenue`, `driver payout` (mục tiêu mặc định) và `estimated net income` (chỉ khi đủ chi phí). Team 2 người: **Cường** & **Khánh**.
 
-## Kết luận thiết kế quan trọng nhất
+Trạng thái: 2026-07-20 · scope v2 (top-down, flow-first) · chưa có code — đang ở giai đoạn xây khung + nghiên cứu thực tế.
 
-Driver Income OS là **lớp hỗ trợ quyết định cho tài xế**, không phải hệ thống dispatch thứ hai và không phải chatbot tự quyết định. Forecasting ước lượng tương lai; optimizer tạo các phương án khả thi; policy gate loại phương án vi phạm an toàn, pháp lý, chính sách hoặc lợi ích hệ thống; UI/LLM chỉ trình bày, giải thích và cho phép tài xế thêm ràng buộc.
+## Nguyên tắc cốt lõi
 
-MVP không khuyên tài xế nhận, từ chối hoặc hủy một cuốc cụ thể; không thay đổi thứ tự phân phối cuốc; không hứa chắc thu nhập. Những gợi ý có thể làm dịch chuyển nguồn cung theo vùng chỉ được mở ở phase sau khi có quota cấp đội xe, fairness, service-level guardrail và đo được tác động thị trường.
+- Bản chất là bài toán tối ưu đa biến có ràng buộc, nhưng tiếp cận **top-down**: rule/analytics tính mọi số tài chính/policy, **AI agent tổng hợp, so sánh, giải thích** — được reasoning có điều kiện cho phần chưa mô hình hóa (log + độ tin cậy + tắt được).
+- Không can thiệp matching/dispatch/pricing/routing; không hứa chắc thu nhập; tài xế luôn tự quyết.
+- Mock data gắn nhãn mock; câu trả lời chính sách phải có trích dẫn nguồn.
 
-## Thứ tự đọc cho AI coding
+## Đọc theo thứ tự
 
-1. `AGENTS.md` — quy tắc làm việc bắt buộc.
-2. `MASTER_PROMPT.md` — prompt đầy đủ để khởi động AI coding.
-3. `docs/00_PROBLEM_FRAMING.md` — định nghĩa bài toán và phạm vi lời khuyên.
-4. `docs/01_PRD.md` — người dùng, use case, MVP và acceptance criteria.
-5. `docs/02_SYSTEM_SPEC.md` — luồng hệ thống, API và failure behavior.
-6. `docs/03_DATA_AND_MOCK_SPEC.md` — data contract, provenance và mock strategy.
-7. `docs/04_OPTIMIZATION_SPEC.md` — objective, constraints, uncertainty và thuật toán.
-8. `docs/05_METRICS_ROI_EXPERIMENTS.md` — đo hiệu quả, causal test và ROI.
-9. `docs/06_ARCHITECTURE_REPO_CICD.md` — kiến trúc, tech stack, scaffold và CI/CD.
-10. `docs/07_ROADMAP_GOVERNANCE.md` — PHASE*, FIX*, MEMORY và risk register.
-11. `docs/08_OPEN_QUESTIONS_AND_DECISIONS.md` — quyết định đã khóa và câu hỏi cần GSM xác nhận.
-12. `docs/09_RESEARCH_REFERENCES.md` — nguồn nghiên cứu và mức độ áp dụng.
+1. `CLAUDE.md` — harness bắt buộc cho AI coding agent (quy trình đọc docs → plan mode → hỏi → làm → ghi UPDATE).
+2. `planning/SCOPE.md` — scope hiện hành (F0 policy Q&A, F1 trước ca, F2 trong ca, F3 sau ca) + câu hỏi mở.
+3. `planning/PERSONAS.md` — 5 hồ sơ tài xế mock (Bike).
+4. `research/` — kết quả nghiên cứu chia theo loại (`policy/`, `economics/`, `community/`, `market/`); đọc trước `research/00_SUMMARY.md`.
+5. `specs/` — đặc tả kỹ thuật để code (vd mock phân phối đơn).
+6. `planning/USER_STORIES.md` — user stories nháp.
+7. `tracking/TODO.md` · `tracking/ASSIGNMENTS.md` (bảng tự nhận việc) · `tracking/DEFERRED.md` · `tracking/updates/` — backlog, phân công, mục đã hoãn, nhật ký thay đổi.
+8. `flow image/` — drawio kiến trúc income advisor: `...v2.drawio` hiện hành (7 trang: L0–L2 + F0–F3), `...v1.drawio` đối chiếu. (File luồng giải trình vi phạm đã xóa — dự án khác, D-006.)
 
-Các JSON Schema trong `contracts/` là điểm nối giữa hai người phát triển. `templates/` chứa mẫu quản trị thay đổi.
+## Pack cũ (DEFERRED)
 
-## Giả định nền tảng
-
-- Chưa có schema dữ liệu chính thức; mọi dữ liệu demo phải mang `data_mode=synthetic`, `is_mock=true`, version và provenance.
-- Thu nhập ròng được tính theo compensation policy của từng nhóm tài xế/loại xe; không dùng một công thức cố định cho Bike, Car và Premium.
-- Các giới hạn lái xe, nghỉ, pin, khu vực hoạt động, thưởng và service-level là policy có version, không hard-code vào optimizer.
-- Địa chỉ nhà không cần lưu dạng địa chỉ thô; MVP dùng `home_zone_id`/geofence đã làm mờ và chỉ khi tài xế đồng ý.
-- Các con số target trong tài liệu là placeholder/hypothesis nếu chưa có baseline; không được trình bày như cam kết kinh doanh.
-
-## Definition of Ready
-
-Một PHASE chỉ được code khi có: problem statement, in/out of scope, contract bị ảnh hưởng, acceptance criteria, test plan, dữ liệu/mode chạy, guardrail và rollback plan.
-
-## Definition of Done
-
-Code, test, contract, telemetry, tài liệu PHASE/FIX và `templates/MEMORY.md` cùng được cập nhật; không có mock data đi qua live adapter; recommendation có trace ID, expiry, baseline, uncertainty và policy decision.
+`docs/00–09`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` là AI-coding pack theo hướng full multi-variable constrained optimization (v0.1, 2026-07-16) — đã **defer** ngày 2026-07-20 (xem `tracking/DEFERRED.md` D-001). Giữ các file đã giải nén làm tài liệu tham khảo; nhiều nguyên tắc ranh giới sản phẩm được kế thừa trong `CLAUDE.md`. Archive ZIP nguồn đã bỏ khỏi Git; lịch sử commit vẫn lưu snapshot trước đó.

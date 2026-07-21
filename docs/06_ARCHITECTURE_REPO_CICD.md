@@ -1,3 +1,5 @@
+> ⚠️ **DEFERRED — 2026-07-20.** Tài liệu thuộc cách tiếp cận cũ (full multi-variable constrained optimization). Scope hiện hành: `CLAUDE.md` + `planning/SCOPE.md`. Chỉ dùng tham khảo (xem `tracking/DEFERRED.md`, mục D-001). Phân chia Dev A/Dev B trong §5 KHÔNG áp dụng — phân công thực tế ở `tracking/ASSIGNMENTS.md`.
+
 # 06 — Architecture, Repository and CI/CD
 
 ## 1. Architecture choice

@@ -1,0 +1,15 @@
+# draw.io temp / lock files (tạo khi mở app diagrams.net)
+.$*
+*.dtmp
+*.bkp
+~$*
+
+# Pack nguồn đã giải nén vào repo — không commit archive
+driver-income-os-ai-pack*.zip
+
+# Claude Code worktrees (tool-generated)
+.claude/worktrees/
+
+# OS / editor
+Thumbs.db
+.DS_Store
