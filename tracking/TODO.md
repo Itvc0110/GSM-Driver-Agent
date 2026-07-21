@@ -1,6 +1,25 @@
 # TODO — Backlog công việc
 
-Cập nhật: 2026-07-21. Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** đầu session — không ai giao việc (xem `ASSIGNMENTS.md`). Khi làm xong một mục phải có UPDATE tương ứng trong `tracking/updates/`.
+Cập nhật: 2026-07-21 (đợt 3 — sắp xếp lại theo yêu cầu Cường). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
+
+## Thứ tự thực thi (theo độ quan trọng + phụ thuộc tuyến tính)
+
+**Track SIM/Advisor (Cường + AI agent) — tuyến tính:**
+
+1. **T-024 Realism pass** (đang chạy research): đối chiếu benchmark thực tế → chỉnh config/mock (unserved, utilization, chờ pin...) — nền của mọi kết quả sau.
+2. **T-021 Calibration B-arm** (gate): sau realism pass; tune để khớp dải thực tế; 3 chỉ số ràng buộc nhau — tune 2 quan sát 1.
+3. **T-019 Advisor system** (việc trung tâm): DP lớp A + trigger + capacity ledger; **LLM lớp C** (deepseek-v4-flash, fallback gpt-4o-mini) render/personalize advice — spec chi tiết đang research (T-025). Kèm **observability per-layer** (T-026: Langfuse hoặc alternative) xây ĐỒNG THỜI, không gắn sau.
+4. **T-020 Twin-runner 3 arm + evaluator**: chỉ sau khi advisor tồn tại (không thể twin khi chưa có system gợi ý); Δ 3 arm × scope × information × adherence sweep; robustness = regime sweep trên cùng map (multi-map chỉ khi cần external validity — kết luận research T-025).
+5. **T-027 Robustness/shift measurement**: demand regime {900/1200/1800}, mưa, adoption, archetype mix, station outage — đo shift trên cùng map trước.
+
+**Track song song (không đụng files nhau):**
+
+- **Khánh: T-009 UI clone** (ưu tiên của Khánh — brief `planning/ui-clone-brief.md`).
+- **Người thật (ai rảnh): T-013** join FB group + kiểm changelog app (chặn crawler).
+- **AI agent (khi Cường rảnh review): T-004 KB chính sách** (độc lập với sim; cần cho product F0 sau).
+- Dashboard sim (xong slice v0) — nâng cấp dần theo nhu cầu xem/control.
+
+**Hoãn cho tới khi track SIM xong:** T-005 (CrewAI — advisor tự viết đang tiến tốt, đánh giá lại sau), T-006/T-007/T-008 (khung F1-F3 product — sẽ tái dùng advisor từ sim), T-011 (contract — chốt sau khi advisor API ổn định), T-015 (community — roadmap).
 
 | ID | Việc | Trạng thái | Owner | Ghi chú |
 | --- | --- | --- | --- | --- |
@@ -27,3 +46,8 @@ Cập nhật: 2026-07-21. Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATIN
 | T-021 | Calibration sim: đối chiếu output với số tự khai research (15–30 cuốc/ngày, payout/ngày, pattern sạc trưa) | TODO | — | Sau T-018; sanity trước khi tin kết quả so sánh A/B |
 | T-022 | Research đợt 4: action space tài xế + pilot world 1 quận/50 actors + timestep phân tầng | DONE | AI agent | 2026-07-21: `research/simulation/{action-space,pilot-world-dongda,timestep-design}.md` + `data/` (OSM: 11 tủ pin Đống Đa, POI, polygon); spec tổng hợp: `specs/simulation-pilot-world.md` |
 | T-023 | Chốt action taxonomy cho SIM actor + phạm vi advisor tác động (product vs sim) | DONE | AI agent + Cường | 2026-07-21: verify chuyên sâu → **A13 = UNVERIFIED** (nguồn duy nhất là trang AI-gen; không dấu vết official/báo chí/diễn đàn sau 3,5 tháng); **Xanh KHÔNG có heatmap tài xế** → advice khu vực = BỔ SUNG không chồng đè, Cường mở CÓ ĐIỀU KIỆN (5 điều kiện an toàn trong `action-space.md` §Phạm vi advisor: capacity-aware, cảnh báo tỷ lệ nhận, nhãn mock, không hứa thu nhập, shift-aware flag OFF). Kiểm changelog in-app → T-013 |
+| T-024 | Realism pass: đối chiếu mọi MOCK với benchmark thực tế (unserved/fulfillment, utilization, cuốc/giờ, chờ pin, payout) → chỉnh config | DOING | AI agent (claim Cường) | 2026-07-21: research đang chạy; sửa config + demand/behavior theo kết quả; ghi bảng đối chiếu vào `research/simulation/realism-benchmarks.md` |
+| T-025 | Research + spec chi tiết AI Advisor system: kiến trúc LLM-in-the-loop (deepseek-v4-flash + fallback gpt-4o-mini), structured output, cache/batch, retry/fallback; multi-map vs same-map robustness | DOING | AI agent (claim Cường) | 2026-07-21: research đang chạy; output → `specs/advisor-system-detail.md`; .env đã có (không commit — xem .env.example) |
+| T-026 | Observability per-layer cho advisor: Langfuse (hoặc alternative từ research) + metric bảng theo layer (trigger/DP/LLM/adherence); xây ĐỒNG THỜI với T-019 | TODO | — | Yêu cầu Cường 2026-07-21: không gắn observability sau; phải đo được shift/robustness |
+| T-027 | Robustness/shift measurement: regime sweep (orders 900/1200/1800, mưa, adoption, archetype mix, station outage) trên cùng map; multi-map chỉ khi cần external validity | TODO | — | Sau T-020; căn cứ phương pháp luận từ T-025 |
+| T-028 | Dashboard sim v0 (Streamlit + pydeck H3): xem + control (seed/demand/actors/dispatcher levers) | DONE (v0) | AI agent (claim Cường) | 2026-07-21: `src/gsm_sim/dashboard.py`; chạy `uv run --extra viz streamlit run src/gsm_sim/dashboard.py`; healthz OK; nâng cấp dần (replay theo thời gian → T-020) |

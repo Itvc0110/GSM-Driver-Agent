@@ -10,6 +10,11 @@ driver-income-os-ai-pack*.zip
 # Claude Code worktrees (tool-generated)
 .claude/worktrees/
 
+# Secrets — TUYỆT ĐỐI không commit
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.py[cod]
