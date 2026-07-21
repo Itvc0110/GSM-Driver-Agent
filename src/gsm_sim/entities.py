@@ -1,0 +1,90 @@
+"""Thực thể sim: Actor, Station. Order ở demand.py.
+
+Nguồn: specs/simulation-pilot-world.md §2.2, advisor-optimization-layer-a.md §1.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+
+
+class ActorState(str, Enum):
+    OFFLINE = "offline"
+    IDLE = "idle"
+    ENROUTE = "enroute"   # đang tới điểm đón
+    ON_TRIP = "on_trip"
+    CHARGING = "charging"  # đổi pin / sạc
+    REST = "rest"
+
+
+class FleetType(str, Enum):
+    SWAP = "swap"     # đổi pin tại trạm
+    CHARGE = "charge"  # sạc cắm tại nhà
+
+
+@dataclass
+class Actor:
+    actor_id: int
+    archetype: str            # P1..P5
+    fleet: FleetType
+    home_cell: str
+    shift_start_min: float
+    shift_end_min: float
+    # tham số hành vi (từ archetype sampling)
+    demand_prior_sigma: float
+    accept_base: float
+    fatigue_threshold_min: float
+    meal_hour: int
+    # trạng thái động
+    state: ActorState = ActorState.OFFLINE
+    cell: str = ""
+    soc_pct: float = 100.0
+    # đếm trong ca
+    trips_done: int = 0
+    orders_offered: int = 0
+    orders_accepted: int = 0
+    orders_completed: int = 0
+    orders_cancelled: int = 0
+    gross_vnd: int = 0
+    payout_vnd: int = 0
+    points: int = 0
+    online_min: float = 0.0
+    empty_min: float = 0.0
+    stranded_count: int = 0
+    # kinh nghiệm cá nhân: bảng demand prior theo (cell, hour) — khởi tạo lazily
+    demand_prior: dict = field(default_factory=dict)
+
+    @property
+    def acceptance_rate(self) -> float:
+        return self.orders_accepted / self.orders_offered if self.orders_offered else 1.0
+
+    @property
+    def completion_rate(self) -> float:
+        return self.orders_completed / self.orders_accepted if self.orders_accepted else 1.0
+
+    def consume_soc(self, dist_km: float, pct_per_km: float) -> None:
+        self.soc_pct = max(0.0, self.soc_pct - dist_km * pct_per_km)
+
+
+@dataclass
+class BatteryInStation:
+    """Một viên pin trong tủ; sạc lại sau khi tài xế trả pin cạn."""
+    soc_pct: float
+    ready_at_min: float  # thời điểm đạt ready_soc (nếu đang sạc)
+
+
+@dataclass
+class Station:
+    node_id: int
+    cell: str
+    lat: float
+    lon: float
+    slots: int
+    ready_soc_pct: float
+    # danh sách pin đang có trong tủ (mock: số pin sẵn sàng)
+    batteries: list[BatteryInStation] = field(default_factory=list)
+    queue_len: int = 0
+
+    def available_full(self, now_min: float) -> int:
+        return sum(1 for b in self.batteries if b.soc_pct >= self.ready_soc_pct and b.ready_at_min <= now_min)
