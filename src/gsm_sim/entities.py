@@ -50,7 +50,11 @@ class Actor:
     payout_vnd: int = 0
     points: int = 0
     online_min: float = 0.0
-    empty_min: float = 0.0
+    empty_min: float = 0.0      # di chuyển không khách (pickup + relocate + deadhead)
+    occupied_min: float = 0.0   # có khách (đo utilization)
+    idle_min: float = 0.0       # chờ đơn tại chỗ
+    rest_min: float = 0.0       # nghỉ
+    charge_min: float = 0.0     # đổi pin / sạc (gồm chờ)
     stranded_count: int = 0
     # kinh nghiệm cá nhân: bảng demand prior theo (cell, hour) — khởi tạo lazily
     demand_prior: dict = field(default_factory=dict)

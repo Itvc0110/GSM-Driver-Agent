@@ -25,7 +25,9 @@ def cmd_run(args) -> int:
     for k in ("orders_total", "orders_completed", "served_rate", "unserved_rate",
               "orders_declined", "orders_expired", "battery_stranded",
               "trips_per_actor_median", "trips_fulltime_median",
-              "payout_fulltime_median", "swap_events", "swap_wait_min_max",
+              "payout_fulltime_median", "utilization_ft_median",
+              "pickup_eta_median", "pickup_eta_p90",
+              "swap_events", "swap_wait_median", "swap_wait_p90", "swap_wait_max",
               "n_actors", "n_fulltime"):
         print(f"  {k:26s}: {m[k]}")
 

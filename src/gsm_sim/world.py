@@ -60,6 +60,14 @@ class World:
         self.metrics_start = float(cfg.get("time.start_min")) + float(cfg.get("time.warmup_min"))
         self.end_min = float(cfg.get("time.end_min"))
 
+        # demand field theo (cell, giờ) từ exogenous trace — nền cho "kinh nghiệm cá nhân"
+        # của actor (behavior model §1). Actor thấy field này có nhiễu theo archetype.
+        self.demand_field: dict[int, dict[str, float]] = {}
+        for o in orders:
+            h = int(o.t_min // 60) % 24
+            self.demand_field.setdefault(h, {})
+            self.demand_field[h][o.pickup_cell] = self.demand_field[h].get(o.pickup_cell, 0.0) + 1.0
+
     def _build_stations(self) -> list[Station]:
         slots = int(self.cfg.get("station.slots"))
         ready = float(self.cfg.get("station.ready_soc_pct"))
@@ -81,6 +89,13 @@ class World:
         for a in self.actors.values():
             self.env.process(self._actor_proc(a))
         self.env.run(until=self.end_min)
+        # thưởng ngày cho actor vẫn online lúc hết run (chưa qua nhánh end_shift)
+        for a in self.actors.values():
+            if a.state != ActorState.OFFLINE:
+                bonus = self.policy.day_bonus(a.points, a.acceptance_rate, a.completion_rate)
+                a.payout_vnd += bonus
+                self.log(a.actor_id, "day_end_settle", a.cell,
+                         trips=a.trips_done, payout=a.payout_vnd, points=a.points, day_bonus=bonus)
         return self.events
 
     def _inject_orders(self):
@@ -93,12 +108,13 @@ class World:
             self._order_ptr += 1
 
     def _order_expiry_proc(self):
-        expire_s = float(self.disp_cfg["order_expire_s"])
+        """Khách hủy khi chưa match quá patience (per-order, exogenous — CRN-safe)."""
         while True:
             yield self.env.timeout(0.5)  # quét mỗi 30s-sim (đơn vị thời gian = phút)
             now = self.env.now
             expired = [oid for oid, t0 in self.order_open_since.items()
-                       if oid in self.open_orders and (now - t0) * 60.0 > expire_s]
+                       if oid in self.open_orders
+                       and (now - t0) > self.open_orders[oid].patience_min]
             for oid in expired:
                 self.open_orders.pop(oid, None)
                 self.order_open_since.pop(oid, None)
@@ -154,10 +170,12 @@ class World:
         actor.cell = order.pickup_cell
         actor.empty_min += pickup_min
         actor.state = ActorState.ON_TRIP
-        self.log(actor.actor_id, "pickup", order.pickup_cell, order_id=order.order_id)
+        self.log(actor.actor_id, "pickup", order.pickup_cell,
+                 order_id=order.order_id, eta_min=round(pickup_min, 2))
         # chở khách
         trip_min = order.dist_km / speed * 60.0
         yield self.env.timeout(trip_min)
+        actor.occupied_min += trip_min
         actor.consume_soc(order.dist_km, pct_per_km)
         # kiểm tra stranded (variance): nếu SOC <= 0 giữa đường
         if actor.soc_pct <= 0.0:
@@ -203,6 +221,8 @@ class World:
         self.log(actor.actor_id, "go_online", actor.cell)
         last = self.env.now
 
+        # online_min = tổng span từ go_online tới offline; cộng mỗi lần ở top vòng
+        # (KHÔNG reset `last` trong nhánh action — nếu không sẽ mất thời gian chờ/serve).
         while self.env.now < self.end_min:
             # nếu đang bận (enroute/on_trip/charging) → nhường, kiểm lại sau
             if actor.state in (ActorState.ENROUTE, ActorState.ON_TRIP, ActorState.CHARGING, ActorState.REST):
@@ -210,27 +230,31 @@ class World:
                 continue
             if actor.state == ActorState.OFFLINE:
                 break
-            # actor IDLE: cập nhật online time
             now = self.env.now
-            actor.online_min += (now - last)
+            actor.online_min += (now - last)  # gộp toàn bộ thời gian đã trôi (chờ + serve + charge)
             last = now
             hour = int(now // 60) % 24
-            action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, None, self.rng)
+            hint = self._actor_demand_hint(actor, hour)
+            action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, hint, self.rng)
 
             if action == IdleAction.END_SHIFT:
                 actor.state = ActorState.OFFLINE
+                # lớp thưởng ngày (rule component — realism: thưởng chiếm 20-30% thu nhập)
+                bonus = self.policy.day_bonus(actor.points, actor.acceptance_rate, actor.completion_rate)
+                actor.payout_vnd += bonus
                 self.log(actor.actor_id, "end_shift", actor.cell,
-                         trips=actor.trips_done, payout=actor.payout_vnd, points=actor.points)
+                         trips=actor.trips_done, payout=actor.payout_vnd,
+                         points=actor.points, day_bonus=bonus)
                 break
             elif action in (IdleAction.GO_SWAP, IdleAction.GO_CHARGE):
                 yield from self._do_charge(actor, action)
-                last = self.env.now
             elif action == IdleAction.REST:
                 actor.state = ActorState.REST
                 self.log(actor.actor_id, "rest", actor.cell)
-                yield self.env.timeout(self.rng.uniform(20, 45))
+                rest_min = self.rng.uniform(20, 45)
+                actor.rest_min += rest_min
+                yield self.env.timeout(rest_min)
                 actor.state = ActorState.IDLE
-                last = self.env.now
             elif action == IdleAction.RELOCATE and target:
                 speed = _speed_kmh(hour, self.speed_cfg)
                 d = cell_distance_km(self.grid, actor.cell, target)
@@ -238,17 +262,38 @@ class World:
                 yield self.env.timeout(t)
                 actor.empty_min += t
                 actor.cell = target
-                last = self.env.now
             else:  # WAIT
+                actor.idle_min += 2.0
                 yield self.env.timeout(2.0)  # chờ đơn, kiểm lại sau 2 phút
-                last = self.env.now
+
+    def _actor_demand_hint(self, actor: Actor, hour: int) -> dict[str, float]:
+        """Kinh nghiệm cá nhân của actor về demand giờ này: demand field thật nhân
+        nhiễu theo archetype (σ_arch) — lão làng chính xác hơn tân binh. Deterministic
+        theo RNG stream của sim. Đây là nền tạo coincident compliance (behavior §1)."""
+        field = self.demand_field.get(hour, {})
+        if not field:
+            return {}
+        sigma = actor.demand_prior_sigma
+        hint: dict[str, float] = {}
+        # chỉ cần các cell trong tầm nhìn (lân cận actor) để rẻ
+        from .geo import grid_disk
+        nearby = set()
+        for c in grid_disk(actor.cell, 2):
+            nearby.add(c)
+        for c in nearby:
+            base = field.get(c, 0.0)
+            noise = 1.0 + self.rng.normal(0.0, sigma)
+            hint[c] = max(0.0, base * noise)
+        return hint
 
     def _do_charge(self, actor: Actor, action: IdleAction):
         if action == IdleAction.GO_CHARGE:
-            # về nhà sạc cắm
+            # về nhà sạc cắm (đội sạc cắm sạc 1 lần/ngày quanh trưa kết hợp nghỉ)
             actor.state = ActorState.CHARGING
             self.log(actor.actor_id, "charge_home_start", actor.cell)
-            yield self.env.timeout(float(self.veh["home_charge_min"]))
+            dur = float(self.veh["home_charge_min"])
+            actor.charge_min += dur
+            yield self.env.timeout(dur)
             actor.soc_pct = 100.0
             actor.state = ActorState.IDLE
             self.log(actor.actor_id, "charge_home_end", actor.cell)
@@ -273,14 +318,16 @@ class World:
         # xếp hàng
         station.queue_len += 1
         wait = 0.0
+        wait_cap = float(self.cfg.get("station.wait_cap_min", 60.0))
         while station.available_full(self.env.now) < 1:
             yield self.env.timeout(1.0)
             wait += 1.0
-            if wait > 60.0:  # tránh kẹt vô hạn slice v0
+            if wait > wait_cap:  # tránh kẹt vô hạn; đuôi hiếm ở giờ đỉnh
                 break
         swap_s = self.rng.uniform(float(self.cfg.get("station.swap_time_s_min")),
                                   float(self.cfg.get("station.swap_time_s_max")))
         yield self.env.timeout(swap_s / 60.0)
+        actor.charge_min += travel + wait + swap_s / 60.0
         station.queue_len = max(0, station.queue_len - 1)
         # lấy 1 pin đầy, trả pin cạn (bắt đầu sạc lại)
         full = [b for b in station.batteries if b.soc_pct >= station.ready_soc_pct and b.ready_at_min <= self.env.now]

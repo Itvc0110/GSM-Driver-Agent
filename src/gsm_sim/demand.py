@@ -27,6 +27,7 @@ class Order:
     drop_cell: str
     dist_km: float
     gross_vnd: int
+    patience_min: float = 5.0  # khách hủy nếu chưa match sau chừng này phút (exogenous, CRN-safe)
 
 
 def _cell_weights(grid: Grid, cfg: Config) -> dict[str, float]:
@@ -87,6 +88,12 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int) ->
     buffer_k = int(cfg.get("world.buffer_ring_k"))
     mu = math.log(med)  # lognormal median = exp(mu)
 
+    # patience khách (realism-benchmarks.md): lognormal median ~3ph, cap 10ph
+    pat_med = float(cfg.get("dispatcher.patience_median_min", 3.0))
+    pat_sigma = float(cfg.get("dispatcher.patience_sigma", 0.5))
+    pat_max = float(cfg.get("dispatcher.patience_max_min", 10.0))
+    pat_mu = math.log(pat_med)
+
     orders: list[Order] = []
     oid = 0
     for hour, share in sorted(hour_share.items()):
@@ -98,7 +105,8 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int) ->
             dist_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
             drop = _sample_drop(grid, pickup, dist_km, buffer_k, rng)
             gross = policy.gross_fare(dist_km)
-            orders.append(Order(oid, t_min, pickup, drop, round(dist_km, 3), gross))
+            patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
+            orders.append(Order(oid, t_min, pickup, drop, round(dist_km, 3), gross, round(patience, 2)))
             oid += 1
 
     orders.sort(key=lambda o: (o.t_min, o.order_id))

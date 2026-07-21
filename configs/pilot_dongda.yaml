@@ -80,7 +80,12 @@ dispatcher:
   candidate_ring_k: 4              # grid_disk k ở res 9 (~ bán kính 1.4km); nới nếu rỗng
   candidate_ring_k_max: 6
   eta_max_min: 8
-  order_expire_s: 90
+  # Patience khách 2 tầng (realism-benchmarks.md: patience ~5ph, không phải 90s):
+  # tầng 1: chờ match ~ lognormal(median, sigma) cap max — per-order, exogenous (CRN-safe)
+  # tầng 2: sau gán, hủy nếu pickup ETA > eta_max_min (đã có ở trên)
+  patience_median_min: 3.0
+  patience_sigma: 0.5
+  patience_max_min: 10.0
 
 station:
   slots: 6                         # 5 pin + 1 trống
@@ -88,6 +93,7 @@ station:
   swap_time_s_max: 120
   battery_recharge_min: 105        # 1.75h/viên (giữa 1.5-2h)
   ready_soc_pct: 90                # ngưỡng "pin sẵn sàng" để phát cho tài xế
+  wait_cap_min: 60                 # trần chờ (đuôi hiếm giờ đỉnh); giảm để mô phỏng đi trạm khác
 
 actors:
   n: 50
