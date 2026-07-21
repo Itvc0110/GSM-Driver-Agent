@@ -1,0 +1,128 @@
+# Config pilot Đống Đa — nguồn số: specs/simulation-pilot-world.md, sim-policy-bundle-v0.md,
+# advisor-optimization-layer-a.md §4 (harmonize), research/simulation/*.
+# MỌI SỐ LÀ MOCK — xem assumption log trong các spec. Không phải số thật của GSM.
+
+meta:
+  spec_version: sim-core-slice-v0
+  policy_bundle_version: sim-policy-v0
+  data_mode: synthetic
+  is_mock: true
+
+world:
+  data_dir: research/simulation/data
+  geom_file: dd_geom.json          # 5 relation phường (proxy quận Đống Đa cũ)
+  stations_file: batt_dd.json      # 11 tủ đổi pin thật (OSM)
+  poi_file: poi_dd.json            # 59 POI (26 BV, 13 ĐH, ...)
+  h3_res: 9                        # lưới vận hành ~85 cells lõi
+  h3_res_report: 8                 # tổng hợp/heatmap
+  buffer_ring_k: 4                 # đích OD có thể rơi ngoài lõi trong vành k<=4
+
+time:
+  # Harmonize §4: run window 05:00-24:00, warm-up 1h (metrics từ 06:00)
+  start_min: 300                   # 05:00 tính theo phút từ 00:00
+  end_min: 1440                    # 24:00
+  warmup_min: 60                   # 05:00-06:00 không tính metrics
+  dispatch_tick_s: 5               # T1
+  metrics_bucket_min: 15           # T2
+
+demand:
+  orders_per_day: 1200             # kỳ vọng TRONG window (renormalize hour-shape trên 05-24h)
+  # hour-shape relative weights (mock-order-distribution.md §3) — chỉ dùng các giờ trong window
+  hour_weights:
+    0: 0.25
+    1: 0.15
+    2: 0.10
+    3: 0.10
+    4: 0.15
+    5: 0.35
+    6: 0.80
+    7: 1.00
+    8: 1.00
+    9: 0.70
+    10: 0.60
+    11: 0.65
+    12: 0.65
+    13: 0.55
+    14: 0.55
+    15: 0.65
+    16: 0.90
+    17: 1.20
+    18: 1.30
+    19: 1.10
+    20: 0.90
+    21: 0.80
+    22: 0.60
+    23: 0.40
+  # trọng số cell: w = a*pop_density + b*poi_score  (chuẩn hóa tổng = 1)
+  zone_weight_pop_coeff: 0.5
+  zone_weight_poi_coeff: 0.5
+  poi_type_weights:        # hệ số theo loại POI (mock)
+    hospital: 3.0
+    university: 2.0
+    college: 1.5
+    marketplace: 1.5
+    bus_station: 2.5
+    mall: 2.0
+    default: 1.0
+  # OD: đích sample theo distance-decay quanh pickup
+  trip_km_median: 3.5
+  trip_km_sigma: 0.55              # lognormal sigma
+  trip_km_max: 12.0
+
+speed_kmh:                         # world-parameters.md §2
+  peak: 17                         # 6-9h, 16.5-19h
+  offpeak: 25
+  night: 30                        # 21-6h
+  peak_hours: [6, 7, 8, 16, 17, 18]
+  night_hours: [21, 22, 23, 0, 1, 2, 3, 4, 5]
+
+dispatcher:
+  candidate_ring_k: 4              # grid_disk k ở res 9 (~ bán kính 1.4km); nới nếu rỗng
+  candidate_ring_k_max: 6
+  eta_max_min: 8
+  order_expire_s: 90
+
+station:
+  slots: 6                         # 5 pin + 1 trống
+  swap_time_s_min: 60
+  swap_time_s_max: 120
+  battery_recharge_min: 105        # 1.75h/viên (giữa 1.5-2h)
+  ready_soc_pct: 90                # ngưỡng "pin sẵn sàng" để phát cho tài xế
+
+actors:
+  n: 50
+  archetype_mix:                   # tỷ trọng (twin-world §5.1)
+    P1: 0.20
+    P2: 0.30
+    P3: 0.10
+    P4: 0.25
+    P5: 0.15
+  charge_fleet_ratio_p3p5: 0.5     # P3/P5: 50% sạc cắm, còn lại swap (sim-policy-bundle §6)
+
+policy:                            # sim-policy-bundle-v0.md
+  base_fare_vnd: 13000
+  base_km: 2.0
+  per_km_vnd: 4300
+  driver_share: 0.75
+  point_peak: 10
+  point_normal: 5
+  point_window_hours: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+  point_peak_hours: [6, 7, 16, 17]   # 06-08h & 16-18h (giờ khách ĐẶT) => bucket bắt đầu 6,7,16,17
+  day_bonus_tiers:                 # điểm -> thưởng VND (nhận mốc cao nhất đạt được)
+    - [60, 30000]
+    - [100, 60000]
+    - [160, 115000]
+    - [200, 170000]
+  bonus_min_acceptance: 0.85
+  bonus_min_completion: 0.85
+
+vehicle:                           # world-parameters.md §2
+  swap_range_km: 60                # pin swap ~55-70
+  swap_consume_pct_per_km: 1.6     # 1.4-1.8
+  charge_range_km: 110             # Feliz S dịch vụ 100-130
+  charge_consume_pct_per_km: 0.85
+  swap_soc_threshold_pct: 20       # đi đổi pin khi SOC dưới ngưỡng
+  home_charge_min: 210             # sạc cắm 3-4h (đội sạc)
+
+output:
+  runs_dir: runs
