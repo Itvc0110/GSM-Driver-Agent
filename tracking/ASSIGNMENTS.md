@@ -17,7 +17,8 @@ Cơ chế: công việc sống trong `tracking/TODO.md` và có thể được c
 
 | Ngày | Người | Việc (T-###) | Phạm vi files/folders | Trạng thái | Ghi chú |
 | --- | --- | --- | --- | --- | --- |
-| 2026-07-21 | Cường | T-018 (kế tiếp T-019, T-020) | `sim/` (code mới), `specs/simulation-*` + `sim-policy-bundle-v0` + `advisor-optimization-layer-a`, `tracking/` | DOING | Cường tự claim (hiện chỉ một mình làm); AI agent làm dưới claim này |
+| 2026-07-21 | Cường | T-018 (kế tiếp T-019, T-020) | `src/gsm_sim/`, `configs/`, `tests/`, `specs/simulation-*` + `sim-policy-bundle-v0` + `advisor-optimization-layer-a`, `pyproject.toml` | DOING | Simulator core; AI agent làm dưới claim này |
+| 2026-07-21 | Khánh | T-009 (UI clone) | thư mục UI mới (`apps/` hoặc `ui/`), KHÔNG đụng `src/gsm_sim/` | TODO (context sẵn sàng) | Brief đầy đủ: `planning/ui-clone-brief.md`. Ưu tiên làm trước (Cường điều phối). Claim lại dòng này khi bắt đầu |
 
 ## Lịch sử
 
