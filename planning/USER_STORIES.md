@@ -22,6 +22,7 @@ Quy ước ID: `US-<khối>-<số>` (khối: F0 policy, F1 trước ca, F2 trong
 - **US-F2-01** · Là tài xế đang trong ca, tôi muốn biết **demand proxy** trong những giờ tới tương đối cao/thấp (dữ liệu mock, không phải đơn chắc chắn được phân), để chọn lúc chạy và lúc nghỉ — không phải để reposition hay quyết định một cuốc cụ thể.
 - **US-F2-02** · Là tài xế bike, tôi muốn được gợi ý khung giờ thấp điểm phù hợp để nghỉ/sạc, để không mất đơn giờ cao điểm.
 - **US-F2-03** · Là tài xế, tôi muốn nhận cập nhật voucher/ưu đãi mới ngay trong ca, để tận dụng kịp.
+- **US-F2-04** · (mở 2026-07-21 sau verify — có điều kiện) Là tài xế đang idle giữa các cuốc, tôi muốn được gợi ý khu vực đứng chờ có demand tương đối cao gần đây (heatmap mock, capacity-aware chống dồn cung, kèm cảnh báo "đơn có thể được phát khi đang di chuyển — từ chối ảnh hưởng tỷ lệ nhận"), để giảm thời gian chờ — hệ thống không hứa thu nhập và không khuyên nhận/từ chối đơn nào.
 
 ## F3 — Sau ca
 

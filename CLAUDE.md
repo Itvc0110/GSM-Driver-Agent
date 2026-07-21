@@ -17,8 +17,8 @@ Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image
 | --- | --- |
 | `CLAUDE.md` | Harness này — đọc đầu tiên |
 | `planning/` | SCOPE (scope hiện hành), USER_STORIES, PERSONAS (5 hồ sơ mock), RESEARCH (kế hoạch nghiên cứu) |
-| `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
-| `specs/` | Đặc tả kỹ thuật để code (vd `mock-order-distribution.md`) |
+| `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`, `simulation/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
+| `specs/` | Đặc tả kỹ thuật để code (`mock-order-distribution`, `simulation-twin-world`, `advice-timing-state-memory`, `community-source-risk-control`) |
 | `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###) |
 | `flow image/` | drawio luồng dự kiến — `...v2.drawio` hiện hành (7 trang), `...v1.drawio` đối chiếu (source of truth về flow) |
 | `docs/`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` | **DEFERRED** — pack cũ theo hướng full optimization scaffold; chỉ dùng tham khảo, không phải scope hiện hành |

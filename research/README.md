@@ -10,6 +10,7 @@ Cập nhật: 2026-07-20. Mỗi **loại tài liệu** nằm trong một folder 
 | `economics/` | Cấu trúc thu nhập, chiết khấu theo hình thức hợp tác, chi phí tài xế | `income-structure.md` |
 | `community/` | Pain points, kinh nghiệm thực chiến, thu nhập tự khai, group Facebook | `pain-points.md`, `community-insights.md` |
 | `market/` | Số liệu thị trường & phân phối đơn (để mock) | `order-distribution.md` |
+| `simulation/` | Nghiên cứu cho môi trường giả lập twin-world: công cụ, phương pháp đánh giá, tham số thế giới, timestep, action space, pilot world | `tooling.md`, `evaluation-methodology.md`, `world-parameters.md`, `timestep-design.md`, `action-space.md`, `pilot-world-dongda.md`, `data/` (OSM snapshots) |
 | (root) | Tổng hợp toàn bộ | `00_SUMMARY.md` |
 
 ## Quy ước

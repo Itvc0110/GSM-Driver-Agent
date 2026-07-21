@@ -1,0 +1,255 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-07-21T04:33:49Z",
+    "timestamp_areas_base": "2026-07-20T13:09:40Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 13665050694,
+  "lat": 21.0163650,
+  "lon": 105.8061795,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13667135450,
+  "lat": 21.0198407,
+  "lon": 105.8269839,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13668264617,
+  "lat": 21.0081499,
+  "lon": 105.8147190,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13668264618,
+  "lat": 21.0122849,
+  "lon": 105.8086400,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13675000202,
+  "lat": 21.0175791,
+  "lon": 105.8238469,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13675000203,
+  "lat": 21.0088024,
+  "lon": 105.8383733,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13675000204,
+  "lat": 21.0079605,
+  "lon": 105.8394524,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13675000205,
+  "lat": 21.0135180,
+  "lon": 105.8411199,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13675000206,
+  "lat": 21.0128270,
+  "lon": 105.8393343,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13675000207,
+  "lat": 21.0067158,
+  "lon": 105.8320543,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+},
+{
+  "type": "node",
+  "id": 13684800191,
+  "lat": 21.0001913,
+  "lon": 105.8312921,
+  "tags": {
+    "access": "yes",
+    "amenity": "vending_machine",
+    "battery_swap": "yes",
+    "brand": "VinFast",
+    "capacity": "6 batteries",
+    "charge": "9000 VND/battery",
+    "currency:VND": "yes",
+    "fee": "yes",
+    "motorcycle": "yes",
+    "name": "Tủ đổi pin VinFast",
+    "name:en": "VinFast Battery-swapping Cabinet",
+    "operator": "VinFast",
+    "payment:app": "yes",
+    "vending": "battery_swap"
+  }
+}
+
+  ]
+}

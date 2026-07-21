@@ -1,0 +1,1211 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-07-21T04:34:51Z",
+    "timestamp_areas_base": "2026-07-20T13:09:40Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 5485651759,
+  "lat": 21.0170546,
+  "lon": 105.8270102,
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Sáng Trần Quang Diệu",
+    "source": "Grab_Hanoi_2018_T2"
+  }
+},
+{
+  "type": "node",
+  "id": 5485660083,
+  "lat": 21.0236535,
+  "lon": 105.8048715,
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Láng Thượng",
+    "source": "grab_hanoi_2018_t3"
+  }
+},
+{
+  "type": "node",
+  "id": 5808582515,
+  "lat": 21.0101268,
+  "lon": 105.8382699,
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Hà Nội",
+    "addr:housenumber": "152",
+    "addr:postcode": "100000",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Xã Đàn",
+    "addr:subdistrict": "Đống Đa",
+    "amenity": "hospital",
+    "description": "Địa chỉ phòng khám đa khoa quốc tế Hà nội chuyên điều trị bệnh nam khoa, phụ khoa bệnh xã hội uy tín tại Việt Nam",
+    "emergency": "no",
+    "healthcare": "hospital",
+    "healthcare:speciality": "clinic",
+    "name": "Phòng khám Đa khoa Quốc tế Hà Nội",
+    "website": "https://ytequocte.vn/"
+  }
+},
+{
+  "type": "node",
+  "id": 9976457533,
+  "lat": 21.0086201,
+  "lon": 105.8330627,
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Trung Tự"
+  }
+},
+{
+  "type": "node",
+  "id": 9976457534,
+  "lat": 21.0117663,
+  "lon": 105.8283958,
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Nam Đồng"
+  }
+},
+{
+  "type": "node",
+  "id": 10749951833,
+  "lat": 21.0106769,
+  "lon": 105.8268110,
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "29",
+    "addr:province": "Hà Nội",
+    "addr:street": "Ngách 31/167 Tây Sơn",
+    "addr:subdistrict": "Quang Trung",
+    "name": "COMPLEX 01",
+    "shop": "mall"
+  }
+},
+{
+  "type": "node",
+  "id": 11949875397,
+  "lat": 21.0135889,
+  "lon": 105.8209988,
+  "tags": {
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện đa khoa Nông nghiệp 2"
+  }
+},
+{
+  "type": "node",
+  "id": 12621772111,
+  "lat": 21.0115478,
+  "lon": 105.8104566,
+  "tags": {
+    "addr:housenumber": "532",
+    "addr:street": "đường Láng",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện mắt Sài Gòn Hà Nội 1"
+  }
+},
+{
+  "type": "node",
+  "id": 13136496646,
+  "lat": 21.0267610,
+  "lon": 105.8265759,
+  "tags": {
+    "addr:housenumber": "57-63",
+    "addr:street": "Phố Vũ Thạnh",
+    "amenity": "hospital",
+    "contact:facebook": "https://www.facebook.com/benhvienhathanh",
+    "email": "info@benhvienhathanh.vn",
+    "healthcare": "hospital",
+    "healthcare:speciality": "general",
+    "name": "Bệnh viện Đa khoa Hà Thành",
+    "phone": "+84 24 3765 5599",
+    "website": "https://benhvienhathanh.vn/"
+  }
+},
+{
+  "type": "way",
+  "id": 136161117,
+  "center": {
+    "lat": 21.0062846,
+    "lon": 105.8319822
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "2",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Phạm Ngọc Thạch",
+    "addr:subdistrict": "Trung Tự",
+    "air_conditioning": "yes",
+    "brand": "Vincom",
+    "building": "retail",
+    "building:levels": "8",
+    "building:levels:underground": "2",
+    "currency:VND": "yes",
+    "internet_access": "wlan",
+    "internet_access:fee": "no",
+    "internet_access:ssid": "AWING Vincom",
+    "name": "Vincom Phạm Ngọc Thạch",
+    "opening_hours": "Mo-Su 09:00-22:00",
+    "operator": "Vingroup",
+    "shop": "mall",
+    "toilets": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 136258986,
+  "center": {
+    "lat": 21.0021332,
+    "lon": 105.8388831
+  },
+  "tags": {
+    "amenity": "hospital",
+    "building": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Bệnh Nhiệt đới Trung ương",
+    "wheelchair": "yes",
+    "wikidata": "Q61132632",
+    "wikipedia": "vi:Bệnh viện Bệnh nhiệt đới Trung ương"
+  }
+},
+{
+  "type": "way",
+  "id": 136259226,
+  "center": {
+    "lat": 21.0123966,
+    "lon": 105.8150138
+  },
+  "tags": {
+    "addr:housenumber": "80",
+    "addr:street": "Ngõ 82 Yên Lãng",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Nội tiết Trung ương"
+  }
+},
+{
+  "type": "way",
+  "id": 163711327,
+  "center": {
+    "lat": 21.0155559,
+    "lon": 105.8267948
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:street": "Ngõ 180 Nguyễn Lương Bằng",
+    "amenity": "hospital",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "healthcare:speciality": "general",
+    "name": "Bệnh viện Đa khoa Đống Đa",
+    "name:en": "Dong Da General Hospital",
+    "name:tr": "Dong Da Hastanesi"
+  }
+},
+{
+  "type": "way",
+  "id": 199148844,
+  "center": {
+    "lat": 21.0268213,
+    "lon": 105.8074644
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:province": "Hà Nội",
+    "addr:street": "Ngõ 933 Đê La Thành",
+    "addr:subdistrict": "Ngọc Khánh",
+    "amenity": "hospital",
+    "contact:phone": "+84 24 3211 5944",
+    "contact:website": "https://benhvienphusanhanoi.vn/",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "healthcare:speciality": "maternity;gynaecology",
+    "name": "Bệnh viện Phụ sản Hà Nội",
+    "name:en": "Hanoi Obstetrics & Gynecology Hospital",
+    "name:ru": "Родильный дом Ханоя",
+    "name:tr": "Hanoi Obstetri ve Jinekoloji Hastanesi"
+  }
+},
+{
+  "type": "way",
+  "id": 199148846,
+  "center": {
+    "lat": 21.0249118,
+    "lon": 105.8083673
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "18",
+    "addr:province": "Hà Nội",
+    "addr:street": "Ngõ 879 La Thành",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "hospital",
+    "contact:email": "chamsockhachhang@nch.gov.vn",
+    "contact:fax": "+84 24 6273 8573",
+    "contact:phone": "+84 24 6273 8532",
+    "contact:website": "https://benhviennhitrunguong.gov.vn/",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "healthcare:speciality": "paediatrics",
+    "name": "Bệnh viện Nhi Trung ương",
+    "name:en": "Vietnam National Children's Hospital",
+    "name:ru": "Вьетнамский Национальный центр педиатрии",
+    "name:tr": "Viyetnam Ulusal Çocuk Hastalıkları Hastanesi",
+    "name:vi": "Bệnh viện Nhi Trung ương",
+    "wikidata": "Q7928527",
+    "wikipedia": "vi:Bệnh viện Nhi Trung ương"
+  }
+},
+{
+  "type": "way",
+  "id": 199150831,
+  "center": {
+    "lat": 21.0225863,
+    "lon": 105.8051833
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "91",
+    "addr:province": "Hà Nội",
+    "addr:street": "Chùa Láng",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "university",
+    "education": "university",
+    "internet_access": "wlan",
+    "name": "Trường Đại học Ngoại thương",
+    "name:en": "Foreign Trade University",
+    "operator": "Bộ Giáo dục và Đào tạo",
+    "operator:type": "public/government",
+    "website": "https://www.ftu.edu.vn/",
+    "wikidata": "Q5468340",
+    "wikimedia_commons": "Category:Trường Đại học Ngoại thương",
+    "wikipedia": "en:Foreign Trade University"
+  }
+},
+{
+  "type": "way",
+  "id": 207314367,
+  "center": {
+    "lat": 21.0291191,
+    "lon": 105.8033558
+  },
+  "tags": {
+    "amenity": "bus_station",
+    "bus": "yes",
+    "name": "Trạm trung chuyển Cầu Giấy",
+    "network": "Hanoibus",
+    "public_transport": "station"
+  }
+},
+{
+  "type": "way",
+  "id": 218625367,
+  "center": {
+    "lat": 21.0018102,
+    "lon": 105.8394004
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "78",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Giải Phóng",
+    "addr:subdistrict": "Phương Mai",
+    "amenity": "hospital",
+    "designation": "Ministry of Health",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Bạch Mai",
+    "name:en": "Bach Mai Hospital",
+    "name:fr": "L'Hôpitale de Bach Mai",
+    "name:id": "Rumah Sakit Bach Mai",
+    "name:tr": "Bach Mai Hastanesi",
+    "name:zh": "白梅医院",
+    "source": "public",
+    "website": "https://bachmai.gov.vn",
+    "wikidata": "Q1074095",
+    "wikimedia_commons": "Category:Bạch Mai Hospital",
+    "wikipedia": "vi:Bệnh viện Bạch Mai"
+  }
+},
+{
+  "type": "way",
+  "id": 219977469,
+  "center": {
+    "lat": 21.0094586,
+    "lon": 105.8290726
+  },
+  "tags": {
+    "addr:district": "Kim Liên",
+    "addr:housenumber": "12",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Chùa Bộc",
+    "amenity": "university",
+    "barrier": "wall",
+    "education": "university",
+    "internet_access": "yes",
+    "internet_access:fee": "customers",
+    "name": "Học viện Ngân hàng",
+    "name:en": "Banking Academy",
+    "website": "https://hvnh.edu.vn/",
+    "wikidata": "Q10771894",
+    "wikipedia": "vi:Học viện Ngân hàng (Việt Nam)"
+  }
+},
+{
+  "type": "way",
+  "id": 438373210,
+  "center": {
+    "lat": 21.0021305,
+    "lon": 105.8303797
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "1",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Tôn Thất Tùng",
+    "addr:subdistrict": "Kim Liên",
+    "amenity": "hospital",
+    "building": "hospital",
+    "ele": "20m",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Đại học Y Hà Nội"
+  }
+},
+{
+  "type": "way",
+  "id": 570572166,
+  "center": {
+    "lat": 21.0226507,
+    "lon": 105.8063310
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "69",
+    "addr:province": "Hà Nội",
+    "addr:street": "Chùa Láng",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "university",
+    "contact:facebook": "https://www.facebook.com/doanthanhniendav",
+    "education": "university",
+    "internet_access": "wlan",
+    "internet_access:fee": "no",
+    "isced:level": "5;6",
+    "name": "Học viện Ngoại giao",
+    "name:en": "Diplomatic Academy of Vietnam",
+    "name:ru": "Академия международных отношений",
+    "opening_hours": "Mo-Su 05:00-22:30",
+    "operator": "Bộ Ngoại giao",
+    "operator:type": "public",
+    "school:gender": "mixed",
+    "source": "grab_hanoi_2018_t2;local knowledge",
+    "website": "https://dav.edu.vn",
+    "wheelchair": "yes",
+    "wikidata": "Q10771893",
+    "wikimedia_commons": "Category:Diplomatic Academy of Vietnam",
+    "wikipedia": "vi:Học viện Ngoại giao (Việt Nam)"
+  }
+},
+{
+  "type": "way",
+  "id": 570573187,
+  "center": {
+    "lat": 21.0223145,
+    "lon": 105.8086525
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "3",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Chùa Láng",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "university",
+    "contact:facebook": "https://www.facebook.com/hocvienthanhnienvietnam",
+    "education": "university",
+    "email": "vya@edu.vn",
+    "fax": "+84 24 3834 3239",
+    "name": "Học viện Thanh thiếu niên Việt Nam",
+    "name:en": "Vietnam Youth Academy",
+    "operator": "Trung ương Đoàn TNCS Hồ Chí Minh",
+    "operator:type": "public/government",
+    "phone": "+84 24 3834 3239",
+    "source": "grab_hanoi_2018_t3",
+    "website": "https://vya.edu.vn/",
+    "wikidata": "Q97166894",
+    "wikipedia": "vi:Học viện Thanh thiếu niên Việt Nam"
+  }
+},
+{
+  "type": "way",
+  "id": 570573930,
+  "center": {
+    "lat": 21.0261377,
+    "lon": 105.8025875
+  },
+  "tags": {
+    "addr:housenumber": "169",
+    "addr:street": "Phố Huỳnh Thúc Kháng",
+    "amenity": "hospital",
+    "email": "info@giaothonghospital.vn",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Giao thông Vận tải",
+    "phone": "+84 91 123 32 09",
+    "source": "grab_hanoi_2018_t3",
+    "website": "https://giaothonghospital.vn/"
+  }
+},
+{
+  "type": "way",
+  "id": 698722897,
+  "center": {
+    "lat": 21.0065366,
+    "lon": 105.8173652
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "220",
+    "addr:postcode": "10165",
+    "addr:province": "Hanoi",
+    "addr:street": "Đường Láng",
+    "amenity": "college",
+    "building:levels": "7",
+    "education": "college",
+    "height": "30",
+    "name": "Trường Đào tạo Cán bộ Lê Hồng Phong",
+    "name:etymology:wikidata": "Q4255657"
+  }
+},
+{
+  "type": "way",
+  "id": 702456216,
+  "center": {
+    "lat": 21.0281103,
+    "lon": 105.8385861
+  },
+  "tags": {
+    "addr:city": "Ha Noi",
+    "addr:country": "VN",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "79B",
+    "addr:street": "Phố Nguyễn Khuyến",
+    "addr:subdistrict": "Văn Miếu",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Da liễu Hà Nội"
+  }
+},
+{
+  "type": "way",
+  "id": 702456223,
+  "center": {
+    "lat": 21.0268166,
+    "lon": 105.8390572
+  },
+  "tags": {
+    "addr:housenumber": "16",
+    "addr:street": "Phố Nguyễn Như Đổ",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Đa khoa Hồng Hà"
+  }
+},
+{
+  "type": "way",
+  "id": 702456227,
+  "center": {
+    "lat": 21.0270923,
+    "lon": 105.8392143
+  },
+  "tags": {
+    "amenity": "marketplace",
+    "landuse": "retail",
+    "name": "Chợ Ngô Sĩ Liên",
+    "name:en": "Ngo Si Lien Market",
+    "name:id": "Pasar Ngo Si Lien",
+    "name:zh": "吴士连市场"
+  }
+},
+{
+  "type": "way",
+  "id": 821395356,
+  "center": {
+    "lat": 21.0066924,
+    "lon": 105.8257726
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "175",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Tây Sơn",
+    "addr:subdistrict": "Trung Liệt",
+    "amenity": "university",
+    "education": "university",
+    "name": "Trường Đại học Thủy lợi",
+    "name:en": "Thuyloi University",
+    "website": "https://www.tlu.edu.vn/",
+    "wikidata": "Q7973360",
+    "wikimedia_commons": "Category:Thủy Lợi University",
+    "wikipedia": "vi:Trường Đại học Thủy lợi"
+  }
+},
+{
+  "type": "way",
+  "id": 826346237,
+  "center": {
+    "lat": 21.0277192,
+    "lon": 105.8026964
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "3",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Cầu Giấy",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "university",
+    "education": "university",
+    "email": "dhgtvt@utc.edu.vn",
+    "fax": "+84 24 37669613",
+    "name": "Trường Đại học Giao thông Vận tải",
+    "name:en": "University of Transport and Communications",
+    "operator": "Bộ Giáo dục & Đào tạo",
+    "operator:type": "public/government",
+    "phone": "+84 24 37663311",
+    "website": "https://www.utc.edu.vn/",
+    "wikidata": "Q10829041",
+    "wikipedia": "vi:Trường Đại học Giao thông Vận tải"
+  }
+},
+{
+  "type": "way",
+  "id": 840803809,
+  "center": {
+    "lat": 21.0026637,
+    "lon": 105.8183919
+  },
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Ngã Tư Sở"
+  }
+},
+{
+  "type": "way",
+  "id": 840867180,
+  "center": {
+    "lat": 21.0060492,
+    "lon": 105.8355452
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Lương Định Của",
+    "addr:subdistrict": "Kim Liên",
+    "amenity": "marketplace",
+    "name": "Chợ Kim Liên"
+  }
+},
+{
+  "type": "way",
+  "id": 857438584,
+  "center": {
+    "lat": 21.0093319,
+    "lon": 105.8379891
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "5",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Xã Đàn",
+    "addr:subdistrict": "Phương Liên – Trung Tự",
+    "amenity": "hospital",
+    "building": "hospital",
+    "building:levels": "10",
+    "contact:facebook": "https://www.facebook.com/benhviendongdoHN/",
+    "email": "dongdohospital@gmail.com",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "healthcare:speciality": "general",
+    "name": "Bệnh viện Đông Đô",
+    "phone": "+84 1900 1965",
+    "website": "https://benhviendongdo.com.vn/"
+  }
+},
+{
+  "type": "way",
+  "id": 860294715,
+  "center": {
+    "lat": 21.0261842,
+    "lon": 105.8318299
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "35",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đoàn Thi Điểm",
+    "addr:subdistrict": "Quốc Tử Giám",
+    "amenity": "college",
+    "education": "college",
+    "name": "Trường Cao đẳng Y tế Hà Nội"
+  }
+},
+{
+  "type": "way",
+  "id": 862095210,
+  "center": {
+    "lat": 21.0234315,
+    "lon": 105.8238275
+  },
+  "tags": {
+    "addr:city": "Tp Hà Nội",
+    "addr:district": "Quận Đống Đa",
+    "addr:housenumber": "360",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường La Thành",
+    "addr:subdistrict": "Phường Ô Chợ Dừa",
+    "amenity": "university",
+    "education": "university",
+    "name": "Trường Đại học Mỹ thuật Công nghiệp",
+    "name:en": "University of Arts and Design",
+    "website": "https://uad.edu.vn/",
+    "wikidata": "Q16481353",
+    "wikipedia": "vi:Trường Đại học Mỹ thuật Công nghiệp"
+  }
+},
+{
+  "type": "way",
+  "id": 862095212,
+  "center": {
+    "lat": 21.0229519,
+    "lon": 105.8259549
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "77",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Hào Nam",
+    "addr:subdistrict": "Ô Chợ Dừa",
+    "amenity": "university",
+    "education": "university",
+    "email": "hvan@vnam.edu.vn",
+    "fax": "+84 24 3851 3545",
+    "name": "Học viện Âm nhạc Quốc gia Việt Nam",
+    "name:en": "Vietnam National Academy of Music",
+    "phone": "+84 24 3851 4969",
+    "website": "https://www.vnam.edu.vn/",
+    "wikidata": "Q5649320",
+    "wikimedia_commons": "Category:Hanoi Conservatory of Music",
+    "wikipedia": "vi:Học viện Âm nhạc Quốc gia Việt Nam"
+  }
+},
+{
+  "type": "way",
+  "id": 888367936,
+  "center": {
+    "lat": 21.0055499,
+    "lon": 105.8313907
+  },
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Khương Thượng"
+  }
+},
+{
+  "type": "way",
+  "id": 888629818,
+  "center": {
+    "lat": 21.0130009,
+    "lon": 105.8151075
+  },
+  "tags": {
+    "addr:district": "Quận Đống Đa",
+    "addr:province": "Thành phố Hà Nội",
+    "addr:street": "Phố Thái Thịnh",
+    "amenity": "college",
+    "education": "college",
+    "name": "Trường Cao đẳng nghề Công nghiệp Hà Nội"
+  }
+},
+{
+  "type": "way",
+  "id": 900842178,
+  "center": {
+    "lat": 21.0005720,
+    "lon": 105.8306240
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "190",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Trường Chinh",
+    "addr:subdistrict": "Khương Thượng",
+    "amenity": "hospital",
+    "building": "hospital",
+    "building:levels": "9",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Thẩm mỹ Kangnam Hàn Quốc"
+  }
+},
+{
+  "type": "way",
+  "id": 906631345,
+  "center": {
+    "lat": 21.0172185,
+    "lon": 105.8073682
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "101",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Nguyễn Chí Thanh",
+    "addr:subdistrict": "Láng Hạ",
+    "amenity": "university",
+    "contact:facebook": "https://www.facebook.com/MUCA.NTQD",
+    "education": "university",
+    "email": "vnq.edu@gmail.com",
+    "name": "Trường Đại học Văn hóa Nghệ thuật Quân đội",
+    "name:en": "Military University of Culture and Arts",
+    "operator": "Tổng cục Chính trị",
+    "operator:type": "military",
+    "phone": "+84 24 362663068",
+    "website": "http://vnq.edu.vn/",
+    "wikidata": "Q10829163",
+    "wikipedia": "vi:Trường Đại học Văn hóa – Nghệ thuật Quân đội"
+  }
+},
+{
+  "type": "way",
+  "id": 906732060,
+  "center": {
+    "lat": 21.0194894,
+    "lon": 105.8071746
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "68",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Nguyễn Chí Thanh",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "university",
+    "education": "university",
+    "name": "Học viện Phụ nữ Việt Nam",
+    "name:en": "Vietnam Women's Academy",
+    "phone": "+84 24 3775 9907",
+    "website": "https://hvpnvn.edu.vn",
+    "wikidata": "Q18458592",
+    "wikipedia": "vi:Học viện Phụ nữ Việt Nam"
+  }
+},
+{
+  "type": "way",
+  "id": 906732062,
+  "center": {
+    "lat": 21.0189013,
+    "lon": 105.8064109
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "70",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Nguyễn Chí Thanh",
+    "addr:subdistrict": "Láng Thượng",
+    "amenity": "hospital",
+    "building": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Thận Hà Nội",
+    "name:en": "Hanoi Nephrology Hospital",
+    "name:tr": "Hanoi Nefroloji Hastanesi"
+  }
+},
+{
+  "type": "way",
+  "id": 943911446,
+  "center": {
+    "lat": 21.0139879,
+    "lon": 105.8227268
+  },
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Thái Hà"
+  }
+},
+{
+  "type": "way",
+  "id": 958652600,
+  "center": {
+    "lat": 21.0093127,
+    "lon": 105.8306210
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "58",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Nguyễn Ngọc Doãn",
+    "addr:subdistrict": "Phương Liên – Trung Tự",
+    "amenity": "college",
+    "education": "college",
+    "name": "Trường Trung cấp Kỹ thuật Tin học Hà Nội (cơ sở 2)",
+    "name:en": "Hanoi College of Information Technology",
+    "operator": "Sở Giáo dục và Đào tạo Hà Nội",
+    "operator:type": "public/government"
+  }
+},
+{
+  "type": "way",
+  "id": 1051883528,
+  "center": {
+    "lat": 21.0142180,
+    "lon": 105.8408994
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "48",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Ô Đồng Lầm",
+    "addr:subdistrict": "Phương Liên",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "healthcare:speciality": "maternity",
+    "name": "Bệnh Viện Đức Phúc",
+    "opening_hours": "24/7",
+    "phone": "+84 971 295 050",
+    "website": "https://benhvienducphuc.com/"
+  }
+},
+{
+  "type": "way",
+  "id": 1158639496,
+  "center": {
+    "lat": 21.0036321,
+    "lon": 105.8404443
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "1",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Phương Mai",
+    "addr:subdistrict": "Phương Mai",
+    "amenity": "hospital",
+    "contact:phone": "+84 24 3577 1100",
+    "contact:website": "https://www.hfh.com.vn",
+    "emergency": "yes",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Việt Pháp",
+    "name:en": "Hanoi French Hospital",
+    "name:tr": "Hanoi Fransız Hastanesi"
+  }
+},
+{
+  "type": "way",
+  "id": 1192868591,
+  "center": {
+    "lat": 21.0036327,
+    "lon": 105.8395966
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "1A",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Phương Mai",
+    "addr:subdistrict": "Phương Mai",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Lão khoa Trung ương",
+    "phone": "+84 24 3576 4558",
+    "website": "https://benhvienlaokhoa.vn"
+  }
+},
+{
+  "type": "way",
+  "id": 1192868592,
+  "center": {
+    "lat": 21.0038010,
+    "lon": 105.8387631
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "15A",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Phương Mai",
+    "addr:subdistrict": "Phương Mai",
+    "amenity": "hospital",
+    "email": "bvdalieutrunguong@gmail.com",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Da liễu Trung ương",
+    "phone": "+84 24 3222 2944",
+    "website": "https://dalieu.vn"
+  }
+},
+{
+  "type": "way",
+  "id": 1192868593,
+  "center": {
+    "lat": 20.9996733,
+    "lon": 105.8405781
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "78",
+    "addr:province": "Hà Nội",
+    "addr:street": "Đường Giải Phóng",
+    "addr:subdistrict": "Phương Mai",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Tai-Mũi-Họng Trung ương"
+  }
+},
+{
+  "type": "way",
+  "id": 1192929296,
+  "center": {
+    "lat": 21.0021026,
+    "lon": 105.8370342
+  },
+  "tags": {
+    "addr:housenumber": "1",
+    "addr:street": "Ngõ 89 Lương Định Của",
+    "amenity": "college",
+    "education": "college",
+    "name": "Trường Cao đẳng Y tế và Thiết bị Việt Đức"
+  }
+},
+{
+  "type": "way",
+  "id": 1215063381,
+  "center": {
+    "lat": 21.0121436,
+    "lon": 105.8217867
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "21",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Trung Liệt",
+    "addr:subdistrict": "Trung Liệt",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "landuse": "military",
+    "name": "Viện Y học dự phòng Quân đội",
+    "operator": "Cục Quân y",
+    "operator:type": "military"
+  }
+},
+{
+  "type": "way",
+  "id": 1216451393,
+  "center": {
+    "lat": 21.0073245,
+    "lon": 105.8226083
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "290",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Tây Sơn",
+    "addr:subdistrict": "Trung Liệt",
+    "amenity": "college",
+    "education": "college",
+    "name": "Trường Trung cấp Nghiệp vụ và Dạy nghề Công đoàn Hà Nội",
+    "operator": "Liên đoàn Lao động thành phố Hà Nội",
+    "operator:type": "association"
+  }
+},
+{
+  "type": "way",
+  "id": 1245995569,
+  "center": {
+    "lat": 21.0169494,
+    "lon": 105.8332492
+  },
+  "tags": {
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Nhà hộ sinh Đống Đa"
+  }
+},
+{
+  "type": "way",
+  "id": 1421773641,
+  "center": {
+    "lat": 21.0256896,
+    "lon": 105.8353451
+  },
+  "tags": {
+    "addr:street": "Ngõ Thông Phong",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Đa khoa Tràng An"
+  }
+},
+{
+  "type": "way",
+  "id": 1468500882,
+  "center": {
+    "lat": 21.0082178,
+    "lon": 105.8193783
+  },
+  "tags": {
+    "addr:housenumber": "49",
+    "addr:street": "Phố Thái Thịnh",
+    "amenity": "hospital",
+    "healthcare": "hospital",
+    "name": "Bệnh viện Châm cứu Trung ương",
+    "name:en": "National Hospital of Acupuncture"
+  }
+},
+{
+  "type": "way",
+  "id": 1497353878,
+  "center": {
+    "lat": 21.0135017,
+    "lon": 105.8078413
+  },
+  "tags": {
+    "amenity": "marketplace",
+    "name": "Chợ Láng Hạ"
+  }
+},
+{
+  "type": "relation",
+  "id": 16802530,
+  "center": {
+    "lat": 21.0023240,
+    "lon": 105.8322323
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "1",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Tôn Thất Tùng",
+    "addr:subdistrict": "Kim Liên",
+    "amenity": "university",
+    "education": "university",
+    "email": "daihocyhn@hmu.edu.vn",
+    "lit": "yes",
+    "name": "Trường Đại học Y Hà Nội",
+    "name:en": "Hanoi Medical University",
+    "name:vi": "Trường Đại học Y Hà Nội",
+    "operator": "Bộ Y tế",
+    "operator:type": "public/government",
+    "phone": "+84 24 3852 3798",
+    "type": "multipolygon",
+    "website": "https://hmu.edu.vn",
+    "wikidata": "Q4383725",
+    "wikimedia_commons": "Category:Hanoi Medical University",
+    "wikipedia": "vi:Trường Đại học Y Hà Nội"
+  }
+},
+{
+  "type": "relation",
+  "id": 17666269,
+  "center": {
+    "lat": 21.0096251,
+    "lon": 105.8265717
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "169",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Tây Sơn",
+    "addr:subdistrict": "Quang Trung",
+    "amenity": "university",
+    "education": "university",
+    "name": "Trường Đại học Công đoàn",
+    "name:en": "Trade Union University",
+    "type": "multipolygon",
+    "website": "http://dhcd.edu.vn/",
+    "wikidata": "Q16480704",
+    "wikipedia": "vi:Trường Đại học Công đoàn"
+  }
+},
+{
+  "type": "relation",
+  "id": 17666773,
+  "center": {
+    "lat": 21.0239896,
+    "lon": 105.8228074
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:district": "Đống Đa",
+    "addr:housenumber": "418",
+    "addr:street": "Đường La Thành",
+    "amenity": "university",
+    "education": "university",
+    "name": "Trường Đại học Văn hóa Hà Nội",
+    "name:en": "Hanoi University of Culture",
+    "name:ja": "ハノイ文化大学",
+    "type": "multipolygon",
+    "website": "https://www.huc.edu.vn/",
+    "wikidata": "Q10829164",
+    "wikipedia": "vi:Trường Đại học Văn hóa Hà Nội"
+  }
+},
+{
+  "type": "relation",
+  "id": 20656551,
+  "center": {
+    "lat": 21.0310954,
+    "lon": 105.8305403
+  },
+  "tags": {
+    "addr:city": "Hà Nội",
+    "addr:housenumber": "175",
+    "addr:province": "Hà Nội",
+    "addr:street": "Phố Nguyễn Thái Học",
+    "addr:subdistrict": "Ô Chợ Dừa",
+    "air_conditioning": "yes",
+    "building": "yes",
+    "contact:facebook": "https://www.facebook.com/hanoicentre.vn",
+    "contact:instagram": "https://www.instagram.com/hanoicentre",
+    "email": "cs@hanoicentre.com.vn",
+    "internet_access": "wlan",
+    "internet_access:ssid": "TTTM Hanoi Centre Free Wifi",
+    "name": "Hanoi Centre",
+    "opening_hours": "Mo-Th 09:30-21:30; Fr-Su 09:30-22:00",
+    "phone": "+84 24 3368 6863",
+    "shop": "mall",
+    "toilets": "yes",
+    "type": "multipolygon",
+    "website": "https://hanoicentre.com.vn/"
+  }
+}
+
+  ]
+}

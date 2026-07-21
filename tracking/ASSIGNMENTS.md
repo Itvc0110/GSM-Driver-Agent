@@ -17,7 +17,7 @@ Cơ chế: công việc sống trong `tracking/TODO.md` và có thể được c
 
 | Ngày | Người | Việc (T-###) | Phạm vi files/folders | Trạng thái | Ghi chú |
 | --- | --- | --- | --- | --- | --- |
-| | | | | | |
+| 2026-07-21 | Cường | T-018 (kế tiếp T-019, T-020) | `sim/` (code mới), `specs/simulation-*` + `sim-policy-bundle-v0` + `advisor-optimization-layer-a`, `tracking/` | DOING | Cường tự claim (hiện chỉ một mình làm); AI agent làm dưới claim này |
 
 ## Lịch sử
 
