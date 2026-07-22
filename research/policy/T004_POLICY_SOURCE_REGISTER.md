@@ -48,8 +48,9 @@ only (`greensm.com`, `cdn.xanhsm.com`) · **Snapshot:** 2026-07-21.
 
 ## Deliberate repository boundary
 
-Raw HTML/text, image assets, OCR/vision transcriptions, crawler scripts and test
-fixtures were intentionally removed after T-004 preparation. They would otherwise
-be stale, large, and incorrectly resemble production knowledge. Later work must
-re-fetch the official URL and create a new reviewed evidence record outside the
-agent prompt.
+The compact [text-only corpus](./t004-current-policy-text-corpus-2026-07-22.json)
+and its [safe-reading guide](./T004_TEXT_CORPUS_USAGE.md) are retained for human
+inspection and later reviewer work. Raw HTML, image assets, OCR/vision
+transcriptions, crawler scripts and test fixtures remain excluded so the
+repository does not mistake them for production knowledge. A later source change
+still requires a re-fetch and reviewer decision before any policy fact is used.

@@ -25,4 +25,4 @@ Cơ chế: công việc sống trong `tracking/TODO.md` và có thể được c
 | Ngày claim → xong | Người | Việc | Kết quả / bàn giao |
 | --- | --- | --- | --- |
 | | | | |
-| 2026-07-21 → 2026-07-22 | Khánh | T-004 | Audit nguồn T1 official (sitemap + Driver Center), curate source Bike/RTO/Platform, kiểm tra track/geo/lifecycle và raw evidence. Kết quả bàn giao gọn: `research/policy/T004_POLICY_SOURCE_REGISTER.md` gồm 7 URL current + guardrail; raw crawl/asset/code/update lặp đã xóa, không tạo runtime/contract. |
+| 2026-07-21 → 2026-07-22 | Khánh | T-004 | Audit nguồn T1 official (sitemap + Driver Center), curate source Bike/RTO/Platform, kiểm tra track/geo/lifecycle và raw evidence. Bàn giao: source register và corpus text-only 7 nguồn current, có provenance + guardrail; HTML/asset/OCR/crawler lặp vẫn loại, không tạo runtime/contract. |
