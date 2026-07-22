@@ -23,10 +23,38 @@
 
 (SCOPE / TODO / DEFERRED / USER_STORIES / RESEARCH có đổi không? Nếu không đổi, ghi "không".)
 
+## Assumptions và evidence
+
+| Claim / tham số | Nhãn (`FACT` / `OBSERVED-CODE` / `PROXY` / `MOCK` / `ASSUMPTION` / `UNVERIFIED`) | Nguồn / bằng chứng | Confidence | Tác động nếu sai |
+| --- | --- | --- | --- | --- |
+| | | | | |
+
 ## Kiểm chứng
 
 (Đã test/chạy thử gì, kết quả; cái gì CHƯA kiểm chứng phải ghi rõ.)
 
+### Seeds và scenarios
+
+| Command / run | Seed set | Scenario set | Kết quả / artifact | Chưa kiểm chứng |
+| --- | --- | --- | --- | --- |
+| | | | | |
+
+## Visual verification
+
+- **Status:** `REVIEWED` / `WAIVED` / `NOT_APPLICABLE` / `BLOCKED`
+- **Cách launch / artifact:**
+- **Seed / scenario đã xem:**
+- **Người review + verdict:**
+- **Nếu WAIVED/BLOCKED/NOT_APPLICABLE:** ghi yêu cầu waive, blocker hoặc lý do cụ thể.
+
+## Adversarial self-review / flaws found
+
+1. Điều gì có thể khiến kết quả trông tốt nhưng sai?
+2. Có future-information leak, CRN drift, hidden fallback/clipping, unit mismatch, factor double-count hoặc visual aggregation bias không?
+3. Assumption/evidence nào yếu nhất?
+4. Đã so với baseline nào và giả thuyết nào đã loại trừ?
+5. Flaw còn mở map vào TODO/DEFERRED ID nào?
+
 ## Follow-up / defer phát sinh
 
-(Việc mới sinh ra → thêm vào TODO; ý tưởng ngoài scope → thêm vào DEFERRED; ghi ID.)
+(Việc mới sinh ra → thêm vào TODO; ý tưởng ngoài scope → thêm vào DEFERRED; ghi ID, severity/evidence và điều kiện mở lại.)

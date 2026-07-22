@@ -75,6 +75,22 @@ Sáu yêu cầu mới được phản ánh vào 2 spec + 3 research:
 
 **Pilot thu hẹp (Cường 2026-07-21 đợt 2, APPROVED + arm C):** phạm vi biểu diễn đầu tiên = **quận Đống Đa cũ, H3 res 9 (85 cells), 50 actors, ~1.200 đơn/ngày, 11 tủ đổi pin thật từ OSM**; timestep phân tầng (DES + dispatch tick 5s + bucket 15ph + advisor anchor 30ph); action set actor chốt theo hành vi thực tài xế (nghiên cứu `research/simulation/action-space.md`) — spec: `specs/simulation-pilot-world.md`. Mở rộng toàn nội thành (N=500, res 8) sau pilot, giữ nguyên kiến trúc.
 
+## 5c. Mở rộng 2026-07-22 — Chương trình simulator reliability-first M0–M4 (Cường APPROVED)
+
+Source of truth về phasing, contract và exit gate: `specs/simulation-reliability-upgrade.md`.
+
+Thứ tự bắt buộc:
+
+1. **M0 Integrity:** audit working diff và baseline; khóa lifecycle, time/money/battery/order conservation, spatial invariants, determinism/CRN và evidence labels trước khi thêm behavior.
+2. **M1 24h dynamic market:** run target `[00:00,24:00)`; `actors.n` = daily actor pool, active supply biến động theo participation/shift/rest/charge/offline; demand được kiểm định theo per-event và bins 1/5/15 phút trên ensemble multi-seed.
+3. **M2 Spatial/exogenous world:** pickup/dropoff snap OSM road/POI nodes có provenance; H3 dùng cho demand/congestion/candidate shortlist, lat/lon/route cho movement/ETA; weather/events/route effects/distribution shifts là versioned traces dùng chung các arm, không gọi live API trong sim loop.
+4. **M3 Stakeholder visualization:** narrative city pulse → actor journey/flaw → advisor placeholder; Diagnostic Mode cho lifecycle, distribution, H3 dispatch, station inventory và audit. Meaningful sim/UI update phải mở visualization thật cho Cường review theo `CLAUDE.md` §4b.
+5. **M4 Advisor/twin-runner:** advice→actor policy/adherence, capacity ledger, A/B/C CRN, paired evaluator, observability và LLM-off template fallback.
+
+Pilot 05:00–24:00 ở §5b là compatibility/history profile. Target mới của M1 là full day; không được silently renormalize phân phối 24h vào window cũ rồi gọi là market 24h.
+
+Ranh giới sản phẩm giữ nguyên: chương trình này phục vụ simulator/advisor-sim và đánh giá; hệ thống thật không can thiệp matching/dispatch/pricing/routing, không khuyên nhận/từ chối/hủy đơn cụ thể, và không trình bày MOCK/PROXY như dữ liệu GSM thật.
+
 ## 6. Cách mở rộng scope
 
 Tăng dần theo **pain point** và **user story** của tài xế (`planning/USER_STORIES.md`). Mỗi lần mở rộng: xác nhận pain point bằng nghiên cứu thực tế trước, rồi mới thêm feature.

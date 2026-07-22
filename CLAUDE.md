@@ -1,6 +1,6 @@
 # CLAUDE.md — Harness cho AI coding agent (GSM Driver Income Agent)
 
-Cập nhật: 2026-07-20. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
+Cập nhật: 2026-07-22. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
 
 ## 1. Dự án là gì
 
@@ -41,6 +41,48 @@ Sau mỗi thay đổi có ý nghĩa (code, docs, data, cấu trúc), tạo file 
 - **Follow-up/defer** phát sinh.
 
 Đồng thời cập nhật trạng thái mục tương ứng trong `tracking/TODO.md`. Thay đổi không có UPDATE đi kèm được coi là chưa hoàn thành.
+
+## 4b. Quy trình implementation, debug, self-review và visual verification BẮT BUỘC
+
+### Coherent implementation cycle
+
+- Trước mỗi **coherent implementation cycle** có thay đổi code, simulation behavior, UI, data contract, architecture hoặc docs quan trọng, agent phải **brainstorm để xác nhận mục tiêu/assumption/ranh giới/acceptance**, sau đó mới vào **plan mode** và xin duyệt plan trước khi implement. Một cycle là một deliverable nhất quán, test/review/commit độc lập được; không cần brainstorm/plan riêng cho từng dòng, từng red-green step, typo hoặc chỉnh câu không đổi nghĩa.
+- Phải brainstorm/plan lại nếu scope vượt milestone đã duyệt, assumption chính thay đổi, root cause thực tế khác plan, hoặc cycle đã phình đến mức không còn review được như một khối độc lập.
+
+### Root-cause protocol cho bug/output bất thường
+
+Khi thấy crash, nondeterminism, impossible state, metric shift không giải thích được, visual inconsistency hoặc seed-specific anomaly, **không sửa ngay theo phỏng đoán**. Bắt buộc theo chuỗi:
+
+`reproduce → classify (BUG / MODEL GAP / CALIBRATION GAP / VISIBILITY GAP) → compare baseline → instrument → prove root cause → thêm failing regression test → narrow fix → verify multi-seed + boundary + full suite → adversarial self-review`.
+
+- Chưa reproduce hoặc chưa chứng minh root cause thì ghi `UNRESOLVED`, không ghi “fixed”.
+- Không được chỉnh calibration để che BUG. External-data/infrastructure failure phải có deterministic fixture/reproduction ở đúng boundary, không sửa domain logic để che lỗi.
+- Mặc định: deterministic invariant/bug phải exact-repeat; stochastic behavior regression chạy **ít nhất 5 seeds**; distribution/calibration chạy **ít nhất 30 seeds** với tolerance/CI. Plan có thể chọn số khác nếu giải thích statistical power/cost.
+
+### Adversarial self-review trước khi báo hoàn thành
+
+Phải double-check tối thiểu:
+
+- lifecycle/terminal state và time/money/battery/order conservation;
+- future-information leak, CRN drift, random stream contamination;
+- factor double-count, hidden clipping/fallback, unit mismatch;
+- config flag có thực sự được dùng và disabled factor có quay về baseline;
+- UI có đọc canonical source-of-truth hay tự recompute khác engine/evaluator;
+- MOCK/PROXY/ASSUMPTION có nhãn, nguồn và confidence;
+- seed/scenario nào có thể làm kết luận đảo chiều;
+- flaw mới đã map vào TODO/DEFERRED với severity/evidence/reopen condition.
+
+UPDATE phải có mục `Adversarial self-review / flaws found`; không được bỏ qua vì test xanh.
+
+### Visual review gate
+
+- Sau mọi **meaningful simulator hoặc UI update** (dynamics, default parameter/assumption, metric/output, visual encoding, control, interaction hoặc cách stakeholder diễn giải kết quả), agent phải launch dashboard/replay thật, mở seed/scenario đã ghi cho Cường xem và chờ verdict **trước commit/push**, trừ khi Cường waive tường minh trong hội thoại hiện tại.
+- Docs-only, test-only hoặc refactor đã chứng minh không đổi output có thể ghi `NOT_APPLICABLE` kèm lý do. Launch lỗi thì status là `BLOCKED`; không được gọi update là complete/reviewed cho tới khi fix hoặc được waive.
+- Gate này không tự cấp quyền commit/push: vẫn chỉ commit/push khi người dùng yêu cầu.
+
+### Evidence và UPDATE tối thiểu
+
+Mỗi UPDATE phải ghi: nhãn evidence/assumption + confidence, seed/scenario thực chạy, cái chưa kiểm chứng, visual status (`REVIEWED / WAIVED / NOT_APPLICABLE / BLOCKED`), root cause/giả thuyết đã loại trừ nếu là bug, và adversarial flaw review. Template tại `tracking/updates/UPDATE_TEMPLATE.md` là bắt buộc.
 
 ## 5. Ranh giới sản phẩm (giữ nguyên từ pack cũ — vẫn có hiệu lực)
 

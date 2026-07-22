@@ -1,7 +1,9 @@
 # SPEC — Pilot World: Đống Đa, 50 actors, 3-arm twin-world (v1)
 
-Cập nhật: 2026-07-21 · Trạng thái: READY FOR BUILD (thiết kế theo khung đã được Cường approve 2026-07-21; chi tiết pilot theo yêu cầu thu hẹp đợt 2)
+Cập nhật: 2026-07-22 · Trạng thái: IMPLEMENTED PILOT / COMPATIBILITY PROFILE (05:00–24:00); nâng cấp bị gate bởi `simulation-reliability-upgrade.md` M0–M4.
 Nguồn: `research/simulation/pilot-world-dongda.md` + `timestep-design.md` + `action-space.md` + `world-parameters.md` + `evaluation-methodology.md` + `tooling.md`. Spec nền: `simulation-twin-world.md` (kiến trúc 3 arm — không đổi), `advice-timing-state-memory.md` (trigger/memory), `mock-order-distribution.md` (hour-shape).
+
+> **Override 2026-07-22:** các số 50 actors/1.200 orders và run 05:00–24:00 dưới đây mô tả pilot lịch sử. M1 target là `[00:00,24:00)` với `actors.n` = daily actor pool; phasing/gates theo `simulation-reliability-upgrade.md`. Không dùng target service của A-arm làm correctness gate cho B-arm.
 Data: `research/simulation/data/` — batt_dd.json (11 tủ pin thật), poi_dd.json, dd_geom.json (polygon 5 phường proxy), battery_nodes.json (144 tủ toàn HN cho bản mở rộng).
 
 ## 1. Thế giới pilot
@@ -11,7 +13,7 @@ Data: `research/simulation/data/` — batt_dd.json (11 tủ pin thật), poi_dd.
 | Khu vực | **Quận Đống Đa cũ** (proxy 5 phường mới: Đống Đa, Kim Liên, Ô Chợ Dừa, Văn Miếu–QTG, Láng), ~9,95 km² | pilot-world-dongda §1 |
 | Lưới | **H3 res 9**: 85 cells lõi (116 kể cả biên) — lưới vận hành; **res 8** (12 cells) cho heatmap/báo cáo qua `cell_to_parent` | §2 |
 | Actors | **N = 50**, sample từ 5 archetype (P1 20% · P2 30% · P3 10% · P4 25% · P5 15% — mix config được) với jitter giờ/target/cell nhà/SOC | twin-world §5 |
-| Đơn/ngày | `orders_per_day = 1.200` (dải 900–1.800); kỳ vọng served ~950–1.050 → 19–21 cuốc/actor; unserved target 15–20% | pilot-world-dongda §3 |
+| Đơn/ngày | `orders_per_day = 1.200` (dải 900–1.800) `[MOCK]`; 15–20% unserved là service objective/scenario target cho A-arm, **không phải integrity target của B-arm** | pilot-world-dongda §3 + reliability-upgrade M0 |
 | Demand không gian | `w_cell = a·pop_density + b·Σ(POI_loại×hệ_số)` chuẩn hóa; POI thật (26 BV, 13 ĐH, 3 TTTM, 10 chợ) + office-weight mock dọc trục Láng Hạ/NCT/Thái Hà/Hoàng Cầu | §4 |
 | Demand thời gian | hour-shape từ `mock-order-distribution.md` (2 đỉnh 7–9h, 17–19h ~2×TB; weather factor `clamp(1+0.006·mm/h, 1, 1.5)`) chiếu xuống cell | spec mock |
 | Trạm pin | **11 tủ thật** (tọa độ OSM), 6 khe (5 pin + 1 trống), đổi 90s (uniform 60–120s), sạc lại trong tủ 1,5–2h/viên → throughput ~2,5–3 pin/giờ/tủ; cụm Đông dày/Tây thưa | world-parameters §1 |
@@ -65,7 +67,7 @@ Data: `research/simulation/data/` — batt_dd.json (11 tủ pin thật), poi_dd.
 **DoD-core (T-018 — world/dispatcher/actors/twin-runner):**
 1. 2 lần chạy cùng seed → identical log (determinism test pass); diff exogenous trace giữa arm → identical.
 2. Sensitivity T1 5s vs 2s: |Δ| < 2% hoặc < ½ SD seeds trên metric nhạy (wait, expire, queue, payout).
-3. Calibration B-arm (T-021, **gate trước khi so sánh arm**): actor full-time 15–30 cuốc/ngày; pattern nghỉ/sạc trưa xuất hiện tự nhiên; unserved trong dải (lưu ý 3 con số ràng buộc nhau — tune 2, quan sát 1).
+3. Calibration B-arm (T-021, **gate trước khi so sánh arm**): output plausible/stable/explainable theo evidence tiers; actor full-time 15–30 cuốc/ngày và pattern nghỉ/sạc là benchmark `[PROXY]`, không invariant cứng. Unserved phải giải thích được theo supply/demand/lifecycle; không tune B-arm về 15–20% để làm A-arm trông tốt.
 
 **DoD-eval (T-019 advisor + T-020 evaluator):**
 4. Kịch bản 4: capacity ledger giảm P95 queue vs ledger-off, không giảm service level.
@@ -73,7 +75,7 @@ Data: `research/simulation/data/` — batt_dd.json (11 tủ pin thật), poi_dd.
 6. Adherence report phân tầng theo divergence index; proximal outcome (90ph quanh episode) báo cùng distal.
 
 **Tiền đề kinh tế:** mọi payout dùng `specs/sim-policy-bundle-v0.md` (fare 13k+4.3k/km, share 75%, điểm 10/5, mốc thưởng NGÀY mock, chi phí theo track); manifest ghi `policy_bundle_version`.
-**OD boundary:** buffer ring k≤4 (demand chỉ sinh trong 85 cells lõi; trả khách ngoài → deadhead quay về); run window 05:00–24:00, warm-up 1h, orders renormalize trong window.
+**OD boundary (compatibility pilot):** buffer ring k≤4 (demand chỉ sinh trong 85 cells lõi; trả khách ngoài phải có movement/deadhead rõ, không teleport); run 05:00–24:00 + warm-up 1h là profile lịch sử. M1 chuyển target sang `[00:00,24:00)` và không renormalize 24h demand vào window cũ.
 
 ## 8. Mở rộng sau pilot
 

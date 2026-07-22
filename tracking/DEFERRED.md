@@ -1,6 +1,6 @@
 # DEFERRED — Các mục đã hoãn
 
-Cập nhật: 2026-07-20. Mọi ý tưởng/việc ngoài minimum scope phải ghi vào đây (kèm lý do + điều kiện mở lại) thay vì tự triển khai. Không xóa mục — chuyển trạng thái khi mở lại.
+Cập nhật: 2026-07-22. Mọi ý tưởng/việc ngoài minimum scope phải ghi vào đây (kèm lý do + điều kiện mở lại) thay vì tự triển khai. Không xóa mục — chuyển trạng thái khi mở lại.
 
 | ID | Mục | Lý do defer | Điều kiện mở lại | Trạng thái |
 | --- | --- | --- | --- | --- |
@@ -13,4 +13,4 @@ Cập nhật: 2026-07-20. Mọi ý tưởng/việc ngoài minimum scope phải g
 | D-007 | Quy trình khiếu nại/giải trình khi tài xế bị phạt/trừ tiền (biểu mẫu, SLA, kháng nghị) | Cường 2026-07-20: bài toán khác (liên quan D-006); không research/build tiếp trong repo này | Cùng điều kiện D-006 | DEFERRED |
 | D-008 | Tích hợp **nguồn cộng đồng** (group tài xế, websearch kinh nghiệm) vào sản phẩm | Tính năng **tương lai/roadmap** sau khi hoàn thiện F0–F3; rủi ro tin sai/lỗi thời/PII → phải qua khối kiểm chứng & lọc rủi ro trước | Sau khi F0–F3 chạy ổn; triển khai theo `specs/community-source-risk-control.md` | ROADMAP |
 | D-009 | Đa loại đơn trong sim generator (chở khách + Xanh Express giao hàng + Xanh SM Ngon đồ ăn, policy khác nhau theo cohort) | Pilot v0 chỉ sinh 1 loại đơn để đơn giản; action-space đã ghi nhận 3 loại có thật | Sau khi pilot pass DoD-core; là hướng làm giàu tự nhiên (audit insight 6) | DEFERRED |
-| D-010 | Trong sim, các hạng mục sau pilot: kịch bản tuần + trust dynamics, counterfactual branch re-run, regime sweep orders∈{900,1200,1800} làm trục báo cáo chính, mất điện 1 trạm, adoption 70%, mở rộng res 8/N=500, ĐBTN cohort trong policy bundle | Không chặn giá trị pilot (audit bảng ưu tiên "sau pilot") | Sau pilot DoD-eval pass | DEFERRED |
+| D-010 | Trong sim, các hạng mục sau pilot: kịch bản tuần + trust dynamics, counterfactual branch re-run, regime sweep orders∈{900,1200,1800}, mất điện 1 trạm, adoption 70%, mở rộng res 8/N=500, ĐBTN cohort trong policy bundle | Chương trình reliability-first 2026-07-22 mở có chọn lọc, không mở toàn bộ scope cùng lúc | **MỞ qua T-034/T-027:** demand regime + labeled distribution/environment shifts; station outage/adoption khi evaluator sẵn sàng. **VẪN DEFER:** tuần+trust, full counterfactual branch, res8/N=500, ĐBTN cohort — mở sau M4 eval gate hoặc khi có bằng chứng riêng | PARTIAL REOPEN |

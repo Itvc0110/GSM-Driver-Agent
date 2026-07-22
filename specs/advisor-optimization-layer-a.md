@@ -1,7 +1,7 @@
 # SPEC — Advisor Optimization Lớp A + Behavior Model B-arm (v0)
 
-Cập nhật: 2026-07-21 · Trạng thái: READY (vá blocker F8 + G1/G4/G5 từ red-team audit) · Tiền đề: `sim-policy-bundle-v0.md`, `advice-timing-state-memory.md` (trigger/lớp biến), `simulation-pilot-world.md` (thế giới).
-Nguyên tắc: deterministic theo input + seed (bắt buộc cho CRN); mọi tie-break có quy tắc cố định.
+Cập nhật: 2026-07-22 · Trạng thái: READY FOR M4 SAU M0–M3 GATES · Tiền đề: `sim-policy-bundle-v0.md`, `advice-timing-state-memory.md`, `simulation-reliability-upgrade.md`.
+Nguyên tắc: deterministic theo allowed input + seed (bắt buộc cho CRN); mọi tie-break có quy tắc cố định; không dùng realized future orders/environment state ngoài forecast được phép.
 
 ## 1. Behavior model (B-arm — nền của MỌI so sánh; cũng là "bản năng" của A/C khi không có advice)
 
@@ -28,7 +28,7 @@ U(end_shift)      = w_home(t vs giờ về quen) + bonus_lock_in           (bonu
 
 ### 1.3 Calibration gate (G1 — thứ tự cứng)
 
-**T-021 phải pass trên B-arm TRƯỚC khi chạy so sánh 3 arm**: 15–30 cuốc/actor full-time; pattern nghỉ-trưa/sạc-trưa xuất hiện; unserved trong dải mục tiêu. Lưu ý audit: 3 con số calibration ràng buộc lẫn nhau — chỉ tune 2, con thứ 3 để quan sát.
+**T-021 phải pass trên B-arm TRƯỚC khi chạy so sánh 3 arm**: baseline phải plausible, stable, explainable theo evidence tiers + invariants + sensitivity. 15–30 cuốc/actor full-time và pattern nghỉ/sạc là benchmark `[PROXY]`, không correctness invariant. Unserved phải giải thích được theo supply/demand/lifecycle; **không tune B-arm về target 15–20% của A-arm/service objective để làm advisor trông tốt**.
 
 ## 2. Advisor optimization lớp A (arm A)
 
@@ -57,8 +57,8 @@ r(END)  = 0; terminal_bonus = giá_trị_mốc_NGÀY_đạt_được(điểm_d�
 ### 2.2 Advisor information model (F3 — bắt buộc config)
 
 `advisor_information ∈ {oracle, product_proxy}`:
-- `oracle`: Ê_advisor = true Poisson intensity (upper bound).
-- `product_proxy` (**headline**): Ê_advisor = intensity × (1+ε_t), ε_t ~ N(0, 0.25) per (cell-cluster, hour) — mô phỏng sai số mock proxy; supply field làm mờ (chỉ đếm theo res-8 parent); station state trễ 5 phút (G2 information model: actor/advisor thấy trạng thái tủ qua snapshot trễ 5ph — nguồn herding từ thông tin cũ).
+- `oracle`: latent/true intensity đã sinh trước run (**upper bound chỉ dùng ablation**, không headline và không được đọc realized future order events).
+- `product_proxy` (**headline**): forecast intensity × noise versioned per (cell-cluster, time-bucket); supply field làm mờ; station state trễ 5 phút. Observation phải ghi `observed_at`, `valid_for`, source/confidence và chỉ chứa past/current/allowed forecast; test M4 phải chứng minh không future-information leak.
 
 ### 2.3 Advice scope (F4 — ablation bắt buộc)
 
@@ -89,13 +89,13 @@ Ledger đếm advice-outstanding theo (trạm, bucket 30ph) [sim_extended] hoặ
 | Mục | Giá trị CHỐT (spec này override) |
 | --- | --- |
 | Field aggregation tick | 15 phút (twin-world §2.1 "5 phút" hết hiệu lực) |
-| Run window | **05:00–24:00**, warm-up 1h (05:00–06:00 không tính metrics); `orders_per_day = 1.200` = kỳ vọng TRONG window (renormalize hour weights trên 05–24h) |
+| Run window | Profile 05:00–24:00 là compatibility pilot; M1 target = **`[00:00,24:00)`**, `orders_per_day` = kỳ vọng toàn ngày; không renormalize full-day demand vào window cũ |
 | Đỉnh demand | sáng ~1,55×TB, chiều ~2,0×TB (theo bảng mock spec — bỏ mô tả "2 đỉnh ~2×") |
 | N actors | Pilot = 50 (twin-world §5.1 "300–500" chỉ cho bản mở rộng) |
 | UNSEEN | = advice **expire trước khi kịp phát** vì actor bận suốt validity; nếu phát được khi về idle thì không phải UNSEEN |
 | Zone weights pilot | `w_cell = a·pop + b·POI` trên res 9 (mock spec §6 Tier A/B/C chỉ cho bản toàn HN; projection res 9 dùng công thức pilot) |
 | OD boundary (F10) | **Buffer ring**: demand sinh trong 85 cells lõi; đích sample distance-decay có thể rơi vào vành k≤4 quanh lõi (nhãn `outside`); actor trả khách ngoài → deadhead tự quay về cell lõi gần nhất (chi phí thời gian thực); metrics chỉ tính hoạt động từ lõi |
-| DoD tách (F9) | **DoD-core (T-018)**: determinism, sensitivity, calibration B-arm (mục 1.3). **DoD-eval (T-019+T-020)**: ledger proof, Δ 3 arm × advice_scope × information × adherence sweep |
+| DoD tách (F9) | **M0–M3 (T-030–T-037)**: integrity, 24h world, spatial/exogenous traces và canonical visualization. **M4 (T-019+T-026+T-020)**: advisor/observability, ledger proof, A/B/C orchestration và Δ × scope × information × adherence |
 | Runtime (G8) | ~5 kịch bản × 3 arm × 2 scope × 20–30 seeds ≈ 600–900 run + sweep; DES 50 actors ước giây→phút/run → giờ-cấp trên laptop, chạy song song theo seed |
 
 ## 5. Defer ghi nhận

@@ -1,6 +1,6 @@
 # SPEC — Môi trường giả lập Twin-World & đánh giá hiệu quả gợi ý (v1.1)
 
-Cập nhật: 2026-07-21 · Trạng thái: **APPROVED** (Cường 2026-07-21: "approve mọi quyết định thiết kế, có thêm arm C") — hiệu chỉnh chi tiết theo research đợt 3+4 trong `research/simulation/`.
+Cập nhật: 2026-07-22 · Trạng thái: **APPROVED — paired triplet A/B/C**; implementation phasing/gates theo `simulation-reliability-upgrade.md` M0–M4.
 Trả lời yêu cầu #1, #2, #5, #6 (Cường, 2026-07-21). Thiết kế giả lập được coi **quan trọng ngang** thiết kế bài toán tối ưu.
 
 **Thu hẹp pilot (Cường 2026-07-21, đợt 2):** phạm vi biểu diễn/visualization đầu tiên = **1 quận Hà Nội, N = 50 actors**; demand/ngày của khu vực lấy từ research hoặc mock theo phân phối vị trí×thời gian; bản đồ pilot gồm trạm đổi pin + POI demand anchors; H3 chia cho cấp quận/phường — chi tiết tại `specs/simulation-pilot-world.md`. Kiến trúc twin-world dưới đây không đổi; N=300–500 toàn thành phố trở thành kịch bản mở rộng sau pilot.
@@ -11,30 +11,32 @@ Chứng minh (hoặc bác bỏ) một cách đo được rằng: **gợi ý củ
 
 ## 1. Kiến trúc Twin-World (trả lời #1)
 
-Chạy **hai thế giới song song, cùng seed** (counterfactual twin):
+Chạy **paired triplet A/B/C cùng seed và cùng exogenous bundle**:
 
 ```text
-                    ┌────────────────────────────────────────────┐
-  WorldConfig ──────┤  SHARED: demand generator (seeded),        │
-  (seed, city, N)   │  H3 grid, station map, weather/events,     │
-                    │  dispatcher algorithm, policy bundle        │
-                    └───────────────┬────────────────────────────┘
-              ┌─────────────────────┴─────────────────────┐
-      ARM A (advised)                            ARM B (baseline)
-      actors nhận advice từ Advisor               actors y hệt, KHÔNG advice
-      (adherence model quyết định nghe/không)     (chỉ heuristic bản năng)
-              │                                           │
-      event log A (parquet)                       event log B (parquet)
-              └───────────────┬───────────────────────────┘
-                        Evaluator: paired metrics theo seed
-                        + dashboard + spatial replay
+                    ┌──────────────────────────────────────────────┐
+  WorldConfig ──────┤ SHARED: demand/actor initial state, H3/OSM, │
+  (seed, city, N)   │ station map, weather/events, dispatcher,     │
+                    │ policy bundle (versioned + CRN-safe)          │
+                    └───────────────┬──────────────────────────────┘
+               ┌────────────────────┼────────────────────┐
+      ARM A (advisor)        ARM B (baseline)       ARM C (placebo)
+      advice thông minh      không advice           advice naive/random-safe
+               │                    │                       │
+          canonical log A      canonical log B         canonical log C
+               └────────────────────┼───────────────────────┘
+                       T-020 paired evaluator/attribution
+                       → canonical metric artifacts
+                       → T-035–T-037 visualization
 ```
+
+T-018 sở hữu runner/trace/RNG substrate; T-020 sở hữu orchestration A/B/C và evaluator. Dashboard/replay chung thuộc M3 (T-035–T-037) và chỉ đọc canonical artifacts, không tự tính metric khác evaluator.
 
 Nguyên tắc bắt buộc:
 
-1. **Common random numbers**: cùng seed ⇒ cùng chuỗi đơn phát sinh (thời gian, cell đón/trả, giá trị cuốc), cùng thời tiết/sự kiện, cùng tính cách actor. Khác biệt duy nhất giữa 2 arm là **advice và phản ứng với advice**. RNG phải tách stream theo mục đích (demand stream, actor-behavior stream, adherence stream) để 1 quyết định khác đi không làm lệch toàn bộ chuỗi ngẫu nhiên phía sau.
+1. **Common random numbers**: cùng seed ⇒ cùng chuỗi đơn phát sinh (thời gian, cell đón/trả, giá trị cuốc), cùng thời tiết/sự kiện, cùng tính cách/initial state actor. Khác biệt giữa 3 arm chỉ là **decision policy/advice và phản ứng với advice**. RNG phải tách stream theo mục đích (demand stream, actor-behavior stream, adherence stream) để 1 quyết định khác đi không làm lệch toàn bộ chuỗi ngẫu nhiên phía sau.
 2. **Dispatcher là hộp đen chung** (thuật toán có sẵn — xem §4): advisor KHÔNG can thiệp matching. Advice chỉ đổi *hành vi actor* (online lúc nào, di chuyển nghỉ/sạc lúc nào, theo mốc thưởng nào) → gián tiếp đổi input cho dispatcher. Đúng ranh giới sản phẩm (không can thiệp dispatch).
-3. So sánh **paired theo seed**: chạy K seeds (mặc định 20–30), mỗi seed cho 1 cặp (A,B); metric hiệu quả = phân phối của Δ(seed) = metric_A(seed) − metric_B(seed); kiểm định paired (bootstrap CI + sign test). ▸RESEARCH: chốt K và test cụ thể theo variance thực đo được.
+3. So sánh **paired theo seed**: chạy K seeds theo protocol M4, mỗi seed cho 1 triplet (A,B,C); báo phân phối Δ(A−B), Δ(C−B), Δ(A−C) với paired CI/test đã chốt trước khi diễn giải. Không kết luận từ một seed.
 4. **Arm C — placebo (ĐÃ CHỐT, Cường approve 2026-07-21)**: arm thứ ba cùng seed với advice ngẫu nhiên/naive (cùng tần suất, cùng loại action space với arm A nhưng nội dung không dùng demand/policy intelligence — vd khuyên sạc tại mốc giờ cố định, khuyên nghỉ ngẫu nhiên trong cooldown hợp lệ). Mục đích: tách "giá trị của việc có lời khuyên bất kỳ" (placebo/Hawthorne) khỏi "giá trị của lời khuyên thông minh". Báo cáo chuẩn: Δ(A−B), Δ(C−B), Δ(A−C) — hiệu quả thật của intelligence là Δ(A−C).
 
 ## 2. Thế giới mô phỏng
@@ -42,18 +44,18 @@ Nguyên tắc bắt buộc:
 ### 2.1 Không gian & thời gian
 
 - Lưới **H3 resolution 8** cho nội thành Hà Nội (▸RESEARCH xác nhận res + số cells; res 8 ~0.7 km²/cell). Res 7 cho vành ngoài nếu cần giảm chi phí.
-- Thời gian: discrete-event trên timeline liên tục, tick tổng hợp 5 phút cho các field (demand, supply density). Một run mặc định = 1 ngày vận hành 05:00–24:00; kịch bản tuần = 7 ngày nối tiếp có persistent memory của actor.
+- Thời gian: discrete-event trên timeline liên tục; observation fields/replay dùng per-event hoặc bins 1/5/15 phút. Profile 05:00–24:00 là compatibility pilot; M1 target = `[00:00,24:00)`. Kịch bản tuần/persistent trust vẫn deferred theo D-010.
 - Demand generator: dùng `specs/mock-order-distribution.md` (BASE × zone_share × hour_shape × dow × weather) chiếu xuống từng cell H3, sinh đơn Poisson theo cell×tick; mỗi đơn có cell đón, cell trả (ma trận OD đơn giản theo khoảng cách), giá trị cuốc.
 
 ### 2.2 Các thực thể
 
 | Thực thể | State chính | Ghi chú |
 | --- | --- | --- |
-| Actor (tài xế) | cell hiện tại, SOC pin, trạng thái (idle/enroute/on-trip/charging/rest/offline), số cuốc & doanh thu hôm nay, điểm thưởng, giờ online, archetype params, adherence params, memory hành vi | sinh từ archetype (§5) |
-| Order | thời điểm đặt, cell đón/trả, giá trị, trạng thái (open/assigned/completed/expired) | expire nếu không ai nhận trong X phút |
-| Station (trạm đổi pin/sạc) | cell, số khe, hàng chờ hiện tại, thời gian phục vụ/khe | ▸RESEARCH: số trạm & phân bố HN thực tế |
-| Dispatcher | thuật toán gán đơn (§4) | hộp đen chung 2 arm |
-| Advisor (chỉ arm A) | policy bundle, demand/supply field nhìn thấy được, capacity ledger (§6) | sinh advice theo trigger (xem `specs/advice-timing-state-memory.md`) |
+| DriverActor | H3+lat/lon hiện tại, SOC, lifecycle state, số cuốc/payout/điểm, duty time, archetype/adherence/memory | daily pool; canonical contract tại reliability-upgrade §3 |
+| CustomerActor + OrderRequest | created/waiting/matched/picked-up/completed/cancelled/censored; OSM/H3 pickup/drop + policy value | exactly-one terminal state hoặc explicit censor |
+| Station | location, battery inventory charging/ready, reservation/queue, service time | conservation + resource semantics gate M0 |
+| Dispatcher | thuật toán gán đơn (§4) | hộp đen chung 3 arm; không đọc advice |
+| Advisor (arm A; placebo controller arm C) | versioned observation, policy bundle, capacity ledger, DecisionRecord | chỉ M4 sau M0–M3 gates |
 | World | demand field, supply field (mật độ tài xế theo cell), weather, event, policy version | supply field là biến mới bổ sung theo yêu cầu #5 |
 
 ### 2.3 Vòng đời actor & action set (chốt theo research `research/simulation/action-space.md`)
@@ -100,7 +102,7 @@ Yêu cầu: đơn giản, minh bạch, đủ giống thực tế, chạy trên H
 - Từ chối/bỏ lỡ: actor có acceptance behavior (theo archetype) → đơn quay lại pool; ảnh hưởng tỷ lệ nhận của actor (liên kết ngưỡng policy).
 - ▸RESEARCH: đối chiếu với tài liệu matching công khai (DiDi/Uber/Grab) và chốt tham số (Δt, r_max, cost function).
 
-Dispatcher giữ nguyên giữa 2 arm và KHÔNG đọc advice — bảo toàn ranh giới "advisor không can thiệp phân đơn".
+Dispatcher giữ nguyên giữa 3 arm và KHÔNG đọc advice — bảo toàn ranh giới "advisor không can thiệp phân đơn". H3 shortlist/continuous-road ETA contract phải qua T-033 trước M4.
 
 ## 5. Quần thể actor (trả lời #6 — "nhiều và đa dạng hơn 3 persona")
 
@@ -116,11 +118,11 @@ Dispatcher giữ nguyên giữa 2 arm và KHÔNG đọc advice — bảo toàn r
 | P4 Tân binh | 25% | giờ lệch khung, hiểu biết thấp, acceptance thấp-trung bình, adherence cao nhưng thực thi lỗi |
 | P5 Lão làng | 15% | 8–9h, thói quen cố định (adherence thấp với advice trái thói quen), hiệu quả bản năng cao |
 
-- Sample N actors (mặc định **N = 300–500**, ▸RESEARCH chốt theo chi phí chạy) với jitter: giờ bắt đầu, cell nhà (phân bố theo tier khu dân cư), SOC ban đầu, target, hệ số hành vi. Cùng seed ⇒ cùng quần thể ở cả 2 arm.
+- `N` là **daily actor pool** (pilot compatibility N=50; N=300–500 vẫn deferred), không phải số concurrent active. Mỗi actor có participation/shift/jitter/SOC/target/behavior; cùng seed ⇒ cùng pool và initial state ở cả 3 arm.
 - Tỷ trọng archetype là config; chạy sensitivity với các mix khác nhau.
-- Trong arm A có thể chỉ X% actor "có app advisor" (mặc định 100%, nhưng config để mô phỏng adoption từng phần).
+- Trong arm A có thể chỉ X% actor "có app advisor"; adoption trace phải CRN-safe và paired.
 
-### 5.2 Behavior model (bản năng — dùng ở CẢ 2 arm)
+### 5.2 Behavior model (bản năng — dùng ở CẢ 3 arm khi không có advice hiệu lực)
 
 Mỗi actor quyết định theo heuristic có nhiễu: chọn hành động có utility cao nhất trong {tiếp tục chờ, dạt sang cell lân cận có demand quen thuộc, nghỉ, đi đổi pin, kết ca} với utility = f(kỳ vọng đơn theo kinh nghiệm cá nhân, SOC, mệt mỏi, gần target, thói quen archetype) + ε. Kinh nghiệm cá nhân = bảng demand đã học từ các ngày trước của chính actor (khởi tạo từ prior của archetype — lão làng có prior chính xác hơn tân binh). Đây chính là cơ chế tạo ra **coincident compliance** (#2): actor giỏi tự làm đúng điều advisor sẽ khuyên.
 
@@ -157,15 +159,15 @@ Ghi chú phạm vi: fleet-awareness này nằm **trong simulator/advisor-sim** �
 - adherence rate theo loại × archetype × loại advice; funnel: phát → hiển thị → thấy → theo (một phần/đủ) → outcome.
 - hiệu quả có điều kiện: Δ payout của nhóm EXPLICIT_FOLLOW vs IGNORE (cùng archetype, cùng seed) — nhưng luôn kèm twin-diff để khử selection bias (người chăm nghe có thể vốn giỏi hơn).
 
-## 8. Visualization & phân tích (trả lời #1 "dễ theo dõi, dễ phân tích")
+## 8. Visualization & phân tích
 
-Ba lớp (đề xuất sơ bộ — ▸RESEARCH sẽ chốt stack cuối trong `research/simulation/tooling.md`):
+M3 (T-035–T-037) sở hữu visualization chung và đọc canonical run/evaluator artifacts:
 
-1. **Spatial replay**: xuất event log → **kepler.gl** (H3 layer + time playback, export file HTML tự chạy không cần server) để xem phim: demand nổi lên theo cell, tài xế di chuyển, hàng chờ trạm. So sánh A/B bằng 2 panel cùng timeline hoặc layer chênh lệch.
-2. **Dashboard chỉ số**: **Streamlit + Plotly**: chọn run/seed/kịch bản, bảng Δ metric + CI, đường tích lũy payout theo giờ, boxplot theo archetype, heatmap mismatch, queue trạm theo thời gian.
-3. **Experiment tracking**: mỗi run ghi config + seed + metrics vào **MLflow** (hoặc parquet + DuckDB nếu muốn nhẹ) để so sánh giữa các phiên bản advisor/optimizer.
+1. **Story Mode:** city pulse 24h → actor journey/Gantt/SOC/payout/points/flaw → advisor placeholder; per-event hoặc bins 1/5/15 phút.
+2. **Diagnostic Mode:** demand/supply/lifecycle/H3 dispatch/station/audit/provenance; raw seed/config/spec/data hashes và fallback modes.
+3. **M4 paired comparison:** A/B/C cùng playhead; chỉ bật sau T-020 evaluator gate, không tự recompute metric khác evaluator.
 
-Alternatives đang cân nhắc: pydeck (nhúng deck.gl trong notebook/Streamlit), Folium (tĩnh, nhẹ), Grafana (nếu muốn theo dõi live khi sim chạy dài). Lưu ý .env: kepler.gl/pydeck có thể cần **Mapbox token** cho basemap đẹp (có fallback không token) — sẽ xin Cường khi build (§10).
+Stack hiện tại: Streamlit + pydeck + Plotly; basemap không token là supported fallback. Chi tiết z-order, labels và visual review tại `simulation-reliability-upgrade.md` §7/§10.
 
 ## 9. Kịch bản đánh giá tối thiểu
 
@@ -185,11 +187,11 @@ Alternatives đang cân nhắc: pydeck (nhúng deck.gl trong notebook/Streamlit)
 | `LLM_API_KEY` (Anthropic/OpenAI) | chỉ khi chạy advisor bản LLM-in-the-loop trong sim; bản đầu dùng advisor rule-based, không cần | chưa |
 | `MLFLOW_TRACKING_URI` | nếu dùng MLflow server thay local folder | không |
 
-## 11. Việc mở tiếp (đưa vào TODO)
+## 11. Việc mở tiếp (source of truth: tracking/TODO.md)
 
-- T-016 research đợt 3 (3 mảng: tooling, evaluation methodology, world params) — ĐANG CHẠY.
-- T-017 chốt spec này v2 sau research + review của Cường/Khánh.
-- T-018 build simulator core (world, actors, dispatcher, twin-runner).
-- T-019 advisor-sim rule-based + capacity ledger.
-- T-020 evaluator + dashboard + replay.
-- T-021 calibration: đối chiếu output sim với các số tự khai trong `research/` (15–30 cuốc/ngày full-time, payout ngày…).
+- T-030 M0 integrity/audit; T-021 calibration gate xuyên milestone.
+- T-031 M1 market 24h/dynamic daily pool.
+- T-032–T-034 M2 endpoint/H3/exogenous world.
+- T-035–T-037 M3 Story/actor/Diagnostic visualization.
+- T-019 + T-026 + T-020 M4 advisor/observability/A-B-C evaluator.
+- T-027 robustness validation sau M2 + M4.

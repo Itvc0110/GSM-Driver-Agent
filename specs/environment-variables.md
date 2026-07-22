@@ -1,7 +1,9 @@
-# SPEC — Biến môi trường & luật kết hợp (v1, thiết kế — chưa code)
+# SPEC — Biến môi trường & luật kết hợp (v1)
 
-Cập nhật: 2026-07-21 · Trạng thái: DESIGN DRAFT — chờ Cường brainstorm/duyệt trước khi implement.
-Nguồn: `research/simulation/environment-variables.md` (định lượng + nguồn) + `research/simulation/math-audit.md` (lỗi toán cần sửa). Bám ranh giới CLAUDE.md §5 (mọi factor tham số hóa, tắt được về 1, log lại).
+Cập nhật: 2026-07-22 · Trạng thái: **IMPLEMENTED CORE / PARTIAL — M2 HARDENING PENDING**.
+Nguồn: `research/simulation/environment-variables.md` + `research/simulation/math-audit.md`; implementation core ghi tại UPDATE-012; phasing/gates mới tại `simulation-reliability-upgrade.md` M2.
+
+**Đã có (UPDATE-012):** EnvironmentContext, rain/temp/dow/event demand channels, demand/speed/range factors, config levers, dry no-op tests và scenario UI. **Chưa qua M2 gate:** route-effect/congestion attribution hoàn chỉnh, minute-level smoothed trace, external snapshot adapters/provenance, no-future-leak audit và multi-seed distribution validation. Working diff congestion ngày 2026-07-22 là M0 audit input, chưa phải phần implemented đã chấp nhận.
 
 ## 0. Nguyên tắc thiết kế (không thương lượng)
 
@@ -137,8 +139,18 @@ behavior:
 6. event_addend: Σ theo không gian bảo toàn N·capture; =0 ngoài cửa sổ thời gian.
 7. Determinism: cùng seed+scenario → weather/event trace identical.
 
-## 7. Chưa làm trong spec này (defer)
+## 7. Chưa qua gate / defer
 
-- Tương tác `f_{rain×peak}` (term riêng) — thêm khi có bằng chứng cần; mặc định off.
-- Nhiễu tiêu pin per-km (math-audit A8) — để stranded có ý nghĩa; nhỏ, sau.
-- Tắc đường theo cell động (`r_congestion` hiện chỉ quanh venue) — mở rộng sau.
+**M2 — T-034 (đã mở backlog):**
+
+- congestion H3 được spatial smoothing + time interpolation;
+- tách attribution base traffic / demand-correlated `[PROXY]` / rain / event route effect;
+- `known_at/effective_at`, no-future-leak và no-op equivalence;
+- external inputs snapshot/version/provenance trước run, không gọi live trong sim loop;
+- multi-seed distribution/sensitivity validation.
+
+**Vẫn defer:**
+
+- tương tác `f_{rain×peak}` riêng — chỉ thêm khi có bằng chứng;
+- nhiễu tiêu pin per-km (math-audit A8);
+- edge-level traffic — sau road graph/route contract gate.
