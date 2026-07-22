@@ -66,6 +66,15 @@ class World:
         self._order_ptr = 0
         self.open_orders: dict[int, object] = {}     # order_id -> Order
         self.order_open_since: dict[int, float] = {}
+        # M0-5: order lifecycle state machine — mỗi đơn đúng 1 terminal state.
+        # CREATED → OPEN → MATCHED → PICKED_UP → COMPLETED | EXPIRED | CENSORED_END_OF_RUN
+        self.order_states: dict[int, tuple[str, float]] = {
+            o.order_id: ("CREATED", o.t_min) for o in orders}
+        # M0-2: offer history (order_id, actor_id) -> t phút lần chào gần nhất (cooldown)
+        self.offer_history: dict[tuple[int, int], float] = {}
+        self.offer_cooldown = float(cfg.get("dispatcher.offer_cooldown_min", 10.0))
+        # M0-4: mốc tích lũy online_min per-actor (flush được lúc censor cuối ngày)
+        self._last_accrual: dict[int, float] = {}
 
         # trạm
         self.stations: list[Station] = self._build_stations()
@@ -94,6 +103,13 @@ class World:
 
     def log(self, actor_id: int, kind: str, cell: str = "", **detail):
         self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail))
+
+    def _order_transition(self, oid: int, state: str) -> None:
+        """M0-5: ghi chuyển trạng thái đơn (terminal chỉ ghi 1 lần — không ghi đè)."""
+        cur = self.order_states.get(oid, ("CREATED", 0.0))[0]
+        if cur in ("COMPLETED", "EXPIRED", "CENSORED_END_OF_RUN"):
+            return  # terminal là bất biến
+        self.order_states[oid] = (state, round(self.env.now, 3))
 
     def _cell_point(self, cell: str) -> tuple[float, float]:
         """Toạ độ đại diện của cell (centroid) — dùng cho endpoint relocate/charge/online."""
@@ -151,14 +167,41 @@ class World:
         for a in self.actors.values():
             self.env.process(self._actor_proc(a))
         self.env.run(until=self.end_min)
-        # thưởng ngày cho actor vẫn online lúc hết run (chưa qua nhánh end_shift)
+        self._settle_end_of_run()
+        return self.events
+
+    def _settle_end_of_run(self):
+        """M0-6 + M0-4: chốt cuối ngày — flush time cho actor còn bận, censor đơn in-flight,
+        rồi mới tính thưởng ngày. SimPy bỏ rơi timeout đang treo nên phải reconcile tường minh."""
+        # 1. M0-4: actor chưa offline → cộng nốt đoạn [last_accrual, end_min] vào online_min
+        for a in self.actors.values():
+            if a.state == ActorState.OFFLINE:
+                continue
+            last = self._last_accrual.get(a.actor_id)
+            if last is not None and self.end_min > last:
+                a.online_min += self.end_min - last
+                self._last_accrual[a.actor_id] = self.end_min
+            # actor đang giữa hoạt động (không idle) → đánh dấu censored để metrics/UI biết
+            if a.state in (ActorState.ENROUTE, ActorState.ON_TRIP, ActorState.CHARGING, ActorState.REST):
+                self.log(a.actor_id, "censored_end_of_run", a.cell, state=a.state.value)
+        # 2. M0-6/M0-5: đơn không terminal (đang matched/picked_up hoặc còn open) → CENSORED
+        for oid, (state, _t) in list(self.order_states.items()):
+            if state in ("COMPLETED", "EXPIRED"):
+                continue
+            if state in ("MATCHED", "PICKED_UP"):
+                self.order_states[oid] = ("CENSORED_END_OF_RUN", self.end_min)
+                self.log(-1, "order_censored", order_id=oid, last_state=state)
+            elif state in ("CREATED", "OPEN"):
+                # đơn chưa từng match tới hết ngày = hết hạn theo nghĩa vận hành
+                self.order_states[oid] = ("EXPIRED", self.end_min)
+                self.log(-1, "order_expired", order_id=oid, reason="end_of_run")
+        # 3. thưởng ngày cho actor vẫn online lúc hết run (chưa qua nhánh end_shift)
         for a in self.actors.values():
             if a.state != ActorState.OFFLINE:
                 bonus = self.policy.day_bonus(a.points, a.acceptance_rate, a.completion_rate)
                 a.payout_vnd += bonus
                 self.log(a.actor_id, "day_end_settle", a.cell,
                          trips=a.trips_done, payout=a.payout_vnd, points=a.points, day_bonus=bonus)
-        return self.events
 
     def _inject_orders(self):
         """Đưa các đơn tới thời điểm hiện tại vào open pool."""
@@ -167,6 +210,7 @@ class World:
             o = self.orders_sorted[self._order_ptr]
             self.open_orders[o.order_id] = o
             self.order_open_since[o.order_id] = now
+            self._order_transition(o.order_id, "OPEN")
             self._order_ptr += 1
 
     def _order_expiry_proc(self):
@@ -180,6 +224,7 @@ class World:
             for oid in expired:
                 self.open_orders.pop(oid, None)
                 self.order_open_since.pop(oid, None)
+                self._order_transition(oid, "EXPIRED")
                 self.log(-1, "order_expired", order_id=oid)
 
     def _dispatcher_proc(self):
@@ -217,6 +262,8 @@ class World:
                 actor.orders_accepted += 1
                 self.open_orders.pop(order.order_id, None)
                 self.order_open_since.pop(order.order_id, None)
+                self._order_transition(order.order_id, "MATCHED")
+                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id)
                 actor.state = ActorState.ENROUTE
                 self.env.process(self._serve_trip(actor, order, asg))
 
@@ -236,6 +283,7 @@ class World:
         self._set_pos(actor, order.pickup_lat, order.pickup_lon)  # vị trí = điểm đón THẬT
         self._seg(actor.actor_id, t_assign, self.env.now, "enroute", frm,
                   (order.pickup_lat, order.pickup_lon), order_id=order.order_id)
+        self._order_transition(order.order_id, "PICKED_UP")
         self.log(actor.actor_id, "pickup", order.pickup_cell,
                  order_id=order.order_id, eta_min=round(pickup_min, 2))
         # chở khách
@@ -261,6 +309,7 @@ class World:
                   (order.pickup_lat, order.pickup_lon), (order.drop_lat, order.drop_lon),
                   order_id=order.order_id, gross=order.gross_vnd,
                   payout=self.policy.driver_payout_from_gross(order.gross_vnd), dist_km=order.dist_km)
+        self._order_transition(order.order_id, "COMPLETED")
         self.log(actor.actor_id, "dropoff", order.drop_cell,
                  order_id=order.order_id, gross=order.gross_vnd, dist_km=order.dist_km)
         actor.state = ActorState.IDLE
@@ -304,6 +353,7 @@ class World:
         self._set_pos(actor, alat, alon)
         self.log(actor.actor_id, "go_online", actor.cell)
         last = self.env.now
+        self._last_accrual[actor.actor_id] = last  # M0-4: cho settle cuối ngày flush đoạn bận
 
         # online_min = tổng span từ go_online tới offline; cộng mỗi lần ở top vòng
         # (KHÔNG reset `last` trong nhánh action — nếu không sẽ mất thời gian chờ/serve).
@@ -317,6 +367,7 @@ class World:
             now = self.env.now
             actor.online_min += (now - last)  # gộp toàn bộ thời gian đã trôi (chờ + serve + charge)
             last = now
+            self._last_accrual[actor.actor_id] = last  # M0-4
             # sau cuốc trả ngoài lõi → chạy về lõi (deadhead) rồi kiểm lại
             if not self.grid.is_core(actor.cell):
                 yield from self._relocate_to_core(actor)
@@ -403,8 +454,10 @@ class World:
         # đổi pin tại trạm
         station = choose_station(actor, self.grid, self.stations, self.env.now, self.rng)
         if station is None:
+            # không có trạm nào trong world (config degenerate) — fallback có nhãn, không im lặng
             actor.soc_pct = 100.0
             actor.state = ActorState.IDLE
+            self.log(actor.actor_id, "swap_fallback_no_station", actor.cell)
             return
         hour = int(self.env.now // 60) % 24
         pct_per_km = self._pct_per_km(actor)
@@ -423,26 +476,43 @@ class World:
         self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (station.lat, station.lon),
                   reason="go_swap", station=station.node_id)
         t_arrive = self.env.now
-        # xếp hàng
+        # xếp hàng — M0-1: chỉ swap khi THẬT SỰ có pin ready; hết wait-cap → swap_failed
         station.queue_len += 1
         wait = 0.0
         wait_cap = float(self.cfg.get("station.wait_cap_min", 60.0))
-        while station.available_full(self.env.now) < 1:
+        reserved = None
+        while wait <= wait_cap:
+            full = [b for b in station.batteries
+                    if b.soc_pct >= station.ready_soc_pct and b.ready_at_min <= self.env.now]
+            if full:
+                # reserve NGAY khi thấy (pop khỏi tủ) — tránh race 2 actor cùng lấy 1 pin
+                full.sort(key=lambda b: b.ready_at_min)
+                reserved = full[0]
+                station.batteries.remove(reserved)
+                break
             yield self.env.timeout(1.0)
             wait += 1.0
-            if wait > wait_cap:  # tránh kẹt vô hạn; đuôi hiếm ở giờ đỉnh
-                break
+        station.queue_len = max(0, station.queue_len - 1)
+        if reserved is None:
+            # M0-1: không còn pin ready trong wait_cap → rời trạm SOC nguyên (không pin ma).
+            # Behavior sẽ re-trigger GO_SWAP ở decision point sau (pin trạm giờ hồi được → hết livelock).
+            actor.charge_min += travel + wait
+            actor.state = ActorState.IDLE
+            self._seg(actor.actor_id, t_arrive, self.env.now, "charge",
+                      (station.lat, station.lon), (station.lat, station.lon),
+                      mode="swap_failed", wait_min=round(wait, 1), station=station.node_id)
+            self.log(actor.actor_id, "swap_failed", station.cell,
+                     station=station.node_id, wait_min=round(wait, 1))
+            return
         swap_s = self.rng.uniform(float(self.cfg.get("station.swap_time_s_min")),
                                   float(self.cfg.get("station.swap_time_s_max")))
         yield self.env.timeout(swap_s / 60.0)
         actor.charge_min += travel + wait + swap_s / 60.0
-        station.queue_len = max(0, station.queue_len - 1)
-        # lấy 1 pin đầy, trả pin cạn (bắt đầu sạc lại)
-        full = [b for b in station.batteries if b.soc_pct >= station.ready_soc_pct and b.ready_at_min <= self.env.now]
-        if full:
-            station.batteries.remove(full[0])
+        # M0-1: đổi 1-1 — pin ready đã reserve ở trên; trả pin cạn vào sạc.
+        # Pin trả về ready sau battery_recharge_min với soc=100 (ready_at = mốc SẠC XONG).
         recharge = float(self.cfg.get("station.battery_recharge_min"))
-        station.batteries.append(BatteryInStation(soc_pct=0.0, ready_at_min=self.env.now + recharge))
+        station.batteries.append(
+            BatteryInStation(soc_pct=100.0, ready_at_min=self.env.now + recharge))
         actor.soc_pct = 100.0
         actor.state = ActorState.IDLE
         self._seg(actor.actor_id, t_arrive, self.env.now, "charge",

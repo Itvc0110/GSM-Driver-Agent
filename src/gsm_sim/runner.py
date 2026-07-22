@@ -31,6 +31,8 @@ class RunResult:
     congestion: CongestionField | None = None
     traj: list = field(default_factory=list)
     segments: list = field(default_factory=list)
+    stations: list = field(default_factory=list)
+    order_states: dict = field(default_factory=dict)
 
 
 def _data(cfg: Config, fname_key: str) -> Path:
@@ -64,4 +66,5 @@ def run_once(cfg: Config, seed: int) -> RunResult:
     events = world.run()
     return RunResult(seed=seed, events=events, actors=actors, orders=orders,
                      config=cfg, policy=policy, grid=grid, env=env,
-                     congestion=congestion, traj=world.traj, segments=world.segments)
+                     congestion=congestion, traj=world.traj, segments=world.segments,
+                     stations=world.stations, order_states=world.order_states)
