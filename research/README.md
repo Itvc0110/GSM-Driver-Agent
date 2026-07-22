@@ -1,16 +1,16 @@
 # research/ — Kết quả nghiên cứu, chia theo loại tài liệu
 
-Cập nhật: 2026-07-20. Mỗi **loại tài liệu** nằm trong một folder tên rõ ràng. Mọi claim trong đây kèm **nguồn + ngày + độ tin cậy** (`official` > `press` > `community` > `research`). Số chưa xác nhận đánh dấu `TBD`/`MOCK`.
+Cập nhật: 2026-07-22. Mỗi **loại tài liệu** nằm trong một folder tên rõ ràng. Mọi claim trong đây kèm **nguồn + ngày + độ tin cậy** (`official` > `press` > `community` > `research`). Số chưa xác nhận đánh dấu `TBD`/`MOCK`.
 
 ## Cấu trúc folder
 
 | Folder | Loại tài liệu | File hiện có |
 | --- | --- | --- |
-| `policy/` | Chính sách, thưởng/phạt, quy tắc — dữ liệu để trả lời F0 và tính thưởng F1 | `bonus-programs.md` |
+| `policy/` | Chính sách, thưởng/phạt, quy tắc — dữ liệu để trả lời F0 và tính thưởng F1 | `bonus-programs.md`; **T-004 handoff (Khánh):** `T004_POLICY_SOURCE_REGISTER.md` (7 URL official current + guardrail track), `T004_TEXT_CORPUS_USAGE.md`, `t004-current-policy-text-corpus-2026-07-22.json` (evidence snapshot — **KHÔNG phải KB runtime/prompt context**; **⚠ full-text đang lỗi encoding (mojibake) — cần re-fetch/repair trước khi reviewer dùng**, xem UPDATE-022) |
 | `economics/` | Cấu trúc thu nhập, chiết khấu theo hình thức hợp tác, chi phí tài xế | `income-structure.md` |
 | `community/` | Pain points, kinh nghiệm thực chiến, thu nhập tự khai, group Facebook | `pain-points.md`, `community-insights.md` |
-| `market/` | Số liệu thị trường & phân phối đơn (để mock) | `order-distribution.md` |
-| `simulation/` | Nghiên cứu cho môi trường giả lập twin-world: công cụ, phương pháp đánh giá, tham số thế giới, timestep, action space, pilot world | `tooling.md`, `evaluation-methodology.md`, `world-parameters.md`, `timestep-design.md`, `action-space.md`, `pilot-world-dongda.md`, `data/` (OSM snapshots) |
+| `market/` | Số liệu thị trường & phân phối đơn (để mock) + tín hiệu điều phối/API ngoài | `order-distribution.md`, `dispatch-signals-and-external-apis.md` |
+| `simulation/` | Nghiên cứu cho môi trường giả lập twin-world: công cụ, phương pháp đánh giá, tham số thế giới, timestep, action space, pilot world, biến môi trường, math-audit, realism, kiến trúc LLM advisor | `tooling.md`, `evaluation-methodology.md`, `world-parameters.md`, `timestep-design.md`, `action-space.md`, `pilot-world-dongda.md`, `environment-variables.md`, `math-audit.md`, `realism-benchmarks.md`, `llm-advisor-architecture.md`, `data/` (OSM snapshots) |
 | (root) | Tổng hợp toàn bộ | `00_SUMMARY.md` |
 
 ## Quy ước

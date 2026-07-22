@@ -39,6 +39,6 @@ Phương pháp: web research song song + đối chiếu chéo; claim trung tâm 
 ## Follow-up
 
 - T-013: người thật join 1–2 group Facebook nếu cần bổ sung insight.
-- T-004: policy KB versioned cho F0.
+- T-004: research handoff xong (source register 7 URL official + text corpus evidence tại `policy/`). **Chưa phải KB runtime**: T-011/reviewer riêng mới chuyển evidence → `PolicyFact` versioned. ⚠ Corpus JSON đang lỗi encoding (mojibake) — cần re-fetch/repair (UPDATE-022).
 - T-011: contract mới phải version hóa policy bundle và money definition; contracts cũ vẫn deferred.
 - D-007: quy trình khiếu nại/giải trình là dự án khác.
