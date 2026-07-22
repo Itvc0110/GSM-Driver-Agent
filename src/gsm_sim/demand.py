@@ -204,12 +204,37 @@ def _event_pickup_cell(grid, cells, ev, rng) -> str:
     return rng.choice(disk) if disk else ev.venue_cell
 
 
+_ALLOWED_DROP_CACHE: dict[int, frozenset[str]] = {}
+
+
+def _allowed_drop_cells(grid: Grid, buffer_k: int) -> frozenset[str]:
+    """OD boundary (spec pilot-world): đích ∈ lõi ∪ vành buffer k≤buffer_k quanh LÕI.
+    Precompute một lần per grid (cache theo id(grid))."""
+    key = id(grid)
+    cached = _ALLOWED_DROP_CACHE.get(key)
+    if cached is not None:
+        return cached
+    allowed: set[str] = set()
+    for c in grid.core_cells:
+        allowed.update(grid_disk(c, buffer_k))
+    out = frozenset(allowed)
+    _ALLOWED_DROP_CACHE.clear()  # giữ 1 grid (tránh leak khi chạy nhiều grid)
+    _ALLOWED_DROP_CACHE[key] = out
+    return out
+
+
 def _sample_drop(grid: Grid, pickup: str, dist_km: float, buffer_k: int,
                  km_per_cell: float, softness: float, rng) -> str:
-    """Chọn cell trả: trong grid_disk quanh pickup, ưu tiên cell có khoảng cách gần
-    dist_km nhất (distance-decay). km_per_cell/softness từ config (A3)."""
-    k = max(1, min(buffer_k + 3, int(round(dist_km / km_per_cell)) + 1))
-    disk = grid_disk(pickup, k)
+    """Chọn cell trả: disk quanh pickup MỞ THEO target distance (M0-9 — không cap
+    tại buffer_k+3 như baseline: cap cũ chặn mọi cuốc >~2.5km rồi vẫn tính tiền
+    theo lognormal → distance contract gãy). Đích ràng buộc trong lõi ∪ buffer
+    quanh LÕI (OD boundary); distance-decay ưu tiên cell gần target nhất.
+    Hệ quả trung thực: pilot Đống Đa nhỏ (~3-4km ngang) nên phân phối quãng đường
+    THỰC bị cắt bởi địa lý — median thấp hơn target 3.5km là giới hạn vật lý của
+    pilot, ghi nhãn CALIBRATION GAP cho T-021, không che bằng số ảo."""
+    k = max(1, int(round(dist_km / km_per_cell)) + 2)
+    allowed = _allowed_drop_cells(grid, buffer_k)
+    disk = [c for c in grid_disk(pickup, k) if c in allowed]
     if len(disk) <= 1:
         return pickup
     dists = np.array([abs(cell_distance_km(grid, pickup, c) - dist_km) for c in disk])
