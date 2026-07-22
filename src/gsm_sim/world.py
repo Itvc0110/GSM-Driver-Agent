@@ -83,13 +83,14 @@ class World:
         self.metrics_start = float(cfg.get("time.start_min")) + float(cfg.get("time.warmup_min"))
         self.end_min = float(cfg.get("time.end_min"))
 
-        # demand field theo (cell, giờ) từ exogenous trace — nền cho "kinh nghiệm cá nhân"
-        # của actor (behavior model §1). Actor thấy field này có nhiễu theo archetype.
-        self.demand_field: dict[int, dict[str, float]] = {}
-        for o in orders:
-            h = int(o.t_min // 60) % 24
-            self.demand_field.setdefault(h, {})
-            self.demand_field[h][o.pickup_cell] = self.demand_field[h].get(o.pickup_cell, 0.0) + 1.0
+        # M0-3: expected demand field TỪ CONFIG (không phải realized trace của run —
+        # tránh future-information leak). Nền cho "kinh nghiệm cá nhân" của actor.
+        from .demand import expected_demand_field
+        self.demand_field: dict[int, dict[str, float]] = expected_demand_field(grid, cfg)
+        # M0-4: belief cache per (actor_id, hour) — sample nhiễu MỘT LẦN rồi giữ ổn định
+        # trong ngày (không resample mỗi idle-check). Key deterministic, không phụ thuộc
+        # thứ tự set-iteration (đã prove PYTHONHASHSEED làm lệch metrics cross-process).
+        self._belief_cache: dict[tuple[int, int], dict[str, float]] = {}
 
     def _build_stations(self) -> list[Station]:
         slots = int(self.cfg.get("station.slots"))
@@ -246,6 +247,12 @@ class World:
                 actor = self.actors.get(asg.actor_id)
                 if order is None or actor is None or actor.state != ActorState.IDLE:
                     continue
+                # M0-2: không chào lại cùng (đơn, tài xế) trong cooldown sau decline/SOC-fail
+                pair = (asg.order_id, asg.actor_id)
+                t_last = self.offer_history.get(pair)
+                if t_last is not None and (self.env.now - t_last) < self.offer_cooldown:
+                    continue
+                self.offer_history[pair] = self.env.now
                 actor.orders_offered += 1
                 # SOC đủ hoàn thành? (pickup + trip, quãng đường thực × detour)
                 total_km = (asg.pickup_dist_km + order.dist_km) * self.detour
@@ -416,30 +423,56 @@ class World:
                 yield self.env.timeout(2.0)  # chờ đơn, kiểm lại sau 2 phút
 
     def _actor_demand_hint(self, actor: Actor, hour: int) -> dict[str, float]:
-        """Kinh nghiệm cá nhân của actor về demand giờ này: demand field thật nhân
-        nhiễu theo archetype (σ_arch) — lão làng chính xác hơn tân binh. Deterministic
-        theo RNG stream của sim. Đây là nền tạo coincident compliance (behavior §1)."""
+        """M0-3/M0-4: kinh nghiệm cá nhân = EXPECTED field (config) × nhiễu per-actor
+        sample MỘT LẦN cho mỗi (actor, giờ) rồi cache — belief ổn định trong ngày,
+        không đọc realized trace (hết future leak), không resample mỗi idle-check.
+
+        Nhiễu per-cell dùng RNG con deterministic theo (seed, actor_id, hour) và
+        duyệt cell theo thứ tự SORTED — kết quả không phụ thuộc PYTHONHASHSEED
+        (root cause cross-process nondeterminism đã prove ở T-030 baseline)."""
+        key = (actor.actor_id, hour, actor.cell)  # cell trong key: tầm nhìn đổi khi di chuyển
+        cached = self._belief_cache.get(key)
+        if cached is not None:
+            return cached
         field = self.demand_field.get(hour, {})
         if not field:
+            self._belief_cache[key] = {}
             return {}
         sigma = actor.demand_prior_sigma
         hint: dict[str, float] = {}
-        # chỉ cần các cell trong tầm nhìn (lân cận actor) để rẻ
         from .geo import grid_disk
-        nearby = set()
-        for c in grid_disk(actor.cell, 2):
-            nearby.add(c)
-        for c in nearby:
+        for c in sorted(grid_disk(actor.cell, 2)):
             base = field.get(c, 0.0)
-            # A6: nhiễu lognormal (luôn dương, không clamp về 0) — sai số nhân
-            noise = math.exp(self.rng.normal(0.0, sigma))
+            # A6: nhiễu lognormal (luôn dương) — sai số nhân; lão làng σ nhỏ chính xác hơn.
+            # Nhiễu PER-CELL deterministic theo (seed, actor, hour, cell): cùng cell luôn
+            # cùng nhiễu dù actor nhìn từ vị trí nào — "trí nhớ" nhất quán, không phụ
+            # thuộc thứ tự duyệt hay PYTHONHASHSEED.
+            rng_c = np.random.default_rng((self.seed, actor.actor_id, hour, int(c, 16)))
+            noise = math.exp(rng_c.normal(0.0, sigma))
             hint[c] = base * noise
+        self._belief_cache[key] = hint
         return hint
 
     def _do_charge(self, actor: Actor, action: IdleAction):
         if action == IdleAction.GO_CHARGE:
-            # về nhà sạc cắm (đội sạc cắm sạc 1 lần/ngày quanh trưa kết hợp nghỉ)
+            # M0-8: VỀ NHÀ rồi mới sạc cắm — leg di chuyển thật (thời gian + pin + segment),
+            # không teleport/sạc tại chỗ như baseline.
+            hour = int(self.env.now // 60) % 24
+            pct_per_km = self._pct_per_km(actor)
             actor.state = ActorState.CHARGING
+            if actor.cell != actor.home_cell:
+                d = cell_distance_km(self.grid, actor.cell, actor.home_cell)
+                t0 = self.env.now
+                frm = (actor.lat, actor.lon)
+                t = self._travel_min(d, hour, actor.cell)
+                yield self.env.timeout(t)
+                actor.consume_soc(d * self.detour, pct_per_km)
+                actor.empty_min += t
+                actor.cell = actor.home_cell
+                hlat, hlon = self._cell_point(actor.home_cell)
+                self._set_pos(actor, hlat, hlon)
+                self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (hlat, hlon),
+                          reason="go_home_charge")
             self.log(actor.actor_id, "charge_home_start", actor.cell)
             t0 = self.env.now
             dur = float(self.veh["home_charge_min"])
@@ -480,20 +513,24 @@ class World:
         station.queue_len += 1
         wait = 0.0
         wait_cap = float(self.cfg.get("station.wait_cap_min", 60.0))
-        reserved = None
+        swapped = False
+        recharge = float(self.cfg.get("station.battery_recharge_min"))
         while wait <= wait_cap:
             full = [b for b in station.batteries
                     if b.soc_pct >= station.ready_soc_pct and b.ready_at_min <= self.env.now]
             if full:
-                # reserve NGAY khi thấy (pop khỏi tủ) — tránh race 2 actor cùng lấy 1 pin
+                # M0-1: đổi 1-1 ATOMIC ngay lúc bắt đầu swap — pin đầy ra, pin cạn vào khe
+                # sạc ngay (tổng pin tủ bất biến mọi thời điểm; chống race 2 actor 1 pin).
                 full.sort(key=lambda b: b.ready_at_min)
-                reserved = full[0]
-                station.batteries.remove(reserved)
+                station.batteries.remove(full[0])
+                station.batteries.append(
+                    BatteryInStation(soc_pct=100.0, ready_at_min=self.env.now + recharge))
+                swapped = True
                 break
             yield self.env.timeout(1.0)
             wait += 1.0
         station.queue_len = max(0, station.queue_len - 1)
-        if reserved is None:
+        if not swapped:
             # M0-1: không còn pin ready trong wait_cap → rời trạm SOC nguyên (không pin ma).
             # Behavior sẽ re-trigger GO_SWAP ở decision point sau (pin trạm giờ hồi được → hết livelock).
             actor.charge_min += travel + wait
@@ -508,11 +545,7 @@ class World:
                                   float(self.cfg.get("station.swap_time_s_max")))
         yield self.env.timeout(swap_s / 60.0)
         actor.charge_min += travel + wait + swap_s / 60.0
-        # M0-1: đổi 1-1 — pin ready đã reserve ở trên; trả pin cạn vào sạc.
-        # Pin trả về ready sau battery_recharge_min với soc=100 (ready_at = mốc SẠC XONG).
-        recharge = float(self.cfg.get("station.battery_recharge_min"))
-        station.batteries.append(
-            BatteryInStation(soc_pct=100.0, ready_at_min=self.env.now + recharge))
+        # (đổi pin 1-1 đã thực hiện atomic ở vòng chờ phía trên)
         actor.soc_pct = 100.0
         actor.state = ActorState.IDLE
         self._seg(actor.actor_id, t_arrive, self.env.now, "charge",

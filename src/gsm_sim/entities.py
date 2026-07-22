@@ -58,6 +58,7 @@ class Actor:
     rest_min: float = 0.0       # nghỉ
     charge_min: float = 0.0     # đổi pin / sạc (gồm chờ)
     stranded_count: int = 0
+    meals_taken: int = 0        # M0-7: nghỉ ăn tối đa 1 lần/ngày trong meal_hour
     # kinh nghiệm cá nhân: bảng demand prior theo (cell, hour) — khởi tạo lazily
     demand_prior: dict = field(default_factory=dict)
 

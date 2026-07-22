@@ -73,6 +73,20 @@ def _hour_intensity(cfg: Config) -> dict[int, float]:
     return {h: w / s for h, w in kept.items()}
 
 
+def expected_demand_field(grid: Grid, cfg: Config) -> dict[int, dict[str, float]]:
+    """M0-3: kỳ vọng đơn theo (giờ, cell) TỪ CONFIG — không đọc realized trace.
+
+    λ(cell, hour) = orders_per_day × hour_share(hour) × cell_weight(cell).
+    Đây là nguồn thông tin HỢP LỆ cho belief của actor (kinh nghiệm/prior),
+    thay cho demand_field cũ xây từ chính orders của run (future-information leak).
+    Deterministic theo config — không phụ thuộc seed."""
+    orders_per_day = float(cfg.get("demand.orders_per_day"))
+    hour_share = _hour_intensity(cfg)
+    cell_w = _cell_weights(grid, cfg)
+    return {h: {c: orders_per_day * share * w for c, w in cell_w.items()}
+            for h, share in hour_share.items()}
+
+
 def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, env=None) -> list[Order]:
     """Sinh exogenous trace deterministic theo seed.
 

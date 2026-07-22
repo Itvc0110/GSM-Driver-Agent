@@ -74,9 +74,11 @@ def choose_idle_action(
     if now_min >= actor.shift_end_min:
         return (IdleAction.END_SHIFT, None)
 
-    # 3. Giờ ăn quen + đã chạy đủ lâu → nghỉ (một lần quanh meal_hour)
+    # 3. Giờ ăn quen + đã chạy đủ lâu → nghỉ (M0-7: đúng MỘT lần/ngày — cờ meals_taken)
     fatigue = actor.online_min / max(1.0, actor.fatigue_threshold_min)
-    if hour == actor.meal_hour and fatigue > 0.35 and rng.random() < 0.5:
+    if (hour == actor.meal_hour and actor.meals_taken == 0
+            and fatigue > 0.35 and rng.random() < 0.5):
+        actor.meals_taken += 1
         return (IdleAction.REST, None)
 
     # 4. Mệt cao → nghỉ ngắn xác suất tăng theo fatigue

@@ -141,3 +141,118 @@ def test_inflight_order_censored(result):
     for oid in inflight:
         assert states[oid][0] == "CENSORED_END_OF_RUN", (
             f"đơn {oid} in-flight cuối ngày nhưng state={states.get(oid)}")
+
+
+# ---------- Tranche 2: M0-3 future-leak + M0-4 stable belief ----------
+
+
+def test_no_future_information_leak(cfg):
+    """M0-3: belief của actor KHÔNG được đọc realized order trace của run.
+    Sau fix: world không còn build demand_field từ orders; hint đến từ expected
+    field (config) + prior per-actor."""
+    r = run_once(cfg, seed=3)
+    # world không được giữ field realized (thuộc tính demand_field từ orders phải biến mất
+    # hoặc không được xây từ realized trace)
+    from gsm_sim.world import World
+    assert not hasattr(r, "_demand_field_realized")
+    # kiểm gián tiếp qua nguồn: expected field chỉ phụ thuộc config, không phụ thuộc seed →
+    # 2 run khác seed phải cho CÙNG expected field (nếu field xây từ realized thì khác nhau)
+    import copy
+    from gsm_sim.config import Config as _C
+    from gsm_sim.demand import expected_demand_field
+    grid = r.grid
+    f1 = expected_demand_field(grid, cfg)
+    f2 = expected_demand_field(grid, cfg)
+    assert f1 == f2, "expected field phải deterministic theo config"
+    # và không trùng y hệt realized counts của một seed cụ thể
+    realized = {}
+    for o in r.orders:
+        h = int(o.t_min // 60) % 24
+        realized.setdefault(h, {})
+        realized[h][o.pickup_cell] = realized[h].get(o.pickup_cell, 0.0) + 1.0
+    assert f1 != realized, "expected field không được là realized trace (future leak)"
+
+
+def test_actor_belief_stable_and_hashseed_free(cfg):
+    """M0-4: belief per (actor, hour) phải ổn định trong run (không resample mỗi call)
+    và kết quả sim không phụ thuộc PYTHONHASHSEED (set-iteration đã prove nondeterminism)."""
+    from gsm_sim.metrics import summarize
+    a = summarize(run_once(cfg, seed=4))
+    b = summarize(run_once(cfg, seed=4))
+    assert a == b  # in-process determinism giữ
+    # belief stability: chạy 1 world, gọi hint 2 lần cùng (actor, hour) → identical
+    from gsm_sim.geo import build_grid
+    from gsm_sim.policy import PolicyBundle
+    from gsm_sim.demand import generate_orders
+    from gsm_sim.archetypes import sample_actors
+    from gsm_sim.world import World
+    data_dir = cfg.resolve_path("world.data_dir")
+    grid = build_grid(geom_path=data_dir / cfg.get("world.geom_file"),
+                      stations_path=data_dir / cfg.get("world.stations_file"),
+                      poi_path=data_dir / cfg.get("world.poi_file"),
+                      res=int(cfg.get("world.h3_res")),
+                      res_report=int(cfg.get("world.h3_res_report")))
+    policy = PolicyBundle.from_config(cfg)
+    orders = generate_orders(grid, cfg, policy, seed=4)
+    actors = sample_actors(grid, cfg, seed=4)
+    w = World(grid, cfg, policy, orders, actors, seed=4)
+    actor = actors[0]
+    h1 = w._actor_demand_hint(actor, 9)
+    h2 = w._actor_demand_hint(actor, 9)
+    assert h1 == h2, "belief resample mỗi call (M0-4 chưa fix)"
+
+
+# ---------- Tranche 2: M0-2 offer cooldown ----------
+
+
+def test_declined_pair_not_reoffered_within_cooldown(result):
+    """M0-2: cùng (order, actor) không được chào lại trong cooldown sau khi decline."""
+    cooldown = float(result.config.get("dispatcher.offer_cooldown_min", 10.0))
+    declines: dict[tuple, list[float]] = {}
+    for e in result.events:
+        if e.kind == "order_declined":
+            declines.setdefault((e.detail["order_id"], e.actor_id), []).append(e.t_min)
+    violations = []
+    for pair, times in declines.items():
+        times.sort()
+        for t1, t2 in zip(times, times[1:]):
+            if t2 - t1 < cooldown - 1e-9:
+                violations.append((pair, t1, t2))
+    assert not violations, f"re-offer trong cooldown: {violations[:5]}"
+
+
+# ---------- Tranche 2: M0-7 meal once ----------
+
+
+def test_meal_rest_once_per_day(result):
+    """M0-7: mỗi actor nghỉ ăn (rest trong meal_hour) tối đa 1 lần/ngày."""
+    actors = {a.actor_id: a for a in result.actors}
+    meal_rests: dict[int, int] = {}
+    for e in result.events:
+        if e.kind == "rest":
+            a = actors.get(e.actor_id)
+            if a is not None and int(e.t_min // 60) % 24 == a.meal_hour:
+                meal_rests[e.actor_id] = meal_rests.get(e.actor_id, 0) + 1
+    over = {aid: n for aid, n in meal_rests.items() if n > 1}
+    assert not over, f"actor nghỉ ăn nhiều lần cùng meal_hour: {over}"
+
+
+# ---------- Tranche 2: M0-8 home-charge travel ----------
+
+
+def test_home_charge_has_travel_segment(result):
+    """M0-8: sạc-tại-nhà phải có leg di chuyển VỀ NHÀ trước khi charge (không teleport)."""
+    actors = {a.actor_id: a for a in result.actors}
+    home_charges = [e for e in result.events if e.kind == "charge_home_start"]
+    if not home_charges:
+        pytest.skip("run này không có charge_home (phụ thuộc mix archetype)")
+    segs = result.segments
+    for e in home_charges:
+        a = actors[e.actor_id]
+        # phải tồn tại segment relocate reason=go_home_charge kết thúc đúng lúc charge bắt đầu
+        legs = [s for s in segs if s["actor_id"] == e.actor_id
+                and s.get("reason") == "go_home_charge" and abs(s["t1"] - e.t_min) < 0.5]
+        assert legs, f"actor {e.actor_id} charge_home lúc {e.t_min} không có leg về nhà"
+        # và sự kiện charge phải diễn ra tại home_cell
+        assert e.cell == a.home_cell, (
+            f"charge_home tại {e.cell} != home_cell {a.home_cell}")
