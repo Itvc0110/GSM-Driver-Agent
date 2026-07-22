@@ -84,9 +84,10 @@ Cường chỉ ra `meals_taken` không đo được ở hệ thực Xanh SM — 
 
 ## Visual verification
 
-- **Status:** `PENDING` — dashboard sẽ launch ngay sau update này, chờ verdict Cường trước push (không waive).
+- **Status:** `REVIEWED` — Cường xem dashboard (port 8501, health 200) 2026-07-22 và duyệt push.
 - **Cách launch:** `uv run --extra viz streamlit run src/gsm_sim/dashboard.py` (port 8501).
 - **Seed/scenario:** seed 1, dry_weekday + rain_peak.
+- **Verdict:** OK push. UI v0 còn lỗi đã biết (tủ pin/H3, trajectory player) — scope T-035–T-037, không thuộc T-030.
 
 ## Adversarial self-review / flaws found
 
