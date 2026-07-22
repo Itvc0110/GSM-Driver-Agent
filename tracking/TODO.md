@@ -29,7 +29,7 @@ Source of truth: `specs/simulation-reliability-upgrade.md`. Mỗi milestone có 
 | T-001 | Deep research chính sách & thu nhập tài xế Xanh SM (theo `planning/RESEARCH.md`) | DONE (đợt 1) | AI agent (Cường duyệt) | 2026-07-20; output: `research/` (chia theo loại); gaps còn lại → T-012 |
 | T-002 | Thiết kế hồ sơ tài xế mock (Bike trước) từ kết quả T-001 | DONE (nháp v1) | AI agent | 2026-07-20: 5 persona tại `planning/PERSONAS.md` (thêm tân binh + lão làng theo yêu cầu Cường); chờ review; số TBD chờ T-012 |
 | T-003 | Mock demand proxy theo khung giờ × ngày trong tuần × khu vực | READY (spec xong) | — | `specs/mock-order-distribution.md` đã phân biệt demand vs matching, normalized weights, weather formula, money terms; code generator chưa claim |
-| T-004 | Knowledge base chính sách cho F0 (policy có version + trích dẫn) | TODO | — | Nguồn từ T-001 |
+| T-004 | Knowledge base chính sách cho F0 (policy có version + trích dẫn) | DONE (text corpus + source register) | Khánh | `research/policy/t004-current-policy-text-corpus-2026-07-22.json` giữ full text + metadata của 7 nguồn T1 current; `T004_TEXT_CORPUS_USAGE.md` nêu guardrail. HTML/ảnh/OCR/crawler không vào repo; T-011/reviewer mới được tạo policy fact runtime. |
 | T-005 | Đánh giá framework agent: CrewAI vs flow tự viết (orchestrator theo drawio v2) | TODO | — | Stakeholder refer CrewAI; cần so sánh control/guardrail/độ phức tạp |
 | T-006 | Khung F1 trước ca: chỉ tiêu net mặc định + nhận xét chỉ tiêu theo hồ sơ | TODO | — | Phụ thuộc T-002, T-004 |
 | T-007 | Khung F2 trong ca: lời khuyên chạy/nghỉ/sạc từ phân phối mock | TODO | — | Phụ thuộc T-003 |
