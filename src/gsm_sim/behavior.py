@@ -33,14 +33,15 @@ def _logistic(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
-def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng) -> bool:
-    """Quyết định nhận đơn. forced=True (auto-accept) → luôn nhận."""
+def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng,
+                 cost_per_km_vnd: float = 3000.0, logit_center_vnd: float = 6000.0,
+                 logit_scale_vnd: float = 8000.0) -> bool:
+    """Quyết định nhận đơn. forced=True (auto-accept) → luôn nhận.
+    Tham số logit từ config (math-audit A5)."""
     if forced:
         return True
-    # utility: giá trị đơn trừ chi phí đến đón; scale để accept_base là điểm giữa
-    net = gross_vnd - pickup_dist_km * 3000.0
-    # dịch để p ~ accept_base khi net ~ 12k
-    x = (net - 6000.0) / 8000.0 + math.log(actor.accept_base / (1 - actor.accept_base))
+    net = gross_vnd - pickup_dist_km * cost_per_km_vnd
+    x = (net - logit_center_vnd) / logit_scale_vnd + math.log(actor.accept_base / (1 - actor.accept_base))
     return rng.random() < _logistic(x)
 
 

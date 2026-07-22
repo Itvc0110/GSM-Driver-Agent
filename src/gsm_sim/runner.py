@@ -11,6 +11,7 @@ from pathlib import Path
 from .archetypes import sample_actors
 from .config import Config
 from .demand import Order, generate_orders
+from .environment import EnvironmentContext
 from .geo import Grid, build_grid
 from .policy import PolicyBundle
 from .world import Event, World
@@ -25,11 +26,21 @@ class RunResult:
     config: Config
     policy: PolicyBundle
     grid: Grid
+    env: EnvironmentContext | None = None
 
 
 def _data(cfg: Config, fname_key: str) -> Path:
     data_dir = cfg.resolve_path("world.data_dir")
     return data_dir / cfg.get(f"world.{fname_key}")
+
+
+def build_environment(grid: Grid, cfg: Config, seed: int) -> EnvironmentContext | None:
+    """Tạo EnvironmentContext nếu config có block `environment`. Scenario mặc định
+    dry_weekday (mọi factor=1) ⇒ tương đương env=None (baseline). Không tiêu RNG khi
+    không mưa/sự kiện ⇒ giữ CRN với các run không-env."""
+    if cfg.get("environment", None) is None:
+        return None
+    return EnvironmentContext(grid, cfg, seed)
 
 
 def run_once(cfg: Config, seed: int) -> RunResult:
@@ -41,9 +52,10 @@ def run_once(cfg: Config, seed: int) -> RunResult:
         res_report=int(cfg.get("world.h3_res_report")),
     )
     policy = PolicyBundle.from_config(cfg)
-    orders = generate_orders(grid, cfg, policy, seed)
+    env = build_environment(grid, cfg, seed)
+    orders = generate_orders(grid, cfg, policy, seed, env=env)
     actors = sample_actors(grid, cfg, seed)
-    world = World(grid, cfg, policy, orders, actors, seed)
+    world = World(grid, cfg, policy, orders, actors, seed, environment=env)
     events = world.run()
     return RunResult(seed=seed, events=events, actors=actors, orders=orders,
-                     config=cfg, policy=policy, grid=grid)
+                     config=cfg, policy=policy, grid=grid, env=env)

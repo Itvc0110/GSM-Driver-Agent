@@ -8,6 +8,7 @@ Slice v0: 1 arm (B, không advice). Twin-runner 3 arm ở vòng sau.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -31,18 +32,25 @@ class Event:
 
 
 class World:
-    def __init__(self, grid: Grid, cfg: Config, policy: PolicyBundle, orders: list, actors: list[Actor], seed: int):
+    def __init__(self, grid: Grid, cfg: Config, policy: PolicyBundle, orders: list, actors: list[Actor],
+                 seed: int, environment=None):
         self.grid = grid
         self.cfg = cfg
         self.policy = policy
         self.orders = orders
         self.actors = {a.actor_id: a for a in actors}
         self.seed = seed
+        self.envctx = environment  # EnvironmentContext | None
         self.env = simpy.Environment()
         self.events: list[Event] = []
         self.speed_cfg = cfg.get("speed_kmh")
         self.disp_cfg = cfg.get("dispatcher")
         self.veh = cfg.get("vehicle")
+        self.detour = float(cfg.get("demand.detour_factor", 1.3))  # A4
+        bcfg = cfg.get("behavior", {})
+        self.accept_cost_km = float(bcfg.get("accept_cost_per_pickup_km_vnd", 3000.0))
+        self.accept_center = float(bcfg.get("accept_logit_center_vnd", 6000.0))
+        self.accept_scale = float(bcfg.get("accept_logit_scale_vnd", 8000.0))
 
         # RNG stream riêng cho hành vi actor (nền CRN: ngoại sinh đã ở orders)
         self.rng = np.random.default_rng(seed ^ 0xBEEF)
@@ -80,6 +88,26 @@ class World:
 
     def log(self, actor_id: int, kind: str, cell: str = "", **detail):
         self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail))
+
+    def _eff_speed(self, hour: int) -> float:
+        """Tốc độ hiệu dụng = base(giờ) × env.speed_factor (mưa/tắc), có sàn."""
+        base = _speed_kmh(hour, self.speed_cfg)
+        if self.envctx is None:
+            return base
+        v = base * self.envctx.speed_factor(self.env.now)
+        return max(self.envctx.v_floor, v)
+
+    def _travel_min(self, dist_km: float, hour: int) -> float:
+        """Thời gian di chuyển = quãng đường THỰC (× detour) / tốc độ hiệu dụng."""
+        return (dist_km * self.detour) / self._eff_speed(hour) * 60.0
+
+    def _pct_per_km(self, actor: Actor) -> float:
+        """Tiêu pin/km, điều chỉnh theo nhiệt độ (range giảm → tiêu hao tăng)."""
+        base = float(self.veh["swap_consume_pct_per_km"] if actor.fleet == FleetType.SWAP
+                     else self.veh["charge_consume_pct_per_km"])
+        if self.envctx is None:
+            return base
+        return base / max(0.5, self.envctx.range_factor(self.env.now))
 
     # --- Processes ---
 
@@ -132,23 +160,23 @@ class World:
                 continue
             hour = int(self.env.now // 60) % 24
             assigns = match_batch(list(self.open_orders.values()), idle, self.grid, hour,
-                                  self.speed_cfg, self.disp_cfg)
+                                  self.speed_cfg, self.disp_cfg,
+                                  eff_speed=self._eff_speed(hour), detour=self.detour)
             for asg in assigns:
                 order = self.open_orders.get(asg.order_id)
                 actor = self.actors.get(asg.actor_id)
                 if order is None or actor is None or actor.state != ActorState.IDLE:
                     continue
                 actor.orders_offered += 1
-                # SOC đủ hoàn thành? (pickup + trip)
-                total_km = asg.pickup_dist_km + order.dist_km
-                pct_per_km = (self.veh["swap_consume_pct_per_km"] if actor.fleet == FleetType.SWAP
-                              else self.veh["charge_consume_pct_per_km"])
-                enough = actor.soc_pct - total_km * float(pct_per_km) > 8.0
+                # SOC đủ hoàn thành? (pickup + trip, quãng đường thực × detour)
+                total_km = (asg.pickup_dist_km + order.dist_km) * self.detour
+                enough = actor.soc_pct - total_km * self._pct_per_km(actor) > 8.0
                 forced = actor.acceptance_rate < 0.5 and actor.orders_offered > 5
                 if not enough:
                     actor.orders_cancelled += 1
                     continue
-                if not accept_order(actor, order.gross_vnd, asg.pickup_dist_km, forced, self.rng):
+                if not accept_order(actor, order.gross_vnd, asg.pickup_dist_km, forced, self.rng,
+                                    self.accept_cost_km, self.accept_center, self.accept_scale):
                     self.log(actor.actor_id, "order_declined", actor.cell, order_id=order.order_id)
                     continue
                 # nhận đơn
@@ -160,23 +188,22 @@ class World:
 
     def _serve_trip(self, actor: Actor, order, asg):
         hour = int(self.env.now // 60) % 24
-        speed = _speed_kmh(hour, self.speed_cfg)
-        pct_per_km = float(self.veh["swap_consume_pct_per_km"] if actor.fleet == FleetType.SWAP
-                           else self.veh["charge_consume_pct_per_km"])
-        # tới điểm đón
-        pickup_min = asg.pickup_dist_km / speed * 60.0
+        pct_per_km = self._pct_per_km(actor)
+        # tới điểm đón (quãng đường thực × detour / tốc độ hiệu dụng)
+        pickup_min = self._travel_min(asg.pickup_dist_km, hour)
         yield self.env.timeout(pickup_min)
-        actor.consume_soc(asg.pickup_dist_km, pct_per_km)
+        actor.consume_soc(asg.pickup_dist_km * self.detour, pct_per_km)
         actor.cell = order.pickup_cell
         actor.empty_min += pickup_min
         actor.state = ActorState.ON_TRIP
         self.log(actor.actor_id, "pickup", order.pickup_cell,
                  order_id=order.order_id, eta_min=round(pickup_min, 2))
         # chở khách
-        trip_min = order.dist_km / speed * 60.0
+        hour = int(self.env.now // 60) % 24
+        trip_min = self._travel_min(order.dist_km, hour)
         yield self.env.timeout(trip_min)
         actor.occupied_min += trip_min
-        actor.consume_soc(order.dist_km, pct_per_km)
+        actor.consume_soc(order.dist_km * self.detour, pct_per_km)
         # kiểm tra stranded (variance): nếu SOC <= 0 giữa đường
         if actor.soc_pct <= 0.0:
             actor.stranded_count += 1
@@ -191,10 +218,10 @@ class World:
                  order_id=order.order_id, gross=order.gross_vnd, dist_km=order.dist_km)
         # nếu trả khách ngoài lõi → deadhead quay về cell lõi gần nhất
         if not self.grid.is_core(actor.cell):
-            yield from self._deadhead_to_core(actor, speed, pct_per_km)
+            yield from self._deadhead_to_core(actor, pct_per_km)
         actor.state = ActorState.IDLE
 
-    def _deadhead_to_core(self, actor: Actor, speed: float, pct_per_km: float):
+    def _deadhead_to_core(self, actor: Actor, pct_per_km: float):
         # tìm cell lõi gần nhất trong vành mở rộng
         target = None
         for r in range(1, 8):
@@ -207,9 +234,10 @@ class World:
         if target is None:
             target = self.grid.core_cells[0]
         d = cell_distance_km(self.grid, actor.cell, target)
-        t = d / speed * 60.0
+        hour = int(self.env.now // 60) % 24
+        t = self._travel_min(d, hour)
         yield self.env.timeout(t)
-        actor.consume_soc(d, pct_per_km)
+        actor.consume_soc(d * self.detour, pct_per_km)
         actor.empty_min += t
         actor.cell = target
 
@@ -256,9 +284,8 @@ class World:
                 yield self.env.timeout(rest_min)
                 actor.state = ActorState.IDLE
             elif action == IdleAction.RELOCATE and target:
-                speed = _speed_kmh(hour, self.speed_cfg)
                 d = cell_distance_km(self.grid, actor.cell, target)
-                t = d / speed * 60.0
+                t = self._travel_min(d, hour)
                 yield self.env.timeout(t)
                 actor.empty_min += t
                 actor.cell = target
@@ -282,8 +309,9 @@ class World:
             nearby.add(c)
         for c in nearby:
             base = field.get(c, 0.0)
-            noise = 1.0 + self.rng.normal(0.0, sigma)
-            hint[c] = max(0.0, base * noise)
+            # A6: nhiễu lognormal (luôn dương, không clamp về 0) — sai số nhân
+            noise = math.exp(self.rng.normal(0.0, sigma))
+            hint[c] = base * noise
         return hint
 
     def _do_charge(self, actor: Actor, action: IdleAction):
@@ -305,14 +333,13 @@ class World:
             actor.state = ActorState.IDLE
             return
         hour = int(self.env.now // 60) % 24
-        speed = _speed_kmh(hour, self.speed_cfg)
-        pct_per_km = float(self.veh["swap_consume_pct_per_km"])
+        pct_per_km = self._pct_per_km(actor)
         d = cell_distance_km(self.grid, actor.cell, station.cell)
-        travel = d / speed * 60.0
+        travel = self._travel_min(d, hour)
         actor.state = ActorState.CHARGING
         self.log(actor.actor_id, "go_swap", actor.cell, station=station.node_id)
         yield self.env.timeout(travel)
-        actor.consume_soc(d, pct_per_km)
+        actor.consume_soc(d * self.detour, pct_per_km)
         actor.cell = station.cell
         actor.empty_min += travel
         # xếp hàng

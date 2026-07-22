@@ -36,13 +36,15 @@ def match_batch(
     hour: int,
     speed_cfg: dict,
     disp_cfg: dict,
+    eff_speed: float | None = None,   # tốc độ hiệu dụng (đã trừ mưa/tắc); None = base
+    detour: float = 1.0,              # hệ số đường vòng (A4)
 ) -> list[Assignment]:
     """Gán greedy: với mỗi đơn (theo order_id tăng dần), tìm actor idle gần nhất
     trong grid_disk k (nới tới k_max), thỏa ETA_max. Mỗi actor nhận tối đa 1 đơn/tick."""
     k = int(disp_cfg["candidate_ring_k"])
     k_max = int(disp_cfg["candidate_ring_k_max"])
     eta_max = float(disp_cfg["eta_max_min"])
-    speed = _speed_kmh(hour, speed_cfg)
+    speed = eff_speed if eff_speed is not None else _speed_kmh(hour, speed_cfg)
 
     # index actor theo cell để tra nhanh
     by_cell: dict[str, list[Actor]] = {}
@@ -67,7 +69,7 @@ def match_batch(
             ring += 1
         if best is None:
             continue
-        eta = best_dist / speed * 60.0  # phút
+        eta = (best_dist * detour) / speed * 60.0  # phút (quãng đường thực × detour)
         if eta > eta_max:
             continue
         taken.add(best.actor_id)
