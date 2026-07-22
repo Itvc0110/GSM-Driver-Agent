@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .config import Config
-from .geo import Grid, cell_distance_km, grid_disk, sample_point_in_cell
+from .geo import Grid, cell_distance_km, grid_disk, haversine_km, sample_point_in_cell
 from .policy import PolicyBundle
 
 
@@ -132,12 +132,16 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
             t_min = hour * 60 + rng.uniform(0, 60)
             # A2: nội suy cường độ giữa giờ → rải theo trọng số (giảm răng cửa biên giờ)
             pickup = _sample_pickup(cells, base_probs, grid, env, t_min, rng)
-            dist_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
-            drop = _sample_drop(grid, pickup, dist_km, buffer_k, km_per_cell, softness, rng)
-            gross = policy.gross_fare(dist_km)
+            target_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
+            drop = _sample_drop(grid, pickup, target_km, buffer_k, km_per_cell, softness, rng)
             patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
             p_lat, p_lon = sample_point_in_cell(grid, pickup, rng_pt)
             d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
+            # M0-9 distance contract: dist_km = haversine giữa ĐÚNG 2 endpoint đã chọn
+            # (lognormal chỉ để CHỌN drop cell — shape phân phối giữ qua distance-decay).
+            # Fare/time/SOC đều đi từ dist_km × detour → một nguồn khoảng cách duy nhất.
+            dist_km = haversine_km(p_lat, p_lon, d_lat, d_lon)
+            gross = policy.gross_fare(dist_km)
             orders.append(Order(oid, t_min, pickup, drop, round(dist_km, 3), gross, round(patience, 2),
                                 p_lat, p_lon, d_lat, d_lon))
             oid += 1
@@ -182,11 +186,12 @@ def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
                 if rng.random() < env._event_time_profile(ev, t) * 60.0:
                     break
             cell = _event_pickup_cell(grid, cells, ev, rng)
-            dist_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
-            drop = _sample_drop(grid, cell, dist_km, buffer_k, km_per_cell, softness, rng)
+            target_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
+            drop = _sample_drop(grid, cell, target_km, buffer_k, km_per_cell, softness, rng)
             patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
             p_lat, p_lon = sample_point_in_cell(grid, cell, rng_pt)
             d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
+            dist_km = haversine_km(p_lat, p_lon, d_lat, d_lon)  # M0-9 contract
             orders.append(Order(oid, t, cell, drop, round(dist_km, 3), policy.gross_fare(dist_km),
                                 round(patience, 2), p_lat, p_lon, d_lat, d_lon))
             oid += 1

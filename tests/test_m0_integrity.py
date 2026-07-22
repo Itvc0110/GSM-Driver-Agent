@@ -256,3 +256,140 @@ def test_home_charge_has_travel_segment(result):
         # và sự kiện charge phải diễn ra tại home_cell
         assert e.cell == a.home_cell, (
             f"charge_home tại {e.cell} != home_cell {a.home_cell}")
+
+
+# ---------- Tranche 3: M0-9 distance contract ----------
+
+
+def test_distance_contract_consistency(result):
+    """M0-9: dist_km (tính tiền/thời gian/pin) phải = haversine(pickup_pt, drop_pt).
+    Baseline bug: dist_km sample lognormal độc lập với endpoints."""
+    for o in result.orders[:200]:
+        hv = haversine_km(o.pickup_lat, o.pickup_lon, o.drop_lat, o.drop_lon)
+        assert abs(o.dist_km - hv) < 0.02, (
+            f"đơn {o.order_id}: dist_km={o.dist_km} != haversine(endpoints)={hv:.3f}")
+
+
+# ---------- Tranche 3: M0-10 atomic position/cell sync ----------
+
+
+def test_position_cell_always_synced(result):
+    """M0-10: actor.cell phải luôn = h3(latlng) sau mọi movement — kiểm cuối run."""
+    res = int(result.config.get("world.h3_res"))
+    for a in result.actors:
+        if a.lat == 0.0 and a.lon == 0.0:
+            continue  # chưa từng online
+        expect = h3.latlng_to_cell(a.lat, a.lon, res)
+        assert a.cell == expect, (
+            f"actor {a.actor_id}: cell={a.cell} != h3(pos)={expect} (desync)")
+
+
+# ---------- Tranche 3: M0-11 + M0-12 dispatch semantics ----------
+
+
+def test_dispatch_nearest_across_rings(cfg):
+    """M0-11: actor GẦN HƠN (haversine) ở ring xa hơn phải thắng actor xa hơn ở ring gần.
+    Baseline bug: dừng ở ring đầu tiên có candidate."""
+    from gsm_sim.dispatcher import match_batch
+    from gsm_sim.demand import Order
+    from gsm_sim.entities import Actor, ActorState, FleetType
+    from gsm_sim.geo import build_grid, grid_disk
+    import h3 as _h3
+    data_dir = cfg.resolve_path("world.data_dir")
+    grid = build_grid(geom_path=data_dir / cfg.get("world.geom_file"),
+                      stations_path=data_dir / cfg.get("world.stations_file"),
+                      poi_path=data_dir / cfg.get("world.poi_file"),
+                      res=int(cfg.get("world.h3_res")),
+                      res_report=int(cfg.get("world.h3_res_report")))
+    pickup = grid.core_cells[len(grid.core_cells) // 2]
+    plat, plon = grid.cell_centroid[pickup]
+    # actor A: cell sát pickup (ring 1) nhưng đứng RÌA XA của cell → haversine xa
+    ring1 = [c for c in grid_disk(pickup, 1) if c != pickup][0]
+    a_lat, a_lon = _h3.cell_to_latlng(ring1)
+    # dời A ra xa pickup thêm ~1.2km theo hướng ngược
+    from gsm_sim.geo import offset_latlng
+    a_lat, a_lon = offset_latlng(a_lat, a_lon, 1.2, 1.2)
+    # actor B: ring 3 nhưng đứng gần pickup hơn (chỉ ~0.5km)
+    ring3 = [c for c in grid_disk(pickup, 3) if c not in set(grid_disk(pickup, 2))][0]
+    b_lat, b_lon = offset_latlng(plat, plon, 0.35, 0.35)  # ~0.5km từ pickup
+
+    def mk(aid, cell, lat, lon):
+        a = Actor(actor_id=aid, archetype="P2", fleet=FleetType.SWAP, home_cell=cell,
+                  shift_start_min=0, shift_end_min=1440, demand_prior_sigma=0.3,
+                  accept_base=0.95, fatigue_threshold_min=600, meal_hour=12, cell=cell)
+        a.state = ActorState.IDLE
+        a.lat, a.lon = lat, lon
+        return a
+
+    A = mk(1, ring1, a_lat, a_lon)
+    B = mk(2, ring3, b_lat, b_lon)
+    order = Order(0, 600.0, pickup, pickup, 3.0, 20000, 5.0, plat, plon, plat, plon)
+    asg = match_batch([order], [A, B], grid, 12, cfg.get("speed_kmh"), cfg.get("dispatcher"))
+    assert asg, "phải match được"
+    assert asg[0].actor_id == 2, (
+        f"actor 2 gần hơn (0.5km, ring3) phải thắng actor 1 (1.7km, ring1); got {asg[0].actor_id}")
+
+
+def test_dispatch_tiebreak_deterministic(cfg):
+    """M0-12: hai actor cùng khoảng cách → actor_id nhỏ hơn thắng (ổn định 2 lần chạy)."""
+    from gsm_sim.dispatcher import match_batch
+    from gsm_sim.demand import Order
+    from gsm_sim.entities import Actor, ActorState, FleetType
+    from gsm_sim.geo import build_grid
+    data_dir = cfg.resolve_path("world.data_dir")
+    grid = build_grid(geom_path=data_dir / cfg.get("world.geom_file"),
+                      stations_path=data_dir / cfg.get("world.stations_file"),
+                      poi_path=data_dir / cfg.get("world.poi_file"),
+                      res=int(cfg.get("world.h3_res")),
+                      res_report=int(cfg.get("world.h3_res_report")))
+    pickup = grid.core_cells[10]
+    plat, plon = grid.cell_centroid[pickup]
+
+    def mk(aid):
+        a = Actor(actor_id=aid, archetype="P2", fleet=FleetType.SWAP, home_cell=pickup,
+                  shift_start_min=0, shift_end_min=1440, demand_prior_sigma=0.3,
+                  accept_base=0.95, fatigue_threshold_min=600, meal_hour=12, cell=pickup)
+        a.state = ActorState.IDLE
+        a.lat, a.lon = plat, plon  # cùng đúng 1 vị trí → distance bằng nhau tuyệt đối
+        return a
+
+    order = Order(0, 600.0, pickup, pickup, 3.0, 20000, 5.0, plat, plon, plat, plon)
+    for _ in range(2):
+        asg = match_batch([order], [mk(7), mk(3)], grid, 12,
+                          cfg.get("speed_kmh"), cfg.get("dispatcher"))
+        assert asg and asg[0].actor_id == 3, f"tie phải chọn actor_id nhỏ (3), got {asg}"
+
+
+# ---------- Tranche 3: C-2 congestion toggle ----------
+
+
+def test_congestion_disabled_zeroes_route_effect(cfg):
+    """C-2: enabled=false phải zero TOÀN BỘ r() kể cả event route_effect."""
+    import copy
+    from gsm_sim.config import Config as _C
+    from gsm_sim.congestion import CongestionField
+    from gsm_sim.environment import EnvironmentContext
+    from gsm_sim.geo import build_grid
+    data_dir = cfg.resolve_path("world.data_dir")
+    grid = build_grid(geom_path=data_dir / cfg.get("world.geom_file"),
+                      stations_path=data_dir / cfg.get("world.stations_file"),
+                      poi_path=data_dir / cfg.get("world.poi_file"),
+                      res=int(cfg.get("world.h3_res")),
+                      res_report=int(cfg.get("world.h3_res_report")))
+    venue = grid.core_cells[0]
+    data = copy.deepcopy(cfg.data)
+    data["congestion"]["enabled"] = False
+    data["environment"]["events"] = [{
+        "venue_cell": venue, "t_start_min": 1140, "t_end_min": 1320,
+        "attendance": 20000, "capture_rate": 0.1, "sigma_cells": 2.0,
+        "route_effect": {"speed_multiplier": 0.5, "sigma_cells": 2.0},
+    }]
+    c2 = _C(data, cfg.root_dir)
+    env = EnvironmentContext(grid, c2, seed=1)
+    from gsm_sim.demand import generate_orders
+    from gsm_sim.policy import PolicyBundle
+    orders = generate_orders(grid, c2, PolicyBundle.from_config(c2), seed=1, env=env)
+    field = CongestionField(orders, c2, env=env)
+    # 19h (=1140+30) trong cửa sổ event, tại venue: nếu toggle đúng → r=0
+    assert field.r(venue, 19) == 0.0, (
+        f"enabled=false nhưng r(venue,19h)={field.r(venue, 19)} — route_effect chưa bị gate (C-2)")

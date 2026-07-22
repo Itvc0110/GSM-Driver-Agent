@@ -139,6 +139,8 @@ Không actor ngoài `k_max` được chọn. Fallback Haversine×detour phải c
 - Baseline actor/advisor không được nhìn realized future orders hoặc future environment state ngoài forecast được phép.
 - External inputs phải fetch/snapshot/version **trước run**; không gọi live API trong deterministic sim loop.
 
+**Observable / Inferable / Latent taxonomy (Cường 2026-07-22):** state của actor chia 3 tầng theo khả năng đo của hệ thực Xanh SM: (a) **observable** — app events (online/offline, accept/decline/complete), GPS trace, giao dịch đổi pin tại tủ, điểm/payout; (b) **inferable** — nghỉ/ăn (đứng im dài giữa trưa không đơn), đi sạc (di chuyển tới tủ + swap), relocate (di chuyển tự do); (c) **latent, sim-only ground truth** — `meals_taken`, fatigue, belief/prior, accept_base, patience khách. Sim ĐƯỢC giữ latent state để điều khiển behavior model; nhưng **advisor observation (M4/T-019), evaluator adherence và F3 analyzer chỉ được tiêu thụ observable + inferable projection** — đọc latent = vi phạm information boundary cùng lớp với future-leak. Flaw/insight cho stakeholder từ latent phải gắn nhãn `SIM-GROUND-TRUTH (không đo được ngoài đời)`; M3 Diagnostic được hiển thị latent, Story Mode phải phân biệt.
+
 ## 4. M0 — Simulator integrity gate
 
 ### 4.1 Mục tiêu

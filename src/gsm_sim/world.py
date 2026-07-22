@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
+import h3
 import numpy as np
 import simpy
 
@@ -117,7 +118,10 @@ class World:
         return self.grid.cell_centroid.get(cell) or (0.0, 0.0)
 
     def _set_pos(self, actor: Actor, lat: float, lon: float) -> None:
+        """M0-10: movement ATOMIC — lat/lon và H3 cell cập nhật cùng nhau.
+        Caller KHÔNG tự gán actor.cell nữa (một nguồn sự thật duy nhất)."""
         actor.lat, actor.lon = lat, lon
+        actor.cell = h3.latlng_to_cell(lat, lon, self.grid.res)
         self.traj.append((round(self.env.now, 3), actor.actor_id, lat, lon, actor.state.value))
 
     def _seg(self, actor_id: int, t0: float, t1: float, kind: str,
@@ -284,7 +288,6 @@ class World:
         pickup_min = self._travel_min(asg.pickup_dist_km, hour, origin_cell)
         yield self.env.timeout(pickup_min)
         actor.consume_soc(asg.pickup_dist_km * self.detour, pct_per_km)
-        actor.cell = order.pickup_cell
         actor.empty_min += pickup_min
         actor.state = ActorState.ON_TRIP
         self._set_pos(actor, order.pickup_lat, order.pickup_lon)  # vị trí = điểm đón THẬT
@@ -304,7 +307,6 @@ class World:
         if actor.soc_pct <= 0.0:
             actor.stranded_count += 1
             self.log(actor.actor_id, "battery_stranded", order.drop_cell, order_id=order.order_id)
-        actor.cell = order.drop_cell
         actor.trips_done += 1
         actor.orders_completed += 1
         actor.gross_vnd += order.gross_vnd
@@ -344,10 +346,9 @@ class World:
         yield self.env.timeout(t)
         actor.consume_soc(d * self.detour, pct_per_km)
         actor.empty_min += t
-        actor.cell = target
         clat, clon = self._cell_point(target)
         actor.state = ActorState.IDLE
-        self._set_pos(actor, clat, clon)
+        self._set_pos(actor, clat, clon)  # M0-10: cell sync trong _set_pos
         self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="deadhead_to_core")
         self.log(actor.actor_id, "relocate", target, reason="deadhead_to_core")
 
@@ -412,10 +413,9 @@ class World:
                 actor.state = ActorState.ENROUTE
                 yield self.env.timeout(t)
                 actor.empty_min += t
-                actor.cell = target
                 clat, clon = self._cell_point(target)
                 actor.state = ActorState.IDLE
-                self._set_pos(actor, clat, clon)
+                self._set_pos(actor, clat, clon)  # M0-10
                 self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="demand_seek")
                 self.log(actor.actor_id, "relocate", target, reason="demand_seek")
             else:  # WAIT
@@ -468,9 +468,8 @@ class World:
                 yield self.env.timeout(t)
                 actor.consume_soc(d * self.detour, pct_per_km)
                 actor.empty_min += t
-                actor.cell = actor.home_cell
                 hlat, hlon = self._cell_point(actor.home_cell)
-                self._set_pos(actor, hlat, hlon)
+                self._set_pos(actor, hlat, hlon)  # M0-10
                 self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (hlat, hlon),
                           reason="go_home_charge")
             self.log(actor.actor_id, "charge_home_start", actor.cell)
@@ -502,8 +501,7 @@ class World:
         self.log(actor.actor_id, "go_swap", actor.cell, station=station.node_id)
         yield self.env.timeout(travel)
         actor.consume_soc(d * self.detour, pct_per_km)
-        actor.cell = station.cell
-        self._set_pos(actor, station.lat, station.lon)  # vị trí = trạm đổi pin THẬT
+        self._set_pos(actor, station.lat, station.lon)  # vị trí = trạm THẬT; cell sync M0-10
         actor.empty_min += travel
         # đoạn di chuyển tới trạm (enroute-to-swap)
         self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (station.lat, station.lon),

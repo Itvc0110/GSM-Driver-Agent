@@ -74,7 +74,11 @@ class CongestionField:
         return 1.0 - surv
 
     def r(self, cell: str, hour: int) -> float:
-        """Tổng r_cong ∈ [0, 0.95]: survival gộp tắc-nền × route_effect."""
+        """Tổng r_cong ∈ [0, 0.95]: survival gộp tắc-nền × route_effect.
+        C-2: enabled=false → 0 TOÀN BỘ (kể cả event route_effect) — đúng docstring
+        'tắt được về baseline'; route_effect thuộc speed model nên đi theo toggle này."""
+        if not self.enabled:
+            return 0.0
         base = self._base_r(cell, hour)
         route = self._route_r(cell, hour)
         r = 1.0 - (1.0 - base) * (1.0 - route)
