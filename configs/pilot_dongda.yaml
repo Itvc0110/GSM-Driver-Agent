@@ -81,6 +81,13 @@ speed_kmh:                         # world-parameters.md §2
   peak_hours: [6, 7, 8, 16, 17, 18]
   night_hours: [21, 22, 23, 0, 1, 2, 3, 4, 5]
 
+# Congestion spatiotemporal: độ tắc suy từ phân phối đơn (cell đông giờ cao điểm chạy chậm).
+# Kết hợp mưa qua survival product. cap=0 hoặc enabled=false → tắt (baseline speed cũ).
+congestion:
+  enabled: true
+  cap: 0.35                        # r_cong tối đa (cell đông nhất giờ đông nhất giảm ~35% tốc độ)
+  normalize: global_peak           # global_peak (so đỉnh toàn ngày) | hour_peak (so đỉnh trong giờ)
+
 dispatcher:
   candidate_ring_k: 4              # grid_disk k ở res 9 (~ bán kính 1.4km); nới nếu rỗng
   candidate_ring_k_max: 6
@@ -160,7 +167,9 @@ environment:
   dow:
     type: weekday                 # weekday | friday | weekend
     level: {weekday: 1.0, friday: 1.10, weekend: 1.05}
-  events: []                      # [{venue_cell, t_start_min, t_end_min, attendance, capture_rate, sigma_cells}]
+  # events: [{venue_cell, t_start_min, t_end_min, attendance, capture_rate, sigma_cells,
+  #           route_effect: {speed_multiplier: 0.6, sigma_cells: 1.5}}]  # route_effect = giảm tốc cục bộ (survival)
+  events: []
   combine:
     demand_total_clamp: [0.3, 3.0]
     log_raw_and_capped: true

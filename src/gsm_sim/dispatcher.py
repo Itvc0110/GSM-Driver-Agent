@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .entities import Actor, ActorState
-from .geo import Grid, cell_distance_km, grid_disk
+from .geo import Grid, cell_distance_km, grid_disk, haversine_km
 
 
 @dataclass
@@ -36,17 +36,17 @@ def match_batch(
     hour: int,
     speed_cfg: dict,
     disp_cfg: dict,
-    eff_speed: float | None = None,   # tốc độ hiệu dụng (đã trừ mưa/tắc); None = base
-    detour: float = 1.0,              # hệ số đường vòng (A4)
+    speed_fn=None,              # (cell, hour) -> km/h hiệu dụng (mưa/tắc); None = base theo giờ
+    detour: float = 1.0,        # hệ số đường vòng (A4)
 ) -> list[Assignment]:
     """Gán greedy: với mỗi đơn (theo order_id tăng dần), tìm actor idle gần nhất
-    trong grid_disk k (nới tới k_max), thỏa ETA_max. Mỗi actor nhận tối đa 1 đơn/tick."""
+    (khoảng cách LIÊN TỤC actor→điểm đón, haversine) trong grid_disk k (nới tới k_max, H3),
+    thỏa ETA_max. Mỗi actor nhận tối đa 1 đơn/tick. speed_fn cho tốc độ theo cell đón."""
     k = int(disp_cfg["candidate_ring_k"])
     k_max = int(disp_cfg["candidate_ring_k_max"])
     eta_max = float(disp_cfg["eta_max_min"])
-    speed = eff_speed if eff_speed is not None else _speed_kmh(hour, speed_cfg)
 
-    # index actor theo cell để tra nhanh
+    # index actor theo cell để tra nhanh (candidate search vẫn theo H3 grid_disk)
     by_cell: dict[str, list[Actor]] = {}
     for a in idle_actors:
         by_cell.setdefault(a.cell, []).append(a)
@@ -63,12 +63,14 @@ def match_batch(
                 for a in by_cell.get(cell, []):
                     if a.actor_id in taken:
                         continue
-                    d = cell_distance_km(grid, a.cell, order.pickup_cell)
+                    # khoảng cách thực actor→điểm đón (toạ độ liên tục)
+                    d = haversine_km(a.lat, a.lon, order.pickup_lat, order.pickup_lon)
                     if d < best_dist:
                         best_dist, best = d, a
             ring += 1
         if best is None:
             continue
+        speed = speed_fn(order.pickup_cell, hour) if speed_fn is not None else _speed_kmh(hour, speed_cfg)
         eta = (best_dist * detour) / speed * 60.0  # phút (quãng đường thực × detour)
         if eta > eta_max:
             continue

@@ -5,11 +5,12 @@ Slice v0: 1 arm (B). Trả về (events, actors) để metrics/logging xử lý.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .archetypes import sample_actors
 from .config import Config
+from .congestion import CongestionField
 from .demand import Order, generate_orders
 from .environment import EnvironmentContext
 from .geo import Grid, build_grid
@@ -27,6 +28,9 @@ class RunResult:
     policy: PolicyBundle
     grid: Grid
     env: EnvironmentContext | None = None
+    congestion: CongestionField | None = None
+    traj: list = field(default_factory=list)
+    segments: list = field(default_factory=list)
 
 
 def _data(cfg: Config, fname_key: str) -> Path:
@@ -54,8 +58,10 @@ def run_once(cfg: Config, seed: int) -> RunResult:
     policy = PolicyBundle.from_config(cfg)
     env = build_environment(grid, cfg, seed)
     orders = generate_orders(grid, cfg, policy, seed, env=env)
+    congestion = CongestionField(orders, cfg, env=env)
     actors = sample_actors(grid, cfg, seed)
-    world = World(grid, cfg, policy, orders, actors, seed, environment=env)
+    world = World(grid, cfg, policy, orders, actors, seed, environment=env, congestion=congestion)
     events = world.run()
     return RunResult(seed=seed, events=events, actors=actors, orders=orders,
-                     config=cfg, policy=policy, grid=grid, env=env)
+                     config=cfg, policy=policy, grid=grid, env=env,
+                     congestion=congestion, traj=world.traj, segments=world.segments)

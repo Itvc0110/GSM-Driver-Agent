@@ -39,6 +39,8 @@ class Actor:
     # trạng thái động
     state: ActorState = ActorState.OFFLINE
     cell: str = ""
+    lat: float = 0.0        # vị trí liên tục hiện tại (hybrid lat/lng)
+    lon: float = 0.0
     soc_pct: float = 100.0
     # đếm trong ca
     trips_done: int = 0

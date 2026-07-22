@@ -15,7 +15,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .config import Config
-from .geo import Grid, cell_distance_km, grid_disk
+from .geo import Grid, cell_distance_km, grid_disk, sample_point_in_cell
 from .policy import PolicyBundle
 
 
@@ -28,6 +28,11 @@ class Order:
     dist_km: float
     gross_vnd: int
     patience_min: float = 5.0  # khách hủy nếu chưa match sau chừng này phút (exogenous, CRN-safe)
+    # toạ độ liên tục "địa chỉ thực" trong cell (hybrid lat/lng — cho movement + visualize)
+    pickup_lat: float = 0.0
+    pickup_lon: float = 0.0
+    drop_lat: float = 0.0
+    drop_lon: float = 0.0
 
 
 def _cell_weights(grid: Grid, cfg: Config) -> dict[str, float]:
@@ -76,6 +81,9 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
     quãng đường lognormal; gross theo policy. env=None → không biến môi trường (baseline).
     """
     rng = np.random.default_rng(seed)
+    # RNG stream RIÊNG cho toạ độ điểm — tách khỏi trace ngoại sinh (cells/dist/gross/patience)
+    # để thêm lat/lng KHÔNG xáo trộn trace cũ (baseline metrics bất biến, CRN-safe).
+    rng_pt = np.random.default_rng(seed ^ 0xC0FFEE)
     orders_per_day = float(cfg.get("demand.orders_per_day"))
     hour_share = _hour_intensity(cfg)
     cell_w = _cell_weights(grid, cfg)
@@ -114,17 +122,21 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
             drop = _sample_drop(grid, pickup, dist_km, buffer_k, km_per_cell, softness, rng)
             gross = policy.gross_fare(dist_km)
             patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
-            orders.append(Order(oid, t_min, pickup, drop, round(dist_km, 3), gross, round(patience, 2)))
+            p_lat, p_lon = sample_point_in_cell(grid, pickup, rng_pt)
+            d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
+            orders.append(Order(oid, t_min, pickup, drop, round(dist_km, 3), gross, round(patience, 2),
+                                p_lat, p_lon, d_lat, d_lon))
             oid += 1
 
     # event addend: sinh cuốc cộng thêm quanh venue (CỘNG không nhân)
     if env is not None and env.events:
         oid = _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
-                                buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng)
+                                buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt)
 
     orders.sort(key=lambda o: (o.t_min, o.order_id))
     # đánh lại order_id theo thứ tự thời gian để deterministic + ổn định
-    return [Order(i, o.t_min, o.pickup_cell, o.drop_cell, o.dist_km, o.gross_vnd, o.patience_min)
+    return [Order(i, o.t_min, o.pickup_cell, o.drop_cell, o.dist_km, o.gross_vnd, o.patience_min,
+                  o.pickup_lat, o.pickup_lon, o.drop_lat, o.drop_lon)
             for i, o in enumerate(orders)]
 
 
@@ -141,7 +153,7 @@ def _sample_pickup(cells, base_probs, grid, env, t_min, rng) -> str:
 
 
 def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
-                      buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng) -> int:
+                      buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt) -> int:
     """Sinh cuốc sự kiện (cộng thêm) — sample thời điểm trong cửa sổ event, cell quanh venue."""
     for ev in env.events:
         # tổng cuốc kỳ vọng của event (xấp xỉ) = N·capture (rải theo time profile)
@@ -159,7 +171,10 @@ def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
             dist_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
             drop = _sample_drop(grid, cell, dist_km, buffer_k, km_per_cell, softness, rng)
             patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
-            orders.append(Order(oid, t, cell, drop, round(dist_km, 3), policy.gross_fare(dist_km), round(patience, 2)))
+            p_lat, p_lon = sample_point_in_cell(grid, cell, rng_pt)
+            d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
+            orders.append(Order(oid, t, cell, drop, round(dist_km, 3), policy.gross_fare(dist_km),
+                                round(patience, 2), p_lat, p_lon, d_lat, d_lon))
             oid += 1
     return oid
 

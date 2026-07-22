@@ -33,7 +33,7 @@ class Event:
 
 class World:
     def __init__(self, grid: Grid, cfg: Config, policy: PolicyBundle, orders: list, actors: list[Actor],
-                 seed: int, environment=None):
+                 seed: int, environment=None, congestion=None):
         self.grid = grid
         self.cfg = cfg
         self.policy = policy
@@ -41,6 +41,12 @@ class World:
         self.actors = {a.actor_id: a for a in actors}
         self.seed = seed
         self.envctx = environment  # EnvironmentContext | None
+        self.congestion = congestion  # CongestionField | None (spatiotemporal)
+        # traj: waypoint (t_min, actor_id, lat, lon, state) tại mọi transition — fallback/debug
+        self.traj: list[tuple] = []
+        # segments: mỗi hoạt động (enroute/on_trip/relocate/charge/rest) với t0/t1/from/to CHÍNH XÁC
+        # → nền cho Gantt + TripsLayer (idle = khoảng trống giữa các segment).
+        self.segments: list[dict] = []
         self.env = simpy.Environment()
         self.events: list[Event] = []
         self.speed_cfg = cfg.get("speed_kmh")
@@ -89,17 +95,45 @@ class World:
     def log(self, actor_id: int, kind: str, cell: str = "", **detail):
         self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail))
 
-    def _eff_speed(self, hour: int) -> float:
-        """Tốc độ hiệu dụng = base(giờ) × env.speed_factor (mưa/tắc), có sàn."""
-        base = _speed_kmh(hour, self.speed_cfg)
-        if self.envctx is None:
-            return base
-        v = base * self.envctx.speed_factor(self.env.now)
-        return max(self.envctx.v_floor, v)
+    def _cell_point(self, cell: str) -> tuple[float, float]:
+        """Toạ độ đại diện của cell (centroid) — dùng cho endpoint relocate/charge/online."""
+        return self.grid.cell_centroid.get(cell) or (0.0, 0.0)
 
-    def _travel_min(self, dist_km: float, hour: int) -> float:
-        """Thời gian di chuyển = quãng đường THỰC (× detour) / tốc độ hiệu dụng."""
-        return (dist_km * self.detour) / self._eff_speed(hour) * 60.0
+    def _set_pos(self, actor: Actor, lat: float, lon: float) -> None:
+        actor.lat, actor.lon = lat, lon
+        self.traj.append((round(self.env.now, 3), actor.actor_id, lat, lon, actor.state.value))
+
+    def _seg(self, actor_id: int, t0: float, t1: float, kind: str,
+             frm: tuple, to: tuple, **meta) -> None:
+        """Ghi 1 đoạn hoạt động (từ frm=(lat,lon) tới to=(lat,lon))."""
+        self.segments.append({
+            "actor_id": actor_id, "t0": round(t0, 3), "t1": round(t1, 3), "kind": kind,
+            "from_lat": frm[0], "from_lon": frm[1], "to_lat": to[0], "to_lon": to[1], **meta,
+        })
+
+    def _congestion_r(self, cell: str | None, hour: int) -> float:
+        if self.congestion is None or cell is None:
+            return 0.0
+        return self.congestion.r(cell, hour)
+
+    def _eff_speed(self, hour: int, cell: str | None = None) -> float:
+        """Tốc độ hiệu dụng = base(giờ) × survival(mưa × tắc cục bộ cell), có sàn.
+
+        Congestion spatiotemporal suy từ mật độ đơn theo (cell, giờ). Tắt (congestion=None
+        hoặc cell=None) + không env → trả base (baseline bất biến)."""
+        base = _speed_kmh(hour, self.speed_cfg)
+        r_cong = self._congestion_r(cell, hour)
+        if self.envctx is not None:
+            # env.speed_factor = (1-r_rain)·(1-r_cong) survival product
+            v = base * self.envctx.speed_factor(self.env.now, r_cong)
+            return max(self.envctx.v_floor, v)
+        if r_cong <= 0.0:
+            return base
+        return max(7.0, base * (1.0 - min(0.95, r_cong)))
+
+    def _travel_min(self, dist_km: float, hour: int, cell: str | None = None) -> float:
+        """Thời gian di chuyển = quãng đường THỰC (× detour) / tốc độ hiệu dụng (tại cell gốc)."""
+        return (dist_km * self.detour) / self._eff_speed(hour, cell) * 60.0
 
     def _pct_per_km(self, actor: Actor) -> float:
         """Tiêu pin/km, điều chỉnh theo nhiệt độ (range giảm → tiêu hao tăng)."""
@@ -146,7 +180,7 @@ class World:
             for oid in expired:
                 self.open_orders.pop(oid, None)
                 self.order_open_since.pop(oid, None)
-                self.log(-1, "order_expired", detail={"order_id": oid})
+                self.log(-1, "order_expired", order_id=oid)
 
     def _dispatcher_proc(self):
         tick_min = float(self.cfg.get("time.dispatch_tick_s")) / 60.0
@@ -161,7 +195,7 @@ class World:
             hour = int(self.env.now // 60) % 24
             assigns = match_batch(list(self.open_orders.values()), idle, self.grid, hour,
                                   self.speed_cfg, self.disp_cfg,
-                                  eff_speed=self._eff_speed(hour), detour=self.detour)
+                                  speed_fn=lambda cell, h: self._eff_speed(h, cell), detour=self.detour)
             for asg in assigns:
                 order = self.open_orders.get(asg.order_id)
                 actor = self.actors.get(asg.actor_id)
@@ -189,18 +223,25 @@ class World:
     def _serve_trip(self, actor: Actor, order, asg):
         hour = int(self.env.now // 60) % 24
         pct_per_km = self._pct_per_km(actor)
-        # tới điểm đón (quãng đường thực × detour / tốc độ hiệu dụng)
-        pickup_min = self._travel_min(asg.pickup_dist_km, hour)
+        origin_cell = actor.cell
+        t_assign = self.env.now
+        frm = (actor.lat, actor.lon)   # vị trí trước khi đi đón
+        # tới điểm đón (quãng đường thực × detour / tốc độ hiệu dụng tại cell gốc)
+        pickup_min = self._travel_min(asg.pickup_dist_km, hour, origin_cell)
         yield self.env.timeout(pickup_min)
         actor.consume_soc(asg.pickup_dist_km * self.detour, pct_per_km)
         actor.cell = order.pickup_cell
         actor.empty_min += pickup_min
         actor.state = ActorState.ON_TRIP
+        self._set_pos(actor, order.pickup_lat, order.pickup_lon)  # vị trí = điểm đón THẬT
+        self._seg(actor.actor_id, t_assign, self.env.now, "enroute", frm,
+                  (order.pickup_lat, order.pickup_lon), order_id=order.order_id)
         self.log(actor.actor_id, "pickup", order.pickup_cell,
                  order_id=order.order_id, eta_min=round(pickup_min, 2))
         # chở khách
         hour = int(self.env.now // 60) % 24
-        trip_min = self._travel_min(order.dist_km, hour)
+        t_pickup = self.env.now
+        trip_min = self._travel_min(order.dist_km, hour, order.pickup_cell)
         yield self.env.timeout(trip_min)
         actor.occupied_min += trip_min
         actor.consume_soc(order.dist_km * self.detour, pct_per_km)
@@ -214,15 +255,19 @@ class World:
         actor.gross_vnd += order.gross_vnd
         actor.payout_vnd += self.policy.driver_payout_from_gross(order.gross_vnd)
         actor.points += self.policy.trip_points(int(order.t_min // 60) % 24)
+        # vị trí SAU CUỐC = điểm trả khách THẬT (không teleport về lõi)
+        self._set_pos(actor, order.drop_lat, order.drop_lon)
+        self._seg(actor.actor_id, t_pickup, self.env.now, "on_trip",
+                  (order.pickup_lat, order.pickup_lon), (order.drop_lat, order.drop_lon),
+                  order_id=order.order_id, gross=order.gross_vnd,
+                  payout=self.policy.driver_payout_from_gross(order.gross_vnd), dist_km=order.dist_km)
         self.log(actor.actor_id, "dropoff", order.drop_cell,
                  order_id=order.order_id, gross=order.gross_vnd, dist_km=order.dist_km)
-        # nếu trả khách ngoài lõi → deadhead quay về cell lõi gần nhất
-        if not self.grid.is_core(actor.cell):
-            yield from self._deadhead_to_core(actor, pct_per_km)
         actor.state = ActorState.IDLE
 
-    def _deadhead_to_core(self, actor: Actor, pct_per_km: float):
-        # tìm cell lõi gần nhất trong vành mở rộng
+    def _relocate_to_core(self, actor: Actor):
+        """Sau cuốc trả ngoài lõi → chạy (deadhead) về cell lõi gần nhất. Là 1 đoạn di
+        chuyển THẬT (tốn thời gian/pin), khởi hành TỪ điểm trả — hiện dưới dạng relocate."""
         target = None
         for r in range(1, 8):
             for c in grid_disk(actor.cell, r):
@@ -235,17 +280,28 @@ class World:
             target = self.grid.core_cells[0]
         d = cell_distance_km(self.grid, actor.cell, target)
         hour = int(self.env.now // 60) % 24
-        t = self._travel_min(d, hour)
+        pct_per_km = self._pct_per_km(actor)
+        t0 = self.env.now
+        frm = (actor.lat, actor.lon)
+        t = self._travel_min(d, hour, actor.cell)
+        actor.state = ActorState.ENROUTE
         yield self.env.timeout(t)
         actor.consume_soc(d * self.detour, pct_per_km)
         actor.empty_min += t
         actor.cell = target
+        clat, clon = self._cell_point(target)
+        actor.state = ActorState.IDLE
+        self._set_pos(actor, clat, clon)
+        self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="deadhead_to_core")
+        self.log(actor.actor_id, "relocate", target, reason="deadhead_to_core")
 
     def _actor_proc(self, actor: Actor):
         # chờ tới giờ bắt đầu ca
         if actor.shift_start_min > self.env.now:
             yield self.env.timeout(actor.shift_start_min - self.env.now)
         actor.state = ActorState.IDLE
+        alat, alon = self._cell_point(actor.cell)   # vị trí xuất phát = home cell
+        self._set_pos(actor, alat, alon)
         self.log(actor.actor_id, "go_online", actor.cell)
         last = self.env.now
 
@@ -261,6 +317,10 @@ class World:
             now = self.env.now
             actor.online_min += (now - last)  # gộp toàn bộ thời gian đã trôi (chờ + serve + charge)
             last = now
+            # sau cuốc trả ngoài lõi → chạy về lõi (deadhead) rồi kiểm lại
+            if not self.grid.is_core(actor.cell):
+                yield from self._relocate_to_core(actor)
+                continue
             hour = int(now // 60) % 24
             hint = self._actor_demand_hint(actor, hour)
             action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, hint, self.rng)
@@ -279,16 +339,27 @@ class World:
             elif action == IdleAction.REST:
                 actor.state = ActorState.REST
                 self.log(actor.actor_id, "rest", actor.cell)
+                t0 = now
                 rest_min = self.rng.uniform(20, 45)
                 actor.rest_min += rest_min
                 yield self.env.timeout(rest_min)
                 actor.state = ActorState.IDLE
+                self._seg(actor.actor_id, t0, self.env.now, "rest",
+                          (actor.lat, actor.lon), (actor.lat, actor.lon))
             elif action == IdleAction.RELOCATE and target:
                 d = cell_distance_km(self.grid, actor.cell, target)
-                t = self._travel_min(d, hour)
+                t0 = now
+                frm = (actor.lat, actor.lon)
+                t = self._travel_min(d, hour, actor.cell)
+                actor.state = ActorState.ENROUTE
                 yield self.env.timeout(t)
                 actor.empty_min += t
                 actor.cell = target
+                clat, clon = self._cell_point(target)
+                actor.state = ActorState.IDLE
+                self._set_pos(actor, clat, clon)
+                self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="demand_seek")
+                self.log(actor.actor_id, "relocate", target, reason="demand_seek")
             else:  # WAIT
                 actor.idle_min += 2.0
                 yield self.env.timeout(2.0)  # chờ đơn, kiểm lại sau 2 phút
@@ -319,11 +390,14 @@ class World:
             # về nhà sạc cắm (đội sạc cắm sạc 1 lần/ngày quanh trưa kết hợp nghỉ)
             actor.state = ActorState.CHARGING
             self.log(actor.actor_id, "charge_home_start", actor.cell)
+            t0 = self.env.now
             dur = float(self.veh["home_charge_min"])
             actor.charge_min += dur
             yield self.env.timeout(dur)
             actor.soc_pct = 100.0
             actor.state = ActorState.IDLE
+            self._seg(actor.actor_id, t0, self.env.now, "charge",
+                      (actor.lat, actor.lon), (actor.lat, actor.lon), mode="home")
             self.log(actor.actor_id, "charge_home_end", actor.cell)
             return
         # đổi pin tại trạm
@@ -335,13 +409,20 @@ class World:
         hour = int(self.env.now // 60) % 24
         pct_per_km = self._pct_per_km(actor)
         d = cell_distance_km(self.grid, actor.cell, station.cell)
-        travel = self._travel_min(d, hour)
+        travel = self._travel_min(d, hour, actor.cell)
+        t0 = self.env.now
+        frm = (actor.lat, actor.lon)
         actor.state = ActorState.CHARGING
         self.log(actor.actor_id, "go_swap", actor.cell, station=station.node_id)
         yield self.env.timeout(travel)
         actor.consume_soc(d * self.detour, pct_per_km)
         actor.cell = station.cell
+        self._set_pos(actor, station.lat, station.lon)  # vị trí = trạm đổi pin THẬT
         actor.empty_min += travel
+        # đoạn di chuyển tới trạm (enroute-to-swap)
+        self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (station.lat, station.lon),
+                  reason="go_swap", station=station.node_id)
+        t_arrive = self.env.now
         # xếp hàng
         station.queue_len += 1
         wait = 0.0
@@ -364,4 +445,7 @@ class World:
         station.batteries.append(BatteryInStation(soc_pct=0.0, ready_at_min=self.env.now + recharge))
         actor.soc_pct = 100.0
         actor.state = ActorState.IDLE
+        self._seg(actor.actor_id, t_arrive, self.env.now, "charge",
+                  (station.lat, station.lon), (station.lat, station.lon),
+                  mode="swap", wait_min=round(wait, 1), station=station.node_id)
         self.log(actor.actor_id, "swap_done", station.cell, station=station.node_id, wait_min=round(wait, 1))

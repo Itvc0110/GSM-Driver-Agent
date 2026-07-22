@@ -28,12 +28,17 @@ class Archetype:
 
 
 # Từ specs: σ P4 0.6 · P1 0.4 · P2 0.3 · P5 0.15 · P3 0.1; accept P3 .98/P5 .97/P2 .95/P1 .85/P4 .80
+# shift_start_min / shift_len_min: hiệu chỉnh để CUNG bám CẦU (T-021, UPDATE-021). Khung cầu:
+#   sáng 7-8h, TỐI đỉnh 17-19h, đuôi đêm 20-23h. Trước đây hầu hết ca kết thúc 14-19h → sụp
+#   cung tối/đêm (0% phục vụ 21-23h). Căn lại theo persona:
+#   P1 part-time TỐI (17-21h) · P2 full-time kéo dài phủ 2 đỉnh · P3 top 10-11h phủ chiều-tối
+#   P4 tân binh CỐ Ý lệch khung (giữ làm dư địa advisor) · P5 lão làng thuộc khung vàng → phủ tối-đêm.
 ARCHETYPES: dict[str, Archetype] = {
-    "P1": Archetype("P1", 0.40, 0.85, 5 * 60, (3 * 60, 5 * 60), (16 * 60, 18 * 60), 12, "charge"),
-    "P2": Archetype("P2", 0.30, 0.95, 10 * 60, (9 * 60, 11 * 60), (6 * 60, 8 * 60), 12, "swap"),
-    "P3": Archetype("P3", 0.10, 0.98, 12 * 60, (10 * 60, 12 * 60), (5 * 60, 7 * 60), 12, "mixed"),
-    "P4": Archetype("P4", 0.60, 0.80, 8 * 60, (8 * 60, 9 * 60), (7 * 60, 10 * 60), 12, "swap"),
-    "P5": Archetype("P5", 0.15, 0.97, 9 * 60, (8 * 60, 9 * 60), (6 * 60, 8 * 60), 12, "mixed"),
+    "P1": Archetype("P1", 0.40, 0.85, 5 * 60, (3 * 60, 4 * 60), (16 * 60 + 30, 18 * 60), 19, "charge"),
+    "P2": Archetype("P2", 0.30, 0.95, 10 * 60, (10 * 60, 11 * 60), (7 * 60, 9 * 60), 12, "swap"),
+    "P3": Archetype("P3", 0.10, 0.98, 12 * 60, (11 * 60, 12 * 60), (9 * 60, 10 * 60), 13, "mixed"),
+    "P4": Archetype("P4", 0.60, 0.80, 8 * 60, (8 * 60, 9 * 60), (6 * 60, 8 * 60), 11, "swap"),
+    "P5": Archetype("P5", 0.15, 0.97, 9 * 60, (8 * 60, 9 * 60), (15 * 60, 17 * 60), 18, "mixed"),
 }
 
 

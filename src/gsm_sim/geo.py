@@ -46,6 +46,7 @@ class Grid:
     stations: list[Station]
     pois: list[Poi]
     cell_centroid: dict[str, tuple[float, float]] = field(default_factory=dict)
+    pois_by_cell: dict[str, list[Poi]] = field(default_factory=dict)
 
     def is_core(self, cell: str) -> bool:
         return cell in self.core_set
@@ -180,6 +181,10 @@ def build_grid(
         pois.append(Poi(lat=lat, lon=lon, kind=kind, cell=cell))
         centroid.setdefault(cell, h3.cell_to_latlng(cell))
 
+    pois_by_cell: dict[str, list[Poi]] = {}
+    for p in pois:
+        pois_by_cell.setdefault(p.cell, []).append(p)
+
     return Grid(
         res=res,
         res_report=res_report,
@@ -189,6 +194,7 @@ def build_grid(
         stations=stations,
         pois=pois,
         cell_centroid=centroid,
+        pois_by_cell=pois_by_cell,
     )
 
 
@@ -223,3 +229,43 @@ def cell_distance_km(grid: Grid, a: str, b: str) -> float:
     la = grid.cell_centroid.get(a) or h3.cell_to_latlng(a)
     lb = grid.cell_centroid.get(b) or h3.cell_to_latlng(b)
     return haversine_km(la[0], la[1], lb[0], lb[1])
+
+
+# --- Toạ độ liên tục trong cell (hybrid lat/lng, cho movement + visualize) ---
+
+_KM_PER_DEG_LAT = 110.574
+_EDGE_KM_CACHE: dict[int, float] = {}
+
+
+def _cell_inradius_km(res: int) -> float:
+    """Bán kính an toàn để sample điểm trong cell H3 res. Apothem = edge·√3/2; lấy
+    hệ số nhỏ hơn (0.72) chừa biên cho sai số xấp xỉ phẳng + cell H3 không đều tuyệt đối."""
+    if res not in _EDGE_KM_CACHE:
+        _EDGE_KM_CACHE[res] = float(h3.average_hexagon_edge_length(res, unit="km"))
+    return _EDGE_KM_CACHE[res] * 0.72
+
+
+def offset_latlng(lat: float, lon: float, dx_km: float, dy_km: float) -> tuple[float, float]:
+    """Dời (lat,lon) đi (dx_km đông, dy_km bắc). Xấp xỉ phẳng — đủ ở quy mô cell."""
+    dlat = dy_km / _KM_PER_DEG_LAT
+    dlon = dx_km / (111.320 * math.cos(math.radians(lat)) or 1e-9)
+    return lat + dlat, lon + dlon
+
+
+def sample_point_in_cell(grid: Grid, cell: str, rng, poi_bias: float = 0.5,
+                         poi_jitter_km: float = 0.025) -> tuple[float, float]:
+    """Sinh 1 điểm (lat,lon) "địa chỉ thực" trong cell.
+
+    Với xác suất poi_bias và cell có POI → snap về 1 POI (jitter nhỏ, giống điểm đón/trả
+    thật quanh bệnh viện/trường/chợ). Ngược lại: điểm ngẫu nhiên trong đĩa bán kính nội
+    tiếp quanh centroid (đảm bảo nằm trong hexagon). rng = numpy Generator (deterministic)."""
+    pois = grid.pois_by_cell.get(cell)
+    if pois and rng.random() < poi_bias:
+        p = pois[rng.integers(len(pois))]
+        r = poi_jitter_km * math.sqrt(rng.random())
+        th = 2 * math.pi * rng.random()
+        return offset_latlng(p.lat, p.lon, r * math.cos(th), r * math.sin(th))
+    clat, clon = grid.cell_centroid.get(cell) or h3.cell_to_latlng(cell)
+    r = _cell_inradius_km(grid.res) * math.sqrt(rng.random())
+    th = 2 * math.pi * rng.random()
+    return offset_latlng(clat, clon, r * math.cos(th), r * math.sin(th))

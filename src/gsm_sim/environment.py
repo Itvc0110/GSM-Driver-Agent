@@ -33,6 +33,9 @@ class EventSpec:
     ramp_lead_min: float     # ramp kết thúc trước t_start
     egress_min: float        # egress kéo dài sau t_end
     egress_boost: float
+    # route_effect: cấm/giảm tốc cục bộ quanh venue (dùng bởi CongestionField, KHÔNG nhân demand)
+    route_speed_mult: float = 1.0   # <1 = chậm hơn (0.6 = còn 60% tốc độ tại venue); 1 = không ảnh hưởng
+    route_sigma_cells: float = 1.5
 
 
 class EnvironmentContext:
@@ -189,6 +192,7 @@ class EnvironmentContext:
     def _build_events(self, env: dict, grid: Grid) -> list[EventSpec]:
         out = []
         for e in env.get("events", []) or []:
+            route = e.get("route_effect", {}) or {}
             out.append(EventSpec(
                 venue_cell=str(e["venue_cell"]),
                 t_start_min=float(e["t_start_min"]),
@@ -200,6 +204,8 @@ class EnvironmentContext:
                 ramp_lead_min=float(e.get("ramp_lead_min", 15.0)),
                 egress_min=float(e.get("egress_min", 60.0)),
                 egress_boost=float(e.get("egress_boost", 2.0)),
+                route_speed_mult=float(route.get("speed_multiplier", 1.0)),
+                route_sigma_cells=float(route.get("sigma_cells", 1.5)),
             ))
         return out
 
