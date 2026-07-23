@@ -89,12 +89,14 @@ Tách khỏi S1 (S1 = điểm/ngày; S5 = doanh số/tuần) — **khuyến ngh�
 | Bảng tier điểm tuần mới nhất (sau 01/12/2025) | (A) | thay số research |
 | Phạt ≤70% còn active không (reconcile mâu thuẫn 23/02 vs 05/06) | (C)/F0 | bản policy active của driver |
 
-## 6. Open decisions (Cường chốt trước khi implement D-POL-01/02)
+## 6. Decisions (Cường chốt 2026-07-24)
 
-- **(a)** Solver **S5 mới** (khuyến nghị) vs mở rộng S1 → ảnh hưởng L3 views + test.
-- **(b)** Model cơ chế (B) bằng **mock số hợp lý ngay** (để chạy pipeline/EXP) hay **chờ data thật** (tránh rework)? — khuyến nghị: schema + S5 code với số `MOCK` gắn nhãn để chạy được, thay số thật khi có.
-- **(c)** Tiers giữ **daily-proxy** hay chuyển **weekly thật** (đúng research nhưng cần regen mock + sửa S1).
-- **(d)** Khoán tính trên **gross** hay **driver payout** (cần data thật).
+- **(a) ✅ CHỐT: Solver S5 MỚI** `WeeklyKhoanFeasibility` (tách khỏi S1). L3 view mới `weekly_khoan_input`.
+- **(b) ✅ CHỐT: CHƯA implement — DỪNG Ở SPEC.** Không đụng schema/solver/mock cho tới khi có **data thật GSM** + Cường mở cycle. KHÔNG code với số MOCK ở giai đoạn này (ưu tiên realism, tránh rework số).
+- **(c) ✅ CHỐT: GIỮ daily-proxy** cho tier điểm (gắn nhãn rõ là simplification); chỉ chuyển weekly thật sau, khi model tuần (S5) ổn.
+- **(d) ⏳ OPEN — cần data thật:** khoán tính trên **gross** hay **driver payout**. Không quyết khi chưa có data (money-definition, §5).
+
+**Trạng thái:** spec = blueprint đóng băng; implement D-POL-01/02/03 **treo tới khi có data thật + Cường mở**. (b)/(d) chờ data; (a)/(c) đã chốt sẵn cho lúc implement.
 
 ## 7. Migration & không phá
 
