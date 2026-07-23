@@ -8,7 +8,7 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 
 1. **T-038 C0**: chốt data schema L0–L3 platform-centric (`schemas/` + validators + changelog).
 2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical ≥30 seeds/consistency/adversarial — spec §8.1).
-3. **C2**: metric table per-layer chốt (T-026 phase 1) + solver S1 BonusFeasibility + SolverReport envelope.
+3. **C2a** ✅ metric table per-layer (T-026 phase 1) DONE 2026-07-23 (`specs/observability-metrics.md`, UPDATE-025). **C2b**: solver S1 BonusFeasibility + SolverReport envelope (cycle sau — brainstorm+plan riêng).
 4. **C3–C5**: S2 ShiftDP → S3 F3Patterns → S4 CapacityAlloc (thuần math).
 5. **C6**: agent pipeline (Router → Composer → Verifier, residual đóng 5 mục) + context pack + memory + Langfuse instrumentation đồng thời (T-026 phase 2).
 6. **C7**: EXP-001..005 trên instrumentation C6.
