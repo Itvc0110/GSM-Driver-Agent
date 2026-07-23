@@ -9,8 +9,8 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 1. **T-038 C0**: chốt data schema L0–L3 platform-centric (`schemas/` + validators + changelog).
 2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical ≥30 seeds/consistency/adversarial — spec §8.1).
 3. **C2a** ✅ metric table (UPDATE-025). **C2b** ✅ solver S1 BonusFeasibility + SolverReport DONE 2026-07-23 (`gsm_core/{policy,features/bonus_gap,solvers/bonus_feasibility}`, UPDATE-026; 12 test, integration mock 7/12 feasible).
-4. **C3** ✅ S2 ShiftDP (UPDATE-027). **C4** ✅ S3 F3Patterns + L2i inference DONE 2026-07-23 (`gsm_core/solvers/f3_patterns.py`, UPDATE-028; 4 pattern observed+HEURISTIC không số loss tuyệt đối, 13 test, 18/20 driver). **C5**: S4 CapacityAlloc (scipy linear_sum_assignment, chống herding — solver cuối, brainstorm+plan riêng).
-5. **C6**: agent pipeline (Router → Composer → Verifier, residual đóng 5 mục) + context pack + memory + Langfuse instrumentation đồng thời (T-026 phase 2).
+4. **C3** ✅ S2 ShiftDP (UPDATE-027). **C4** ✅ S3 F3Patterns + L2i (UPDATE-028). **C5** ✅ S4 CapacityAlloc DONE 2026-07-23 (`gsm_core/solvers/capacity_alloc.py`, UPDATE-029; scipy assignment chống herding, 5 safety_flags F2-04, 12 test, over-subscribe 0 vi phạm capacity). **→ 4/4 SOLVER XONG.**
+5. **C6 (TIẾP THEO)**: agent pipeline (Router → Composer → Verifier, residual đóng 5 mục) + context pack + memory + Langfuse instrumentation đồng thời (T-026 phase 2). LLM VÀO ĐÂY. 4 SolverReport envelope sẵn làm input Composer.
 6. **C7**: EXP-001..005 trên instrumentation C6.
 7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
 
