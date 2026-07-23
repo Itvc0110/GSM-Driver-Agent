@@ -8,8 +8,8 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 
 1. **T-038 C0**: chốt data schema L0–L3 platform-centric (`schemas/` + validators + changelog).
 2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical ≥30 seeds/consistency/adversarial — spec §8.1).
-3. **C2a** ✅ metric table per-layer (T-026 phase 1) DONE 2026-07-23 (`specs/observability-metrics.md`, UPDATE-025). **C2b**: solver S1 BonusFeasibility + SolverReport envelope (cycle sau — brainstorm+plan riêng).
-4. **C3–C5**: S2 ShiftDP → S3 F3Patterns → S4 CapacityAlloc (thuần math).
+3. **C2a** ✅ metric table (UPDATE-025). **C2b** ✅ solver S1 BonusFeasibility + SolverReport DONE 2026-07-23 (`gsm_core/{policy,features/bonus_gap,solvers/bonus_feasibility}`, UPDATE-026; 12 test, integration mock 7/12 feasible).
+4. **C3–C5**: S2 ShiftDP (DP numpy + demand forecast) → S3 F3Patterns → S4 CapacityAlloc (thuần math). Mỗi solver brainstorm+plan riêng.
 5. **C6**: agent pipeline (Router → Composer → Verifier, residual đóng 5 mục) + context pack + memory + Langfuse instrumentation đồng thời (T-026 phase 2).
 6. **C7**: EXP-001..005 trên instrumentation C6.
 7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
