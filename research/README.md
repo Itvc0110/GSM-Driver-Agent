@@ -10,7 +10,7 @@ Cập nhật: 2026-07-22. Mỗi **loại tài liệu** nằm trong một folder 
 | `economics/` | Cấu trúc thu nhập, chiết khấu theo hình thức hợp tác, chi phí tài xế | `income-structure.md` |
 | `community/` | Pain points, kinh nghiệm thực chiến, thu nhập tự khai, group Facebook | `pain-points.md`, `community-insights.md` |
 | `market/` | Số liệu thị trường & phân phối đơn (để mock) + tín hiệu điều phối/API ngoài | `order-distribution.md`, `dispatch-signals-and-external-apis.md` |
-| `simulation/` | Nghiên cứu cho môi trường giả lập twin-world: công cụ, phương pháp đánh giá, tham số thế giới, timestep, action space, pilot world, biến môi trường, math-audit, realism, kiến trúc LLM advisor | `tooling.md`, `evaluation-methodology.md`, `world-parameters.md`, `timestep-design.md`, `action-space.md`, `pilot-world-dongda.md`, `environment-variables.md`, `math-audit.md`, `realism-benchmarks.md`, `llm-advisor-architecture.md`, `data/` (OSM snapshots) |
+| `simulation/` | Nghiên cứu cho môi trường giả lập twin-world: công cụ, phương pháp đánh giá, tham số thế giới, timestep, action space, pilot world, biến môi trường, math-audit, realism, kiến trúc LLM advisor | `tooling.md`, `evaluation-methodology.md`, `world-parameters.md`, `timestep-design.md`, `action-space.md`, `pilot-world-dongda.md`, `environment-variables.md`, `math-audit.md`, `realism-benchmarks.md`, `llm-advisor-architecture.md`, `agent-pipeline-patterns.md` (đợt 7 — C6), `data/` (OSM snapshots) |
 | (root) | Tổng hợp toàn bộ | `00_SUMMARY.md` |
 
 ## Quy ước
