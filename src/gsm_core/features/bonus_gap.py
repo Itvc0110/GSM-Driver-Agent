@@ -10,32 +10,17 @@ from __future__ import annotations
 from collections import defaultdict
 
 from gsm_core.policy import PolicyBundle
-
-
-def _hour(iso: str) -> int:
-    return int(iso[11:13])
-
-
-def _date(iso: str) -> str:
-    return iso[:10]
+from gsm_core.features._common import (hour as _hour, date as _date,
+                                        min_of_day, points_on_date as _points_on_date,
+                                        online_minutes_on_date)
 
 
 def _bucket(policy: PolicyBundle, hour: int) -> str:
     return "peak" if policy.is_peak(hour) else "offpeak"
 
 
-def _points_on_date(trips: list[dict], driver: str, date: str, policy: PolicyBundle) -> int:
-    return sum(policy.trip_points(_hour(t["t_request"]))
-               for t in trips if t["driver_id"] == driver and _date(t["t_request"]) == date)
-
-
 def _online_hours_on_date(events: list[dict], driver: str, date: str) -> float:
-    """Giờ online = từ go_online sớm nhất tới event muộn nhất trong ngày (xấp xỉ observable)."""
-    ts = sorted(e["t"] for e in events
-                if e["driver_id"] == driver and _date(e["t"]) == date)
-    if len(ts) < 2:
-        return 0.0
-    return (_hour(ts[-1]) * 60 + int(ts[-1][14:16]) - _hour(ts[0]) * 60 - int(ts[0][14:16])) / 60.0
+    return online_minutes_on_date(events, driver, date) / 60.0
 
 
 def derive_bonus_gap_input(driver_id: str, t_now: str, l1: dict, policy: PolicyBundle,
