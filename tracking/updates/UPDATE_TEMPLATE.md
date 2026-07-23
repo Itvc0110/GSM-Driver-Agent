@@ -55,6 +55,14 @@
 4. Đã so với baseline nào và giả thuyết nào đã loại trừ?
 5. Flaw còn mở map vào TODO/DEFERRED ID nào?
 
+## Expansion checkpoint (T-039 — bắt buộc sau mỗi phần hoàn thành)
+
+1. **Schema**: cần thêm/bớt/sửa field/entity nào? (biến mới phải điền được bảng traceability §1.7 spec core)
+2. **Bài toán tối ưu**: có residual nào formalize được thành solver mới không? Có bài toán mới từ data hiện có?
+3. **Tính năng**: tính năng mới khả thi từ những gì vừa xây?
+
+(Không tự triển khai — ghi đề xuất để Cường duyệt. Không có gì thì ghi "không".)
+
 ## Follow-up / defer phát sinh
 
 (Việc mới sinh ra → thêm vào TODO; ý tưởng ngoài scope → thêm vào DEFERRED; ghi ID, severity/evidence và điều kiện mở lại.)

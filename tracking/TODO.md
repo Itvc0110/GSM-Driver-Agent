@@ -1,28 +1,29 @@
 # TODO — Backlog công việc
 
-Cập nhật: 2026-07-22 (chương trình simulator reliability-first M0–M4 — Cường APPROVED). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
+Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T-030). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
 
 ## Thứ tự thực thi (theo độ quan trọng + phụ thuộc tuyến tính)
 
-**Track SIM/Advisor (Cường + AI agent) — reliability-first, tuyến tính:**
+**Track CORE bài toán (Cường 2026-07-23 — ƯU TIÊN HIỆN TẠI; spec `core-data-schema-and-advisor-architecture.md`):**
 
-1. **M0 — T-030 Simulator integrity (TIẾP THEO):** bảo toàn + audit working diff Stage A–C; reproduce/classify flaws; khóa lifecycle/time/money/battery/order/spatial invariants, determinism/CRN và baseline manifest. T-021 là gate calibration xuyên milestone; **không tune B-arm để ép target A-arm**.
-2. **M1 — T-031 24h dynamic market:** target `[00:00,24:00)`; `actors.n` = daily actor pool; active supply biến động; demand NHPP/piecewise-linear và validation per-event/1/5/15 phút trên ≥30 seeds mặc định.
-3. **M2 — T-032→T-034 Spatial/exogenous world:** OSM road/POI endpoints + provenance/offline replay → H3 hybrid dispatch/routing contract → congestion/weather/events/distribution-shift traces, không future leak.
-4. **M3 — T-035→T-037 Stakeholder visualization:** Story Mode city pulse → actor journey/advisor placeholder; Diagnostic Mode + visual-review harness. T-028 là dashboard v0 predecessor.
-5. **M4 — T-019 + T-026 + T-020:** advisor/observability làm đồng thời → A/B/C twin-runner/evaluator. LLM-off/template fallback là supported mode; fallback gpt-4o-mini hiện 403 không được chặn deterministic core.
-6. **Sau M4 — T-027 Robustness/shift:** validation trên world/evaluator đã qua gate; multi-map chỉ khi cần external validity.
+1. **T-038 C0**: chốt data schema L0–L3 platform-centric (`schemas/` + validators + changelog).
+2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical ≥30 seeds/consistency/adversarial — spec §8.1).
+3. **C2**: metric table per-layer chốt (T-026 phase 1) + solver S1 BonusFeasibility + SolverReport envelope.
+4. **C3–C5**: S2 ShiftDP → S3 F3Patterns → S4 CapacityAlloc (thuần math).
+5. **C6**: agent pipeline (Router → Composer → Verifier, residual đóng 5 mục) + context pack + memory + Langfuse instrumentation đồng thời (T-026 phase 2).
+6. **C7**: EXP-001..005 trên instrumentation C6.
+7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
 
-Source of truth: `specs/simulation-reliability-upgrade.md`. Mỗi milestone có plan mode riêng, multi-seed/boundary/full-suite verification và visual review theo `CLAUDE.md` §4b.
+**Track SIM/Advisor (PAUSE sau T-030 — resume sau khung core; reliability-first):**
 
-**Track CORE bài toán (Cường 2026-07-23 — ưu tiên hiện tại, sim tạm pause sau T-030):**
+1. ✅ **M0 — T-030 Simulator integrity (DONE 2026-07-22, UPDATE-023):** 12 flaw + C-2 fixed, 57/57 test, determinism cross-process PASS.
+2. **M1 — T-031 (PAUSED — Track CORE chạy trước, 2026-07-23):** 24h dynamic market + data schema/inferable projection.
+3. **M2 — T-032→T-034 (PAUSED):** OSM endpoints → H3 routing contract → exogenous traces.
+4. **M3 — T-035→T-037 (PAUSED):** Story/actor/Diagnostic visualization.
+5. **M4 — T-019 + T-020 (sau C6/C7):** twin-integration kế thừa artifacts core; T-026 đã nhập vào C2/C6.
+6. **Sau M4 — T-027 Robustness/shift.**
 
-1. **T-038 C0**: chốt data schema L0–L3 platform-centric (spec `core-data-schema-and-advisor-architecture.md`).
-2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical/consistency/adversarial).
-3. **C2–C5**: 4 solver thuần math (BonusFeasibility → ShiftDP → F3Patterns → CapacityAlloc) + SolverReport envelope.
-4. **C6**: agent pipeline (Router → Composer → Verifier, agent-residual đóng 5 mục) + context pack + memory.
-5. **C7**: EXP-001..005 + Langfuse T-026.
-6. **T-039** checkpoint mở rộng sau mỗi bước.
+Source of truth sim: `specs/simulation-reliability-upgrade.md`. Mỗi milestone/C# có plan mode riêng, multi-seed/boundary/full-suite verification và visual review theo `CLAUDE.md` §4b.
 
 **Track song song (không đụng files nhau):**
 

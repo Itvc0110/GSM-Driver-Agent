@@ -10,10 +10,12 @@ Bối cảnh mới: **dự án hợp tác chính thức với GSM — có quyề
 |---|---|---|
 | D1 | Góc nhìn data | **Platform-centric** — gồm supply/demand field, station state thật của GSM |
 | D2 | Bài toán modelling lõi | **4 solver**: ShiftDP, BonusFeasibility, F3Patterns, CapacityAlloc — thuần math, KHÔNG agent |
-| D3 | Ranh giới math vs agent | **Solver-first, agent-residual**: mặc định mọi bài formalize được đi solver; agent chỉ nhận residual liệt kê ĐÓNG (§5) |
+| D3 | Ranh giới math vs agent | **Solver-first, agent-residual**: mặc định mọi bài formalize được đi solver; agent chỉ nhận residual liệt kê ĐÓNG (§4) |
 | D4 | Kiến trúc schema | **4 tầng + event backbone** (L0 reference → L1 event log → L2 state fields → L3 feature views) |
 
 Ràng buộc bất biến (CLAUDE.md §5): agent không tự tính số tài chính/xác suất; tách `gross_revenue`/`driver_payout`/`estimated_net_income`; mock có nhãn; không can thiệp matching/dispatch/pricing/routing; không khuyên nhận/từ chối đơn cụ thể.
+
+**Assumption data quality (Cường chốt):** L1 giả định data GSM export **đã clean/normalize** trước ingest — dedup, timestamp chuẩn hóa UTC+7, schema hợp lệ, không late-event/clock-skew chưa xử lý. Data-quality/ingest pipeline **ngoài scope spec này**; nếu export thô thì mở task riêng (ghi `TBC-với-GSM`). Mock generator (T-038 C1) phải gen data ĐÃ ở mức sạch này.
 
 ## 1. Schema 4 tầng
 
@@ -26,8 +28,10 @@ L0 REFERENCE (slowly-changing, versioned)
 L1 EVENT LOG (immutable, append-only — NGUỒN SỰ THẬT)
   AppEvent · TripRecord · GPSPing · SwapTransaction · PayoutLedger · PolicyChangeEvent
       ↓ derivation JOB (code có version — không sửa tay)
-L2 STATE FIELDS (bucket 15ph × H3 — platform data thật)
+L2 STATE FIELDS (bucket 15ph × H3 — platform data thật, ĐO ĐƯỢC)
   SupplyField · DemandField · StationState · DriverDayState
+L2i INFERRED VIEWS (rule-versioned — TÁCH RIÊNG, không trộn với measured)
+  InferredActivity (+ mọi entity suy diễn tương lai đều vào tầng này)
       ↓ feature view (read-only)
 L3 FEATURE VIEWS (input cho solver/agent)
   ShiftPlanInput · BonusGapInput · SessionSummaryInput · AllocationInput
@@ -64,7 +68,11 @@ Mọi field L1 là thứ **GSM đo được thật** (taxonomy §3.5). Không fi
 | `DemandField(bucket, cell)` | count request/served/unserved từ TripRecord + request log | **thay mock bằng thật** — mock chỉ còn cho sim/dev, có nhãn |
 | `StationState(bucket, station)` | pin ready/charging từ SwapTransaction + telemetry (TBC) | |
 | `DriverDayState(driver, bucket)` | điểm lũy kế, acceptance/completion rate, giờ online, SOC (TBC per-ping hay per-swap) | nuôi cảnh báo ngưỡng |
-| `InferredActivity(driver, segment)` | **INFERRED** label ∈ {rest_likely, charging_likely, relocating, idle_wait} từ GPS+event gaps, kèm `inference_rule_version` + confidence | Inferable tầng — KHÔNG BAO GIỜ trình bày như đo được; nuôi F3 |
+**L2i — Inferred views (tầng RIÊNG, tách khỏi measured):**
+
+| Entity | Derivation | Ghi chú |
+|---|---|---|
+| `InferredActivity(driver, segment)` | **INFERRED** label ∈ {rest_likely, charging_likely, relocating, idle_wait} từ GPS+event gaps, kèm `inference_rule_version` + confidence | KHÔNG BAO GIỜ trình bày như đo được; nuôi F3. Quy ước: mọi entity suy diễn tương lai vào L2i, cấm thêm vào bảng measured phía trên |
 
 ### 1.5 L3 — Feature views (hợp đồng input solver)
 
@@ -73,10 +81,38 @@ Mọi field L1 là thứ **GSM đo được thật** (taxonomy §3.5). Không fi
 ### 1.6 Versioning & extensibility (yêu cầu Cường: dư địa update)
 
 - Mỗi entity: `schema_version` semver. **Thêm** = optional field + minor bump. **Bỏ** = `deprecated_since` + ≥1 chu kỳ chuyển tiếp, không xóa thẳng.
-- Field chưa chắc GSM export được: nhãn **`AVAILABILITY: TBC-với-GSM`** (GPSPing tần suất, queue đo được, SOC telemetry, request-log unserved). Mỗi TBC có fallback ghi sẵn (vd không có request-log → DemandField chỉ có served, unserved là ước lượng có nhãn).
+- Field chưa chắc GSM export được: nhãn **`AVAILABILITY: TBC-với-GSM`** — bảng fallback GHI SẴN đầy đủ:
+
+| TBC field | Fallback nếu GSM không export | Nhãn output |
+|---|---|---|
+| GPSPing tần suất cao/độ trễ thấp | Ping thưa → `InferredActivity` hạ confidence + bucket to hơn (30ph thay 15ph); SupplyField độ phân giải res8 thay res9 | `COARSE` |
+| Station queue/wait đo trực tiếp | Ước lượng wait từ mật độ SwapTransaction liên tiếp cùng trạm + throughput danh định StationRegistry | `ESTIMATED` + confidence |
+| SOC telemetry per-ping | SOC chỉ biết tại mốc swap (100%) + ước lượng tiêu hao theo km từ GPS; `DriverDayState.SOC` nhãn coarse | `ESTIMATED` |
+| StationState pin ready/charging telemetry | Suy từ SwapTransaction in/outflow + battery_recharge throughput; field không suy được để rỗng (không bịa) | `ESTIMATED` + confidence |
+| Request-log (đơn không được serve) | DemandField chỉ có served; unserved = ước lượng từ mismatch supply/demand có nhãn | `ESTIMATED` |
 - `sensitivity` per field (PII: lat/lon thô, driver_id) → cơ chế thu hẹp/anonymize khi cần.
 - **Sim map cùng schema**: sim runner xuất L1 events đúng format này (adapter từ `world.events`/`segments`) → twin-world eval và product dùng chung pipeline; dữ liệu sim phải bám phân phối thực tế (benchmark research + data thật khi có).
 - Registry `schemas/` trong repo: JSON Schema per entity + validator + changelog.
+
+### 1.7 Traceability biến → feature → pain point (chiều xuất phát từ BIẾN)
+
+Pain # theo `research/community/pain-points.md`: **#1** sạc/đổi pin giờ đỉnh · **#2** quỹ giờ 10–13h/ngày quá tải · **#3** áp lực tỷ lệ nhận (ngưỡng 50% forced-accept, 85% bonus) · **#4** chính sách khó hiểu/đổi liên tục.
+
+| Nhóm biến | Feature/US nuôi | Pain # | Solver tiêu thụ |
+|---|---|---|---|
+| `PolicyBundle` + `PolicyChangeEvent` | US-F0-01/02/**03**, US-F1-01 | #4 | S1; R1 RAG |
+| `DriverProfile` (track!) | US-F0-02 (đúng track RTO/platform), mọi F cá nhân hóa | #4 | tất cả |
+| `PayoutLedger` | US-F1-02, US-F3-01 (tách gross/payout/net) | #2, #4 | S1, S3 |
+| `AppEvent` (accept/decline/forced flag) | US-F3-02, cảnh báo ngưỡng F0 | **#3** | S3, DriverDayState |
+| `TripRecord` | US-F3-01/02 (timeline ca), input mọi solver | #2 | S1–S3 |
+| `GPSPing` → `InferredActivity` | US-F3-02 (pattern chưa tối ưu, INFERRED có nhãn) | #1, #2 | S3 |
+| `SwapTransaction` + `StationState` | US-F2-02 (sạc thấp điểm), F2-04 | **#1** | S2 (SOC constraint), S4 |
+| `DemandField` + `SupplyField` | US-F2-01 (demand proxy), F2-04 heatmap có điều kiện | #1, #2 | S2, S4 |
+| `DriverDayState` | US-F1-04 (tiến độ mốc), US-F3-02 (sát ngưỡng) | #2, #3 | S1, S3 |
+| `StationRegistry`/`ZoneMap`/`ServiceCatalog` | hạ tầng bắt buộc (FK/không gian/dịch vụ) — không nuôi US trực tiếp, giữ vì mọi entity khác tham chiếu | — | tất cả |
+| L3 views (4) | đúng 1-1 với S1–S4 → US tương ứng ở §2 | #1–#4 | S1–S4 |
+
+Biến nào sau này thêm vào schema PHẢI điền được hàng trong bảng này (feature + pain hoặc lý-do-hạ-tầng) — điều kiện của T-039 checkpoint.
 
 ## 2. Bốn bài toán modelling (thuần math — không agent)
 
@@ -112,24 +148,30 @@ AdviceRequest → Router (deterministic, không LLM)
   → AdviceEpisode → AdvisorStateStore (DecisionRecord append-only)
 ```
 
+- **Hiện trạng trung thực:** repo CHƯA có agent harness/multi-agent nào được implement (chỉ có spec DP, research llm-advisor-architecture, smoke script LLM; T-005 CrewAI đang hoãn — thiết kế này thay thế đánh giá đó). Pipeline dưới đây là bản build đầu tiên; LLM chỉ xuất hiện từ C6.
 - **Không multi-agent swarm** — 1 pipeline deterministic + đúng 2 vai LLM (Composer, Verifier). Model: deepseek-v4-flash chính; fallback gpt-4o-mini (403 — chờ Cường xin quyền); template fallback luôn chạy được (LLM-off mode).
 - **Loop bounds**: solver single-pass; Composer↔Verifier ≤1 repair; F0 clarify ≤2 lượt; what-if residual có token budget. Không open-ended loop.
 - **State**: agent stateless per-request; state ở L2/L3 + AdvisorStateStore (advice history, cooldown, adherence stats). Cập nhật state = ghi DecisionRecord sau mỗi episode — cơ chế duy nhất.
 - **Context pack builder**: code deterministic versioned, budget cứng per section (policy excerpt đúng track+version; K episodes gần nhất; SolverReports; guardrail checklist); mọi mục có provenance + freshness.
 - **Memory**: durable (DB — profile/adherence/episode) · session (TTL hết ca) · semantic cache (state-digest → advice). KHÔNG vector-memory hội thoại v1; RAG duy nhất = policy KB.
-- **I/O format đóng băng**: `AdviceRequest` / `SolverReport` / `ComposedAdvice` (message, citations, numbers-with-source, confidence, `advice_spec` machine-checkable — dùng lại advisor-layer-a §7.1 cho adherence).
+- **I/O format đóng băng** (3 schema versioned trong `schemas/`):
+  - `AdviceRequest`: driver_id, feature ∈ {F0,F1,F2,F3}, free_text_query (nullable), l3_view_refs[], session_id, t_request, trigger_source (user_ask | anchor | event_trigger).
+  - `SolverReport`: như §2.
+  - `ComposedAdvice`: message, citations[], numbers[] (mỗi số kèm source), confidence, caveats[], `advice_spec` machine-checkable {action_type, target_window, target_zone/station|none, expiry} — theo taxonomy adherence `simulation-twin-world.md` §7.1, dùng cho T-020 đo adherence.
 
 ## 4. Agent-residual — danh sách ĐÓNG (chỗ modelling không với tới)
 
-Ghi nhận Cường: "chưa thấy bài toán nào dùng agent — thuần modelling" là ĐÚNG THIẾT KẾ (D3). Agent có đúng 5 việc:
+Ghi nhận Cường: "chưa thấy bài toán nào dùng agent — thuần modelling" là ĐÚNG THIẾT KẾ (D3). Agent có đúng 5 việc.
 
-| R# | Residual | Vì sao không formalize được | Guardrail |
+**Guardrail chung mọi R#** (kế thừa, không lặp từng ô): log `DecisionRecord` mỗi episode + `confidence` bắt buộc trong ComposedAdvice + fallback template khi Verifier veto / LLM-off (CLAUDE.md §5).
+
+| R# | Residual | Vì sao KHÔNG formalize được | Guardrail riêng |
 |---|---|---|---|
-| R1 | F0 free-text policy Q&A | intent tự nhiên + tra policy đúng track/version + gọi S1 lấy số + diễn giải có trích dẫn | số từ solver; citation bắt buộc; thiếu track → hỏi lại (≤2) |
-| R2 | Composer: hợp nhất nhiều SolverReport thành MỘT lời khuyên theo persona | chọn-và-diễn-giải là judgment | chỉ dùng numbers[] có source; Verifier đối chiếu |
-| R3 | Infeasibility explanation | biến `infeasible_reason` cứng thành lời trung thực + phương án thay thế | không hứa thu nhập; nêu bất định |
-| R4 | What-if định tính ngoài model (mưa/sự kiện chưa có model) | chưa có model production | confidence thấp bắt buộc + log + fallback template |
-| R5 | Out-of-taxonomy router | câu hỏi lạ → trả lời được/không | không bịa; route hoặc từ chối lịch sự |
+| R1 | F0 free-text policy Q&A | Không gian câu hỏi tự nhiên là mở — không enumerate được intent trước; hiểu ngôn ngữ + chọn đúng đoạn policy theo ngữ cảnh là năng lực NLU, không phải bài tối ưu | số từ S1; citation bắt buộc; thiếu track → hỏi lại (≤2) |
+| R2 | Composer: hợp nhất nhiều SolverReport thành MỘT lời khuyên theo persona | "Chọn 1 trong 3 lời khuyên hợp lệ + nói sao cho P4 hiểu" không có objective function đo được — là judgment về ngôn ngữ/ưu tiên người dùng | chỉ dùng numbers[] có source; Verifier đối chiếu từng số |
+| R3 | Infeasibility explanation | `infeasible_reason` là mệnh đề logic; biến nó thành lời khuyên trung thực + phương án thay thế phù hợp hoàn cảnh cần sinh ngôn ngữ có empathy — không có công thức | không hứa thu nhập; nêu bất định |
+| R4 | What-if định tính ngoài model (mưa/sự kiện chưa có model) | Thiếu data/model production để formalize — reasoning tạm thời TRONG KHI CHỜ formalize | confidence thấp BẮT BUỘC |
+| R5 | Out-of-taxonomy router | Nhận diện "câu này ngoài phạm vi" trên input mở là bài phân loại open-set — taxonomy đóng không phủ được | không bịa; route hoặc từ chối lịch sự |
 
 **Residual shrinks over time**: khi R4 formalize được (vd có weather-demand model) → chuyển sang solver, cập nhật spec + minor version. Checkpoint mở rộng (T-039) nhắc việc này.
 
@@ -155,22 +197,33 @@ Per-layer (Langfuse chính): router accuracy · solver feasibility-rate/latency/
 
 ## 8. Thứ tự implement + backlog
 
+**Track CORE chạy TRƯỚC; sim pause sau T-030 — M1–M4 (T-031..T-037) resume sau khung core.** Một ordering duy nhất cho observability: T-026 phase 1 (metric table) tại C2, phase 2 (Langfuse instrumentation) đồng thời C6 — không gắn sau; T-019 twin-integration kế thừa artifacts C6/C7.
+
 ```text
 C0 (T-038a): schemas/ JSON Schema + validators + changelog        ← chốt schema
-C1 (T-038b): MOCK DATA GENERATOR theo schema — GEN CHI TIẾT,
-     VERIFY NHIỀU VÒNG: (a) schema validation
-                        (b) statistical realism vs research benchmarks
-                        (c) cross-entity consistency (ledger↔trips↔policy↔events)
-                        (d) adversarial review — mỗi vòng có report riêng
-     nguồn gen: sim T-030 (adapter) + sampler độc lập; nhãn MOCK + seed + ngày
-C2: S1 BonusFeasibility + SolverReport envelope (verify dễ nhất)
+C1 (T-038b): MOCK DATA GENERATOR theo schema (chi tiết §8.1)
+C2: metric table per-layer CHỐT (T-026 phase 1 — TRƯỚC khi code solver)
+    + S1 BonusFeasibility + SolverReport envelope (verify dễ nhất)
 C3: S2 ShiftDP        C4: S3 F3Patterns       C5: S4 CapacityAlloc
 C6: Router + Composer + Verifier + context pack builder (LLM vào đây)
-C7: EXP-001..005 + Langfuse (T-026)
-Sau MỖI C#: checkpoint T-039 — "MỞ RỘNG? (schema / bài toán tối ưu / tính năng)"
+    + Langfuse instrumentation ĐỒNG THỜI (T-026 phase 2)
+C7: EXP-001..005 chạy trên instrumentation của C6
+Sau mỗi C#/T# hoàn thành: checkpoint T-039 — "MỞ RỘNG? (schema / bài toán tối ưu / tính năng)"
 ```
 
-Backlog mới: **T-038** (C0+C1 — chốt schema + mock gen multi-round verify) · **T-039 recurring** (expansion checkpoint sau mỗi phần hoàn thành — nhắc trong UPDATE mỗi cycle).
+### 8.1 Chi tiết C1 — mock data generator (Cường: gen sạch, phản ánh thực tế, verify nhiều vòng)
+
+- **Phương pháp gen per-entity:** L0 từ policy research thật (`bonus-programs.md` — bundle có effective date/version); L1 hai nguồn: (i) **adapter từ sim T-030** (world.events/segments → AppEvent/TripRecord/SwapTransaction/PayoutLedger — sim đã qua M0 integrity gate), (ii) sampler độc lập cho entity sim chưa có (GPSPing nội suy dọc segment 30s/ping, PolicyChangeEvent theo kịch bản). Tương quan BẮT BUỘC giữ: ledger amount tái tính được từ (policy_version, trip); event ordering hợp lệ per driver; GPS liên tục theo segment; SOC timeline khớp swap.
+- **"Data sạch" acceptance:** 100% pass JSON Schema; 0 orphan FK; 0 event nghịch thời gian per driver; ledger↔trip↔policy khớp 100%; phân phối trong tolerance benchmark.
+- **4 vòng verify — mỗi vòng 1 report `research/experiments/mockgen/`:**
+  1. **Schema validation**: 100% record mọi entity.
+  2. **Statistical realism** vs `research/simulation/realism-benchmarks.md`: trips FT 15–30/ngày, payout dải benchmark, hour-shape 2 đỉnh, dist median ~3.2–3.5km (calibration gap T-021 ghi chú), acceptance per archetype — **≥30 seeds**, tolerance/CI trong report (CLAUDE.md §4b).
+  3. **Cross-entity consistency**: tái tính payout từ policy+trips so với ledger; SOC↔swap; GPS↔trip endpoints.
+  4. **Adversarial review**: tìm pattern phi thực tế (driver 24h không nghỉ, trip 0 phút, thu nhập âm, GPS teleport) — flaw → sửa generator → chạy lại TỪ VÒNG 1.
+- **Volume:** ≥30 ngày × 50 driver (scale theo nhu cầu solver); mọi record nhãn `MOCK` + seed + generated_at.
+- Data thật GSM thay dần từng entity khi có export — cùng schema, chỉ đổi nguồn.
+
+Backlog: **T-038** (C0+C1) · **T-039 recurring** (checkpoint sau mỗi phần — section bắt buộc trong `UPDATE_TEMPLATE.md`).
 
 ## 9. Không làm trong spec này
 
