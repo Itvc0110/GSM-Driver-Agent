@@ -10,8 +10,8 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical ≥30 seeds/consistency/adversarial — spec §8.1).
 3. **C2a** ✅ metric table (UPDATE-025). **C2b** ✅ solver S1 BonusFeasibility + SolverReport DONE 2026-07-23 (`gsm_core/{policy,features/bonus_gap,solvers/bonus_feasibility}`, UPDATE-026; 12 test, integration mock 7/12 feasible).
 4. **C3** ✅ S2 ShiftDP (UPDATE-027). **C4** ✅ S3 F3Patterns + L2i (UPDATE-028). **C5** ✅ S4 CapacityAlloc DONE 2026-07-23 (`gsm_core/solvers/capacity_alloc.py`, UPDATE-029; scipy assignment chống herding, 5 safety_flags F2-04, 12 test, over-subscribe 0 vi phạm capacity). **→ 4/4 SOLVER XONG.**
-5. **C6 (TIẾP THEO)**: agent pipeline (Router → Composer → Verifier, residual đóng 5 mục) + context pack + memory + Langfuse instrumentation đồng thời (T-026 phase 2). LLM VÀO ĐÂY. 4 SolverReport envelope sẵn làm input Composer.
-6. **C7**: EXP-001..005 trên instrumentation C6.
+5. **C6** ✅ DONE 2026-07-24 (UPDATE-030): agent pipeline `src/gsm_core/advisor/` (Router zero-ML → Composer placeholder-first LLM#1 → Verifier 3 tầng CODE-veto) + context pack (1 renderer) + episode store (exact-key cache, kiêm DecisionRecord) + observability per-layer (2 HARD invariant =1.0). F0 corpus-based track-guardrail. Template fallback (LLM-off) bắt buộc. 37 test (14+18+5), full suite 162. **3 bug thật fix có regression** (BUG-C6-01 normalize đ/Đ ở cả 3 module; BUG-C6-02 promise pattern báo nhầm tên chính sách "Đảm Bảo Thu Nhập"; BUG-C6-03 verifier soi text trích dẫn official). T-026 phase 2 instrument xong. **Còn: live LLM smoke thật (D-C6-03), visual = sample text.**
+6. **C7 (TIẾP THEO)**: EXP-001..005 trên instrumentation C6 (episode store đã bandit-ready).
 7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
 
 **Track SIM/Advisor (PAUSE sau T-030 — resume sau khung core; reliability-first):**

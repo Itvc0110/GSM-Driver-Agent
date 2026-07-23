@@ -22,6 +22,9 @@ gsm-sim = "gsm_sim.cli:main"
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 viz = ["streamlit>=1.35", "pydeck>=0.9", "plotly>=5.20", "pandas>=2.0"]
+# Live LLM composer (C6) — CHỈ cần khi chạy pipeline llm_mode="live"/smoke; test-suite
+# deterministic KHÔNG cần. Dùng JSON-mode thuần (không instructor) để tối thiểu deps.
+llm = ["openai>=1.30"]
 
 [build-system]
 requires = ["hatchling"]
