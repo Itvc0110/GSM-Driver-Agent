@@ -15,6 +15,15 @@ Cập nhật: 2026-07-22 (chương trình simulator reliability-first M0–M4 �
 
 Source of truth: `specs/simulation-reliability-upgrade.md`. Mỗi milestone có plan mode riêng, multi-seed/boundary/full-suite verification và visual review theo `CLAUDE.md` §4b.
 
+**Track CORE bài toán (Cường 2026-07-23 — ưu tiên hiện tại, sim tạm pause sau T-030):**
+
+1. **T-038 C0**: chốt data schema L0–L3 platform-centric (spec `core-data-schema-and-advisor-architecture.md`).
+2. **T-038 C1**: mock data generator + verify 4 vòng (schema/statistical/consistency/adversarial).
+3. **C2–C5**: 4 solver thuần math (BonusFeasibility → ShiftDP → F3Patterns → CapacityAlloc) + SolverReport envelope.
+4. **C6**: agent pipeline (Router → Composer → Verifier, agent-residual đóng 5 mục) + context pack + memory.
+5. **C7**: EXP-001..005 + Langfuse T-026.
+6. **T-039** checkpoint mở rộng sau mỗi bước.
+
 **Track song song (không đụng files nhau):**
 
 - **Khánh: T-009 UI clone** (ưu tiên của Khánh — brief `planning/ui-clone-brief.md`).
@@ -63,3 +72,5 @@ Source of truth: `specs/simulation-reliability-upgrade.md`. Mỗi milestone có 
 | T-035 | M3a: Story Mode city pulse + canonical replay/player (per-event, 1/5/15 phút) | BLOCKED | — | Phụ thuộc T-034; narrative market 24h. H3 mặc định phẳng/bán trong suốt; station layer trên cùng; active fleet/lifecycle/environment đồng bộ playhead. |
 | T-036 | M3b: actor journey selector + route/Gantt/SOC/payout/points + flaw labels + advisor placeholder | BLOCKED | — | Phụ thuộc T-035. `OBSERVED` ≠ `HEURISTIC` ≠ `PAIRED_COUNTERFACTUAL`; chưa có M4 thì không hiển thị số “mất tiền” chắc chắn. |
 | T-037 | M3c: Diagnostic Mode + audit panels + visual-review harness | BLOCKED | — | Phụ thuộc T-035 + T-036. Demand/supply/lifecycle/spatial/station/evidence diagnostics; launch seed/scenario cho Cường review theo CLAUDE.md §4b. |
+| T-038 | **CORE C0+C1: chốt data schema (L0–L3, platform-centric) + MOCK data generator theo schema** | READY (spec DONE — chờ Cường duyệt file) | — | Spec: `specs/core-data-schema-and-advisor-architecture.md`. C0: `schemas/` JSON Schema + validators + changelog. C1: gen MOCK **chi tiết, phản ánh thực tế, VERIFY NHIỀU VÒNG** — (a) schema validation, (b) statistical realism vs benchmarks, (c) cross-entity consistency ledger↔trips↔policy↔events, (d) adversarial review; mỗi vòng có report. Nguồn gen: sim T-030 adapter + sampler độc lập; nhãn MOCK+seed+ngày. Data thật GSM thay dần khi có export. |
+| T-039 | **Recurring: expansion checkpoint — MỞ RỘNG schema / bài toán tối ưu / tính năng?** | RECURRING | — | Yêu cầu Cường 2026-07-23: sau MỖI phần hoàn thành (mỗi C#/T#), UPDATE phải có mục trả lời: (1) schema cần thêm/bớt field gì? (2) có bài toán mới formalize được không (residual→solver)? (3) tính năng mới khả thi từ data hiện có? Không tự triển khai — ghi đề xuất để Cường duyệt. |
