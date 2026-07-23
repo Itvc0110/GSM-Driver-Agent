@@ -203,6 +203,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "h3" },
+    { name = "jsonschema" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "polars" },
@@ -226,6 +227,7 @@ viz = [
 [package.metadata]
 requires-dist = [
     { name = "h3", specifier = ">=4.1" },
+    { name = "jsonschema", specifier = ">=4.21" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pandas", marker = "extra == 'viz'", specifier = ">=2.0" },
     { name = "plotly", marker = "extra == 'viz'", specifier = ">=5.20" },

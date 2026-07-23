@@ -30,3 +30,6 @@ runs/
 # OS / editor
 Thumbs.db
 .DS_Store
+
+# Mock data — parquet tái gen được từ seed (manifest + reports commit)
+data/mock/**/*.parquet
