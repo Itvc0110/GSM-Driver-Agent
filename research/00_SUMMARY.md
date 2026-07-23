@@ -1,7 +1,9 @@
-# Research Summary — Đợt 1 + Đợt 2 + Đợt 3 (simulation)
+# Research Summary — Đợt 1 + Đợt 2 + Đợt 3 (simulation) + Refresh policy 2026-07-24
 
-Ngày cập nhật: 2026-07-21 · Files chi tiết: [income structure](economics/income-structure.md) · [bonus/policy](policy/bonus-programs.md) · [pain points](community/pain-points.md) · [community insights](community/community-insights.md) · [order distribution](market/order-distribution.md) · **simulation:** [tooling](simulation/tooling.md) · [evaluation methodology](simulation/evaluation-methodology.md) · [world parameters](simulation/world-parameters.md) (+ đợt 4 đang chạy: action space, pilot 1 quận, timestep).
+Ngày cập nhật: 2026-07-21 (refresh policy 2026-07-24) · Files chi tiết: [income structure](economics/income-structure.md) · [bonus/policy](policy/bonus-programs.md) · **[⚠ POLICY REFRESH 2026-07-24](policy/policy-refresh-2026-07-24.md)** · [pain points](community/pain-points.md) · [community insights](community/community-insights.md) · [order distribution](market/order-distribution.md) · **simulation:** [tooling](simulation/tooling.md) · [evaluation methodology](simulation/evaluation-methodology.md) · [world parameters](simulation/world-parameters.md) (+ đợt 4 đang chạy: action space, pilot 1 quận, timestep).
 Phương pháp: web research song song + đối chiếu chéo; claim trung tâm ĐBTN đã xác minh trực tiếp trên official page. Mỗi file ghi nguồn/ngày/reliability; số community không được nâng thành policy/financial fact.
+
+> **⚠ ĐÍNH CHÍNH 2026-07-24 (đọc trước):** Chính sách **Vận Doanh 23/02/2026** (toàn quốc) đã **BỎ phạt tỷ lệ nhận/hoàn thành ≤70%**, chuyển sang **KHOÁN TUẦN** + **truy thu 20%** (HN/HCM tới 40%) phần doanh số chưa đạt. ⇒ Mọi phần nói "phạt <70%" trong đợt 1/2 là **snapshot lịch sử (15/07/2025), có thể đã bị thay thế**. Bộ QTƯX 05/06/2026 vẫn liệt kê phạt <70% → **mâu thuẫn chưa reconcile**, cần data thật GSM. Chi tiết + timeline version: [policy-refresh-2026-07-24.md](policy/policy-refresh-2026-07-24.md).
 
 ## 10 điều quan trọng nhất
 

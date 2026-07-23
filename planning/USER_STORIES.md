@@ -26,6 +26,8 @@ Quy ước ID: `US-<khối>-<số>` (khối: F0 policy, F1 trước ca, F2 trong
 
 ## F3 — Sau ca
 
+> **Ghi chú 2026-07-24:** "tỷ lệ nhận gần ngưỡng policy" (US-F3-02) và "từ chối ảnh hưởng tỷ lệ nhận" (US-F2-04) — sau Vận Doanh 23/02/2026, ngưỡng còn hiệu lực là **eligibility thưởng tuần (≥85% HN)** + đạt **khoán tuần**, KHÔNG phải phạt <70% (đã bỏ). Diễn giải phải nói "lỡ thưởng/truy thu khoán", không "bị phạt". Xem [research/policy/policy-refresh-2026-07-24.md](../research/policy/policy-refresh-2026-07-24.md).
+
 - **US-F3-01** · Là tài xế kết thúc ca, tôi muốn bản tổng hợp tách gross revenue, driver payout và estimated net (nếu known costs đủ), cùng thời gian chạy/chờ và so với chỉ tiêu payout, để hiểu đúng kết quả ca.
 - **US-F3-02** · Là tài xế, tôi muốn được chỉ ra tối đa vài pattern chưa tối ưu kèm giải thích (vd: sạc trong khung demand cao, thiếu tiến độ tới mốc thưởng versioned, tỷ lệ nhận gần ngưỡng policy), để ca sau làm tốt hơn mà không bị phán xét theo từng cuốc.
 - **US-F3-03** · Là tài xế, tôi muốn một gợi ý cụ thể duy nhất cho ca tới (không phải danh sách dài), để dễ thực hiện.

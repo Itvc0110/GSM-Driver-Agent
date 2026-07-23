@@ -83,6 +83,7 @@ Mọi con số là **MOCK** được tổng hợp/suy luận từ `research/` (n
 
 ## Ghi chú thiết kế
 
+- **⚠ Cập nhật 2026-07-24 (risk-framing):** cơ chế **phạt tỷ lệ nhận <70% đã bị BỎ** (Vận Doanh 23/02/2026) — xem [research/policy/policy-refresh-2026-07-24.md](../research/policy/policy-refresh-2026-07-24.md). Vì vậy rủi ro "tỷ lệ nhận thấp" của P1 (82%) / P4 (74%) **KHÔNG còn là "bị phạt"** mà là: (1) **không đủ eligibility nhận thưởng tuần** (HN ≥85% nhận & hoàn thành, version 12/2025), và (2) **không đạt khoán tuần → truy thu 20-40%**. Các ô "rủi ro"/"tỷ lệ nhận" dưới đây vốn đã version-aware (dẫn Policy KB theo effective date) nên GIỮ NGUYÊN, nhưng khi F1/F3 diễn giải phải nói đúng: *lỡ thưởng / truy thu khoán*, không nói *bị phạt vì tỷ lệ nhận*.
 - P4/P5 thể hiện 2 chiều **kinh nghiệm dùng app** và **thâm niên → tiền thưởng** như Cường yêu cầu; P1–P3 phủ trục **quỹ giờ** (part-time → full-time → top) và **track hợp tác**.
 - Thứ tự triển khai đề xuất: P4 và P2 trước (đại diện 2 nhu cầu F0/F1 rõ nhất), rồi P1, P5, P3.
 - Research đợt 2 cung cấp các **policy snapshots có ngày/market** — xem `research/policy/bonus-programs.md`. Persona dùng chúng làm MOCK calibration, không hard-code thành policy hiện hành. `TBD` thật sự: mức thâm niên/Loyalty Bike; % chia chi tiết theo khung giờ; mapping quyền lợi theo Platform/RTO/cohort.

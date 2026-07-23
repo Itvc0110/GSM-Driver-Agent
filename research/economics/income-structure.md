@@ -3,6 +3,8 @@
 Ngày nghiên cứu: 2026-07-20 · Trạng thái: đợt 1 (chưa kiểm chứng chéo toàn bộ) · Nguồn: T-001
 Độ tin cậy: `official` (greensm.com/xanhsm.com) > `press` (báo chí) > `community` (trung gian/tự khai) — số từ community tối đa medium confidence.
 
+> **⚠ BỔ SUNG 2026-07-24 — mô hình accounting đổi.** Chính sách **Vận Doanh 23/02/2026** chuyển tính doanh số **theo TUẦN (khoán tuần)** thay vì theo ngày; không đạt khoán tuần → **truy thu 20%** (HN/HCM tới 40% — 04/05/2026) phần thiếu, **cấn trừ ví** ⇒ đây là **khoản khấu trừ vào driver payout** (giống chức năng phạt cũ nhưng theo doanh số tuần). Gap #3 "chính sách phạt chính thức" bên dưới **nay đã có văn bản** (Bộ QTƯX 05/06/2026 + clawback 23/02/2026) — nhưng 2 nguồn **mâu thuẫn** về phạt <70%. `driver_payout` và `estimated_net` phải model được **clawback** như một deduction versioned. Chi tiết: [../policy/policy-refresh-2026-07-24.md](../policy/policy-refresh-2026-07-24.md).
+
 ## Kết luận chính (đọc nhanh)
 
 Có **3 hình thức hợp tác**, cấu trúc thu nhập khác hẳn nhau — hệ thống phải coi chiết khấu/tỷ lệ chia là **tham số cấu hình theo thời gian**, không phải hằng số (chính sách đổi ít nhất 4 lần từ 2023):

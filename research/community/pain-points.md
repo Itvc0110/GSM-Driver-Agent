@@ -3,6 +3,8 @@
 Ngày nghiên cứu: 2026-07-20 · Trạng thái: đợt 1 · Nguồn: T-001
 Lưu ý: số tự khai từ cộng đồng (VOZ, diễn đàn VinFast, YouTube) tối đa **medium confidence**, chưa kiểm chứng.
 
+> **⚠ ĐÍNH CHÍNH 2026-07-24 (pain #3):** cơ chế "phạt tỷ lệ nhận <70% / auto-accept <50%" bên dưới là snapshot 15/07/2025. Chính sách **Vận Doanh 23/02/2026** đã **BỎ phạt ≤70%** → chuyển sang **khoán tuần + truy thu 20-40%**. Vì vậy F3/F0 KHÔNG cảnh báo "sắp bị phạt vì tỷ lệ nhận thấp" như fact; **ngưỡng còn ý nghĩa thật là ELIGIBILITY THƯỞNG TUẦN (≥85% HN, 12/2025)** + đạt khoán tuần, không phải phạt. Chi tiết: [policy-refresh-2026-07-24.md](../policy/policy-refresh-2026-07-24.md).
+
 ## Kết luận chính (đọc nhanh)
 
 **Thu nhập Bike tự khai tương quan gần như tuyến tính với số giờ chạy:** ~4h/ngày → ~8tr/tháng; 8–10h → 15–20tr; >10h → 22tr+.

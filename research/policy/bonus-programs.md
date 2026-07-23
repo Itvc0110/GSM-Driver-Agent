@@ -3,6 +3,8 @@
 Ngày nghiên cứu: 2026-07-20 · Trạng thái: đợt 1 + đợt 2 (T-012) · Nguồn: T-001, T-012
 Ghi chú chung: xanhsm.com đã redirect 301 sang greensm.com (rebrand Green SM). Nhiều bảng thưởng chi tiết công bố dạng ảnh/PDF/in-app — đợt 2 đã trích được **con số cụ thể** từ text bài official + trang vệ tinh (bên dưới, mục "Bảng số verify đợt 2").
 
+> **⚠ ĐÍNH CHÍNH 2026-07-24 — đọc [policy-refresh-2026-07-24.md](policy-refresh-2026-07-24.md) trước.** Phần "phạt tỷ lệ nhận <70%" và cơ chế "cưỡng chế auto-accept <50%" bên dưới là **snapshot 15/07/2025**. Chính sách **Vận Doanh 23/02/2026** (toàn quốc) đã **BỎ phạt ≤70%** và chuyển sang **KHOÁN TUẦN + truy thu 20%** (HN/HCM tới 40%). Bộ QTƯX 05/06/2026 vẫn ghi phạt Nhóm 4 → **mâu thuẫn chưa reconcile**. Đừng dùng "phạt <70%" như fact hiện hành trong F0; cite đúng doc + effective date, hoặc trả "nguồn khác biệt, kiểm tra app".
+
 ## Bảng số verify đợt 2 (2026-07-20, đã trích trực tiếp)
 
 > Đây là các con số dạng TEXT lấy được, thay cho phần "trong ảnh" của đợt 1. Mỗi con số chỉ có hiệu lực trong market/profile/time window được nguồn nêu. T-013 là việc join Facebook groups, không phải bước xác minh policy trong app.

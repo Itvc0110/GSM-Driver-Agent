@@ -98,6 +98,11 @@ Mọi field L1 là thứ **GSM đo được thật** (taxonomy §3.5). Không fi
 
 Pain # theo `research/community/pain-points.md`: **#1** sạc/đổi pin giờ đỉnh · **#2** quỹ giờ 10–13h/ngày quá tải · **#3** áp lực tỷ lệ nhận (ngưỡng 50% forced-accept, 85% bonus) · **#4** chính sách khó hiểu/đổi liên tục.
 
+> **⚠ Refresh 2026-07-24 ([research/policy/policy-refresh-2026-07-24.md](../research/policy/policy-refresh-2026-07-24.md)) — ảnh hưởng schema/solver, ứng viên T-039:**
+> - **Pain #3 đổi bản chất:** phạt <70% + forced-accept <50% **đã bỏ** (Vận Doanh 23/02/2026). Ngưỡng còn hiệu lực = **85% eligibility thưởng tuần** + **đạt khoán tuần**. `thresholds.forced_accept_below` trong `policy_bundle` schema → review có còn dùng không (versioned).
+> - **MODEL GAP (solver):** mô hình mới = **khoán tuần (doanh số/tuần) + truy thu 20-40%** khi thiếu. S1 hiện tính theo ĐIỂM/ngày; cần biến thể/solver "gap tới khoán tuần" đơn vị **VND doanh số tuần** + cảnh báo clawback. Clawback map được vào `PayoutLedger.kind=deduction` (đã có) — nhưng solver chưa dự báo/planning quanh nó.
+> - **SCHEMA GAP:** `policy_bundle.points` chỉ có trục peak/normal; điểm thực tế còn khác theo **service_type** (5-10-15-20-30 Bike/Food/Express, PDF Q&A 12/2025) → thêm chiều service (nối `ServiceCatalog`); thêm `weekly_quota`/`clawback_rate` versioned. Mọi việc này = **cycle plan riêng**, không sửa trong refresh docs này.
+
 | Nhóm biến | Feature/US nuôi | Pain # | Solver tiêu thụ |
 |---|---|---|---|
 | `PolicyBundle` + `PolicyChangeEvent` | US-F0-01/02/**03**, US-F1-01 | #4 | S1; R1 RAG |
