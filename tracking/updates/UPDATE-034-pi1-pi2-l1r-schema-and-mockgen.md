@@ -45,7 +45,11 @@ TODO: PI-1/PI-2 → DONE. `specs/real-data/00-index.md`,`03-mockgen` status→im
 
 ## Kiểm chứng
 
-`pytest tests/test_l1r_schemas.py` 30 pass; `tests/test_realdata_gen.py` 9 pass (gen 8 ngày + R1 schema/FK + R3 cross-table + R4 bounds); full suite **201 pass**. Smoke 14 ngày sinh 13 bảng thật shape. Parquet gitignored (regen từ seed). **CHƯA kiểm chứng:** R2 statistical ≥30 seeds vs benchmark (chưa chạy — chỉ R1/R3/R4 ở test); semantics GSM cho 5 bảng + số target KPI (TBC); DataSource tool (PI-3, chưa làm); solver remap (PI-4).
+`pytest tests/test_l1r_schemas.py` 30 pass; `tests/test_realdata_gen.py` 9 pass (gen 8 ngày + R1 schema/FK + R3 cross-table + R4 bounds); full suite **201 pass**. Smoke 14 ngày sinh 13 bảng thật shape. Parquet gitignored (regen từ seed).
+
+**R2 statistical (DONE — `scripts/verify_realdata_stats.py`, 30 seeds/1500 driver-days → `research/experiments/mockgen-realdata/ROUND-2-stats-report.md`):** 6/6 metric median trong dải benchmark. **Caveat trung thực (không claim "realism-proven tuyệt đối"):** (a) payout median ~195k = **biên DƯỚI** (sim thiếu lớp thưởng tuần — cộng ở rule/S5, không phải bug mock); (b) acceptance median **1.00 = biên TRÊN** (sim under-produce decline → tỷ lệ nhận lạc quan hơn thực 0.74-0.97) → cần thêm decline realistic hoặc data thật; (c) cuốc/ngày median 14 ~ biên dưới. Aggregate consistency R1/R3/R4 vẫn chặt.
+
+**CHƯA kiểm chứng:** semantics GSM cho 5 bảng + số target KPI (TBC); DataSource tool (PI-3, chưa làm); solver remap (PI-4); acceptance realism (caveat b).
 
 ### Seeds và scenarios
 | Run | Seed | Kết quả | Chưa kiểm chứng |
@@ -72,6 +76,6 @@ TODO: PI-1/PI-2 → DONE. `specs/real-data/00-index.md`,`03-mockgen` status→im
 
 ## Follow-up / defer phát sinh
 - **PI-3** DataSource tool (read-only+PII) — next; **PI-4** solver remap + S5/S6; **PI-5** UC5-8 features.
-- **R2 statistical verify** (≥30 seeds vs benchmark) — chạy trước khi coi mock "realistic-proven".
+- **R2 DONE** (6/6 in-range, 2 caveat biên): cải thiện realism khi có data thật; acceptance sim quá cao (thêm decline) — theo dõi.
 - **Cần GSM**: cột thật 5 bảng + số target KPI tuần + semantics (P1§4) → đối chiếu engineered.
 - Cần Cường chốt (khi tới phase): BQ auth/env (PI-3), external key (PI-6) — chưa đụng.
