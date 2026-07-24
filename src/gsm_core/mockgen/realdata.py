@@ -1,8 +1,9 @@
-"""PI-2 — gen MOCK 13 bảng l1r (shape data thật) bằng sim→AGGREGATE (P3 grandplan).
+"""PI-2/PI-2b — gen MOCK 13 bảng l1r (shape data thật) profile-driven.
 
-Tái dùng `adapter_sim.generate_day` (event nền) → aggregate ra KPI daily/weekly + reshape
-trips/hex + rule-based mission/penalty/fraud. Aggregate LUÔN nhất quán event nền (verify R3).
-Mọi record source=MOCK/INFERRED. Deterministic theo seed.
+BIKE simulate qua `adapter_sim.generate_day` (event nền); car/premium/rto sinh trips
+RULE-BASED (không sim). Aggregate ĐỒNG NHẤT → KPI daily/weekly. **Acceptance theo
+archetype target + noise** (sửa caveat R2 acceptance≈1.00, thêm randomness). Per-driver
+`driver_share`. Mọi record MOCK/INFERRED, deterministic seed. Zone enlargement DEFER.
 """
 
 from __future__ import annotations
@@ -16,10 +17,14 @@ from pathlib import Path
 import polars as pl
 
 from gsm_core.mockgen.adapter_sim import generate_day
-from gsm_core.schema_registry import SchemaRegistry, L1R_ENTITIES
+from gsm_core.mockgen.profiles import build_profile_universe, kind_distribution
+from gsm_core.schema_registry import L1R_ENTITIES
 
 ROOT = Path(__file__).resolve().parents[3]
 RUSH_HOURS = {6, 7, 8, 16, 17, 18}
+# demand shape theo giờ 6..22 (2 đỉnh sáng/chiều) — trọng số cho rule-based trips
+_HOUR_W = {6: 3, 7: 5, 8: 4, 9: 2, 10: 2, 11: 3, 12: 3, 13: 1, 14: 1, 15: 2,
+           16: 4, 17: 5, 18: 5, 19: 3, 20: 3, 21: 2, 22: 1}
 
 
 def _hour(iso: str) -> int:
@@ -30,166 +35,201 @@ def _date_of(iso: str) -> str:
     return datetime.fromisoformat(iso).date().isoformat()
 
 
-def _week_key(d: str) -> tuple[str, str, str]:
+def _week_key(d: str):
     dt = _date.fromisoformat(d)
     iso = dt.isocalendar()
     monday = dt - timedelta(days=dt.weekday())
     return f"{iso.year}-W{iso.week:02d}", monday.isoformat(), (monday + timedelta(days=6)).isoformat()
 
 
-def _num(rng: random.Random, mu: float, sd: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, rng.gauss(mu, sd)))
+def _clamp(v, lo, hi):
+    return max(lo, min(hi, v))
 
 
-def aggregate_days(days: list[dict], share: float, profiles: dict, seed: int) -> dict[str, list[dict]]:
-    """days = list of generate_day output. Trả {l1r_entity: records}."""
-    rng = random.Random(seed ^ 0x5EED)
-    trips_all: list[dict] = []
-    events_all: list[dict] = []
-    pings_all: list[dict] = []
-    for day in days:
-        trips_all += day.get("trip_record", [])
-        events_all += day.get("app_event", [])
-        pings_all += day.get("gps_ping", [])
+def rule_based_trips(profile: dict, date_str: str, rng: random.Random) -> list[dict]:
+    """Trips cho driver KHÔNG simulate (car/premium/rto) — shape ~ trip_record sim."""
+    if rng.random() < 0.12:  # ~12% ngày nghỉ (randomness)
+        return []
+    n = rng.randint(profile["trips_lo"], profile["trips_hi"])
+    hours = list(_HOUR_W)
+    weights = [_HOUR_W[h] for h in hours]
+    trips = []
+    for i in range(n):
+        h = rng.choices(hours, weights=weights)[0]
+        mi = rng.randint(0, 59)
+        base = datetime.fromisoformat(f"{date_str}T{h:02d}:{mi:02d}:00+07:00")
+        dist = round(_clamp(rng.gauss(4.5, 2.2), 0.8, 18.0), 2)
+        dur_s = int(dist / max(12, rng.gauss(22, 4)) * 3600) + rng.randint(120, 420)
+        fare = rng.randint(profile["fare_lo"], profile["fare_hi"])
+        t_req = base.isoformat()
+        t_assign = (base + timedelta(seconds=60)).isoformat()
+        t_pickup = (base + timedelta(seconds=240)).isoformat()
+        t_complete = (base + timedelta(seconds=240 + dur_s)).isoformat()
+        trips.append({
+            "order_id": f"{profile['driver_id']}-{date_str}-{i}", "driver_id": profile["driver_id"],
+            "t_request": t_req, "t_assign": t_assign, "t_pickup": t_pickup, "t_complete": t_complete,
+            "pickup": {"h3": f"8amock{rng.randint(0, 60):02d}"},
+            "drop": {"h3": f"8amock{rng.randint(0, 60):02d}"},
+            "dist_km": dist, "gross_vnd": fare})
+    return sorted(trips, key=lambda x: x["t_complete"])
 
-    # index per (driver, date)
-    dd = lambda: defaultdict(list)  # noqa: E731
-    trips_by = defaultdict(list)
-    for t in trips_all:
-        trips_by[(t["driver_id"], _date_of(t["t_complete"]))].append(t)
-    ev_by = defaultdict(lambda: defaultdict(int))
-    online_by = defaultdict(list)
-    for e in events_all:
-        d = _date_of(e["t"])
-        ev_by[(e["driver_id"], d)][e["kind"]] += 1
-        if e["kind"] in ("go_online", "go_offline"):
-            online_by[(e["driver_id"], d)].append((e["t"], e["kind"]))
 
+def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: float,
+              rng: random.Random) -> None:
+    """Aggregate 1 driver-day → mọi bảng KPI daily + trips. Acceptance từ profile target."""
+    share = prof["driver_share"]
+    completed = len(trips)
+    ful = _clamp(rng.gauss(prof["target_fulfil"], 0.02), 0.6, 1.0)
+    accepted = max(completed, round(completed / ful)) if completed else 0
+    acc = _clamp(rng.gauss(prof["target_acceptance"], 0.04), 0.5, 1.0)
+    req_accept = max(accepted, round(accepted / acc)) if accepted else 0
+    declined = req_accept - accepted
+    cancelled = accepted - completed
+    acc_rate = round(accepted / req_accept, 4) if req_accept else 1.0
+    ful_rate = round(completed / accepted, 4) if accepted else 1.0
+    can_rate = round(cancelled / req_accept, 4) if req_accept else 0.0
+    n_5 = int(round(completed * _clamp(rng.gauss(0.78, 0.08), 0.4, 1.0)))
+    avg_star = _clamp(rng.gauss(4.7, 0.15), 3.5, 5.0)
+
+    out["driver_statistic_daily"].append({
+        "schema_version": "1.0.0", "source": "MOCK", "local_date": d, "driver_id": drv,
+        "completed_count": completed, "accepted_count": accepted, "cancelled_count": cancelled,
+        "total_request_calculate_complete": accepted, "total_request_calculate_cancel": cancelled + declined,
+        "total_request_calculate_accept": req_accept,
+        "count_cancel_not_relate_driver": rng.randint(0, cancelled) if cancelled else 0,
+        "total_rating": round(avg_star * completed, 2), "total_order_rating": completed,
+        "count_rating_5_star": min(n_5, completed),
+        "acceptance_rate": acc_rate, "fulfillment_rate": ful_rate, "cancellation_rate": can_rate})
+
+    out["driver_online_hours"].append({
+        "schema_version": "1.0.0", "source": "MOCK", "local_date": d, "schedule_date": d,
+        "driver_id": drv, "full_name": f"MOCK Driver {drv}", "sap_profile_id": f"SAP-{drv}",
+        "hub_id": "hub-dongda", "depot_id": "depot-01", "phone_number": "+8490MOCK000",
+        "driver_type": prof["driver_type"], "online_time": round(online_h, 2)})
+
+    gross = sum(t["gross_vnd"] for t in trips)
+    commission = int(round(gross * share))
+    rush = [t for t in trips if _hour(t["t_complete"]) in RUSH_HOURS]
+    g_rush = sum(t["gross_vnd"] for t in rush)
+    c_rush = int(round(g_rush * share))
+    g_norm, c_norm = gross - g_rush, commission - c_rush
+    out["driver_orders_rush_hours"].append({
+        "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "local_date": d,
+        "total_order": completed, "commission": commission, "total_fee": gross,
+        "revenue_not_relate_driver": gross - commission,
+        "total_order_normal_hour": completed - len(rush), "commission_normal_hour": c_norm,
+        "total_fee_normal_hour": g_norm, "revenue_not_relate_driver_normal_hour": g_norm - c_norm,
+        "total_order_rush_hour": len(rush), "commission_rush_hour": c_rush,
+        "total_fee_rush_hour": g_rush, "revenue_not_relate_driver_rush_hour": g_rush - c_rush})
+    out["driver_income_daily"].append({
+        "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "order_date": d,
+        "commission": commission, "total_order": completed, "total_fee": gross,
+        "revenue_not_relate_driver": gross - commission,
+        "avg_daily_revenue": round(gross / completed, 2) if completed else 0.0,
+        "total_core_order": completed})
+    out["driver_bike_stoppoints"].append({
+        "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "local_date": d,
+        "total_stoppoints": completed, "total_stoppoints_rush_hour": len(rush)})
+
+    for t in trips:
+        out["trips"].append({
+            "schema_version": "1.0.0", "source": "MOCK", "trip_id": t["order_id"], "driver_id": drv,
+            "customer_id": f"cust-{t['order_id']}", "service_type": prof["service_type"],
+            "status": "completed", "request_time": t["t_request"], "assign_time": t["t_assign"],
+            "pickup_time": t["t_pickup"], "complete_time": t["t_complete"],
+            "pickup_h3": t["pickup"]["h3"], "drop_h3": t["drop"]["h3"], "distance_km": t["dist_km"],
+            "duration_seconds": int((datetime.fromisoformat(t["t_complete"])
+                                     - datetime.fromisoformat(t["t_pickup"])).total_seconds()),
+            "gross_vnd": t["gross_vnd"], "commission_vnd": int(round(t["gross_vnd"] * share)),
+            "rush_hour": _hour(t["t_complete"]) in RUSH_HOURS, "travel_mode": prof["service_type"],
+            "created_at": t["t_request"], "datastream_metadata": None})
+
+
+def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {e: [] for e in L1R_ENTITIES}
-    keys = sorted(set(trips_by) | set(ev_by) | set(online_by))
+    rng = random.Random(seed ^ 0x5EED)
 
-    for (drv, d) in keys:
-        trips = sorted(trips_by[(drv, d)], key=lambda x: x["t_complete"])
-        ev = ev_by[(drv, d)]
-        accepted = ev.get("accept", len(trips))
-        completed = len(trips)
-        declined = ev.get("decline", 0)
-        accepted = max(accepted, completed)
-        req_accept = accepted + declined
-        cancelled = max(0, accepted - completed)
-        acc_rate = round(accepted / req_accept, 4) if req_accept else 1.0
-        ful_rate = round(completed / accepted, 4) if accepted else 1.0
-        can_rate = round(cancelled / req_accept, 4) if req_accept else 0.0
-        n_rated = completed
-        n_5star = int(round(n_rated * _num(rng, 0.78, 0.08, 0.4, 1.0)))
-        avg_star = _num(rng, 4.7, 0.15, 3.5, 5.0)
+    # --- BIKE simulated: gom trips + online span + pings từ sim ---
+    trips_by = defaultdict(list)
+    online_by = defaultdict(list)
+    pings_all = []
+    dates = set()
+    for day in day_outputs:
+        for t in day.get("trip_record", []):
+            trips_by[(t["driver_id"], _date_of(t["t_complete"]))].append(t)
+        for e in day.get("app_event", []):
+            if e["kind"] in ("go_online", "go_offline"):
+                online_by[(e["driver_id"], _date_of(e["t"]))].append((e["t"], e["kind"]))
+        pings_all += day.get("gps_ping", [])
+    for day in day_outputs:  # tập ngày
+        for t in day.get("trip_record", []):
+            dates.add(_date_of(t["t_complete"]))
+    dates = sorted(dates)
 
-        # --- driver_statistic_daily ---
-        out["driver_statistic_daily"].append({
-            "schema_version": "1.0.0", "source": "MOCK", "local_date": d, "driver_id": drv,
-            "completed_count": completed, "accepted_count": accepted, "cancelled_count": cancelled,
-            "total_request_calculate_complete": accepted,
-            "total_request_calculate_cancel": cancelled + declined,
-            "total_request_calculate_accept": req_accept,
-            "count_cancel_not_relate_driver": max(0, cancelled - int(cancelled * 0.5)),
-            "total_rating": round(avg_star * n_rated, 2), "total_order_rating": n_rated,
-            "count_rating_5_star": min(n_5star, n_rated),
-            "acceptance_rate": acc_rate, "fulfillment_rate": ful_rate, "cancellation_rate": can_rate})
-
-        # --- online hours ---
-        spans = sorted(online_by[(drv, d)], key=lambda x: x[0])
-        online_h = 0.0
-        stack = None
+    def online_hours(drv, d):
+        spans = sorted(online_by[(drv, d)])
+        h, stack = 0.0, None
         for ts, kind in spans:
             if kind == "go_online":
                 stack = ts
             elif kind == "go_offline" and stack:
-                online_h += (datetime.fromisoformat(ts) - datetime.fromisoformat(stack)).total_seconds() / 3600
+                h += (datetime.fromisoformat(ts) - datetime.fromisoformat(stack)).total_seconds() / 3600
                 stack = None
-        prof = profiles.get(drv, {})
-        out["driver_online_hours"].append({
-            "schema_version": "1.0.0", "source": "MOCK", "local_date": d, "schedule_date": d,
-            "driver_id": drv, "full_name": f"MOCK Driver {drv}", "sap_profile_id": f"SAP-{drv}",
-            "hub_id": "hub-dongda", "depot_id": "depot-01", "phone_number": "+8490MOCK000",
-            "driver_type": prof.get("vehicle_type", "bike-electric"),
-            "online_time": round(online_h, 2)})
+        return h
 
-        # --- income + rush split ---
-        gross = sum(t["gross_vnd"] for t in trips)
-        commission = int(round(gross * share))
-        rnrd = gross - commission
-        rush_trips = [t for t in trips if _hour(t["t_complete"]) in RUSH_HOURS]
-        g_rush = sum(t["gross_vnd"] for t in rush_trips)
-        c_rush = int(round(g_rush * share))
-        g_norm, c_norm = gross - g_rush, commission - c_rush
-        out["driver_orders_rush_hours"].append({
-            "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "local_date": d,
-            "total_order": completed, "commission": commission, "total_fee": gross,
-            "revenue_not_relate_driver": rnrd,
-            "total_order_normal_hour": completed - len(rush_trips), "commission_normal_hour": c_norm,
-            "total_fee_normal_hour": g_norm, "revenue_not_relate_driver_normal_hour": g_norm - c_norm,
-            "total_order_rush_hour": len(rush_trips), "commission_rush_hour": c_rush,
-            "total_fee_rush_hour": g_rush, "revenue_not_relate_driver_rush_hour": g_rush - c_rush})
-        out["driver_income_daily"].append({
-            "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "order_date": d,
-            "commission": commission, "total_order": completed, "total_fee": gross,
-            "revenue_not_relate_driver": rnrd,
-            "avg_daily_revenue": round(gross / completed, 2) if completed else 0.0,
-            "total_core_order": completed})
+    # emit bike-sim driver-days
+    for (drv, d), trips in sorted(trips_by.items()):
+        prof = universe.get(drv)
+        if prof is None:
+            continue
+        _emit_day(out, drv, d, sorted(trips, key=lambda x: x["t_complete"]), prof,
+                  online_hours(drv, d), rng)
 
-        # --- stoppoints (proxy: mỗi trip 1 điểm drop) ---
-        out["driver_bike_stoppoints"].append({
-            "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "local_date": d,
-            "total_stoppoints": completed, "total_stoppoints_rush_hour": len(rush_trips)})
+    # --- Rule-based (car/premium/rto): sinh trips + emit ---
+    for drv, prof in sorted(universe.items()):
+        if prof["simulated"]:
+            continue
+        for d in dates:
+            trips = rule_based_trips(prof, d, rng)
+            if not trips:
+                continue
+            oh = _clamp(rng.gauss((prof["online_lo"] + prof["online_hi"]) / 2, 1.0),
+                        0.0, prof["online_hi"] + 1)
+            _emit_day(out, drv, d, trips, prof, oh, rng)
 
-        # --- trips (reshape dispatch) ---
-        for t in trips:
-            out["trips"].append({
-                "schema_version": "1.0.0", "source": "MOCK", "trip_id": t["order_id"],
-                "driver_id": drv, "customer_id": f"cust-{t['order_id']}", "service_type": "bike",
-                "status": "completed", "request_time": t["t_request"], "assign_time": t["t_assign"],
-                "pickup_time": t["t_pickup"], "complete_time": t["t_complete"],
-                "pickup_h3": t["pickup"]["h3"], "drop_h3": t["drop"]["h3"],
-                "distance_km": t["dist_km"],
-                "duration_seconds": int((datetime.fromisoformat(t["t_complete"])
-                                         - datetime.fromisoformat(t["t_pickup"])).total_seconds()),
-                "gross_vnd": t["gross_vnd"], "commission_vnd": int(round(t["gross_vnd"] * share)),
-                "rush_hour": _hour(t["t_complete"]) in RUSH_HOURS, "travel_mode": "bike",
-                "created_at": t["t_request"], "datastream_metadata": None})
-
-    # --- hex_tracking từ gps dwell segments ---
+    # --- hex_tracking (BIKE simulate only) từ gps dwell ---
     pings_by = defaultdict(list)
     for p in pings_all:
         pings_by[p["driver_id"]].append(p)
     hx = 0
     for drv, ps in sorted(pings_by.items()):
         ps.sort(key=lambda x: x["t"])
-        seg_hex, seg_start, prev_hex = None, None, None
+        seg_hex = seg_start = prev_hex = prev_t = None
         for p in ps:
             h = p["location"]["h3"]
             if h != seg_hex:
                 if seg_hex is not None:
                     dur = int((datetime.fromisoformat(prev_t) - datetime.fromisoformat(seg_start)).total_seconds())
+                    reposition = rng.random() < 0.05  # ~5% có target reposition (diversity)
                     out["driver_hex_tracking"].append({
-                        "schema_version": "1.0.0", "source": "MOCK", "id": f"hx-{seed}-{hx}",
-                        "driver_id": drv, "campaign_id": None, "log_id": None,
+                        "schema_version": "1.0.0", "source": "MOCK", "id": f"hx-{seed}-{hx}", "driver_id": drv,
+                        "campaign_id": "repo-01" if reposition else None, "log_id": None,
                         "init_hex": prev_hex, "current_hex": seg_hex, "last_hex": prev_hex,
-                        "target_hex": None, "last_seen_at": prev_t, "entered_current_hex_at": seg_start,
-                        "stay_duration_seconds": dur, "reached_target": None, "reached_target_at": None,
-                        "hex_history": None, "created_at": seg_start, "updated_at": prev_t,
-                        "schedule_job_id": None, "datastream_metadata": None,
+                        "target_hex": (f"8amock{rng.randint(0, 60):02d}") if reposition else None,
+                        "last_seen_at": prev_t, "entered_current_hex_at": seg_start,
+                        "stay_duration_seconds": dur,
+                        "reached_target": (rng.random() < 0.6) if reposition else None,
+                        "reached_target_at": None, "hex_history": None, "created_at": seg_start,
+                        "updated_at": prev_t, "schedule_job_id": None, "datastream_metadata": None,
                         "tracking_status": "idle" if dur > 300 else "moving"})
                     hx += 1
                 seg_hex, seg_start, prev_hex = h, p["t"], seg_hex
             prev_t = p["t"]
-
     return out
 
 
-def build_weekly_and_missions(daily: dict, profiles: dict, seed: int) -> None:
-    """kpi_weekly_calculator + mission_catalog/earn/progress + penalization + fraud (rule-based)."""
+def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
     rng = random.Random(seed ^ 0xB0B)
-    # weekly rollup từ income_daily
     by_dw = defaultdict(list)
     for r in daily["driver_income_daily"]:
         wk, ws, we = _week_key(r["order_date"])
@@ -197,52 +237,45 @@ def build_weekly_and_missions(daily: dict, profiles: dict, seed: int) -> None:
     kid = 0
     for (drv, wk, ws, we), rows in sorted(by_dw.items()):
         rev = sum(x["total_fee"] for x in rows)
+        prof = universe.get(drv, {})
         status = "achieved" if rev >= 2_000_000 else ("at_risk" if len(rows) < 5 else "active")
         daily["kpi_weekly_calculator"].append({
             "schema_version": "1.0.0", "source": "MOCK", "id": f"kpi-{seed}-{kid}", "driver_id": drv,
             "driver_name": f"MOCK Driver {drv}", "sap_id": f"SAP-{drv}", "status": status,
-            "week_key": wk, "week_start": ws, "week_end": we,
-            "kpi_month": _date.fromisoformat(ws).month, "kpi_year": _date.fromisoformat(ws).year,
-            "email": None, "tel": None, "engname": None, "depot_code": "DPT01", "depot_name": "Dong Da",
-            "vehicle_vin_number": f"VIN{drv}", "vehicle_license_plate": f"29-MOCK{drv}",
-            "vehicle_model": "Feliz S", "country": "VN", "type": profiles.get(drv, {}).get("track", "platform"),
-            "last_updated_date": f"{we}T23:59:00+07:00"})
+            "week_key": wk, "week_start": ws, "week_end": we, "kpi_month": _date.fromisoformat(ws).month,
+            "kpi_year": _date.fromisoformat(ws).year, "email": None, "tel": None, "engname": None,
+            "depot_code": "DPT01", "depot_name": "Dong Da", "vehicle_vin_number": f"VIN{drv}",
+            "vehicle_license_plate": f"29-MOCK{drv}", "vehicle_model": prof.get("vehicle_model", "Feliz S"),
+            "country": "VN", "type": prof.get("track", "platform"), "last_updated_date": f"{we}T23:59:00+07:00"})
         kid += 1
 
-    # mission catalog (rule-based, grounded mini-task thật)
     missions = [
-        {"id": "m-trip20", "mission_type": "trip_count", "name": "20 chuyến/ngày",
-         "target_count": 20, "reward_vnd": 30000, "rush": False},
-        {"id": "m-rush", "mission_type": "rush_hour", "name": "2 chuyến khung vàng",
-         "target_count": 2, "reward_vnd": 30000, "rush": True},
-        {"id": "m-week250", "mission_type": "trip_count", "name": "250 chuyến/tuần",
-         "target_count": 250, "reward_vnd": 1000000, "rush": False},
+        ("m-trip20", "trip_count", "20 chuyến/ngày", 30000),
+        ("m-rush", "rush_hour", "2 chuyến khung vàng", 30000),
+        ("m-week250", "trip_count", "250 chuyến/tuần", 1000000),
     ]
-    for m in missions:
+    for mid, mtype, name, reward in missions:
         daily["mission_catalog"].append({
-            "schema_version": "1.0.0", "source": "MOCK", "id": m["id"], "created_at": "2026-07-01T00:00:00+07:00",
+            "schema_version": "1.0.0", "source": "MOCK", "id": mid, "created_at": "2026-07-01T00:00:00+07:00",
             "updated_at": None, "deleted_at": None, "created_by": "gsm", "updated_by": None,
-            "mission_type": m["mission_type"], "parent_id": None, "name": m["name"], "state": "active",
-            "audience": "bike_platform", "description": m["name"],
-            "start_time": "2026-07-01T00:00:00+07:00", "end_time": "2026-12-31T23:59:00+07:00",
-            "point_id": None, "rewards": {"vnd": m["reward_vnd"], "target_count": m["target_count"]},
-            "mission_claim": None, "mission_code": m["id"], "time_claim_reward": None, "rule_code": None,
-            "meta_data": None, "contract_type": None, "qualify_execute_code": None, "status": "active",
-            "datastream_metadata": None, "business_code": None, "show_only": False, "is_ddi_mission": False})
+            "mission_type": mtype, "parent_id": None, "name": name, "state": "active", "audience": "bike_platform",
+            "description": name, "start_time": "2026-07-01T00:00:00+07:00", "end_time": "2026-12-31T23:59:00+07:00",
+            "point_id": None, "rewards": {"vnd": reward}, "mission_claim": None, "mission_code": mid,
+            "time_claim_reward": None, "rule_code": None, "meta_data": None, "contract_type": None,
+            "qualify_execute_code": None, "status": "active", "datastream_metadata": None,
+            "business_code": None, "show_only": False, "is_ddi_mission": False})
 
-    # earn_history + progress: gán mission m-trip20 theo ngày đạt ≥20 chuyến
     eid = pid = 0
-    trips_by_dd = defaultdict(int)
-    for r in daily["driver_income_daily"]:
-        trips_by_dd[(r["driver_id"], r["order_date"])] = r["total_order"]
+    trips_by_dd = {(r["driver_id"], r["order_date"]): r["total_order"] for r in daily["driver_income_daily"]}
     prog = defaultdict(int)
     for (drv, d), n in sorted(trips_by_dd.items()):
         if n >= 20:
             daily["mission_earn_history"].append({
                 "schema_version": "1.0.0", "source": "MOCK", "id": f"eh-{seed}-{eid}", "mission_id": "m-trip20",
                 "order_id": None, "order_status": "completed", "driver_id": drv, "customer_id": None,
-                "service_type": "bike", "order_time": f"{d}T20:00:00+07:00", "complete_time": f"{d}T20:00:00+07:00",
-                "travel_mode": "bike", "sap_contract_type": "platform", "type": "mission",
+                "service_type": universe.get(drv, {}).get("service_type", "bike"),
+                "order_time": f"{d}T20:00:00+07:00", "complete_time": f"{d}T20:00:00+07:00", "travel_mode": "bike",
+                "sap_contract_type": universe.get(drv, {}).get("track", "platform"), "type": "mission",
                 "count_order": n, "count_stoppoint": n, "earn": 30000, "description": "20 chuyến/ngày",
                 "datastream_metadata": None, "reward_level": "1"})
             eid += 1
@@ -257,43 +290,46 @@ def build_weekly_and_missions(daily: dict, profiles: dict, seed: int) -> None:
             "datastream_metadata": None})
         pid += 1
 
-    # penalization: clawback khi tuần at_risk (rev thấp) — hiếm
+    ptypes = ["clawback_khoan", "conduct", "late", "acceptance"]
     for k in daily["kpi_weekly_calculator"]:
         if k["status"] == "at_risk" and rng.random() < 0.5:
+            pt = rng.choice(ptypes)
             daily["driver_penalization"].append({
                 "schema_version": "1.0.0", "source": "MOCK", "penalization_id": f"pen-{seed}-{k['id']}",
                 "driver_id": k["driver_id"], "local_date": k["week_end"], "week_key": k["week_key"],
-                "penalty_type": "clawback_khoan", "amount_vnd": 40000,
-                "reason": "không đạt khoán tuần", "related_metric": "weekly_revenue",
-                "ata_code": None, "status": "applied", "created_at": f"{k['week_end']}T23:00:00+07:00"})
+                "penalty_type": pt, "amount_vnd": rng.choice([40000, 100000, 200000]),
+                "reason": f"vi phạm {pt}", "related_metric": "weekly_revenue", "ata_code": None,
+                "status": "applied", "created_at": f"{k['week_end']}T23:00:00+07:00"})
 
-    # fraud: rất hiếm (~1% driver-day) — INFERRED
+    ftypes = ["route_deviation", "gps_anomaly", "off_app", "abnormal_cancel"]
     fid = 0
     for r in daily["driver_statistic_daily"]:
         if rng.random() < 0.01:
             daily["fraud_flag"].append({
                 "schema_version": "1.0.0", "source": "INFERRED", "fraud_id": f"f-{seed}-{fid}",
                 "driver_id": r["driver_id"], "detected_at": f"{r['local_date']}T18:00:00+07:00",
-                "fraud_type": "route_deviation", "severity": "low", "confidence": 0.4,
-                "evidence_ref": None, "status": "open", "created_at": f"{r['local_date']}T18:00:00+07:00",
-                "datastream_metadata": None})
+                "fraud_type": rng.choice(ftypes), "severity": rng.choice(["low", "medium", "high"]),
+                "confidence": round(rng.uniform(0.3, 0.8), 2), "evidence_ref": None, "status": "open",
+                "created_at": f"{r['local_date']}T18:00:00+07:00", "datastream_metadata": None})
             fid += 1
 
 
-def generate_realdata(days: int, seed_base: int, out_dir: Path,
-                      config_path: Path | None = None, start_date: str = "2026-07-01") -> dict:
+def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Path | None = None,
+                      start_date: str = "2026-07-01", extra_kinds: bool = True) -> dict:
     cfg_path = config_path or (ROOT / "configs" / "pilot_dongda.yaml")
     out_dir.mkdir(parents=True, exist_ok=True)
-    day_outputs, profiles, share = [], {}, 0.75
+    day_outputs = []
     d0 = _date.fromisoformat(start_date)
+    bike_ids = []
     for i in range(days):
         day = generate_day(cfg_path, seed=seed_base + i, date=(d0 + timedelta(days=i)).isoformat())
         day_outputs.append(day)
         if i == 0:
-            share = float(day["policy_bundle"][0]["driver_share"])
-            profiles = {p["driver_id"]: p for p in day["driver_profile"]}
-    tables = aggregate_days(day_outputs, share, profiles, seed_base)
-    build_weekly_and_missions(tables, profiles, seed_base)
+            bike_ids = [p["driver_id"] for p in day["driver_profile"]]
+    counts_kwargs = {} if extra_kinds else dict(n_bike_rto=0, n_car_platform=0, n_car_employee=0, n_car_premium=0)
+    universe = build_profile_universe(bike_ids, seed_base, **counts_kwargs)
+    tables = build_tables(day_outputs, universe, seed_base)
+    build_weekly_and_missions(tables, universe, seed_base)
 
     counts = {}
     for entity, records in tables.items():
@@ -301,9 +337,10 @@ def generate_realdata(days: int, seed_base: int, out_dir: Path,
                  for k, v in r.items()} for r in records]
         pl.DataFrame(flat).write_parquet(out_dir / f"{entity}.parquet")
         counts[entity] = len(records)
-    manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v1", "days": days,
-                "seed_base": seed_base, "start_date": start_date, "record_counts": counts,
+    manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v2 (profile-driven)",
+                "days": days, "seed_base": seed_base, "start_date": start_date, "record_counts": counts,
+                "profile_universe": kind_distribution(universe),
                 "schema_versions": {e: "1.0.0" for e in tables}}
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
                                            encoding="utf-8")
-    return {"tables": tables, "manifest": manifest}
+    return {"tables": tables, "manifest": manifest, "universe": universe}

@@ -16,10 +16,12 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 8. **Real-data integration** (Cường cấp schema thật gsm-data-prod 2026-07-24) — **blueprint DONE** (UPDATE-033): catalog `docs/data-catalog/` + 7 part-plan `specs/real-data/`. Chốt: re-ground về 13 bảng thật; chưa BQ access (tool=interface+PII); mở rộng UC5-UC8. **Roadmap 6 phase (mỗi phase cycle riêng có plan+test):**
    - **PI-1 Schema** ✅ DONE 2026-07-24 (UPDATE-034): 13 `l1r/*` + registry + 30 test; 5 bảng thiếu cột ENGINEER (nhãn TBC).
    - **PI-2 Mock regen** ✅ DONE 2026-07-24 (UPDATE-034): `mockgen/realdata.py` sim→aggregate → 13 bảng; R1/R3/R4 verify (9 test) + **R2 statistical 30 seeds/1500 driver-day** (`ROUND-2`, 6/6 in-range). Smoke 14 ngày×50 driver OK.
-   - **PI-2b Data review toàn diện + enlargement (TIẾP THEO — yêu cầu Cường)**: 
-     - **Overall review**: audit từng bảng/cột/phân phối 13 bảng vs catalog+schema+UC; kiểm coverage UC1-UC8 (bảng nào chưa nuôi feature nào); soi 3 caveat R2 (payout biên dưới thiếu lớp thưởng; **acceptance median 1.00 quá cao — sim thiếu decline**; cuốc/ngày biên dưới); kiểm cột ENGINEER 5 bảng có hợp lý; cross-check FK/consistency toàn tập lớn.
-     - **Enlargement**: (1) quy mô — tăng driver (50→200-500) + ngày (→90+, đủ nhiều tuần cho KPI); (2) đa dạng archetype — track platform/rto/core, tenure spread, PT/FT/top, đa dịch vụ Bike/Food/Express (D-009); (3) realism — thêm **decline thật** (sửa acceptance), cộng **lớp thưởng tuần** vào payout (nối S5), reposition mission (populate target_hex), penalization/fraud đa dạng hơn, idle patterns; (4) không gian — nhiều zone/station/market (ngoài Đống Đa) + demand density variety.
-     - Sau enlargement: chạy lại 4 vòng verify trên tập lớn; cập nhật ROUND report. **Gate cho PI-4** (solver build trên data đã review+enlarge).
+   - **PI-2b Data review + enlargement (ĐANG LÀM — refine Cường 2026-07-24)**: 
+     - **Overall review**: audit từng bảng/cột/phân phối vs catalog+schema+UC coverage; soi caveat R2; kiểm cột ENGINEER; FK/consistency tập lớn.
+     - **REALISM + RANDOMNESS (ưu tiên)**: sửa **acceptance median 1.00** (sim thiếu decline) → tỷ lệ nhận theo archetype target (0.74-0.97) + noise per-day, back-out decline; thêm variance/randomness mọi metric; cộng **lớp thưởng tuần** vào payout (nối S5); reposition/penalty/fraud/idle đa dạng hơn.
+     - **PROFILE UNIVERSE phủ MỌI loại GSM** (car / bike / premium / platform / rto / employee, archetype PT/FT/top/newbie/veteran, tenure spread): roster LỚN đa dạng; **sim CHỈ sample một subset (bike)** — car/premium/khác sinh KPI **rule-based** grounded `economics/income-structure` (car: lương+commission; premium: fare cao). Quy mô ngày →90+.
+     - **DEFER (Cường)**: enlargement zone/station/market (ngoài Đống Đa) — future update.
+     - Sau enlarge: chạy lại 4 vòng verify (R1/R2/R3/R4) tập lớn; cập nhật ROUND report. **Gate cho PI-4.**
    - **PI-3 DataSource tool**: MockSource+BQ skeleton+PII read-only (P4). Sau PI-1. Live treo chờ credentials + Cường chốt BQ auth/env.
    - **PI-4 Solver remap + S5/S6**: S1-4 remap field thật + S5 khoán + S6 mission-knapsack (P6). Sau PI-2.
    - **PI-5 UC5-8 features**: idle-reduction, penalty-explain, anomaly-alert + router (P6). Sau PI-4.
