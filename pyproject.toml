@@ -25,6 +25,9 @@ viz = ["streamlit>=1.35", "pydeck>=0.9", "plotly>=5.20", "pandas>=2.0"]
 # Live LLM composer (C6) — CHỈ cần khi chạy pipeline llm_mode="live"/smoke; test-suite
 # deterministic KHÔNG cần. Dùng JSON-mode thuần (không instructor) để tối thiểu deps.
 llm = ["openai>=1.30"]
+# Data catalog xlsx export (scripts/build_data_catalog.py) — CSV luôn sinh bằng stdlib;
+# .xlsx cần openpyxl. Không ảnh hưởng test-suite.
+catalog = ["openpyxl>=3.1"]
 
 [build-system]
 requires = ["hatchling"]
