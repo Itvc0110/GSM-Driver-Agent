@@ -35,9 +35,17 @@ EXPECTED = {
     "advice_request", "solver_report", "composed_advice",
 }
 
+# L1-real (re-ground về bảng thật gsm-data-prod — UPDATE-033/034, PI-1)
+EXPECTED_L1R = {
+    "driver_statistic_daily", "driver_online_hours", "driver_orders_rush_hours",
+    "driver_bike_stoppoints", "kpi_weekly_calculator", "driver_income_daily",
+    "trips", "driver_hex_tracking", "mission_catalog", "mission_earn_history",
+    "user_mission_progress", "driver_penalization", "fraud_flag",
+}
+
 
 def test_all_entities_registered():
-    assert set(ALL_ENTITIES) == EXPECTED
+    assert set(ALL_ENTITIES) == EXPECTED | EXPECTED_L1R
 
 
 def test_all_schemas_load_and_have_version(reg):

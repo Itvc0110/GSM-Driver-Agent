@@ -24,8 +24,16 @@ LAYER_OF: dict[str, str] = {
     "shift_plan_input": "l3", "bonus_gap_input": "l3",
     "session_summary_input": "l3", "allocation_input": "l3",
     "advice_request": "advisor", "solver_report": "advisor", "composed_advice": "advisor",
+    # l1r = L1-real: mirror 13 bảng thật gsm-data-prod (re-ground — UPDATE-033, PI-1)
+    "driver_statistic_daily": "l1r", "driver_online_hours": "l1r",
+    "driver_orders_rush_hours": "l1r", "driver_bike_stoppoints": "l1r",
+    "kpi_weekly_calculator": "l1r", "driver_income_daily": "l1r",
+    "trips": "l1r", "driver_hex_tracking": "l1r", "mission_catalog": "l1r",
+    "mission_earn_history": "l1r", "user_mission_progress": "l1r",
+    "driver_penalization": "l1r", "fraud_flag": "l1r",
 }
 ALL_ENTITIES: list[str] = sorted(LAYER_OF)
+L1R_ENTITIES: list[str] = sorted(e for e, layer in LAYER_OF.items() if layer == "l1r")
 
 
 class SchemaRegistry:
