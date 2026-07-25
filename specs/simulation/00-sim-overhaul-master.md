@@ -1,0 +1,87 @@
+# SPEC — SIMULATION OVERHAUL (mảng riêng, Track A) — master
+
+Cập nhật: 2026-07-24 · Trạng thái: **DESIGN** · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
+
+> **Sim là mảng ĐỘC LẬP.** UI app do **Khánh** phát triển; sim **không phụ thuộc UI**, chỉ nối **data output** vào sau (bên cạnh UI). Sim phục vụ: (1) kiểm chứng advisor bằng thế giới song song, (2) sinh/giải thích hành vi tài xế, (3) nguồn dữ liệu hành vi cho mock.
+
+## 1. Yêu cầu Cường (chuẩn nghiệm thu)
+
+1. **Giả lập THỰC SỰ** trên data đang dùng; tương lai thêm data thì **gán vào sim được**.
+2. Tài xế **thật sự nhận cuốc, di chuyển, có mật độ** — như hiện tại **và hơn thế**.
+3. **Thống kê chung** cho các metric.
+4. **Dịch được advice của advisor → ACTION của actor** trong sim.
+5. **State phải theo đúng data** (schema `l1r` thật).
+6. **ĐẶC BIỆT — theo dõi hành trình 1 tài xế**: mở đầu phiên làm việc; **thế giới song song
+   (tự làm vs làm theo chỉ dẫn)**; nhận cuốc thật; tỷ lệ nhận/hoàn thành; **hành vi random**;
+   **đo metric trên đúng driver đó**; sim được **tài xế mới thiếu kinh nghiệm** (hành vi
+   chưa tối ưu + hồ sơ mới nhiều thưởng) → **baseline tốt**.
+7. Sửa các phần **"rất tệ"** — cụ thể tỷ lệ hoàn thành/phục vụ **quá thấp so thực tế** — và
+   **làm chi tiết hơn**.
+
+## 2. CHẨN ĐOÁN HIỆN TRẠNG (đo thật, seed 42, `configs/pilot_dongda.yaml`)
+
+| Metric | Sim hiện tại | Thực tế (research) | Kết luận |
+|---|---|---|---|
+| **served = matched/orders** | **61.9%** (774/1251) | mục tiêu **80–85%** (NYC 2015 ~82%; hệ cung cố định không surge 75–85%) | ❌ **38% cầu không ai nhận** — ĐÂY là "quá thấp" Cường nói |
+| completed = dropoff/matched | **99.6%** | ~95% (có huỷ sau nhận, khách bom, sự cố) | ⚠️ **quá sạch** — sim không có huỷ sau khi nhận |
+| accept = matched/(matched+declined) | **96.3%** (chỉ 30 decline) | **0.74–0.97 theo archetype** | ⚠️ **quá sạch** — tài xế gần như không từ chối |
+| order_expired | 477/1251 (38%) | — | nguyên nhân trực tiếp của served thấp |
+
+**Phát hiện quan trọng (coherence bug xuyên tầng):** vì sim gần như không có `decline`, **data mock sinh ra từ sim từng có acceptance ≈ 1.00**. PI-2b đã vá ở **tầng data** (override theo archetype target 0.74–0.96) → **sim và data hiện KHÔNG NHẤT QUÁN** (data nói 0.88, sim hành xử 0.96). Overhaul phải sửa **tại gốc (sim)** rồi bỏ override ở tầng data.
+
+**Nguyên nhân served thấp (giả thuyết cần chứng minh trong SIM-1):** `order_expire`/patience quá ngắn so với thực tế; số actor online hiệu dụng thấp (research đợt 5: FT chỉ online median ~4.5h dù thiết kế 8–10h); dispatcher chỉ tìm trong `grid_disk k=2`; không có hàng đợi/retry khi chưa có xe.
+
+## 3. NGUYÊN TẮC THIẾT KẾ
+
+- **Data-driven, không hard-code**: mọi tham số hành vi/policy đọc từ config + `l1r` schema thật; thêm data thật sau → chỉ đổi nguồn, không sửa engine.
+- **State khớp schema `l1r`**: mọi thứ sim xuất ra phải map 1-1 vào 13 bảng (đã có `mockgen/realdata.py` làm cầu nối) → **sim là nguồn sinh data, không phải thế giới riêng**.
+- **Deterministic + CRN**: cùng seed → cùng kết quả; **thế giới song song dùng CHUNG random stream** cho phần ngoại sinh (đơn hàng, thời tiết) để so sánh công bằng (paired-seed).
+- **Hành vi random có cấu trúc**: mỗi archetype có phân phối riêng (accept, nghỉ, sạc, tốc độ phản ứng), không phải hằng số.
+- **Advisor không được nhìn tương lai**: actor chỉ dùng thông tin có tại thời điểm đó.
+
+## 4. KIẾN TRÚC MỤC TIÊU
+
+```
+configs/ + l1r data  ─┐
+                      ├─►  SIM ENGINE (SimPy)  ──►  events/state  ──►  mockgen → 13 bảng l1r
+research benchmarks ──┘         │                                          │
+                                │                                          ▼
+                    ┌───────────┴────────────┐                    advisor (9 solver + C6)
+                    │  WORLD A: tự làm       │                             │
+                    │  WORLD B: theo advice  │◄── advice→action bridge ────┘
+                    └───────────┬────────────┘
+                                ▼
+                     paired metrics (A vs B) + driver journey timeline
+```
+
+**Thành phần mới cần xây:**
+- `AdviceActionBridge`: `ComposedAdvice.advice_spec` → hành động actor (`rest_window`, `swap`, `online`, `mission`, `reposition`…) + **mô hình tuân thủ** (adherence: explicit-follow / partial / ignore / unseen).
+- `DriverJourney`: bản ghi chi tiết 1 tài xế theo timeline (phiên, cuốc, quyết định, thu nhập tích luỹ, metric).
+- `ParallelWorld`: chạy 2 nhánh cùng seed, chỉ khác "có advisor hay không".
+- `SimMetrics`: bộ metric chung + per-driver (served/accept/complete/util/idle/payout/points/khoán).
+
+## 5. LỘ TRÌNH (mỗi phase = 1 cycle có plan + test riêng)
+
+| Phase | Nội dung | Tiêu chí xong |
+|---|---|---|
+| **SIM-1 Realism gate** | Chẩn đoán + sửa served 61.9%→**80–85%**; thêm **decline theo archetype** (accept 0.74–0.97) và **huỷ sau nhận** (complete ~95%); bỏ override acceptance ở tầng data | 3 tỷ lệ vào dải thực; **≥30 seed**; sim↔data nhất quán |
+| **SIM-2 Driver journey** | `DriverJourney` timeline chi tiết 1 tài xế: phiên, từng offer (nhận/từ chối + lý do), di chuyển, nghỉ/sạc, thu nhập tích luỹ | Xuất được journey đầy đủ 1 driver-day; metric per-driver khớp tổng |
+| **SIM-3 Advice→Action** | `AdviceActionBridge` + adherence model; actor thực thi advice trong ca | Advice thay đổi hành vi đo được; không nhìn tương lai |
+| **SIM-4 Parallel worlds** | World A (tự làm) vs World B (theo chỉ dẫn), CRN paired; **baseline tài xế mới** | Δ(B−A) có CI trên ≥30 seed; baseline newbie tái lập được |
+| **SIM-5 Metrics + xuất data** | Bộ metric chung + per-driver; nối vào `mockgen` để sinh 13 bảng từ sim mới | Dashboard/CLI xem được; data sinh ra pass 4 vòng verify |
+
+## 6. METRIC BẮT BUỘC (đo ở mọi phase)
+
+- **Hệ thống**: served rate, expired rate, thời gian chờ khách, mật độ cung/cầu theo hex×giờ.
+- **Tài xế**: accept rate, completion rate, cancel rate, util (occupied/online), idle phút, số cuốc, payout gross/net, điểm, tiến độ khoán tuần.
+- **Advisor (A vs B)**: Δ payout, Δ util, Δ idle, adherence rate, và **guardrail**: advice KHÔNG làm xấu queue trạm/served của hệ thống.
+
+## 7. RỦI RO / BẪY ĐÃ BIẾT
+
+1. **Đừng "vặn tham số" để đẹp số** — research T-021 từng chốt *baseline chưa tối ưu là dư địa advisor*. Nay Cường yêu cầu realism ⇒ **phân biệt rõ**: `served` phải thực tế (80–85%), còn **dư địa advisor** nằm ở **hiệu quả tài xế** (util/idle/timing), không phải ở việc bỏ đói cầu.
+2. **Không để advisor nhìn tương lai** (leak) khi so A/B.
+3. **Coherence**: sim → data → solver phải cùng một sự thật; sửa ở gốc, không vá ở ngọn.
+4. Sim chi tiết hơn = chậm hơn → cần giữ thời gian chạy chấp nhận được (đo, không đoán).
+
+## 8. Không thuộc spec này
+UI (Khánh). Ghép data thật GSM (D-GCP-01). Twin-world evaluator đầy đủ T-020 (kế thừa sau SIM-4).

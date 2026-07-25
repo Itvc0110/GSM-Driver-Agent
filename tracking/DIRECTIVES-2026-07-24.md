@@ -94,7 +94,7 @@ vào sau, bên cạnh UI app.
 
 | Track | Nội dung | Trạng thái |
 |---|---|---|
-| **A. SIM overhaul** | mảng riêng, docs+plan riêng (§5) | ⏳ CHƯA BẮT ĐẦU — ưu tiên cao nhất |
+| **A. SIM overhaul** | mảng riêng, docs+plan riêng (§5) | 🟡 **ĐANG LÀM** — spec master: `specs/simulation/00-sim-overhaul-master.md` (chẩn đoán đo thật: served 61.9% quá thấp; accept 96.3%/complete 99.6% quá sạch). Lộ trình SIM-1..SIM-5 |
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ⏳ chưa bắt đầu |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
