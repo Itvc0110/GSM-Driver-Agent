@@ -22,6 +22,7 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
      - **PROFILE UNIVERSE phủ MỌI loại GSM** (car / bike / premium / platform / rto / employee, archetype PT/FT/top/newbie/veteran, tenure spread): roster LỚN đa dạng; **sim CHỈ sample một subset (bike)** — car/premium/khác sinh KPI **rule-based** grounded `economics/income-structure` (car: lương+commission; premium: fare cao). Quy mô ngày →90+.
      - **DEFER (Cường)**: enlargement zone/station/market (ngoài Đống Đa) — future update.
      - Sau enlarge: chạy lại 4 vòng verify (R1/R2/R3/R4) tập lớn; cập nhật ROUND report. **Gate cho PI-4.**
+     - ✅ **DONE 2026-07-24** (UPDATE-035 + **UPDATE-036 audit**): profile universe 110 (bike/rto/car/employee/premium), acceptance 1.00→0.88, CSV export. **Audit tìm & fix 5 flaw**: R2 trộn population (verdict sai), impossible-state 203 driver-day (cuốc khi online=0), tràn nửa đêm, field degenerate (core_order/stoppoints), **crash parquet phụ thuộc seed**. Suite 208. **Đính chính:** bike payout thật ~221k (không phải 273k đã báo — số đó lẫn car), vẫn biên dưới tới khi có **lớp thưởng tuần (S5)**.
    - **PI-3 DataSource tool**: MockSource+BQ skeleton+PII read-only (P4). Sau PI-1. Live treo chờ credentials + Cường chốt BQ auth/env.
    - **PI-4 Solver remap + S5/S6**: S1-4 remap field thật + S5 khoán + S6 mission-knapsack (P6). Sau PI-2.
    - **PI-5 UC5-8 features**: idle-reduction, penalty-explain, anomaly-alert + router (P6). Sau PI-4.

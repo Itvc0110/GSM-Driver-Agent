@@ -1,8 +1,12 @@
 """R2 statistical verify (P3 §3) — phân phối mock l1r vs benchmark, ≥30 seeds.
 
-Gen N seed (1 ngày/seed) → pool driver-day → percentile so `realism-benchmarks.md`.
+Gen N seed (1 ngày/seed) → driver-day → percentile so `realism-benchmarks.md`.
 KHÔNG hard-fail gap sim đã biết (T-021: FT ~16 cuốc/~300k/~4.5h là biên dưới) — LABEL.
-Ghi report `research/experiments/mockgen-realdata/ROUND-2-stats-report.md`.
+
+**BUG-PI2b-01 fix:** TÁCH THEO service_type. `realism-benchmarks.md` là benchmark BIKE
+Hà Nội; gộp chung car/premium (fare cao gấp 3-5×) làm median payout bị thổi → verdict
+SAI (nhìn "PASS" nhờ car, che việc bike vẫn biên dưới). Car = OBSERVE-ONLY (chưa có
+benchmark VN cho car trong research).
 
 Chạy:  uv run python scripts/verify_realdata_stats.py --seeds 30
 """
@@ -45,14 +49,16 @@ def main() -> None:
     ap.add_argument("--seed-base", type=int, default=200)
     args = ap.parse_args()
 
-    samples: dict[str, list[float]] = {k: [] for k in BENCH}
+    # TÁCH population: bike (có benchmark) vs car (observe-only)
+    samples: dict[str, dict[str, list[float]]] = {"bike": {k: [] for k in BENCH},
+                                                   "car": {k: [] for k in BENCH}}
     d0 = date(2026, 7, 1)
-    n_driver_days = 0
+    n_dd = {"bike": 0, "car": 0}
     for i in range(args.seeds):
         with TemporaryDirectory() as td:
             res = generate_realdata(days=1, seed_base=args.seed_base + i, out_dir=Path(td),
                                     start_date=(d0 + timedelta(days=i)).isoformat())
-            t = res["tables"]
+            t, uni = res["tables"], res["universe"]
         stat = {r["driver_id"]: r for r in t["driver_statistic_daily"]}
         inc = {r["driver_id"]: r for r in t["driver_income_daily"]}
         onl = {r["driver_id"]: r for r in t["driver_online_hours"]}
@@ -60,40 +66,56 @@ def main() -> None:
         for drv, s in stat.items():
             if s["completed_count"] <= 0:
                 continue
-            n_driver_days += 1
-            samples["trips_per_driver_day"].append(s["completed_count"])
-            samples["payout_per_driver_day"].append(inc[drv]["commission"])
-            samples["online_hours"].append(onl[drv]["online_time"])
-            samples["acceptance_rate"].append(s["acceptance_rate"])
+            svc = uni.get(drv, {}).get("service_type", "bike")
+            g = samples.setdefault(svc, {k: [] for k in BENCH})
+            n_dd[svc] = n_dd.get(svc, 0) + 1
+            g["trips_per_driver_day"].append(s["completed_count"])
+            g["payout_per_driver_day"].append(inc[drv]["commission"])
+            g["online_hours"].append(onl[drv]["online_time"])
+            g["acceptance_rate"].append(s["acceptance_rate"])
             ro = rush[drv]
-            samples["rush_order_share"].append(
+            g["rush_order_share"].append(
                 ro["total_order_rush_hour"] / ro["total_order"] if ro["total_order"] else 0.0)
-            samples["five_star_share"].append(
+            g["five_star_share"].append(
                 s["count_rating_5_star"] / s["total_order_rating"] if s["total_order_rating"] else 0.0)
 
-    lines = [f"# ROUND 2 — Statistical realism (mock l1r vs benchmark)\n",
-             f"Seeds: {args.seeds} (base {args.seed_base}), driver-days: {n_driver_days}. "
-             f"Nguồn benchmark: `research/simulation/realism-benchmarks.md`.\n",
-             "> Gap sim đã biết (T-021) được LABEL, không hard-fail — mock kế thừa sim calibration.\n",
-             "| metric | median | p10 | p90 | target | verdict | ghi chú |",
-             "|---|---|---|---|---|---|---|"]
+    lines = ["# ROUND 2 — Statistical realism (mock l1r vs benchmark)\n",
+             f"Seeds: {args.seeds} (base {args.seed_base}). driver-days: "
+             f"bike={n_dd.get('bike', 0)}, car={n_dd.get('car', 0)}. "
+             "Nguồn benchmark: `research/simulation/realism-benchmarks.md`.\n",
+             "> **TÁCH POPULATION (fix BUG-PI2b-01):** benchmark là của **BIKE Hà Nội**. "
+             "Gộp car/premium (fare cao 3-5×) sẽ thổi median payout → verdict sai. "
+             "**Car = OBSERVE-ONLY** (chưa có benchmark VN cho car trong research).\n",
+             "> Gap sim đã biết (T-021) được LABEL, không hard-fail — mock kế thừa sim calibration.\n"]
     n_gap = 0
-    for key, (label, note, rng) in BENCH.items():
-        xs = samples[key]
-        med, p10, p90 = _pct(xs, 0.5), _pct(xs, 0.1), _pct(xs, 0.9)
-        in_range = rng is None or (rng[0] <= med <= rng[1])
-        verdict = "PASS" if in_range else "GAP-T021"
-        if not in_range:
-            n_gap += 1
-        fmt = (lambda v: f"{v:,.0f}") if "payout" in key else (lambda v: f"{v:.2f}")
-        tgt = f"{rng[0]}–{rng[1]}" if rng else "observe"
-        lines.append(f"| {label} | {fmt(med)} | {fmt(p10)} | {fmt(p90)} | {tgt} | {verdict} | {note} |")
-    lines.append(f"\n**Tổng:** {len(BENCH)-n_gap}/{len(BENCH)} PASS, {n_gap} GAP-T021 (labeled). "
-                 "GAP = sim baseline biên dưới (cuốc/payout/online) — dư địa advisor + thiếu lớp thưởng tuần, "
-                 "không phải bug mock. Aggregate consistency đã pass R1/R3/R4 (test_realdata_gen).")
+    for svc in ("bike", "car"):
+        if not n_dd.get(svc):
+            continue
+        judged = svc == "bike"
+        lines += [f"\n## {svc.upper()} ({'vs benchmark' if judged else 'OBSERVE-ONLY'})\n",
+                  "| metric | median | p10 | p90 | target | verdict | ghi chú |",
+                  "|---|---|---|---|---|---|---|"]
+        for key, (label, note, rng_t) in BENCH.items():
+            xs = samples[svc][key]
+            med, p10, p90 = _pct(xs, 0.5), _pct(xs, 0.1), _pct(xs, 0.9)
+            fmt = (lambda v: f"{v:,.0f}") if "payout" in key else (lambda v: f"{v:.2f}")
+            if not judged:
+                verdict, tgt = "OBSERVE", "—"
+            else:
+                in_range = rng_t is None or (rng_t[0] <= med <= rng_t[1])
+                verdict = "PASS" if in_range else "GAP-T021"
+                tgt = f"{rng_t[0]}–{rng_t[1]}" if rng_t else "observe"
+                if not in_range:
+                    n_gap += 1
+            lines.append(f"| {label} | {fmt(med)} | {fmt(p10)} | {fmt(p90)} | {tgt} | {verdict} | "
+                         f"{note if judged else 'car — không dùng benchmark bike'} |")
+    lines.append(f"\n**Tổng (BIKE, có benchmark):** {len(BENCH)-n_gap}/{len(BENCH)} PASS, "
+                 f"{n_gap} GAP-T021 (labeled). GAP = sim baseline biên dưới (cuốc/payout/online) — "
+                 "dư địa advisor + **thiếu lớp thưởng tuần** (sẽ cộng ở S5/rule), không phải bug mock. "
+                 "Aggregate consistency pass R1/R3/R4 (`test_realdata_gen`).")
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"R2 report: {REPORT} | driver-days={n_driver_days} | gaps={n_gap}")
+    print(f"R2 report: {REPORT} | driver-days={n_dd} | bike-gaps={n_gap}")
 
 
 if __name__ == "__main__":

@@ -44,9 +44,11 @@ def generate_dataset(days: int, seed_base: int, out_dir: Path,
     # ghi parquet (nested field -> json string cho polars đơn giản)
     counts = {}
     for entity, records in all_records.items():
+        # infer_schema_length=None: quét toàn bộ — cột thưa (nullable) không bị suy Null
+        # rồi crash khi gặp giá trị ở dòng >100 (BUG-PI2b-05)
         flat = [{k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
                  for k, v in r.items()} for r in records]
-        pl.DataFrame(flat).write_parquet(out_dir / f"{entity}.parquet")
+        pl.DataFrame(flat, infer_schema_length=None).write_parquet(out_dir / f"{entity}.parquet")
         counts[entity] = len(records)
 
     manifest = {

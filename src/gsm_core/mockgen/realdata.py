@@ -27,6 +27,20 @@ _HOUR_W = {6: 3, 7: 5, 8: 4, 9: 2, 10: 2, 11: 3, 12: 3, 13: 1, 14: 1, 15: 2,
            16: 4, 17: 5, 18: 5, 19: 3, 20: 3, 21: 2, 22: 1}
 
 
+def write_table_parquet(records: list[dict], path: Path) -> int:
+    """Ghi parquet AN TOÀN KIỂU (BUG-PI2b-05).
+
+    `pl.DataFrame(...)` mặc định chỉ suy kiểu từ 100 dòng đầu → cột THƯA
+    (`campaign_id`/`target_hex` chỉ ~5% có giá trị) bị suy thành Null rồi CRASH khi
+    gặp giá trị str ở dòng sau ("could not append value ... to the builder").
+    Lỗi phụ thuộc seed → phải quét TOÀN BỘ (`infer_schema_length=None`).
+    """
+    flat = [{k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
+             for k, v in r.items()} for r in records]
+    pl.DataFrame(flat, infer_schema_length=None).write_parquet(path)
+    return len(records)
+
+
 def _hour(iso: str) -> int:
     return datetime.fromisoformat(iso).hour
 
@@ -47,12 +61,17 @@ def _clamp(v, lo, hi):
 
 
 def rule_based_trips(profile: dict, date_str: str, rng: random.Random) -> list[dict]:
-    """Trips cho driver KHÔNG simulate (car/premium/rto) — shape ~ trip_record sim."""
+    """Trips cho driver KHÔNG simulate (car/premium/rto) — shape ~ trip_record sim.
+
+    BUG-PI2b-03 fix: complete_time PHẢI nằm trong ngày (không tràn nửa đêm) — nếu tràn
+    thì dịch cả cuốc sớm lại, giữ bất biến R3 (statistic.completed == trips theo ngày).
+    """
     if rng.random() < 0.12:  # ~12% ngày nghỉ (randomness)
         return []
     n = rng.randint(profile["trips_lo"], profile["trips_hi"])
     hours = list(_HOUR_W)
     weights = [_HOUR_W[h] for h in hours]
+    day_end = datetime.fromisoformat(f"{date_str}T23:59:00+07:00")
     trips = []
     for i in range(n):
         h = rng.choices(hours, weights=weights)[0]
@@ -61,6 +80,10 @@ def rule_based_trips(profile: dict, date_str: str, rng: random.Random) -> list[d
         dist = round(_clamp(rng.gauss(4.5, 2.2), 0.8, 18.0), 2)
         dur_s = int(dist / max(12, rng.gauss(22, 4)) * 3600) + rng.randint(120, 420)
         fare = rng.randint(profile["fare_lo"], profile["fare_hi"])
+        # giữ trong ngày: nếu kết thúc quá 23:59 → dịch base sớm lại đúng phần tràn
+        overflow = (base + timedelta(seconds=240 + dur_s)) - day_end
+        if overflow.total_seconds() > 0:
+            base -= timedelta(seconds=int(overflow.total_seconds()) + 60)
         t_req = base.isoformat()
         t_assign = (base + timedelta(seconds=60)).isoformat()
         t_pickup = (base + timedelta(seconds=240)).isoformat()
@@ -74,10 +97,25 @@ def rule_based_trips(profile: dict, date_str: str, rng: random.Random) -> list[d
     return sorted(trips, key=lambda x: x["t_complete"])
 
 
+def _trip_hours(trips: list) -> float:
+    """Tổng giờ THỰC phục vụ cuốc (request→complete) — sàn cho online_time."""
+    tot = 0.0
+    for t in trips:
+        tot += (datetime.fromisoformat(t["t_complete"])
+                - datetime.fromisoformat(t["t_request"])).total_seconds() / 3600
+    return tot
+
+
 def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: float,
               rng: random.Random) -> None:
-    """Aggregate 1 driver-day → mọi bảng KPI daily + trips. Acceptance từ profile target."""
+    """Aggregate 1 driver-day → mọi bảng KPI daily + trips. Acceptance từ profile target.
+
+    BUG-PI2b-02 fix: online_time PHẢI ≥ giờ phục vụ cuốc (không thể có cuốc khi offline).
+    Sàn = trip_hours/0.55 (utilization ≤55% — realism-benchmarks FT 45-55%).
+    """
     share = prof["driver_share"]
+    if trips:
+        online_h = max(online_h, _trip_hours(trips) / 0.55)
     completed = len(trips)
     ful = _clamp(rng.gauss(prof["target_fulfil"], 0.02), 0.6, 1.0)
     accepted = max(completed, round(completed / ful)) if completed else 0
@@ -121,15 +159,21 @@ def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: fl
         "total_fee_normal_hour": g_norm, "revenue_not_relate_driver_normal_hour": g_norm - c_norm,
         "total_order_rush_hour": len(rush), "commission_rush_hour": c_rush,
         "total_fee_rush_hour": g_rush, "revenue_not_relate_driver_rush_hour": g_rush - c_rush})
+    # BUG-PI2b-04 fix: core_order ⊊ total (85-95% — catalog), KHÔNG degenerate
+    core = int(round(completed * _clamp(rng.gauss(0.90, 0.04), 0.80, 1.0)))
     out["driver_income_daily"].append({
         "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "order_date": d,
         "commission": commission, "total_order": completed, "total_fee": gross,
         "revenue_not_relate_driver": gross - commission,
         "avg_daily_revenue": round(gross / completed, 2) if completed else 0.0,
-        "total_core_order": completed})
+        "total_core_order": min(core, completed)})
+    # BUG-PI2b-04 fix: stoppoints = điểm trả khách + điểm dừng CHỜ (idle) → ≠ số cuốc
+    idle_stops = rng.randint(0, max(1, completed // 2)) if completed else 0
+    idle_rush = rng.randint(0, idle_stops) if idle_stops else 0
     out["driver_bike_stoppoints"].append({
         "schema_version": "1.0.0", "source": "MOCK", "driver_id": drv, "local_date": d,
-        "total_stoppoints": completed, "total_stoppoints_rush_hour": len(rush)})
+        "total_stoppoints": completed + idle_stops,
+        "total_stoppoints_rush_hour": len(rush) + idle_rush})
 
     for t in trips:
         out["trips"].append({
@@ -333,10 +377,7 @@ def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Pat
 
     counts = {}
     for entity, records in tables.items():
-        flat = [{k: (json.dumps(v, ensure_ascii=False) if isinstance(v, (dict, list)) else v)
-                 for k, v in r.items()} for r in records]
-        pl.DataFrame(flat).write_parquet(out_dir / f"{entity}.parquet")
-        counts[entity] = len(records)
+        counts[entity] = write_table_parquet(records, out_dir / f"{entity}.parquet")
     manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v2 (profile-driven)",
                 "days": days, "seed_base": seed_base, "start_date": start_date, "record_counts": counts,
                 "profile_universe": kind_distribution(universe),
