@@ -36,6 +36,13 @@ def _trusted_spans(solver_reports: list[dict]) -> list[str]:
         na = sol.get("next_action")
         if isinstance(na, dict) and na.get("reason"):
             spans.append(na["reason"])
+        # PI-5a: TÊN nhiệm vụ lấy nguyên văn từ `public_mission.name` (catalog nền tảng)
+        # thường chứa số — vd "2 chuyến khung vàng". Cùng trust-class với tiêu đề policy
+        # (BUG-C6-03): là DATA trích dẫn, không phải số agent bịa. Giá trị thưởng vẫn
+        # BẮT BUỘC đến từ numbers_registry.
+        for m in sol.get("chosen_missions") or []:
+            if isinstance(m, dict) and m.get("name"):
+                spans.append(str(m["name"]))
     return spans
 
 

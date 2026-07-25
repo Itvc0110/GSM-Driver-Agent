@@ -8,20 +8,30 @@ from __future__ import annotations
 
 from gsm_core.advisor._text import normalize_vi as _norm
 
+# UC của GSM map VÀO feature F0-F3 của ta (advice_request.feature là enum ĐÓNG):
+#   UC3 khoán tuần → weekly_khoan (F1 kế hoạch, F3 tổng kết)
+#   UC8 mini-task  → mission_knapsack (F1 kế hoạch, F2 trong ca)
 FEATURE_SOLVERS = {
     "F0": {"solvers": ["bonus_feasibility"], "use_kb": True},
-    "F1": {"solvers": ["bonus_feasibility", "shift_dp"], "use_kb": False},
-    "F2": {"solvers": ["shift_dp", "capacity_alloc"], "use_kb": False},
-    "F3": {"solvers": ["f3_patterns"], "use_kb": False},
+    "F1": {"solvers": ["bonus_feasibility", "shift_dp", "weekly_khoan", "mission_knapsack"],
+           "use_kb": False},
+    "F2": {"solvers": ["shift_dp", "capacity_alloc", "mission_knapsack"], "use_kb": False},
+    "F3": {"solvers": ["f3_patterns", "weekly_khoan"], "use_kb": False},
 }
 
-# keyword tiếng Việt (đã bỏ dấu) per intent — dict viết tay, fixture test
+# keyword tiếng Việt (đã bỏ dấu, đ→d) per intent — dict viết tay, fixture test
 _INTENT_KEYWORDS = {
     "policy_bonus": ["thuong", "moc", "diem", "chinh sach", "chuyen", "cuoc",
                      "thu nhap", "phi", "pin", "doi pin", "tai khoan", "quyen loi"],
     "shift_plan": ["ca", "lich", "gio", "nghi", "sac", "chay luc nao", "khung gio"],
     "session_review": ["tong ket", "ca vua", "sao thu nhap", "toi uu",
                        "thu nhap hom nay", "ket qua ca"],
+    # UC8 mini-task
+    "mission_task": ["nhiem vu", "mini task", "mission", "lam them viec",
+                     "thuong nhiem vu", "task"],
+    # UC3 khoán tuần / chỉ tiêu
+    "weekly_target": ["khoan", "doanh so tuan", "chi tieu tuan", "kpi tuan",
+                      "truy thu", "muc tieu tuan"],
 }
 
 

@@ -70,10 +70,18 @@ def build_context_pack(feature: str, solver_reports: list[dict],
         lines = [f'<solver_report solver="{rep["solver"]}">',
                  f"tóm_tắt: {rep['problem_digest']}"]
         sol = rep.get("solution", {})
-        for k in ("feasible", "next_action", "top_pattern", "herding_avoided"):
+        # whitelist key được đưa vào prompt. S5/S6 (PI-5a) thêm key riêng — nếu không
+        # khai ở đây thì LLM/verifier KHÔNG thấy nội dung khoán tuần / mini-task.
+        for k in ("feasible", "next_action", "top_pattern", "herding_avoided",
+                  "quota_available", "gap_revenue_vnd", "clawback_risk_vnd",
+                  "expected_reward_vnd", "chosen_missions"):
             if k in sol and sol[k] is not None:
                 v = sol[k]
-                lines.append(f"{k}: {v if not isinstance(v, dict) else v.get('action', v.get('type', ''))}")
+                if isinstance(v, dict):
+                    v = v.get("action", v.get("type", ""))
+                elif isinstance(v, list):  # chosen_missions → tên nhiệm vụ (số ở [N-id])
+                    v = ", ".join(str(x.get("name") or x.get("mission_id")) for x in v) or "không có"
+                lines.append(f"{k}: {v}")
         lines.append("số_liệu (chỉ dùng các [N-id] này, KHÔNG tự viết số):")
         for n in rep.get("numbers", []):
             n_idx += 1

@@ -63,8 +63,9 @@ def test_kb_citation_has_url(kb):
 # ---------- router ----------
 
 def test_router_feature_direct_map():
-    assert route("F1", None)["solvers"] == ["bonus_feasibility", "shift_dp"]
-    assert route("F3", None)["solvers"] == ["f3_patterns"]
+    # PI-5a: F1/F2/F3 nhận thêm S5 weekly_khoan / S6 mission_knapsack
+    assert {"bonus_feasibility", "shift_dp"} <= set(route("F1", None)["solvers"])
+    assert "f3_patterns" in route("F3", None)["solvers"]
     assert "policy_kb" in route("F0", None)["solvers"] or route("F0", None)["use_kb"]
 
 
@@ -85,7 +86,10 @@ def _report_s1():
             "problem_digest": "Thiếu 20đ tới mốc 160",
             "inputs_used": [{"view_id": "bg:d-1", "version": "1.0.0",
                              "freshness": "2026-07-01T18:00:00+07:00"}],
-            "solution": {"feasible": True, "gap_points": 20, "hours_needed": 1.33},
+            # khớp solution THẬT của bonus_feasibility (có tier_points/tier_vnd) — template
+            # neo số theo giá trị solution nên fixture phải trung thực (PI-5a)
+            "solution": {"feasible": True, "gap_points": 20, "hours_needed": 1.33,
+                          "tier_points": 160, "tier_vnd": 115000},
             "numbers": [{"value": 20, "unit": "points", "source": "policy_v:sim-policy-v0"},
                          {"value": 115000, "unit": "vnd", "source": "policy_v:sim-policy-v0"}],
             "sensitivity": [], "confidence": 0.85, "caveats": ["demand proxy"],
