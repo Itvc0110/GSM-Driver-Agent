@@ -14,7 +14,9 @@
         "capacity_alloc",
         "weekly_khoan",
         "mission_knapsack",
-        "idle_reduction"
+        "idle_reduction",
+        "penalty_explain",
+        "anomaly_alert"
       ]
     },
     "problem_digest": {

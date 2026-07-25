@@ -1,5 +1,13 @@
 # Schema changelog
 
+## 2026-07-24 (PI-5c, UPDATE-042) — additive
+
+- `l3/penalty_explain_input` (mới): input S8 UC6. Số tiền trừ từ `driver_penalization_ATA`;
+  ngưỡng từ policy. Guardrail: giải thích QUY TẮC — KHÔNG dạy lách.
+- `l3/anomaly_alert_input` (mới): input S9 UC7, `source=INFERRED`. **KHÔNG mang
+  `evidence_ref`** sang view (chống lộ cách phát hiện). Guardrail: KHÔNG kết tội.
+- `advisor/solver_report.solver`: enum **+`penalty_explain`, +`anomaly_alert`** → đủ 9 solver.
+
 ## 2026-07-24 (PI-5b, UPDATE-041) — additive
 
 - `l3/idle_reduction_input` (mới): input S7 IdleReduction (UC5). `hex` CHỈ để thống kê —

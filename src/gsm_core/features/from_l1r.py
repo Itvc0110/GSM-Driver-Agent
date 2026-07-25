@@ -328,6 +328,80 @@ def derive_idle_reduction_input_l1r(driver_id: str, t_now: str, l1r: dict,
     }
 
 
+# ---------- S8: penalty_explain_input (UC6) ----------
+
+def derive_penalty_explain_input_l1r(driver_id: str, t_now: str, l1r: dict,
+                                     policy: PolicyBundle | None = None,
+                                     days_back: int = 30,
+                                     khoan_gap_vnd: int | None = None) -> dict:
+    """Khoản trừ ĐO ĐƯỢC (`driver_penalization_ATA`) + tỷ lệ + ngưỡng policy.
+
+    Guardrail: chỉ tập hợp DỮ LIỆU; giải thích/khuyến nghị do solver (không dạy lách).
+    """
+    today = _date(t_now)
+    start = (_dt_date.fromisoformat(today) - timedelta(days=days_back)).isoformat()
+
+    pens = []
+    for r in _rows(l1r, "driver_penalization_ATA"):
+        if r["driver_id"] != driver_id:
+            continue
+        d = r.get("local_date") or ""
+        if not (start <= d <= today):
+            continue
+        pens.append({"penalization_id": r["penalization_id"], "local_date": d,
+                     "penalty_type": r["penalty_type"], "amount_vnd": int(r["amount_vnd"]),
+                     "reason": r.get("reason"), "status": r.get("status"),
+                     "week_key": r.get("week_key")})
+
+    stat = _stat_row(l1r, driver_id, today)
+    if stat is None:  # lấy dòng đo gần nhất trong kỳ
+        prior = sorted((s for s in _rows(l1r, "driver_statistic_daily")
+                        if s["driver_id"] == driver_id and s["local_date"] <= today),
+                       key=lambda s: s["local_date"])
+        stat = prior[-1] if prior else None
+    rates = {"acceptance": (stat or {}).get("acceptance_rate"),
+             "fulfillment": (stat or {}).get("fulfillment_rate"),
+             "cancellation": (stat or {}).get("cancellation_rate")}
+    thresholds = {"min_acceptance": policy.bonus_min_acceptance if policy else None,
+                  "min_completion": policy.bonus_min_completion if policy else None}
+
+    return {
+        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now,
+        "period_start": start, "period_end": today,
+        "penalties": sorted(pens, key=lambda p: (p["local_date"] or "", p["penalization_id"])),
+        "rates": rates, "thresholds": thresholds, "khoan_gap_vnd": khoan_gap_vnd,
+        "view_version": VIEW_VERSION, "source": _provenance(stat, pens[0] if pens else None),
+    }
+
+
+# ---------- S9: anomaly_alert_input (UC7) ----------
+
+def derive_anomaly_alert_input_l1r(driver_id: str, t_now: str, l1r: dict,
+                                   days_back: int = 14) -> dict:
+    """Cờ bất thường (`public_frauds`) — nhãn INFERRED.
+
+    KHÔNG mang `evidence_ref` sang view (chống lộ cách phát hiện → chống dạy lách).
+    """
+    today = _date(t_now)
+    start = (_dt_date.fromisoformat(today) - timedelta(days=days_back)).isoformat()
+    flags = []
+    for r in _rows(l1r, "public_frauds"):
+        if r["driver_id"] != driver_id:
+            continue
+        det = (r.get("detected_at") or "")[:10]
+        if det and not (start <= det <= today):
+            continue
+        flags.append({"fraud_id": r["fraud_id"], "detected_at": r.get("detected_at"),
+                      "fraud_type": r["fraud_type"], "severity": r["severity"],
+                      "confidence": float(r["confidence"]), "status": r["status"]})
+    return {
+        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now,
+        "flags": sorted(flags, key=lambda f: f["detected_at"] or ""),
+        "view_version": VIEW_VERSION,
+        "source": "INFERRED",  # cờ là SUY DIỄN của nền tảng, không phải sự kiện đã kết luận
+    }
+
+
 # ---------- S2: shift_plan_input ----------
 
 def derive_shift_plan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: PolicyBundle,

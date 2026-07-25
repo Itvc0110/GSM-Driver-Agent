@@ -97,6 +97,45 @@ def _idle_sentence(solver_reports: list[dict], reg: dict) -> str:
     return s
 
 
+def _penalty_sentence(solver_reports: list[dict], reg: dict) -> str:
+    """UC6: nêu khoản trừ + cách TUÂN THỦ (không dạy lách, không phán xét)."""
+    r = _rep(solver_reports, "penalty_explain")
+    if not r:
+        return ""
+    sol = r.get("solution") or {}
+    if not sol.get("notable"):
+        return ""
+    total = _vn(reg, sol.get("total_deducted_vnd"), "vnd")
+    s = ""
+    if total and sol.get("penalty_count"):
+        s += f" Kỳ này anh/chị bị trừ tổng {total} ({sol['penalty_count']} khoản)."
+    for risk in (sol.get("risks") or [])[:1]:
+        state = "đang dưới" if risk["state"] == "below" else "đang sát"
+        s += (f" {risk['metric'].capitalize()} {state} mức tối thiểu "
+              f"{risk['threshold']:.0%} theo chính sách.")
+    acts = sol.get("actions") or []
+    if acts:
+        s += f" Để cải thiện: {acts[0]}."
+    return s
+
+
+def _anomaly_sentence(solver_reports: list[dict]) -> str:
+    """UC7: heads-up KHÔNG kết tội — chỉ 'ghi nhận dấu hiệu' + khuyến nghị kiểm tra."""
+    r = _rep(solver_reports, "anomaly_alert")
+    if not r:
+        return ""
+    sol = r.get("solution") or {}
+    if not sol.get("notable"):
+        return ""  # không có cờ mở → im lặng
+    items = sol.get("items") or []
+    if not items:
+        return ""
+    top = items[0]
+    return (f" Lưu ý: hệ thống ghi nhận dấu hiệu cần xem lại — {top['description']}. "
+            "Đây chưa phải kết luận vi phạm; anh/chị kiểm tra lại thông tin chuyến "
+            "liên quan hoặc liên hệ hỗ trợ nếu thấy chưa chính xác.")
+
+
 def _advice_spec(action: str | None, bucket: str | None) -> dict:
     """advice_spec hợp schema: action_type thường-hoá (adherence taxonomy), KHÔNG
     kèm `expiry` khi rỗng (schema: expiry là string date-time, không nullable)."""
@@ -160,12 +199,16 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
         if top:
             msg = (f"Tổng kết ca: {top['heuristic_note']}{progress}{khoan}"
                    f"{_idle_sentence(solver_reports, reg)} "
-                   f"Ca sau anh/chị thử điều chỉnh điểm này nhé.{disclaimer}")
+                   f"Ca sau anh/chị thử điều chỉnh điểm này nhé."
+                   f"{_penalty_sentence(solver_reports, reg)}"
+                   f"{_anomaly_sentence(solver_reports)}{disclaimer}")
         else:
             msg = (f"Tổng kết ca:{(progress + ' ') if progress else ' '}"
                    f"không có điểm nào cần điều chỉnh rõ rệt "
                    f"— anh/chị chạy ổn định.{khoan}"
-                   f"{_idle_sentence(solver_reports, reg)}{disclaimer}")
+                   f"{_idle_sentence(solver_reports, reg)}"
+                   f"{_penalty_sentence(solver_reports, reg)}"
+                   f"{_anomaly_sentence(solver_reports)}{disclaimer}")
 
     return {
         "message": msg.strip(),

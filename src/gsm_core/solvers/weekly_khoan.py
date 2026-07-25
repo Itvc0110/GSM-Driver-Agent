@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 
 from gsm_core.policy import PolicyBundle
+from gsm_core.vn_format import format_vnd
 
 SOLVER = "weekly_khoan"
 
@@ -50,7 +51,7 @@ def solve(wi: dict, policy: PolicyBundle) -> dict:
     if quota_min is None:
         return {
             "schema_version": "1.0.0", "solver": SOLVER,
-            "problem_digest": (f"Tài xế {drv} tuần {wi['week_key']}: doanh số {revenue:,}đ, "
+            "problem_digest": (f"Tài xế {drv} tuần {wi['week_key']}: doanh số {format_vnd(revenue)}, "
                                f"{days_active} ngày hoạt động. CHƯA có mốc khoán tuần trong "
                                "policy → không thể tính khoảng thiếu/truy thu."),
             "inputs_used": inputs_used,
@@ -117,10 +118,10 @@ def solve(wi: dict, policy: PolicyBundle) -> dict:
     if not rate:
         caveats.append("Thiếu lịch sử doanh số/giờ → không ước được số giờ cần.")
 
-    digest = (f"Tài xế {drv} tuần {wi['week_key']}: doanh số {revenue:,}đ/{quota_min:,}đ khoán"
-              + (f", thiếu {gap:,}đ" if gap else " — ĐÃ ĐẠT")
+    digest = (f"Tài xế {drv} tuần {wi['week_key']}: doanh số {format_vnd(revenue)}/{format_vnd(quota_min)} khoán"
+              + (f", thiếu {format_vnd(gap)}" if gap else " — ĐÃ ĐẠT")
               + (f" (≈{hours_needed:.1f} giờ)" if gap and math.isfinite(hours_needed) else "")
-              + (f"; rủi ro truy thu {clawback:,}đ" if clawback else "")
+              + (f"; rủi ro truy thu {format_vnd(clawback)}" if clawback else "")
               + f"; {days_active} ngày hoạt động, còn {days_remaining} ngày.")
 
     return {

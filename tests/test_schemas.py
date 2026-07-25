@@ -32,6 +32,7 @@ EXPECTED = {
     # L3 (+ PI-4b: view cho S5 khoán tuần, S6 mission knapsack)
     "shift_plan_input", "bonus_gap_input", "session_summary_input", "allocation_input",
     "weekly_khoan_input", "mission_select_input", "idle_reduction_input",
+    "penalty_explain_input", "anomaly_alert_input",
     # advisor
     "advice_request", "solver_report", "composed_advice",
 }

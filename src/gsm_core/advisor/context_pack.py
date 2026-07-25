@@ -8,6 +8,9 @@ cho placeholder render + verify (faithfulness = bất biến cấu trúc).
 
 from __future__ import annotations
 
+# MỘT nguồn định dạng VN dùng chung với solver (tránh 2 kiểu format cùng số)
+from gsm_core.vn_format import render_number_vn  # noqa: F401 (re-export)
+
 PROMPT_VERSION = "cp-v1"
 MAX_PACK_CHARS = 16000  # ~4K tokens
 
@@ -40,24 +43,6 @@ _FEATURE_INSTRUCTION = {
 }
 
 
-def render_number_vn(value: float, unit: str) -> str:
-    """CODE render số theo locale VN — LLM không bao giờ format số."""
-    if unit == "vnd":
-        return f"{int(round(value)):,}".replace(",", ".") + "đ"
-    if unit == "points":
-        return f"{int(round(value))} điểm"
-    if unit == "hours":
-        s = f"{value:.1f}".replace(".", ",")
-        return f"{s} giờ"
-    if unit == "trips":
-        return f"{int(round(value))} cuốc"
-    if unit == "ratio":
-        return f"{value:.0%}".replace("%", "%")
-    if unit == "minutes":
-        return f"{int(round(value))} phút"
-    return f"{value:g} {unit}"
-
-
 def build_context_pack(feature: str, solver_reports: list[dict],
                        kb_excerpts: list[dict], driver_id: str) -> dict:
     """Trả {system_prompt, prompt_data, instruction, numbers_registry, citations_registry}."""
@@ -75,7 +60,8 @@ def build_context_pack(feature: str, solver_reports: list[dict],
         for k in ("feasible", "next_action", "top_pattern", "herding_avoided",
                   "quota_available", "gap_revenue_vnd", "clawback_risk_vnd",
                   "expected_reward_vnd", "chosen_missions",
-                  "total_idle_min", "idle_share", "worst_window", "reposition_mission"):
+                  "total_idle_min", "idle_share", "worst_window", "reposition_mission",
+                  "total_deducted_vnd", "penalty_count", "open_count", "top_severity"):
             if k in sol and sol[k] is not None:
                 v = sol[k]
                 if isinstance(v, dict):

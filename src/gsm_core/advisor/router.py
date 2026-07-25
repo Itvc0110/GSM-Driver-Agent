@@ -17,7 +17,8 @@ FEATURE_SOLVERS = {
            "use_kb": False},
     "F2": {"solvers": ["shift_dp", "capacity_alloc", "mission_knapsack", "idle_reduction"],
            "use_kb": False},
-    "F3": {"solvers": ["f3_patterns", "weekly_khoan", "idle_reduction"], "use_kb": False},
+    "F3": {"solvers": ["f3_patterns", "weekly_khoan", "idle_reduction",
+                       "penalty_explain", "anomaly_alert"], "use_kb": False},
 }
 
 # keyword tiếng Việt (đã bỏ dấu, đ→d) per intent — dict viết tay, fixture test
@@ -33,6 +34,12 @@ _INTENT_KEYWORDS = {
     # UC5 chờ/ế khách
     "idle_wait": ["dung cho", "cho lau", "e khach", "khong co cuoc", "vang khach",
                   "cho mai", "it don"],
+    # UC6 vì sao bị trừ tiền
+    "penalty_why": ["bi tru tien", "vi sao bi phat", "tru vi", "mat thuong",
+                    "bi phat", "tru tien"],
+    # UC7 cảnh báo bất thường (chỉ hiện ở F3 — không bắn giữa ca)
+    "anomaly_check": ["bat thuong", "canh bao", "khoa tai khoan", "lech tuyen",
+                      "bi nghi ngo"],
     # UC3 khoán tuần / chỉ tiêu
     "weekly_target": ["khoan", "doanh so tuan", "chi tieu tuan", "kpi tuan",
                       "truy thu", "muc tieu tuan"],
@@ -50,11 +57,15 @@ def route(feature: str, free_text_query: str | None) -> dict:
         out["solvers"] = out["solvers"] + ["policy_kb"]
     if free_text_query:
         q = _norm(free_text_query)
-        matched = None
+        # BUG-PI5c-01: TRƯỚC ĐÂY lấy intent ĐẦU TIÊN khớp bất kỳ keyword nào → sai với
+        # ĐỒNG ÂM tiếng Việt sau khi bỏ dấu: "bất thường"→"bat thuong" CHỨA "thuong"
+        # (= "thưởng"/bonus) ⇒ câu hỏi cảnh báo bị định tuyến sang hỏi thưởng.
+        # Nay: KEYWORD DÀI NHẤT thắng (cụm cụ thể hơn thắng từ đơn); hoà → thứ tự dict.
+        matched, best_len = None, 0
         for intent, kws in _INTENT_KEYWORDS.items():
-            if any(kw in q for kw in kws):
-                matched = intent
-                break
+            hit = max((len(kw) for kw in kws if kw in q), default=0)
+            if hit > best_len:
+                matched, best_len = intent, hit
         if matched is None:
             return {"intent": "out_of_taxonomy", "solvers": [], "use_kb": False,
                     "feature": feature}
