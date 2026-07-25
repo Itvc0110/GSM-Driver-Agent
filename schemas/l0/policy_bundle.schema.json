@@ -112,6 +112,46 @@
         "maxItems": 2
       }
     },
+    "weekly_quota": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Khoán tuần + truy thu (Vận Doanh 23/02/2026). Optional — số TBC-với-GSM (image-locked). money basis = GROSS (doanh số) theo quyết định (d) 2026-07-24.",
+      "properties": {
+        "min_revenue_vnd": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "description": "Doanh số (GROSS) tối thiểu/tuần. null = chưa có số thật → solver KHÔNG được bịa"
+        },
+        "min_active_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "clawback_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1,
+          "description": "0.20 toàn quốc; tới 0.40 HN/HCM (04/05/2026) — versioned theo market"
+        },
+        "market_scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "thresholds": {
       "type": "object",
       "properties": {

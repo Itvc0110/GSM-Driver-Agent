@@ -23,6 +23,8 @@ LAYER_OF: dict[str, str] = {
     "inferred_activity": "l2i",
     "shift_plan_input": "l3", "bonus_gap_input": "l3",
     "session_summary_input": "l3", "allocation_input": "l3",
+    # PI-4b: view cho S5 (khoán tuần) + S6 (mission knapsack)
+    "weekly_khoan_input": "l3", "mission_select_input": "l3",
     "advice_request": "advisor", "solver_report": "advisor", "composed_advice": "advisor",
     # l1r = L1-real: mirror 13 bảng thật gsm-data-prod (re-ground — UPDATE-033, PI-1)
     "driver_statistic_daily": "l1r", "driver_online_hours": "l1r",

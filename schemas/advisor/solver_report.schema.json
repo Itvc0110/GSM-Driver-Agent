@@ -11,7 +11,9 @@
         "bonus_feasibility",
         "shift_dp",
         "f3_patterns",
-        "capacity_alloc"
+        "capacity_alloc",
+        "weekly_khoan",
+        "mission_knapsack"
       ]
     },
     "problem_digest": {

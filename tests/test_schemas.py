@@ -29,8 +29,9 @@ EXPECTED = {
     "supply_field", "demand_field", "station_state", "driver_day_state",
     # L2i
     "inferred_activity",
-    # L3
+    # L3 (+ PI-4b: view cho S5 khoán tuần, S6 mission knapsack)
     "shift_plan_input", "bonus_gap_input", "session_summary_input", "allocation_input",
+    "weekly_khoan_input", "mission_select_input",
     # advisor
     "advice_request", "solver_report", "composed_advice",
 }

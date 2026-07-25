@@ -23,6 +23,9 @@ class PolicyBundle:
     day_bonus_tiers: tuple[tuple[int, int], ...]  # (điểm, thưởng VND) tăng dần
     bonus_min_acceptance: float
     bonus_min_completion: float
+    # Khoán tuần (Vận Doanh 23/02/2026) — None nếu policy chưa có số (TBC-với-GSM).
+    # Solver KHÔNG được bịa số khi None (§5).
+    weekly_quota: dict | None = None
 
     @classmethod
     def from_record(cls, rec: dict) -> "PolicyBundle":
@@ -41,7 +44,13 @@ class PolicyBundle:
             day_bonus_tiers=tiers,
             bonus_min_acceptance=float(th.get("bonus_min_acceptance", 0.85)),
             bonus_min_completion=float(th.get("bonus_min_completion", 0.85)),
+            weekly_quota=rec.get("weekly_quota") or None,
         )
+
+    def has_weekly_quota(self) -> bool:
+        """True khi policy có ĐỦ số khoán tuần để tính (không suy đoán)."""
+        q = self.weekly_quota or {}
+        return q.get("min_revenue_vnd") is not None
 
     def trip_points(self, order_hour: int) -> int:
         """Điểm cho 1 cuốc theo giờ khách đặt."""
