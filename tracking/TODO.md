@@ -24,7 +24,8 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
      - Sau enlarge: chạy lại 4 vòng verify (R1/R2/R3/R4) tập lớn; cập nhật ROUND report. **Gate cho PI-4.**
      - ✅ **DONE 2026-07-24** (UPDATE-035 + **UPDATE-036 audit**): profile universe 110 (bike/rto/car/employee/premium), acceptance 1.00→0.88, CSV export. **Audit tìm & fix 5 flaw**: R2 trộn population (verdict sai), impossible-state 203 driver-day (cuốc khi online=0), tràn nửa đêm, field degenerate (core_order/stoppoints), **crash parquet phụ thuộc seed**. Suite 208. **Đính chính:** bike payout thật ~221k (không phải 273k đã báo — số đó lẫn car), vẫn biên dưới tới khi có **lớp thưởng tuần (S5)**.
    - **PI-3 DataSource tool**: MockSource+BQ skeleton+PII read-only (P4). Sau PI-1. Live treo chờ credentials + Cường chốt BQ auth/env.
-   - **PI-4 Solver remap + S5/S6**: S1-4 remap field thật + S5 khoán + S6 mission-knapsack (P6). Sau PI-2.
+   - **PI-4a Adapter L1R→L3** ✅ DONE 2026-07-24 (UPDATE-037): `features/from_l1r.py` — S1/S2/S3 view đọc field ĐO ĐƯỢC (acceptance/fulfillment/online/payout) thay vì recompute; `points_now` vẫn tính từ policy; chain S1→SolverReport traceability=1.0; 12 test, suite 221. **Fix self-review**: không bịa acceptance=1.0 khi thiếu dòng đo → carry-forward + nhãn ESTIMATED. **S4 KHÔNG remap** (bảng thật thiếu station capacity). **(d) CHỐT: khoán = GROSS** (doanh số), nhãn ASSUMPTION + `money_basis` param.
+   - **PI-4b (TIẾP THEO)**: S5 WeeklyKhoanFeasibility (money_basis=gross) + S6 MissionKnapsack (data mission đã có). Sau PI-4a.
    - **PI-5 UC5-8 features**: idle-reduction, penalty-explain, anomaly-alert + router (P6). Sau PI-4.
    - **PI-6 External** (treo): ExternalContext + Google Maps/Weather (P5). Chờ Cường chốt key/techstack.
    - **Cần Cường/GSM chốt trước impl:** semantics 5 field + target KPI + cột thật 5 bảng; BQ auth/env; external key. **LOẠI TRỪ**: hiệu năng AI-Advisor/observability/CICD/optimize.

@@ -94,7 +94,9 @@ Tách khỏi S1 (S1 = điểm/ngày; S5 = doanh số/tuần) — **khuyến ngh�
 - **(a) ✅ CHỐT: Solver S5 MỚI** `WeeklyKhoanFeasibility` (tách khỏi S1). L3 view mới `weekly_khoan_input`.
 - **(b) ✅ CHỐT: CHƯA implement — DỪNG Ở SPEC.** Không đụng schema/solver/mock cho tới khi có **data thật GSM** + Cường mở cycle. KHÔNG code với số MOCK ở giai đoạn này (ưu tiên realism, tránh rework số).
 - **(c) ✅ CHỐT: GIỮ daily-proxy** cho tier điểm (gắn nhãn rõ là simplification); chỉ chuyển weekly thật sau, khi model tuần (S5) ổn.
-- **(d) ⏳ OPEN — cần data thật:** khoán tính trên **gross** hay **driver payout**. Không quyết khi chưa có data (money-definition, §5).
+- **(d) ✅ CHỐT 2026-07-24 (Cường): khoán tính trên GROSS (doanh số = `total_fee`).**
+  - *Căn cứ:* văn bản Vận Doanh 23/02/2026 ghi "truy thu 20% phần **doanh số** chưa đạt" — "doanh số" = turnover; bảng thật tách bạch `total_fee` (gross) vs `commission` (driver payout).
+  - *Nhãn:* **ASSUMPTION** (chưa có GSM xác nhận bằng văn bản định nghĩa) → S5 phải expose tham số `money_basis ∈ {gross, driver_payout}` mặc định `gross`, đổi được khi GSM xác nhận. Ghi rõ basis trong `SolverReport.numbers[].source`.
 
 **Trạng thái:** spec = blueprint đóng băng; implement D-POL-01/02/03 **treo tới khi có data thật + Cường mở**. (b)/(d) chờ data; (a)/(c) đã chốt sẵn cho lúc implement.
 
