@@ -210,6 +210,91 @@ def test_router_wires_uc6_uc7_to_f3_only():
     assert route("F3", "có cảnh báo bất thường gì không")["intent"] == "anomaly_check"
 
 
+# ---------- research đợt 4: thang chính thức + hạn giải trình 48h ----------
+
+def test_s9_uses_official_4_level_scale():
+    """F-2: dùng ĐÚNG thang app (Không/Thấp/Cao/Rất cao) — không phải low/medium/high."""
+    from gsm_core.solvers.anomaly_alert import NO_ALERT_LEVEL, OFFICIAL_LEVEL
+    assert set(OFFICIAL_LEVEL.values()) == {"Thấp", "Cao", "Rất cao"}
+    r = solve_s9(_anom_view([_flag("f1", sev="high")]))
+    assert r["solution"]["items"][0]["official_level"] == "Rất cao"
+    assert r["solution"]["official_level_top"] == "Rất cao"
+    assert "mức cảnh báo: Rất cao" in r["problem_digest"]
+    # không cờ → mức "Không"
+    assert solve_s9(_anom_view([]))["solution"]["official_level_top"] == NO_ALERT_LEVEL
+
+
+def test_s9_explain_deadline_48h_countdown():
+    """F-3: nhắc hạn giải trình 48h; số giờ còn lại phải TRACE được (có trong numbers)."""
+    v = _anom_view([_flag("f1")])           # detected 2026-07-05T18:00
+    v["t_now"] = "2026-07-06T18:00:00+07:00"  # +24h → còn 24h
+    r = solve_s9(v)
+    item = r["solution"]["items"][0]
+    assert item["explain_hours_left"] == pytest.approx(24.0, abs=0.1)
+    assert item["explain_overdue"] is False
+    assert "giải trình" in r["problem_digest"]
+    hrs = [n for n in r["numbers"] if n["unit"] == "hours"]
+    assert hrs and "deadline=48h" in hrs[0]["source"], "số giờ phải trace được"
+
+
+def test_s9_explain_deadline_overdue_no_fake_countdown():
+    """Quá hạn → KHÔNG nêu số giờ dương; hướng sang liên hệ hỗ trợ."""
+    v = _anom_view([_flag("f1")])
+    v["t_now"] = "2026-07-09T18:00:00+07:00"  # +96h > 48h
+    r = solve_s9(v)
+    assert r["solution"]["items"][0]["explain_overdue"] is True
+    assert "đã qua" in r["problem_digest"]
+    assert not [n for n in r["numbers"] if n["unit"] == "hours"], "không bịa giờ còn lại"
+
+
+def test_s9_missing_detected_at_does_not_invent_deadline():
+    """Thiếu mốc thời gian → KHÔNG đoán hạn (thà thiếu còn hơn bịa)."""
+    f = _flag("f1"); f["detected_at"] = None
+    r = solve_s9(_anom_view([f]))
+    assert r["solution"]["items"][0]["explain_hours_left"] is None
+    assert "giờ để giải trình" not in r["problem_digest"]
+
+
+def test_bug_pi5d_01_deadline_number_passes_verifier(reg, tmp_path):
+    """BUG-PI5d-01: template tự format "24 giờ" ≠ chuỗi render từ registry ("24,0 giờ")
+    ⇒ verifier V1 coi là SỐ TRẦN và VETO cả advice. Mọi số phải neo registry."""
+    v = _anom_view([_flag("f1", sev="medium", conf=0.58)])
+    v["t_now"] = "2026-07-06T18:00:00+07:00"  # còn 24h
+    r = solve_s9(v)
+    pipe = AdvisorPipeline(corpus_path=CORPUS, store_path=tmp_path / "ep.db", llm_mode="off")
+    req = {"schema_version": "1.0.0", "request_id": "r1", "driver_id": "d-1", "feature": "F3",
+           "free_text_query": None, "l3_view_refs": [], "session_id": "s",
+           "t_request": "2026-07-06T18:00:00+07:00", "trigger_source": "user_ask"}
+    advice = pipe.handle(req, solver_reports=[r], kb_track="platform")
+    assert pipe.last_verify_result["passed"] is True, pipe.last_verify_result
+    assert "giải trình" in advice["message"]
+    assert reg.validate("composed_advice", advice) == []
+
+
+def test_s8_mentions_explain_right_48h():
+    """F-3: S8 nhắc QUYỀN giải trình + hạn 48h (không xây quy trình khiếu nại — D-007)."""
+    r = solve_s8(_pen_view([_pen("p1", "conduct", 200000)]))
+    blob = " ".join(r["caveats"])
+    assert "GIẢI TRÌNH TRỰC TUYẾN" in blob and "48 giờ" in blob
+
+
+def test_s7_points_to_official_feature():
+    """F-1: app ĐÃ CÓ bản đồ nhiệt → trỏ về tính năng chính thức, không tự chọn khu."""
+    from gsm_core.solvers.idle_reduction import USE_OFFICIAL_FEATURE, solve as solve_s7
+    v = {"schema_version": "1.0.0", "driver_id": "d-1", "t_now": "2026-07-01T18:00:00+07:00",
+         "session_date": "2026-07-01",
+         "idle_segments": [{"hex": "8amock01", "start": "2026-07-01T14:00:00+07:00",
+                             "duration_seconds": 3600, "hour": 14}],
+         "total_idle_min": 60.0, "longest_idle_min": 60.0, "online_hours": 8.0,
+         "demand_by_hour": {"14": 0.2}, "active_reposition": None,
+         "view_version": "1.0.0", "source": "MOCK"}
+    r = solve_s7(v)
+    assert USE_OFFICIAL_FEATURE in r["caveats"]
+    assert "Nhiệm vụ tiếp theo" in USE_OFFICIAL_FEATURE
+    # vẫn KHÔNG chỉ định ô H3 (D-004b/B1)
+    assert "8amock01" not in str(r["solution"]) + r["problem_digest"]
+
+
 @pytest.mark.parametrize("q,intent", [
     # BUG-PI5c-01: "bất thường"→"bat thuong" CHỨA "thuong" (=thưởng/bonus) sau khi bỏ dấu
     ("có cảnh báo bất thường gì không", "anomaly_check"),

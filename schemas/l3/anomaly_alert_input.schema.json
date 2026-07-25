@@ -77,6 +77,14 @@
     },
     "schema_version": {
       "const": "1.0.0"
+    },
+    "explain_deadline_hours": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Hạn giải trình trực tuyến (giờ) — official 48h từ 15/12/2025. null = không áp dụng."
     }
   },
   "required": [

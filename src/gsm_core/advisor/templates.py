@@ -119,7 +119,7 @@ def _penalty_sentence(solver_reports: list[dict], reg: dict) -> str:
     return s
 
 
-def _anomaly_sentence(solver_reports: list[dict]) -> str:
+def _anomaly_sentence(solver_reports: list[dict], reg: dict) -> str:
     """UC7: heads-up KHÔNG kết tội — chỉ 'ghi nhận dấu hiệu' + khuyến nghị kiểm tra."""
     r = _rep(solver_reports, "anomaly_alert")
     if not r:
@@ -131,9 +131,27 @@ def _anomaly_sentence(solver_reports: list[dict]) -> str:
     if not items:
         return ""
     top = items[0]
-    return (f" Lưu ý: hệ thống ghi nhận dấu hiệu cần xem lại — {top['description']}. "
-            "Đây chưa phải kết luận vi phạm; anh/chị kiểm tra lại thông tin chuyến "
-            "liên quan hoặc liên hệ hỗ trợ nếu thấy chưa chính xác.")
+    lvl = top.get("official_level")
+    # dùng ĐÚNG thang app ("Mức độ cảnh báo gian lận": Không/Thấp/Cao/Rất cao) để khớp
+    # cái tài xế đang nhìn thấy (research đợt 4 §F-2)
+    lvl_txt = f" (mức cảnh báo trên app: {lvl})" if lvl else ""
+    s = (f" Lưu ý: hệ thống ghi nhận dấu hiệu cần xem lại — {top['description']}{lvl_txt}. "
+         "Đây chưa phải kết luận vi phạm; anh/chị kiểm tra lại thông tin chuyến "
+         "liên quan hoặc liên hệ hỗ trợ nếu thấy chưa chính xác.")
+    # hạn giải trình 48h (official 15/12/2025) — nhu cầu GẤP nhất khi bị gắn cờ
+    left = top.get("explain_hours_left")
+    if left is not None:
+        if top.get("explain_overdue"):
+            s += (" Anh/chị có thể giải trình trực tuyến trên app; thời hạn có thể đã qua "
+                  "— nên liên hệ hỗ trợ sớm.")
+        else:
+            # BUG-PI5d-01: TRƯỚC ĐÂY template tự format f"{left:.0f} giờ" → KHÔNG khớp
+            # chuỗi render từ registry ⇒ verifier V1 coi là SỐ TRẦN và veto cả advice.
+            # Mọi số hiển thị PHẢI đi qua _vn() (neo registry).
+            hrs = _vn(reg, left, "hours")
+            s += (f" Anh/chị còn khoảng {hrs} để giải trình trực tuyến trên app." if hrs
+                  else " Anh/chị nên giải trình trực tuyến trên app sớm.")
+    return s
 
 
 def _advice_spec(action: str | None, bucket: str | None) -> dict:
@@ -201,14 +219,14 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
                    f"{_idle_sentence(solver_reports, reg)} "
                    f"Ca sau anh/chị thử điều chỉnh điểm này nhé."
                    f"{_penalty_sentence(solver_reports, reg)}"
-                   f"{_anomaly_sentence(solver_reports)}{disclaimer}")
+                   f"{_anomaly_sentence(solver_reports, reg)}{disclaimer}")
         else:
             msg = (f"Tổng kết ca:{(progress + ' ') if progress else ' '}"
                    f"không có điểm nào cần điều chỉnh rõ rệt "
                    f"— anh/chị chạy ổn định.{khoan}"
                    f"{_idle_sentence(solver_reports, reg)}"
                    f"{_penalty_sentence(solver_reports, reg)}"
-                   f"{_anomaly_sentence(solver_reports)}{disclaimer}")
+                   f"{_anomaly_sentence(solver_reports, reg)}{disclaimer}")
 
     return {
         "message": msg.strip(),

@@ -21,6 +21,9 @@ def render_number_vn(value: float, unit: str) -> str:
     if unit == "points":
         return f"{int(round(value))} điểm"
     if unit == "hours":
+        # số giờ nguyên → "24 giờ" (không phải "24,0 giờ" — đọc gượng); lẻ → "1,3 giờ"
+        if abs(value - round(value)) < 0.05:
+            return f"{int(round(value))} giờ"
         return f"{value:.1f}".replace(".", ",") + " giờ"
     if unit == "trips":
         return f"{int(round(value))} cuốc"

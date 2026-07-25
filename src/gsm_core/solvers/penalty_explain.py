@@ -70,8 +70,13 @@ def solve(pi: dict) -> dict:
             risks.append({"metric": label, "value": val, "threshold": lim, "state": "near",
                           "gap": round(val - lim, 4)})
 
+    # Quyền giải trình trực tuyến (official 15/12/2025): BẮT BUỘC trong 48 GIỜ với cuốc
+    # bị nghi vấn; quá hạn ảnh hưởng tài khoản. Chỉ NHẮC quyền + hạn — không xây quy
+    # trình khiếu nại (D-007 = dự án khác).
     caveats = ["Số liệu lấy từ bản ghi của hệ thống; nếu anh/chị thấy chưa đúng, "
                "liên hệ bộ phận hỗ trợ để được rà soát.",
+               "Với cuốc bị nghi vấn vi phạm, anh/chị có quyền GIẢI TRÌNH TRỰC TUYẾN trên "
+               "app — hạn 48 giờ kể từ khi có thông báo.",
                "Thông tin mang tính giải thích quy định, không phải tư vấn pháp lý."]
 
     # KHÔNG có khoản trừ và KHÔNG có rủi ro → không bịa vấn đề

@@ -18,6 +18,16 @@ Lưu ý: số tự khai từ cộng đồng (VOZ, diễn đàn VinFast, YouTube)
 | 3 | **Áp lực tỷ lệ nhận đơn**: <50% bị ép bật auto-accept tới 23h59; <70% phạt 100–200k/tuần, 3 tuần → khóa tài khoản; ĐBTN một số nơi yêu cầu ≥90% | official + press + community | F0/F3 (cảnh báo ngưỡng, phân tích từ chối đơn) |
 | 4 | **Không nắm/khó hiểu chính sách**: chính sách đổi ≥4 lần 2023–2026, bảng thưởng trong ảnh/in-app | suy ra từ biến động chính sách | F0 (hỏi đáp có trích dẫn) |
 
+## Pain point BỔ SUNG (research đợt 4 — 2026-07-24)
+
+| # | Pain point | Nguồn | Feature phục vụ |
+| --- | --- | --- | --- |
+| **P-5** | **Bị nghi vấn vi phạm mà không kịp giải trình trong 48 GIỜ** → ảnh hưởng tài khoản | official "Giải trình trực tuyến" 15/12/2025 | S8/S9 nhắc quyền + đếm ngược hạn |
+| **P-6** | Không hiểu **mức cảnh báo gian lận** (4 mức Không/Thấp/Cao/Rất cao) đang ở đâu và phải làm gì | tính năng in-app 10/10/2025 | S9 dùng đúng thang app |
+| **P-7** | Không biết/không dùng **tính năng tối ưu sẵn có** (Nhiệm vụ tiếp theo + bản đồ nhiệt, Danh sách chuyến hẹn giờ) | official 15/04/2026 | S7 trỏ về tính năng chính thức |
+
+Chi tiết + nguồn: [`../policy/app-features-refresh-2026-07-24.md`](../policy/app-features-refresh-2026-07-24.md).
+
 ## Thu nhập tự khai (mock profile calibration)
 
 1. **Full-time TP.HCM (cuối 2023)**: 500–600k/ngày, 11–12h/ngày, ~16tr/tháng sau thuế + sạc. — [Stockbiz](https://stockbiz.vn/tin-tuc/xanh-sm-bike-tung-dang-tin-tuyen-tai-xe-thu-nhap-co-the-len-den-18-trieu-dongthang-thuc-te-thi-sao/23538378), **press/medium**.

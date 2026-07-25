@@ -26,6 +26,10 @@ WARN_ACCEPTANCE = ("Đơn có thể được phát trong lúc anh/chị di chuy�
                    "từ chối sẽ ảnh hưởng tỷ lệ nhận cuốc.")
 WARN_PROXY = ("Mức nhu cầu theo khung giờ là ƯỚC LƯỢNG từ cuốc đã hoàn thành "
               "(không phải dự báo chính thức của hãng).")
+# F-1 (research đợt 4): app đã CÓ bản đồ nhiệt + "Nhiệm Vụ Tiếp Theo" (15/04/2026).
+# ⇒ KHÔNG tự gợi ý khu (chồng đè tối ưu của hãng) mà TRỎ VỀ tính năng chính thức.
+USE_OFFICIAL_FEATURE = ("Anh/chị có thể bật \"Dẫn đường\" ở chế độ Trực tuyến để xem "
+                        "\"Nhiệm vụ tiếp theo\" — gợi ý khu vực nhiều khách của hãng.")
 
 
 def _num(value, unit, source):
@@ -72,7 +76,7 @@ def solve(ii: dict) -> dict:
             break
 
     notable = total_min >= IDLE_TOTAL_ALERT_MIN or longest_min >= IDLE_LONGEST_ALERT_MIN
-    caveats = [WARN_ACCEPTANCE, WARN_PROXY]
+    caveats = [WARN_ACCEPTANCE, WARN_PROXY, USE_OFFICIAL_FEATURE]
     if data_warning:
         caveats.append(data_warning)
 
