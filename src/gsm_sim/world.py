@@ -66,6 +66,10 @@ class World:
         # RNG stream riêng cho hành vi actor (nền CRN: ngoại sinh đã ở orders)
         self.rng = np.random.default_rng(seed ^ 0xBEEF)
 
+        # SIM-3: cầu nối advice→action. Mặc định TẮT ⇒ World A (tự làm) không đổi gì.
+        from .advice_bridge import AdviceActionBridge
+        self.advice = AdviceActionBridge(cfg, policy, seed)
+
         # đơn mở theo thời điểm — dùng con trỏ
         self.orders_sorted = sorted(orders, key=lambda o: (o.t_min, o.order_id))
         self._order_ptr = 0
@@ -426,6 +430,23 @@ class World:
             hour = int(now // 60) % 24
             hint = self._actor_demand_hint(actor, hour)
             action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, hint, self.rng)
+
+            # --- SIM-3: hỏi advisor (nếu tài xế này được phủ + tới hạn) ---
+            # ĐẶT SAU `choose_idle_action` CÓ CHỦ Ý: hành vi bản năng vẫn được tính (và tiêu
+            # RNG) y như World A ⇒ bật advice KHÔNG dịch dòng ngẫu nhiên của actor. Advice
+            # chỉ GHI ĐÈ kết quả. Đây là điều kiện để paired-seed (CRN) ở SIM-4 có nghĩa.
+            adv = self.advice.consult(actor, now, self._actor_demand_hint, actor.shift_end_min)
+            if adv is not None:
+                self.log(actor.actor_id, "advice_given", actor.cell,
+                         solver_action=adv.solver_action, adherence=adv.adherence,
+                         followed=adv.followed, instinct_action=action.value,
+                         plan_next=adv.plan_next_action, reason=adv.reason)
+                if adv.followed and adv.mapped_action is not None:
+                    if adv.mapped_action != action:
+                        self.log(actor.actor_id, "advice_followed", actor.cell,
+                                 from_action=action.value, to_action=adv.mapped_action.value)
+                    action = adv.mapped_action
+                    target = None      # advice không chỉ định cell (product boundary D-004)
 
             if action == IdleAction.END_SHIFT:
                 actor.state = ActorState.OFFLINE

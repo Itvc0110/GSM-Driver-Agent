@@ -16,6 +16,7 @@ Khi Cường cho verdict → chuyển sang phần "Đã xong", ghi ngày + kết
 | **V-01** | **SIM-1 realism** — mật độ tài xế lúc 05-07h (trước đây trống trơn), đuôi đêm 21-23h, cuốc bị huỷ giữa đường đi đón | Dashboard tab 🗺️ Bản đồ H3 + 📈 Theo thời gian, **seed 1000** | 2026-07-25 (UPDATE-044) |
 | **V-02** | **Fix visual trạm sạc bị cột H3 đè** — bật/tắt checkbox *"Xem phẳng (2D)"*, kiểm chấm xanh viền trắng có nổi rõ ở cả 2 chế độ không | Dashboard tab 🗺️ Bản đồ H3 | 2026-07-25 (UPDATE-044) |
 | **V-03** | **SIM-2 hành trình tài xế** — Gantt timeline, bảng offer có LÝ DO, và đường thu nhập **không có bậc thưởng** ở tân binh (đó là `D-SIM-02`) | Dashboard tab 🧭 Hành trình 1 tài xế → **seed 1000 → `d-30 · P4 TÂN BINH`** | 2026-07-25 (UPDATE-045) |
+| **V-04** | **SIM-3 cầu nối advice→action** — bật `advice.enabled=true` + `single_actor_id` = tài xế P4, xem các mốc advice trên timeline và cột theo/không-theo | Dashboard tab 🧭 | 2026-07-26 (UPDATE-046) |
 
 ## ❓ QUYẾT ĐỊNH CẦN CƯỜNG CHỐT (không phải visual)
 

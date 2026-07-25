@@ -55,23 +55,17 @@ def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, lis
     out: dict[str, list[dict]] = {}
 
     # ---- L0: policy_bundle từ config sim (nguồn: sim-policy-bundle-v0 — research thật) ----
-    pol = cfg.get("policy")
+    # SIM-3: nội dung policy lấy từ `PolicyBundle.to_core_record()` — nguồn chuyển đổi DUY
+    # NHẤT dùng chung với `gsm_sim.advice_bridge`, để tầng data và tầng advisor không bao
+    # giờ nói hai con số policy khác nhau. Ở đây chỉ bọc thêm trường riêng của schema L1R.
     out["policy_bundle"] = [{
         "schema_version": "1.0.0",
-        "bundle_id": "sim-policy", "version": str(cfg.get("meta.policy_bundle_version")),
+        "bundle_id": "sim-policy",
         "effective_from": _iso(date, 0),
         "track": "green_bike_unspecified",  # sim chưa phân track — guardrail: không auto-map
         "service": "bike",
-        "fare": {"base_vnd": int(pol["base_fare_vnd"]), "base_km": float(pol["base_km"]),
-                 "per_km_vnd": int(pol["per_km_vnd"])},
-        "driver_share": float(pol["driver_share"]),
-        "points": {"peak": int(pol["point_peak"]), "normal": int(pol["point_normal"]),
-                   "peak_hours": [int(h) for h in pol["point_peak_hours"]],
-                   "window_hours": [int(h) for h in pol["point_window_hours"]]},
-        "day_bonus_tiers": [[int(p), int(v)] for p, v in pol["day_bonus_tiers"]],
-        "thresholds": {"bonus_min_acceptance": float(pol["bonus_min_acceptance"]),
-                        "bonus_min_completion": float(pol["bonus_min_completion"]),
-                        "forced_accept_below": 0.5},
+        **r.policy.to_core_record(),
+        "version": str(cfg.get("meta.policy_bundle_version")),
         "source_url": None, "source": "MOCK",
     }]
 
@@ -164,7 +158,7 @@ def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, lis
     } for i, e in enumerate(ev for ev in r.events if ev.kind == "swap_done")]
 
     # ---- L1: payout_ledger — TÁI TÍNH từ policy (không copy số sim mù) ----
-    share = float(pol["driver_share"])
+    share = float(r.policy.driver_share)   # SIM-3: cùng nguồn với policy_bundle ở trên
     ledger = []
     for i, t in enumerate(trips):
         ledger.append({

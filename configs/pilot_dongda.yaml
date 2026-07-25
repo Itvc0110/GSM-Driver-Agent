@@ -212,3 +212,29 @@ environment:
 
 output:
   runs_dir: runs
+
+# --- SIM-3: cầu nối advice → action (UPDATE-046) ---
+# MẶC ĐỊNH TẮT. Bật lên là chuyển từ "World A: tự làm" sang "World B: làm theo chỉ dẫn".
+# SIM-4 sẽ chạy 2 nhánh cùng seed, chỉ khác cờ này (paired-seed / CRN).
+advice:
+  enabled: false
+  # Ai được nhận advice: none | single (theo `single_actor_id`) | share (theo `share`) | all
+  # Cường chốt 2026-07-26: mặc định **1 tài xế** — để SIM-4 đo được ảnh hưởng RIÊNG lên
+  # người đó, không bị nhiễu bởi việc cả thị trường cùng đổi hành vi. Bật `all` sau để
+  # kiểm guardrail (advice có làm xấu queue trạm / served của hệ thống không).
+  coverage: single
+  single_actor_id: null            # null = lấy tài xế P4 (tân binh) đầu tiên; xem runner
+  share: 0.0                       # chỉ dùng khi coverage=share
+  interval_min: 30                 # tài xế không mở app 30 giây/lần
+  bucket_min: 60                   # bucket của shift_dp (khớp derive_shift_plan_input_l1r)
+  # Mức TUÂN THỦ theo archetype — ASSUMPTION có lập luận, CHƯA có số thật:
+  # tân binh nghe nhiều nhất, top/lão làng đã có hệ thống riêng nên nghe ít nhất.
+  # Cần hiệu chỉnh khi có dữ liệu adherence thật (khảo sát tài xế hoặc A/B thật).
+  adherence_by_archetype:
+    P1: 0.55
+    P2: 0.50
+    P3: 0.30
+    P4: 0.75
+    P5: 0.30
+    P6: 0.50
+    P7: 0.50

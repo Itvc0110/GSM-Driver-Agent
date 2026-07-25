@@ -58,7 +58,14 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    14 test, suite **405** xanh, RNG không trôi.
    ⚠️ **F-SIM2-A (D-SIM-02) CHẶN baseline tân binh của SIM-4**: sim cho tài xế mới thưởng **0đ**,
    trái thực tế Cường nêu (*"hồ sơ mới cũng có nhiều thưởng"*).
-3. **SIM-3 Advice→Action:** `AdviceActionBridge` + adherence model.
+3. ✅ **SIM-3 Advice→Action — DONE 2026-07-26 (UPDATE-046).** `src/gsm_sim/advice_bridge.py`
+   (S2 → `IdleAction` + tuân thủ theo archetype, mặc định TẮT). Bug thật **BUG-SIM3-01**:
+   `ONLINE→WAIT` sai ngữ nghĩa (ONLINE = 'cứ làm việc', KHÔNG phải 'đứng im') ⇒ ghi đè cả
+   RELOCATE, đo được d-42 tụt 14→11 cuốc, 214k→155k. Nay ONLINE = không can thiệp.
+   15 test, suite **420**.
+   ⚠️ **F-SIM3-A**: cầu nối mới dùng **1/9 solver** ⇒ Δ(B−A)≈0 (−3.173đ, trong nhiễu).
+   KHÔNG phải advisor vô dụng — kênh tác động còn hẹp. **SIM-4 phải đọc mục này trước khi
+   diễn giải kết quả**, nếu không sẽ kết luận sai là advisor không có giá trị.
 4. **SIM-4 Parallel worlds:** World A (tự làm) vs B (theo chỉ dẫn), CRN paired, baseline tân binh.
    ⚠️ Advisor pipeline **deterministic** (Cường chốt 2026-07-24), không gọi LLM live.
 5. **SIM-5 Metrics + xuất data:** bộ metric chung/per-driver + regen 13 bảng l1r từ sim mới

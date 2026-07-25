@@ -26,6 +26,31 @@ class PolicyBundle:
     bonus_min_completion: float
     version: str
 
+    def to_core_record(self) -> dict:
+        """Bản ghi policy theo khuôn L0 `policy_bundle` để `gsm_core` đọc.
+
+        SIM-3: sim và gsm_core có HAI lớp `PolicyBundle` khác nhau (sim có `day_bonus`,
+        core có `bonus_at`). Solver S2 nằm ở gsm_core nên cần bản core. Hàm này là **nguồn
+        chuyển đổi DUY NHẤT** — `mockgen.adapter_sim` cũng dùng nó, để hai tầng không bao
+        giờ nói hai con số policy khác nhau (đúng bài học coherence của SIM-1).
+
+        Các trường riêng của schema L1R (bundle_id, effective_from, track, service…) do
+        caller bổ sung — ở đây chỉ giữ phần NỘI DUNG policy.
+        """
+        return {
+            "version": self.version,
+            "fare": {"base_vnd": int(self.base_fare_vnd), "base_km": float(self.base_km),
+                     "per_km_vnd": int(self.per_km_vnd)},
+            "driver_share": float(self.driver_share),
+            "points": {"peak": int(self.point_peak), "normal": int(self.point_normal),
+                       "peak_hours": sorted(int(h) for h in self.point_peak_hours),
+                       "window_hours": sorted(int(h) for h in self.point_window_hours)},
+            "day_bonus_tiers": [[int(p), int(v)] for p, v in self.day_bonus_tiers],
+            "thresholds": {"bonus_min_acceptance": float(self.bonus_min_acceptance),
+                           "bonus_min_completion": float(self.bonus_min_completion),
+                           "forced_accept_below": 0.5},
+        }
+
     @classmethod
     def from_config(cls, cfg: Config) -> "PolicyBundle":
         p = cfg.get("policy")
