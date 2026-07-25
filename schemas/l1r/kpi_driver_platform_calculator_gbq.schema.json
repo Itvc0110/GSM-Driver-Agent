@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/driver_hex_tracking",
-  "title": "driver_hex_tracking",
-  "description": "Chuyển động H3 + reposition (UC5). target_hex/reached = reposition mission GSM.",
+  "$id": "https://gsm-driver-agent/schemas/l1r/kpi_driver_platform_calculator_gbq",
+  "title": "kpi_driver_platform_calculator_gbq",
+  "description": "Tính KPI tuần + thưởng (UC3) — NỀN S5 khoán. PII optional (scrub). Số target/threshold có thể ở meta → TBC.",
   "type": "object",
   "properties": {
     "id": {
@@ -11,103 +11,111 @@
     "driver_id": {
       "type": "string"
     },
-    "campaign_id": {
+    "driver_name": {
       "type": [
         "string",
         "null"
       ]
     },
-    "log_id": {
+    "sap_id": {
       "type": [
         "string",
         "null"
       ]
     },
-    "init_hex": {
+    "status": {
       "type": [
         "string",
         "null"
       ]
     },
-    "current_hex": {
+    "week_key": {
       "type": "string"
     },
-    "last_hex": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "target_hex": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "last_seen_at": {
+    "week_start": {
       "type": "string",
-      "description": "ISO-8601 UTC+7"
+      "format": "date"
     },
-    "entered_current_hex_at": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "stay_duration_seconds": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "reached_target": {
-      "type": [
-        "boolean",
-        "null"
-      ]
-    },
-    "reached_target_at": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "hex_history": {
-      "type": [
-        "array",
-        "null"
-      ],
-      "items": {
-        "type": "string"
-      }
-    },
-    "created_at": {
+    "week_end": {
       "type": "string",
-      "description": "ISO-8601 UTC+7"
+      "format": "date"
     },
-    "updated_at": {
+    "kpi_month": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "kpi_year": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "email": {
       "type": [
         "string",
         "null"
       ]
     },
-    "schedule_job_id": {
+    "tel": {
       "type": [
         "string",
         "null"
       ]
     },
-    "datastream_metadata": {
+    "engname": {
       "type": [
-        "object",
+        "string",
         "null"
-      ],
-      "description": "CDC Datastream metadata — không dùng logic"
+      ]
     },
-    "tracking_status": {
-      "type": "string",
-      "enum": [
-        "moving",
-        "idle",
-        "offline"
+    "depot_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "depot_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "vehicle_vin_number": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "vehicle_license_plate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "vehicle_model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "country": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "last_updated_date": {
+      "type": [
+        "string",
+        "null"
       ]
     },
     "source": {
@@ -126,17 +134,22 @@
     }
   },
   "required": [
-    "current_hex",
     "driver_id",
     "id",
-    "last_seen_at",
     "schema_version",
     "source",
-    "stay_duration_seconds",
-    "tracking_status"
+    "week_end",
+    "week_key",
+    "week_start"
   ],
   "additionalProperties": false,
   "x-pii-columns": [
-    "driver_id"
+    "driver_id",
+    "driver_name",
+    "sap_id",
+    "email",
+    "tel",
+    "vehicle_vin_number",
+    "vehicle_license_plate"
   ]
 }

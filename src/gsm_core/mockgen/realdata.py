@@ -139,7 +139,7 @@ def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: fl
         "count_rating_5_star": min(n_5, completed),
         "acceptance_rate": acc_rate, "fulfillment_rate": ful_rate, "cancellation_rate": can_rate})
 
-    out["driver_online_hours"].append({
+    out["driver_online_hours_sap_id"].append({
         "schema_version": "1.0.0", "source": "MOCK", "local_date": d, "schedule_date": d,
         "driver_id": drv, "full_name": f"MOCK Driver {drv}", "sap_profile_id": f"SAP-{drv}",
         "hub_id": "hub-dongda", "depot_id": "depot-01", "phone_number": "+8490MOCK000",
@@ -255,7 +255,7 @@ def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str
                 if seg_hex is not None:
                     dur = int((datetime.fromisoformat(prev_t) - datetime.fromisoformat(seg_start)).total_seconds())
                     reposition = rng.random() < 0.05  # ~5% có target reposition (diversity)
-                    out["driver_hex_tracking"].append({
+                    out["public_driver_hex_tracking"].append({
                         "schema_version": "1.0.0", "source": "MOCK", "id": f"hx-{seed}-{hx}", "driver_id": drv,
                         "campaign_id": "repo-01" if reposition else None, "log_id": None,
                         "init_hex": prev_hex, "current_hex": seg_hex, "last_hex": prev_hex,
@@ -283,7 +283,7 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
         rev = sum(x["total_fee"] for x in rows)
         prof = universe.get(drv, {})
         status = "achieved" if rev >= 2_000_000 else ("at_risk" if len(rows) < 5 else "active")
-        daily["kpi_weekly_calculator"].append({
+        daily["kpi_driver_platform_calculator_gbq"].append({
             "schema_version": "1.0.0", "source": "MOCK", "id": f"kpi-{seed}-{kid}", "driver_id": drv,
             "driver_name": f"MOCK Driver {drv}", "sap_id": f"SAP-{drv}", "status": status,
             "week_key": wk, "week_start": ws, "week_end": we, "kpi_month": _date.fromisoformat(ws).month,
@@ -301,7 +301,7 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
         ("m-week250", "trip_count", "250 chuyến/tuần", 1000000, 250),
     ]
     for mid, mtype, name, reward, target in missions:
-        daily["mission_catalog"].append({
+        daily["public_mission"].append({
             "schema_version": "1.0.0", "source": "MOCK", "id": mid, "created_at": "2026-07-01T00:00:00+07:00",
             "updated_at": None, "deleted_at": None, "created_by": "gsm", "updated_by": None,
             "mission_type": mtype, "parent_id": None, "name": name, "state": "active", "audience": "bike_platform",
@@ -317,8 +317,11 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
     prog = defaultdict(int)
     for (drv, d), n in sorted(trips_by_dd.items()):
         if n >= 20:
-            daily["mission_earn_history"].append({
-                "schema_version": "1.0.0", "source": "MOCK", "id": f"eh-{seed}-{eid}", "mission_id": "m-trip20",
+            daily["public_mission_earn_history"].append({
+                # THỨ TỰ CỘT theo đúng spec GSM (21 cột) — id, audit, rồi nghiệp vụ
+                "schema_version": "1.0.0", "source": "MOCK", "id": f"eh-{seed}-{eid}",
+                "created_at": f"{d}T20:00:00+07:00", "updated_at": f"{d}T20:00:00+07:00",
+                "deleted_at": None, "mission_id": "m-trip20",
                 "order_id": None, "order_status": "completed", "driver_id": drv, "customer_id": None,
                 "service_type": universe.get(drv, {}).get("service_type", "bike"),
                 "order_time": f"{d}T20:00:00+07:00", "complete_time": f"{d}T20:00:00+07:00", "travel_mode": "bike",
@@ -328,7 +331,7 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
             eid += 1
         prog[drv] += n
     for drv, total in sorted(prog.items()):
-        daily["user_mission_progress"].append({
+        daily["public_user_mission_progress"].append({
             "schema_version": "1.0.0", "source": "MOCK", "id": f"ump-{seed}-{pid}", "driver_id": drv,
             "mission_id": "m-week250", "progress_count": min(total, 250), "target_count": 250,
             "progress_value_vnd": 0, "target_value_vnd": 1000000,
@@ -338,10 +341,10 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
         pid += 1
 
     ptypes = ["clawback_khoan", "conduct", "late", "acceptance"]
-    for k in daily["kpi_weekly_calculator"]:
+    for k in daily["kpi_driver_platform_calculator_gbq"]:
         if k["status"] == "at_risk" and rng.random() < 0.5:
             pt = rng.choice(ptypes)
-            daily["driver_penalization"].append({
+            daily["driver_penalization_ATA"].append({
                 "schema_version": "1.0.0", "source": "MOCK", "penalization_id": f"pen-{seed}-{k['id']}",
                 "driver_id": k["driver_id"], "local_date": k["week_end"], "week_key": k["week_key"],
                 "penalty_type": pt, "amount_vnd": rng.choice([40000, 100000, 200000]),
@@ -352,7 +355,7 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
     fid = 0
     for r in daily["driver_statistic_daily"]:
         if rng.random() < 0.01:
-            daily["fraud_flag"].append({
+            daily["public_frauds"].append({
                 "schema_version": "1.0.0", "source": "INFERRED", "fraud_id": f"f-{seed}-{fid}",
                 "driver_id": r["driver_id"], "detected_at": f"{r['local_date']}T18:00:00+07:00",
                 "fraud_type": rng.choice(ftypes), "severity": rng.choice(["low", "medium", "high"]),

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/mission_catalog",
-  "title": "mission_catalog (public_mission)",
+  "$id": "https://gsm-driver-agent/schemas/l1r/public_mission",
+  "title": "public_mission (public_mission)",
   "description": "Catalog mini-task (UC8) — NỀN S6 knapsack. rewards + khung giờ + rule.",
   "type": "object",
   "properties": {

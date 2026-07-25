@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/user_mission_progress",
-  "title": "user_mission_progress",
+  "$id": "https://gsm-driver-agent/schemas/l1r/public_user_mission_progress",
+  "title": "public_user_mission_progress",
   "description": "Tiến độ mission per driver (UC8) — ENGINEER. progress ≤ target.",
   "type": "object",
   "properties": {

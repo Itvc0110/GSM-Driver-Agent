@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/driver_online_hours",
-  "title": "driver_online_hours",
+  "$id": "https://gsm-driver-agent/schemas/l1r/driver_online_hours_sap_id",
+  "title": "driver_online_hours_sap_id",
   "description": "Số giờ online/ngày (UC1). PII (full_name/phone/sap) optional — tool scrub bỏ.",
   "type": "object",
   "properties": {

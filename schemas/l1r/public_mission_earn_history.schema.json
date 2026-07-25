@@ -1,106 +1,78 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/kpi_weekly_calculator",
-  "title": "kpi_weekly_calculator",
-  "description": "Tính KPI tuần + thưởng (UC3) — NỀN S5 khoán. PII optional (scrub). Số target/threshold có thể ở meta → TBC.",
+  "$id": "https://gsm-driver-agent/schemas/l1r/public_mission_earn_history",
+  "title": "public_mission_earn_history",
+  "description": "Lịch sử nhận thưởng mission (UC3/UC8). earn từ mission.rewards. customer_id drop.",
   "type": "object",
   "properties": {
     "id": {
       "type": "string"
     },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-8601 UTC+7"
+    },
+    "updated_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "deleted_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "mission_id": {
+      "type": "string"
+    },
+    "order_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "order_status": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "driver_id": {
       "type": "string"
     },
-    "driver_name": {
+    "customer_id": {
       "type": [
         "string",
         "null"
       ]
     },
-    "sap_id": {
+    "service_type": {
       "type": [
         "string",
         "null"
       ]
     },
-    "status": {
+    "order_time": {
       "type": [
         "string",
         "null"
       ]
     },
-    "week_key": {
-      "type": "string"
-    },
-    "week_start": {
-      "type": "string",
-      "format": "date"
-    },
-    "week_end": {
-      "type": "string",
-      "format": "date"
-    },
-    "kpi_month": {
-      "type": [
-        "integer",
-        "null"
-      ]
-    },
-    "kpi_year": {
-      "type": [
-        "integer",
-        "null"
-      ]
-    },
-    "email": {
+    "complete_time": {
       "type": [
         "string",
         "null"
       ]
     },
-    "tel": {
+    "travel_mode": {
       "type": [
         "string",
         "null"
       ]
     },
-    "engname": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "depot_code": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "depot_name": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "vehicle_vin_number": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "vehicle_license_plate": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "vehicle_model": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "country": {
+    "sap_contract_type": {
       "type": [
         "string",
         "null"
@@ -112,7 +84,33 @@
         "null"
       ]
     },
-    "last_updated_date": {
+    "count_order": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "count_stoppoint": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "earn": {
+      "type": "integer",
+      "description": "VND nguyên (không âm)",
+      "minimum": 0
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "datastream_metadata": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "CDC Datastream metadata — không dùng logic"
+    },
+    "reward_level": {
       "type": [
         "string",
         "null"
@@ -134,22 +132,17 @@
     }
   },
   "required": [
+    "count_order",
     "driver_id",
+    "earn",
     "id",
+    "mission_id",
     "schema_version",
-    "source",
-    "week_end",
-    "week_key",
-    "week_start"
+    "source"
   ],
   "additionalProperties": false,
   "x-pii-columns": [
     "driver_id",
-    "driver_name",
-    "sap_id",
-    "email",
-    "tel",
-    "vehicle_vin_number",
-    "vehicle_license_plate"
+    "customer_id"
   ]
 }

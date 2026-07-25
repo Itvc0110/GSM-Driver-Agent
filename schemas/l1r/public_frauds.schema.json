@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/fraud_flag",
-  "title": "fraud_flag (public_frauds)",
+  "$id": "https://gsm-driver-agent/schemas/l1r/public_frauds",
+  "title": "public_frauds (public_frauds)",
   "description": "Cờ bất thường (UC7) — ENGINEER, nhãn INFERRED, KHÔNG kết tội.",
   "type": "object",
   "properties": {

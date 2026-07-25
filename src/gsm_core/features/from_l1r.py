@@ -44,7 +44,7 @@ def _stat_row(l1r: dict, driver_id: str, d: str) -> dict | None:
 
 
 def _online_row(l1r: dict, driver_id: str, d: str) -> dict | None:
-    for r in _rows(l1r, "driver_online_hours"):
+    for r in _rows(l1r, "driver_online_hours_sap_id"):
         if r["driver_id"] == driver_id and r["local_date"] == d:
             return r
     return None
@@ -183,13 +183,13 @@ def derive_weekly_khoan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy:
                                   hours_per_day: float = 10.0) -> dict:
     """Tiến độ khoán TUẦN (UC3). revenue = Σ `total_fee` (GROSS — quyết định (d)).
 
-    Tuần lấy từ `kpi_weekly_calculator` (đo được) nếu có; else ISO week của t_now.
+    Tuần lấy từ `kpi_driver_platform_calculator_gbq` (đo được) nếu có; else ISO week của t_now.
     quota lấy TỪ POLICY — nếu policy chưa có số thì để `None` (solver KHÔNG bịa).
     """
     today = _date(t_now)
     d0 = _dt_date.fromisoformat(today)
 
-    wk_row = next((r for r in _rows(l1r, "kpi_weekly_calculator")
+    wk_row = next((r for r in _rows(l1r, "kpi_driver_platform_calculator_gbq")
                    if r["driver_id"] == driver_id
                    and r["week_start"] <= today <= r["week_end"]), None)
     if wk_row:
@@ -207,7 +207,7 @@ def derive_weekly_khoan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy:
     days_active = sum(1 for r in in_week if r["total_order"] > 0)
 
     # giờ ĐO ĐƯỢC trong tuần → avg revenue/giờ (null nếu chưa đủ dữ liệu)
-    onl_week = [r for r in _rows(l1r, "driver_online_hours")
+    onl_week = [r for r in _rows(l1r, "driver_online_hours_sap_id")
                 if r["driver_id"] == driver_id and week_start <= r["local_date"] <= week_end]
     online_h = sum(float(r["online_time"]) for r in onl_week)
     avg_rev_per_hour = round(revenue / online_h, 2) if online_h > 0 else None
@@ -235,22 +235,22 @@ def derive_weekly_khoan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy:
 def derive_mission_select_input_l1r(driver_id: str, t_now: str, l1r: dict,
                                     hours_budget_remaining: float,
                                     trips_per_hour: float | None = None) -> dict:
-    """Mission còn hiệu lực + tiến độ (UC8). reward CHỈ từ `mission_catalog.rewards`."""
-    progress = {r["mission_id"]: r for r in _rows(l1r, "user_mission_progress")
+    """Mission còn hiệu lực + tiến độ (UC8). reward CHỈ từ `public_mission.rewards`."""
+    progress = {r["mission_id"]: r for r in _rows(l1r, "public_user_mission_progress")
                 if r["driver_id"] == driver_id}
 
     # trips/hour ĐO ĐƯỢC từ lịch sử driver (fallback 2.0 — ASSUMPTION có nhãn)
     if trips_per_hour is None:
         inc = [r for r in _rows(l1r, "driver_income_daily") if r["driver_id"] == driver_id]
         onl = {r["local_date"]: float(r["online_time"])
-               for r in _rows(l1r, "driver_online_hours") if r["driver_id"] == driver_id}
+               for r in _rows(l1r, "driver_online_hours_sap_id") if r["driver_id"] == driver_id}
         tot_o = sum(r["total_order"] for r in inc)
         tot_h = sum(onl.get(r["order_date"], 0.0) for r in inc)
         trips_per_hour = round(tot_o / tot_h, 3) if tot_h > 0 else 2.0
     trips_per_hour = max(0.1, float(trips_per_hour))
 
     missions = []
-    for m in _rows(l1r, "mission_catalog"):
+    for m in _rows(l1r, "public_mission"):
         p = progress.get(m["id"])
         state = (p or {}).get("state")
         if state in ("completed", "claimed", "expired"):
@@ -274,7 +274,7 @@ def derive_mission_select_input_l1r(driver_id: str, t_now: str, l1r: dict,
         "trips_per_hour": trips_per_hour,
         "missions": sorted(missions, key=lambda x: x["mission_id"]),
         "view_version": VIEW_VERSION,
-        "source": _provenance(*(_rows(l1r, "mission_catalog")[:1] or [None])),
+        "source": _provenance(*(_rows(l1r, "public_mission")[:1] or [None])),
     }
 
 

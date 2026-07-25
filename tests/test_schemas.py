@@ -38,10 +38,10 @@ EXPECTED = {
 
 # L1-real (re-ground về bảng thật gsm-data-prod — UPDATE-033/034, PI-1)
 EXPECTED_L1R = {
-    "driver_statistic_daily", "driver_online_hours", "driver_orders_rush_hours",
-    "driver_bike_stoppoints", "kpi_weekly_calculator", "driver_income_daily",
-    "trips", "driver_hex_tracking", "mission_catalog", "mission_earn_history",
-    "user_mission_progress", "driver_penalization", "fraud_flag",
+    "driver_statistic_daily", "driver_online_hours_sap_id", "driver_orders_rush_hours",
+    "driver_bike_stoppoints", "kpi_driver_platform_calculator_gbq", "driver_income_daily",
+    "trips", "public_driver_hex_tracking", "public_mission", "public_mission_earn_history",
+    "public_user_mission_progress", "driver_penalization_ATA", "public_frauds",
 }
 
 

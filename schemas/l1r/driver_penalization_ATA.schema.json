@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l1r/driver_penalization",
-  "title": "driver_penalization (penalization_ATA)",
+  "$id": "https://gsm-driver-agent/schemas/l1r/driver_penalization_ATA",
+  "title": "driver_penalization_ATA (penalization_ATA)",
   "description": "Sự kiện phạt/trừ tiền (UC6) — ENGINEER. amount có source policy.",
   "type": "object",
   "properties": {

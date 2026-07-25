@@ -61,7 +61,7 @@ def main() -> None:
             t, uni = res["tables"], res["universe"]
         stat = {r["driver_id"]: r for r in t["driver_statistic_daily"]}
         inc = {r["driver_id"]: r for r in t["driver_income_daily"]}
-        onl = {r["driver_id"]: r for r in t["driver_online_hours"]}
+        onl = {r["driver_id"]: r for r in t["driver_online_hours_sap_id"]}
         rush = {r["driver_id"]: r for r in t["driver_orders_rush_hours"]}
         for drv, s in stat.items():
             if s["completed_count"] <= 0:

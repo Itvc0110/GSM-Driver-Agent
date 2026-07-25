@@ -97,10 +97,10 @@ def test_skips_completed_and_too_expensive():
 
 
 def test_reward_only_from_catalog():
-    """Mọi số VND phải trace về mission_catalog (không bịa)."""
+    """Mọi số VND phải trace về public_mission (không bịa)."""
     r = solve(_view([_m("m1", 30000, 4), _m("m2", 20000, 4)]))
     for n in r["numbers"]:
-        assert n["source"].startswith("mission_catalog") or n["source"].startswith("historical:")
+        assert n["source"].startswith("public_mission") or n["source"].startswith("historical:")
     total = r["solution"]["expected_reward_vnd"]
     assert total == sum(c["reward_vnd"] for c in r["solution"]["chosen_missions"])
 
@@ -129,7 +129,7 @@ def test_derivation_filters_and_chains(reg):
     assert reg.validate("mission_select_input", v) == [], v
     assert v["trips_per_hour"] > 0
     # mission đã claim/completed không được đề xuất
-    prog = {p["mission_id"]: p["state"] for p in tables["user_mission_progress"]
+    prog = {p["mission_id"]: p["state"] for p in tables["public_user_mission_progress"]
             if p["driver_id"] == drv}
     for m in v["missions"]:
         assert prog.get(m["mission_id"]) not in ("completed", "claimed", "expired")
@@ -138,14 +138,14 @@ def test_derivation_filters_and_chains(reg):
 
 
 def test_mock_missions_are_actionable(reg):
-    """Regression: `mission_catalog.rewards` PHẢI có `target_count`.
+    """Regression: `public_mission.rewards` PHẢI có `target_count`.
 
     Thiếu → remaining=0 → S6 loại hết ("đã đủ tiến độ") → solver vô nghĩa dù chạy xanh.
     """
     import tempfile
     with tempfile.TemporaryDirectory() as td:
         tables = generate_realdata(days=8, seed_base=501, out_dir=Path(td))["tables"]
-    for m in tables["mission_catalog"]:
+    for m in tables["public_mission"]:
         assert (m["rewards"] or {}).get("target_count", 0) > 0, f"{m['id']} thiếu target_count"
     # driver mới (không có progress row) phải thấy mission còn việc để làm
     v = derive_mission_select_input_l1r("d-CHUA-CO", "2026-07-02T14:00:00+07:00", tables,
@@ -157,7 +157,7 @@ def test_mock_missions_are_actionable(reg):
 
 def test_window_filter_excludes_expired():
     """Mission ngoài khung giờ hiệu lực bị loại ở derivation (không vào view)."""
-    tables = {"mission_catalog": [
+    tables = {"public_mission": [
         {"id": "m-old", "name": "cũ", "mission_type": "trip_count",
          "rewards": {"vnd": 30000, "target_count": 10},
          "start_time": "2026-06-01T00:00:00+07:00", "end_time": "2026-06-30T23:59:00+07:00",
@@ -166,6 +166,6 @@ def test_window_filter_excludes_expired():
          "rewards": {"vnd": 30000, "target_count": 10},
          "start_time": "2026-07-01T00:00:00+07:00", "end_time": "2026-07-31T23:59:00+07:00",
          "source": "MOCK"}],
-        "user_mission_progress": [], "driver_income_daily": [], "driver_online_hours": []}
+        "public_user_mission_progress": [], "driver_income_daily": [], "driver_online_hours_sap_id": []}
     v = derive_mission_select_input_l1r("d-1", "2026-07-15T10:00:00+07:00", tables, 5.0)
     assert [m["mission_id"] for m in v["missions"]] == ["m-now"]

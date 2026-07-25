@@ -28,7 +28,7 @@ EXAMPLES = {
         "total_rating": 84.6, "total_order_rating": 18, "count_rating_5_star": 15,
         "count_cancel_not_relate_driver": 1,
         "total_request_calculate_complete": 20, "total_request_calculate_cancel": 2},
-    "driver_online_hours": {
+    "driver_online_hours_sap_id": {
         "schema_version": "1.0.0", "source": "MOCK", "local_date": "2026-07-01",
         "driver_id": "d-7", "online_time": 8.5, "driver_type": "bike",
         "full_name": "MOCK Driver 0007", "phone_number": "+8490MOCK007"},
@@ -43,7 +43,7 @@ EXAMPLES = {
     "driver_bike_stoppoints": {
         "schema_version": "1.0.0", "source": "MOCK", "driver_id": "d-7",
         "local_date": "2026-07-01", "total_stoppoints": 22, "total_stoppoints_rush_hour": 9},
-    "kpi_weekly_calculator": {
+    "kpi_driver_platform_calculator_gbq": {
         "schema_version": "1.0.0", "source": "MOCK", "id": "kpi-1", "driver_id": "d-7",
         "week_key": "2026-W27", "week_start": "2026-06-29", "week_end": "2026-07-05",
         "status": "active", "type": "platform"},
@@ -57,26 +57,26 @@ EXAMPLES = {
         "service_type": "bike", "status": "completed", "request_time": "2026-07-01T17:00:00+07:00",
         "pickup_h3": "8abc", "drop_h3": "8def", "gross_vnd": 20000, "commission_vnd": 15000,
         "rush_hour": True, "distance_km": 3.2},
-    "driver_hex_tracking": {
+    "public_driver_hex_tracking": {
         "schema_version": "1.0.0", "source": "MOCK", "id": "hx-1", "driver_id": "d-7",
         "current_hex": "8abc", "last_seen_at": "2026-07-01T17:05:00+07:00",
         "stay_duration_seconds": 320, "tracking_status": "idle"},
-    "mission_catalog": {
+    "public_mission": {
         "schema_version": "1.0.0", "source": "MOCK", "id": "m-1", "mission_type": "trip_count",
         "name": "20 chuyến khung vàng", "start_time": "2026-07-01T16:00:00+07:00",
         "end_time": "2026-07-01T19:59:00+07:00", "rewards": {"vnd": 30000}},
-    "mission_earn_history": {
+    "public_mission_earn_history": {
         "schema_version": "1.0.0", "source": "MOCK", "id": "eh-1", "mission_id": "m-1",
         "driver_id": "d-7", "earn": 30000, "count_order": 20, "count_stoppoint": 5},
-    "user_mission_progress": {
+    "public_user_mission_progress": {
         "schema_version": "1.0.0", "source": "MOCK", "id": "ump-1", "driver_id": "d-7",
         "mission_id": "m-1", "progress_count": 12, "target_count": 20, "state": "in_progress",
         "started_at": "2026-07-01T16:00:00+07:00", "progress_value_vnd": 0, "target_value_vnd": 30000},
-    "driver_penalization": {
+    "driver_penalization_ATA": {
         "schema_version": "1.0.0", "source": "MOCK", "penalization_id": "pen-1", "driver_id": "d-7",
         "local_date": "2026-07-05", "penalty_type": "clawback_khoan", "amount_vnd": 40000,
         "status": "applied", "created_at": "2026-07-05T23:00:00+07:00"},
-    "fraud_flag": {
+    "public_frauds": {
         "schema_version": "1.0.0", "source": "INFERRED", "fraud_id": "f-1", "driver_id": "d-7",
         "detected_at": "2026-07-01T18:00:00+07:00", "fraud_type": "route_deviation",
         "severity": "low", "confidence": 0.4, "status": "open",
@@ -103,20 +103,20 @@ def test_additional_props_rejected(reg, entity):
 
 def test_pii_scrubbed_record_still_valid(reg):
     """Record sau khi tool P4 DROP PII (bỏ full_name/phone) vẫn validate (PII optional)."""
-    rec = dict(EXAMPLES["driver_online_hours"])
+    rec = dict(EXAMPLES["driver_online_hours_sap_id"])
     rec.pop("full_name"); rec.pop("phone_number")
-    assert reg.validate("driver_online_hours", rec) == []
+    assert reg.validate("driver_online_hours_sap_id", rec) == []
 
 
 def test_engineered_tables_flagged_tbc():
     """4 bảng ENGINEER (thiếu cột thật) phải có nhãn x-availability TBC."""
-    for entity in ("trips", "user_mission_progress", "driver_penalization", "fraud_flag"):
+    for entity in ("trips", "public_user_mission_progress", "driver_penalization_ATA", "public_frauds"):
         s = json.loads((ROOT / "schemas" / "l1r" / f"{entity}.schema.json").read_text(encoding="utf-8"))
         assert "TBC" in s.get("x-availability", ""), f"{entity} thiếu nhãn TBC"
 
 
 def test_pii_columns_annotated():
     """Bảng có driver_id phải khai x-pii-columns (cho tool scrub)."""
-    for entity in ("driver_statistic_daily", "kpi_weekly_calculator", "trips"):
+    for entity in ("driver_statistic_daily", "kpi_driver_platform_calculator_gbq", "trips"):
         s = json.loads((ROOT / "schemas" / "l1r" / f"{entity}.schema.json").read_text(encoding="utf-8"))
         assert "driver_id" in s.get("x-pii-columns", [])

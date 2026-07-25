@@ -2,7 +2,7 @@
 
 Bài toán (UC8 mini-task): chọn tập nhiệm vụ để **tối đa tổng thưởng** trong quỹ giờ
 còn lại. Chi phí mỗi mission = `remaining_count / trips_per_hour` (ASSUMPTION: effort
-tuyến tính theo số cuốc). Giá trị = `reward_vnd` LẤY TỪ `mission_catalog` (không bịa).
+tuyến tính theo số cuốc). Giá trị = `reward_vnd` LẤY TỪ `public_mission` (không bịa).
 
 DP trên quỹ giờ RỜI RẠC (slot 15 phút) → tối ưu chính xác trong lưới đó (test đối
 chiếu brute-force). Tie-break theo `mission_id` → deterministic.
@@ -31,7 +31,7 @@ def solve(mi: dict) -> dict:
     tph = float(mi["trips_per_hour"])
     budget_h = float(mi["hours_budget_remaining"])
     cap = _slots(budget_h)
-    src = "mission_catalog"
+    src = "public_mission"
 
     inputs_used = [{"view_id": f"mission_select_input:{drv}",
                     "version": mi["view_version"], "freshness": mi["t_now"]}]

@@ -68,8 +68,8 @@ SCHEMAS["driver_statistic_daily"] = schema(
      "acceptance_rate", "fulfillment_rate", "cancellation_rate"],
     pii=["driver_id"])
 
-SCHEMAS["driver_online_hours"] = schema(
-    "driver_online_hours", "driver_online_hours",
+SCHEMAS["driver_online_hours_sap_id"] = schema(
+    "driver_online_hours_sap_id", "driver_online_hours_sap_id",
     "Số giờ online/ngày (UC1). PII (full_name/phone/sap) optional — tool scrub bỏ.",
     {
         "local_date": {"type": "string", "format": "date"},
@@ -106,8 +106,8 @@ SCHEMAS["driver_bike_stoppoints"] = schema(
     ["driver_id", "local_date", "total_stoppoints", "total_stoppoints_rush_hour"],
     pii=["driver_id"])
 
-SCHEMAS["kpi_weekly_calculator"] = schema(
-    "kpi_weekly_calculator", "kpi_weekly_calculator",
+SCHEMAS["kpi_driver_platform_calculator_gbq"] = schema(
+    "kpi_driver_platform_calculator_gbq", "kpi_driver_platform_calculator_gbq",
     "Tính KPI tuần + thưởng (UC3) — NỀN S5 khoán. PII optional (scrub). "
     "Số target/threshold có thể ở meta → TBC.",
     {
@@ -158,8 +158,8 @@ SCHEMAS["trips"] = schema(
      "pickup_h3", "drop_h3", "gross_vnd"],
     pii=["driver_id", "customer_id"], tbc=True)
 
-SCHEMAS["driver_hex_tracking"] = schema(
-    "driver_hex_tracking", "driver_hex_tracking",
+SCHEMAS["public_driver_hex_tracking"] = schema(
+    "public_driver_hex_tracking", "public_driver_hex_tracking",
     "Chuyển động H3 + reposition (UC5). target_hex/reached = reposition mission GSM.",
     {
         "id": _STR, "driver_id": _STR, "campaign_id": _STR_N, "log_id": _STR_N,
@@ -175,8 +175,8 @@ SCHEMAS["driver_hex_tracking"] = schema(
     ["id", "driver_id", "current_hex", "last_seen_at", "stay_duration_seconds", "tracking_status"],
     pii=["driver_id"])
 
-SCHEMAS["mission_catalog"] = schema(
-    "mission_catalog", "mission_catalog (public_mission)",
+SCHEMAS["public_mission"] = schema(
+    "public_mission", "public_mission (public_mission)",
     "Catalog mini-task (UC8) — NỀN S6 knapsack. rewards + khung giờ + rule.",
     {
         "id": _STR, "created_at": _TS, "updated_at": _TS_N, "deleted_at": _TS_N,
@@ -195,8 +195,8 @@ SCHEMAS["mission_catalog"] = schema(
     },
     ["id", "mission_type", "name", "start_time", "end_time", "rewards"])
 
-SCHEMAS["mission_earn_history"] = schema(
-    "mission_earn_history", "mission_earn_history",
+SCHEMAS["public_mission_earn_history"] = schema(
+    "public_mission_earn_history", "public_mission_earn_history",
     "Lịch sử nhận thưởng mission (UC3/UC8). earn từ mission.rewards. customer_id drop.",
     {
         "id": _STR, "created_at": _TS, "updated_at": _TS_N, "deleted_at": _TS_N,
@@ -212,8 +212,8 @@ SCHEMAS["mission_earn_history"] = schema(
 
 # ---------- ENGINEER (thiếu cột) ----------
 
-SCHEMAS["user_mission_progress"] = schema(
-    "user_mission_progress", "user_mission_progress",
+SCHEMAS["public_user_mission_progress"] = schema(
+    "public_user_mission_progress", "public_user_mission_progress",
     "Tiến độ mission per driver (UC8) — ENGINEER. progress ≤ target.",
     {
         "id": _STR, "driver_id": _STR, "mission_id": _STR,
@@ -226,8 +226,8 @@ SCHEMAS["user_mission_progress"] = schema(
     ["id", "driver_id", "mission_id", "progress_count", "target_count", "state"],
     pii=["driver_id"], tbc=True)
 
-SCHEMAS["driver_penalization"] = schema(
-    "driver_penalization", "driver_penalization (penalization_ATA)",
+SCHEMAS["driver_penalization_ATA"] = schema(
+    "driver_penalization_ATA", "driver_penalization_ATA (penalization_ATA)",
     "Sự kiện phạt/trừ tiền (UC6) — ENGINEER. amount có source policy.",
     {
         "penalization_id": _STR, "driver_id": _STR,
@@ -242,8 +242,8 @@ SCHEMAS["driver_penalization"] = schema(
     ["penalization_id", "driver_id", "local_date", "penalty_type", "amount_vnd", "status"],
     pii=["driver_id"], tbc=True)
 
-SCHEMAS["fraud_flag"] = schema(
-    "fraud_flag", "fraud_flag (public_frauds)",
+SCHEMAS["public_frauds"] = schema(
+    "public_frauds", "public_frauds (public_frauds)",
     "Cờ bất thường (UC7) — ENGINEER, nhãn INFERRED, KHÔNG kết tội.",
     {
         "fraud_id": _STR, "driver_id": _STR, "detected_at": _TS,

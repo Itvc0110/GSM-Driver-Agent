@@ -47,8 +47,8 @@ def test_r1_fk_no_orphan(gen):
     drivers = {r["driver_id"] for r in gen["driver_income_daily"]}
     for e in gen["trips"]:
         assert e["driver_id"] in drivers
-    missions = {m["id"] for m in gen["mission_catalog"]}
-    for eh in gen["mission_earn_history"]:
+    missions = {m["id"] for m in gen["public_mission"]}
+    for eh in gen["public_mission_earn_history"]:
         assert eh["mission_id"] in missions
 
 
@@ -90,13 +90,13 @@ def test_r4_rates_bounded(gen):
 
 
 def test_r4_progress_le_target(gen):
-    for p in gen["user_mission_progress"]:
+    for p in gen["public_user_mission_progress"]:
         assert p["progress_count"] <= p["target_count"]
 
 
 def test_weekly_rollup_covers_drivers(gen):
     daily_drivers = {r["driver_id"] for r in gen["driver_income_daily"]}
-    weekly_drivers = {r["driver_id"] for r in gen["kpi_weekly_calculator"]}
+    weekly_drivers = {r["driver_id"] for r in gen["kpi_driver_platform_calculator_gbq"]}
     assert weekly_drivers == daily_drivers
 
 
@@ -121,7 +121,7 @@ def test_profile_universe_diverse(res):
 
 def test_bug02_no_trips_while_offline(gen):
     """BUG-PI2b-02: KHÔNG được có cuốc khi online_time=0 (impossible state / conservation)."""
-    onl = {(r["driver_id"], r["local_date"]): r["online_time"] for r in gen["driver_online_hours"]}
+    onl = {(r["driver_id"], r["local_date"]): r["online_time"] for r in gen["driver_online_hours_sap_id"]}
     for r in gen["driver_income_daily"]:
         if r["total_order"] > 0:
             h = onl.get((r["driver_id"], r["order_date"]), 0.0)
@@ -130,7 +130,7 @@ def test_bug02_no_trips_while_offline(gen):
 
 def test_bug02_trips_per_hour_plausible(gen):
     """Hệ quả BUG-02: cuốc/giờ phải hợp lý (≤6/h) — sàn online = trip_hours/0.55."""
-    onl = {(r["driver_id"], r["local_date"]): r["online_time"] for r in gen["driver_online_hours"]}
+    onl = {(r["driver_id"], r["local_date"]): r["online_time"] for r in gen["driver_online_hours_sap_id"]}
     for r in gen["driver_income_daily"]:
         h = onl.get((r["driver_id"], r["order_date"]), 0.0)
         if h > 0.5 and r["total_order"] > 0:
