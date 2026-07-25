@@ -293,18 +293,21 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
             "country": "VN", "type": prof.get("track", "platform"), "last_updated_date": f"{we}T23:59:00+07:00"})
         kid += 1
 
+    # (id, type, tên, thưởng VND, SỐ CUỐC CẦN) — target_count BẮT BUỘC: thiếu thì
+    # mission vô nghĩa (remaining=0 → S6 coi như đã xong). Grounded mini-task thật.
     missions = [
-        ("m-trip20", "trip_count", "20 chuyến/ngày", 30000),
-        ("m-rush", "rush_hour", "2 chuyến khung vàng", 30000),
-        ("m-week250", "trip_count", "250 chuyến/tuần", 1000000),
+        ("m-trip20", "trip_count", "20 chuyến/ngày", 30000, 20),
+        ("m-rush", "rush_hour", "2 chuyến khung vàng", 30000, 2),
+        ("m-week250", "trip_count", "250 chuyến/tuần", 1000000, 250),
     ]
-    for mid, mtype, name, reward in missions:
+    for mid, mtype, name, reward, target in missions:
         daily["mission_catalog"].append({
             "schema_version": "1.0.0", "source": "MOCK", "id": mid, "created_at": "2026-07-01T00:00:00+07:00",
             "updated_at": None, "deleted_at": None, "created_by": "gsm", "updated_by": None,
             "mission_type": mtype, "parent_id": None, "name": name, "state": "active", "audience": "bike_platform",
             "description": name, "start_time": "2026-07-01T00:00:00+07:00", "end_time": "2026-12-31T23:59:00+07:00",
-            "point_id": None, "rewards": {"vnd": reward}, "mission_claim": None, "mission_code": mid,
+            "point_id": None, "rewards": {"vnd": reward, "target_count": target},
+            "mission_claim": None, "mission_code": mid,
             "time_claim_reward": None, "rule_code": None, "meta_data": None, "contract_type": None,
             "qualify_execute_code": None, "status": "active", "datastream_metadata": None,
             "business_code": None, "show_only": False, "is_ddi_mission": False})

@@ -16,6 +16,7 @@ thiếu station/battery capacity.
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date as _dt_date, timedelta
 
 from gsm_core.policy import PolicyBundle
 from gsm_core.features._common import date as _date, hour as _hour, min_of_day
@@ -172,6 +173,108 @@ def derive_session_summary_input_l1r(driver_id: str, session_date: str, l1r: dic
             "estimated_net_vnd": None, "net_definition_version": None},
         "day_state_end": day_state,
         "view_version": VIEW_VERSION, "source": _provenance(inc, stat),
+    }
+
+
+# ---------- S5: weekly_khoan_input ----------
+
+def derive_weekly_khoan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: PolicyBundle,
+                                  money_basis: str = "gross",
+                                  hours_per_day: float = 10.0) -> dict:
+    """Tiến độ khoán TUẦN (UC3). revenue = Σ `total_fee` (GROSS — quyết định (d)).
+
+    Tuần lấy từ `kpi_weekly_calculator` (đo được) nếu có; else ISO week của t_now.
+    quota lấy TỪ POLICY — nếu policy chưa có số thì để `None` (solver KHÔNG bịa).
+    """
+    today = _date(t_now)
+    d0 = _dt_date.fromisoformat(today)
+
+    wk_row = next((r for r in _rows(l1r, "kpi_weekly_calculator")
+                   if r["driver_id"] == driver_id
+                   and r["week_start"] <= today <= r["week_end"]), None)
+    if wk_row:
+        week_key, week_start, week_end = wk_row["week_key"], wk_row["week_start"], wk_row["week_end"]
+    else:
+        monday = d0 - timedelta(days=d0.weekday())
+        iso = d0.isocalendar()
+        week_key = f"{iso.year}-W{iso.week:02d}"
+        week_start, week_end = monday.isoformat(), (monday + timedelta(days=6)).isoformat()
+
+    field = "total_fee" if money_basis == "gross" else "commission"
+    in_week = [r for r in _rows(l1r, "driver_income_daily")
+               if r["driver_id"] == driver_id and week_start <= r["order_date"] <= week_end]
+    revenue = sum(int(r[field]) for r in in_week)
+    days_active = sum(1 for r in in_week if r["total_order"] > 0)
+
+    # giờ ĐO ĐƯỢC trong tuần → avg revenue/giờ (null nếu chưa đủ dữ liệu)
+    onl_week = [r for r in _rows(l1r, "driver_online_hours")
+                if r["driver_id"] == driver_id and week_start <= r["local_date"] <= week_end]
+    online_h = sum(float(r["online_time"]) for r in onl_week)
+    avg_rev_per_hour = round(revenue / online_h, 2) if online_h > 0 else None
+
+    days_remaining = max(0, (_dt_date.fromisoformat(week_end) - d0).days)
+    hours_today_left = max(0.0, (24 * 60 - min_of_day(t_now)) / 60.0)
+    hours_budget = round(min(hours_today_left, hours_per_day) + days_remaining * hours_per_day, 2)
+
+    q = policy.weekly_quota if policy.has_weekly_quota() else None
+    return {
+        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now,
+        "week_key": week_key, "week_start": week_start, "week_end": week_end,
+        "revenue_so_far_vnd": int(revenue), "days_active": days_active,
+        "days_remaining": days_remaining, "hours_budget_remaining": hours_budget,
+        "avg_revenue_per_hour": avg_rev_per_hour,
+        "quota": dict(q) if q else None,
+        "money_basis": money_basis,
+        "policy_bundle_version": policy.version, "view_version": VIEW_VERSION,
+        "source": _provenance(wk_row, in_week[0] if in_week else None),
+    }
+
+
+# ---------- S6: mission_select_input ----------
+
+def derive_mission_select_input_l1r(driver_id: str, t_now: str, l1r: dict,
+                                    hours_budget_remaining: float,
+                                    trips_per_hour: float | None = None) -> dict:
+    """Mission còn hiệu lực + tiến độ (UC8). reward CHỈ từ `mission_catalog.rewards`."""
+    progress = {r["mission_id"]: r for r in _rows(l1r, "user_mission_progress")
+                if r["driver_id"] == driver_id}
+
+    # trips/hour ĐO ĐƯỢC từ lịch sử driver (fallback 2.0 — ASSUMPTION có nhãn)
+    if trips_per_hour is None:
+        inc = [r for r in _rows(l1r, "driver_income_daily") if r["driver_id"] == driver_id]
+        onl = {r["local_date"]: float(r["online_time"])
+               for r in _rows(l1r, "driver_online_hours") if r["driver_id"] == driver_id}
+        tot_o = sum(r["total_order"] for r in inc)
+        tot_h = sum(onl.get(r["order_date"], 0.0) for r in inc)
+        trips_per_hour = round(tot_o / tot_h, 3) if tot_h > 0 else 2.0
+    trips_per_hour = max(0.1, float(trips_per_hour))
+
+    missions = []
+    for m in _rows(l1r, "mission_catalog"):
+        p = progress.get(m["id"])
+        state = (p or {}).get("state")
+        if state in ("completed", "claimed", "expired"):
+            continue  # đã xong → không đề xuất nữa
+        ws, we = m.get("start_time"), m.get("end_time")
+        if ws and we and not (ws <= t_now <= we):
+            continue  # ngoài khung giờ hiệu lực
+        rewards = m.get("rewards") or {}
+        reward = int(rewards.get("vnd", 0))
+        target = int((p or {}).get("target_count") or rewards.get("target_count") or 0)
+        done = int((p or {}).get("progress_count") or 0)
+        remaining = max(0, target - done)
+        missions.append({
+            "mission_id": m["id"], "name": m.get("name"), "mission_type": m.get("mission_type"),
+            "reward_vnd": reward, "remaining_count": remaining,
+            "window_start": ws, "window_end": we, "state": state})
+
+    return {
+        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now,
+        "hours_budget_remaining": round(float(hours_budget_remaining), 3),
+        "trips_per_hour": trips_per_hour,
+        "missions": sorted(missions, key=lambda x: x["mission_id"]),
+        "view_version": VIEW_VERSION,
+        "source": _provenance(*(_rows(l1r, "mission_catalog")[:1] or [None])),
     }
 
 
