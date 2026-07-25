@@ -39,6 +39,18 @@ ARCHETYPES: dict[str, Archetype] = {
     "P3": Archetype("P3", 0.10, 0.98, 12 * 60, (11 * 60, 12 * 60), (9 * 60, 10 * 60), 13, "mixed"),
     "P4": Archetype("P4", 0.60, 0.80, 8 * 60, (8 * 60, 9 * 60), (6 * 60, 8 * 60), 11, "swap"),
     "P5": Archetype("P5", 0.15, 0.97, 9 * 60, (8 * 60, 9 * 60), (15 * 60, 17 * 60), 18, "mixed"),
+    # --- SIM-1: 2 archetype PHỦ KHUNG TRỐNG (chứng minh bằng đo: 05-06h có 0 tài xế,
+    # 21-23h chỉ 8-10 tài xế trong khi cầu 168 đơn) ---
+    # P6 "ca sáng sớm": bắt đầu 5:00-6:30 để phủ khung vàng sáng 6-8h (10 điểm/cuốc,
+    #    research bonus-programs). Kinh nghiệm khá → accept cao.
+    #    Khung bắt đầu 4:40-5:50 (KHÔNG phải 5:00-6:30): với 5:00-6:30 thì lúc 05h mới có
+    #    ~1-2 tài xế online ⇒ gate `test_no_dead_hour` đo được 49% đơn hết hạn lúc 05h.
+    #    Blog official nói ca đêm phủ "4h-6h" ⇒ bắt đầu trước 5h là CÓ CĂN CỨ, không phải
+    #    vặn số. Sau khi sửa: 05h còn ~30%.
+    "P6": Archetype("P6", 0.25, 0.93, 7 * 60, (7 * 60, 9 * 60), (4 * 60 + 40, 5 * 60 + 50), 11, "swap"),
+    # P7 "ca tối-đêm": 15-16h → 23-24h. Căn cứ: blog official "kinh nghiệm chạy ca đêm"
+    #    (khung 22h-2h & 4h-6h; sân bay/bến xe/phố đi bộ/bệnh viện 24h).
+    "P7": Archetype("P7", 0.20, 0.94, 9 * 60, (8 * 60, 9 * 60), (15 * 60, 16 * 60), 18, "swap"),
 }
 
 

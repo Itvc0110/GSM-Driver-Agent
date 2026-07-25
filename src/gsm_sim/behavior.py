@@ -33,15 +33,38 @@ def _logistic(x: float) -> float:
     return 1.0 / (1.0 + math.exp(-x))
 
 
+# SIM-1: trọng số kinh tế trong quyết định nhận đơn. Nhỏ (<1) để `accept_base` của
+# archetype giữ vai trò chính — thực tế tài xế từ chối vì xa/mệt/cuối ca, không thuần
+# theo tiền từng cuốc. ASSUMPTION, hiệu chỉnh bằng gate test ≥30 seed.
+ECON_WEIGHT = 0.7
+
+
 def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng,
                  cost_per_km_vnd: float = 3000.0, logit_center_vnd: float = 6000.0,
                  logit_scale_vnd: float = 8000.0) -> bool:
     """Quyết định nhận đơn. forced=True (auto-accept) → luôn nhận.
-    Tham số logit từ config (math-audit A5)."""
+
+    SIM-1 HIỆU CHỈNH LẠI (khuyết tật đã chứng minh bằng số):
+      Mô hình cũ `x = (net − center)/scale + logit(accept_base)` có số hạng kinh tế ÁP ĐẢO:
+      cuốc thường (gross 20k, pickup 1km → net 17k) cho (17000−6000)/8000 = **+1.375**,
+      khiến P4 (accept_base 0.80) thực tế nhận **94%** và P3 (0.98) nhận 99.5% →
+      **archetype gần như vô nghĩa**, accept tổng 96.3% (thực tế 0.74–0.97).
+
+      Mô hình mới: **`accept_base` LÀ mức nhận trung bình của archetype**; kinh tế chỉ
+      **điều biến quanh** nó. `x = logit(accept_base) + w · z`, với
+      `z = (net − center)/scale` **kẹp trong [−2, 2]** và `w = econ_weight` nhỏ (mặc định
+      0.7). Khi net ≈ center → nhận đúng `accept_base`; cuốc quá xa/rẻ (z âm) mới giảm.
+
+      `logit_center_vnd` giờ mang nghĩa **net TRUNG VỊ của thị trường** (không phải mốc
+      "hoà vốn"), nên cần đặt theo phân phối cuốc thật trong config.
+    """
     if forced:
         return True
     net = gross_vnd - pickup_dist_km * cost_per_km_vnd
-    x = (net - logit_center_vnd) / logit_scale_vnd + math.log(actor.accept_base / (1 - actor.accept_base))
+    z = (net - logit_center_vnd) / max(1e-6, logit_scale_vnd)
+    z = max(-2.0, min(2.0, z))                      # kẹp: kinh tế KHÔNG được áp đảo
+    base = min(0.999, max(0.001, actor.accept_base))
+    x = math.log(base / (1 - base)) + ECON_WEIGHT * z
     return rng.random() < _logistic(x)
 
 

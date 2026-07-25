@@ -42,6 +42,23 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 9. **C7**: EXP-001..005 trên instrumentation C6 (episode store đã bandit-ready). **Gated:** eval set F0 phải phản ánh policy hiện hành (post-refresh) + data thật (post PI-2) → chạy sau khi nền policy+data ổn.
 7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
 
+**Track A — SIM OVERHAUL (ưu tiên cao nhất, Cường 2026-07-24; spec `specs/simulation/00-sim-overhaul-master.md`):**
+
+1. ✅ **SIM-1 Realism gate — DONE 2026-07-25 (UPDATE-044).** Sửa 3 khuyết tật tại GỐC:
+   served **61.9% → 82.3%** (phủ ca P6 sáng sớm/P7 tối-đêm, n=74, patience 5ph đúng nguồn),
+   completion **99.6% → 94.7%** (huỷ-sau-nhận 5%, mất thời gian+pin thật),
+   accept **96.3% → 91.0% và BÁM `accept_base` từng archetype** (P4 tân binh .781 vs P3 .965
+   — trước đây chênh 5đ%, archetype gần như vô nghĩa). Data BIKE đọc counter sim (coherence).
+   Gate 30 seed: `tests/test_sim_realism.py` (10 test). Suite **388** xanh.
+   Flaw còn lại: F-SIM1-A (trips/driver 12.3 < 18-22 — cơ cấu 1 quận, đã defer), F-SIM1-B/D (LOW).
+2. **SIM-2 Driver journey (READY — kế tiếp):** `DriverJourney` timeline 1 tài xế (phiên, từng
+   offer nhận/từ chối + lý do, di chuyển, nghỉ/sạc, thu nhập tích luỹ); metric per-driver khớp tổng.
+3. **SIM-3 Advice→Action:** `AdviceActionBridge` + adherence model.
+4. **SIM-4 Parallel worlds:** World A (tự làm) vs B (theo chỉ dẫn), CRN paired, baseline tân binh.
+   ⚠️ Advisor pipeline **deterministic** (Cường chốt 2026-07-24), không gọi LLM live.
+5. **SIM-5 Metrics + xuất data:** bộ metric chung/per-driver + regen 13 bảng l1r từ sim mới
+   (bộ `data/mock/realdata-v1/` sinh TRƯỚC SIM-1 ⇒ phải regen + verify 4 vòng lại).
+
 **Track SIM/Advisor (PAUSE sau T-030 — resume sau khung core; reliability-first):**
 
 1. ✅ **M0 — T-030 Simulator integrity (DONE 2026-07-22, UPDATE-023):** 12 flaw + C-2 fixed, 57/57 test, determinism cross-process PASS.

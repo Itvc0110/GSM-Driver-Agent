@@ -35,8 +35,21 @@ def _iso(date: str, t_min: float) -> str:
     return (base + timedelta(minutes=float(t_min))).isoformat()
 
 
+def entity_tables(day: dict) -> dict[str, list[dict]]:
+    """Chỉ các bảng L1R THẬT trong output của `generate_day`.
+
+    SIM-1: `generate_day` còn trả **kênh nội bộ** (key có tiền tố `_`) cho tầng mockgen —
+    KHÔNG phải bảng, KHÔNG theo schema, KHÔNG bao giờ được ghi ra parquet/đưa cho advisor.
+    Mọi chỗ duyệt "tất cả bảng" phải đi qua hàm này.
+    """
+    return {k: v for k, v in day.items() if not k.startswith("_")}
+
+
 def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, list[dict]]:
-    """Chạy 1 sim run → dict {entity: records} đúng schema. Deterministic theo seed."""
+    """Chạy 1 sim run → dict {entity: records} đúng schema. Deterministic theo seed.
+
+    Ngoài các bảng L1R, trả thêm key nội bộ `_sim_driver_day` (xem `entity_tables`).
+    """
     cfg = Config.load(config_path)
     r = run_once(cfg, seed)
     out: dict[str, list[dict]] = {}
@@ -72,6 +85,18 @@ def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, lis
         "declared_shift_window": [int(a.shift_start_min), int(a.shift_end_min)],
         "source": "MOCK",
     } for a in r.actors]
+
+    # ---- SIM-1 fix D: COUNTER THẬT của sim (KHÔNG phải bảng L1R — tiền tố "_") ----
+    # Trước đây tầng data suy NGƯỢC acceptance từ `profiles.target_acceptance` vì sim cũ
+    # nhận gần 100% mọi đơn (accept 96.3%) ⇒ data và sim nói 2 con số khác nhau.
+    # SIM-1 đã sửa ở GỐC (accept bám accept_base từng archetype) nên data lấy thẳng số này.
+    out["_sim_driver_day"] = {
+        "date": date,
+        "stats": {f"d-{a.actor_id}": {
+            "offered": a.orders_offered, "accepted": a.orders_accepted,
+            "completed": a.orders_completed, "cancelled": a.orders_cancelled,
+        } for a in r.actors},
+    }
 
     # ---- L0: station_registry ----
     out["station_registry"] = [{

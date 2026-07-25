@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from gsm_core.mockgen.adapter_sim import generate_day
+from gsm_core.mockgen.adapter_sim import generate_day, entity_tables
 from gsm_core.schema_registry import SchemaRegistry
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,13 +32,13 @@ def test_all_entities_present(day):
 
 
 def test_every_record_passes_schema(reg, day):
-    for entity, records in day.items():
+    for entity, records in entity_tables(day).items():
         bad = reg.validate_many(entity, records)
         assert not bad, f"{entity}: {len(bad)} record fail — ví dụ {list(bad.items())[:1]}"
 
 
 def test_all_records_labeled_mock(day):
-    for entity, records in day.items():
+    for entity, records in entity_tables(day).items():
         for r in records:
             assert r.get("source") == "MOCK", f"{entity} thiếu nhãn MOCK"
 
@@ -99,6 +99,8 @@ def test_determinism_same_seed(day):
 
 def test_no_latent_fields_in_output(day):
     import json
-    blob = json.dumps({k: v[:5] for k, v in day.items()})
+    # SIM-1: quét CẢ kênh nội bộ `_sim_driver_day` — nó cũng không được chứa latent
+    blob = json.dumps({k: (v[:5] if isinstance(v, list) else v) for k, v in day.items()},
+                      default=str)
     for latent in ("meals_taken", "fatigue", "demand_prior", "patience"):
         assert latent not in blob, f"latent '{latent}' leak vào mock data"

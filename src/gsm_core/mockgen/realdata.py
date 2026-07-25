@@ -110,22 +110,34 @@ def _trip_hours(trips: list) -> float:
 
 
 def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: float,
-              rng: random.Random) -> None:
-    """Aggregate 1 driver-day → mọi bảng KPI daily + trips. Acceptance từ profile target.
+              rng: random.Random, sim_stats: dict | None = None) -> None:
+    """Aggregate 1 driver-day → mọi bảng KPI daily + trips.
 
     BUG-PI2b-02 fix: online_time PHẢI ≥ giờ phục vụ cuốc (không thể có cuốc khi offline).
     Sàn = trip_hours/0.55 (utilization ≤55% — realism-benchmarks FT 45-55%).
+
+    SIM-1 fix D — NGUỒN SỰ THẬT của accept/cancel:
+      - tài xế BIKE có sim (`sim_stats` khác None) → lấy THẲNG counter của sim. Sim là
+        nguồn sự thật duy nhất; tầng data KHÔNG suy ngược từ target nữa.
+      - tài xế CAR/PREMIUM/RTO **không có sim** → vẫn dùng target profile + noise (đó là
+        cách sinh duy nhất cho họ, không phải "vá").
     """
     share = prof["driver_share"]
     if trips:
         online_h = max(online_h, _trip_hours(trips) / 0.55)
     completed = len(trips)
-    ful = _clamp(rng.gauss(prof["target_fulfil"], 0.02), 0.6, 1.0)
-    accepted = max(completed, round(completed / ful)) if completed else 0
-    acc = _clamp(rng.gauss(prof["target_acceptance"], 0.04), 0.5, 1.0)
-    req_accept = max(accepted, round(accepted / acc)) if accepted else 0
-    declined = req_accept - accepted
-    cancelled = accepted - completed
+    if sim_stats is not None:
+        accepted = max(completed, int(sim_stats["accepted"]))
+        req_accept = max(accepted, int(sim_stats["offered"]))
+        declined = req_accept - accepted
+        cancelled = accepted - completed          # gồm huỷ-sau-nhận + đơn bị censor 24:00
+    else:
+        ful = _clamp(rng.gauss(prof["target_fulfil"], 0.02), 0.6, 1.0)
+        accepted = max(completed, round(completed / ful)) if completed else 0
+        acc = _clamp(rng.gauss(prof["target_acceptance"], 0.04), 0.5, 1.0)
+        req_accept = max(accepted, round(accepted / acc)) if accepted else 0
+        declined = req_accept - accepted
+        cancelled = accepted - completed
     acc_rate = round(accepted / req_accept, 4) if req_accept else 1.0
     ful_rate = round(completed / accepted, 4) if accepted else 1.0
     can_rate = round(cancelled / req_accept, 4) if req_accept else 0.0
@@ -208,6 +220,13 @@ def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str
             if e["kind"] in ("go_online", "go_offline"):
                 online_by[(e["driver_id"], _date_of(e["t"]))].append((e["t"], e["kind"]))
         pings_all += day.get("gps_ping", [])
+    # SIM-1 fix D: counter accept/cancel THẬT từ sim, khoá theo (driver, ngày)
+    sim_stats: dict[tuple[str, str], dict] = {}
+    for day in day_outputs:
+        sd = day.get("_sim_driver_day")
+        if sd:
+            for drv_id, stt in sd["stats"].items():
+                sim_stats[(drv_id, sd["date"])] = stt
     for day in day_outputs:  # tập ngày
         for t in day.get("trip_record", []):
             dates.add(_date_of(t["t_complete"]))
@@ -230,7 +249,7 @@ def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str
         if prof is None:
             continue
         _emit_day(out, drv, d, sorted(trips, key=lambda x: x["t_complete"]), prof,
-                  online_hours(drv, d), rng)
+                  online_hours(drv, d), rng, sim_stats=sim_stats.get((drv, d)))
 
     # --- Rule-based (car/premium/rto): sinh trips + emit ---
     for drv, prof in sorted(universe.items()):

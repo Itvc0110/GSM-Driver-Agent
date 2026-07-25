@@ -101,7 +101,8 @@ def test_order_exactly_one_terminal(result):
     assert states, "world phải xuất order_states"
     n = len(result.orders)
     assert len(states) == n, f"thiếu order trong state map: {len(states)} != {n}"
-    terminals = {"COMPLETED", "EXPIRED", "CENSORED_END_OF_RUN"}
+    # SIM-1 fix C: thêm CANCELLED_AFTER_ACCEPT (huỷ khi tài xế đang trên đường đón)
+    terminals = {"COMPLETED", "EXPIRED", "CENSORED_END_OF_RUN", "CANCELLED_AFTER_ACCEPT"}
     bad = {oid: s for oid, s in states.items() if s[0] not in terminals}
     assert not bad, f"đơn không có terminal state (bốc hơi): {dict(list(bad.items())[:5])}"
 
@@ -137,7 +138,9 @@ def test_inflight_order_censored(result):
     matched = {e.detail["order_id"] for e in result.events if e.kind == "order_matched"}
     dropped = {e.detail["order_id"] for e in result.events if e.kind == "dropoff"}
     expired = {e.detail["order_id"] for e in result.events if e.kind == "order_expired"}
-    inflight = matched - dropped - expired
+    cancelled = {e.detail["order_id"] for e in result.events
+                 if e.kind == "order_cancelled_after_accept"}   # SIM-1 fix C
+    inflight = matched - dropped - expired - cancelled
     for oid in inflight:
         assert states[oid][0] == "CENSORED_END_OF_RUN", (
             f"đơn {oid} in-flight cuối ngày nhưng state={states.get(oid)}")

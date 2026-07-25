@@ -270,35 +270,58 @@ with tab_map:
     src = dem if layer_choice.startswith("Demand") else drops
     cell_counts = src.groupby("cell").size().reset_index(name="count") if len(src) else pd.DataFrame({"cell": [], "count": []})
 
+    # --- FIX VISUAL: cột H3 3D ĐÈ LÊN chấm tủ pin ---
+    # Nguyên nhân: hex extruded cao `count × elevation_scale` mét, còn trạm nằm ở MẶT ĐẤT
+    # (z=0). deck.gl dùng depth buffer ⇒ cột 3D che trạm bất kể thứ tự layer (đổi thứ tự
+    # KHÔNG sửa được). Hai đường xử lý, cả hai đều thuần hình học nên không phụ thuộc
+    # phiên bản deck.gl:
+    #   1. cho phép xem PHẲNG (tắt extrude) — nhìn trạm rõ nhất;
+    #   2. khi xem 3D thì NHẤC trạm lên cao hơn cột cao nhất.
+    flat = st.checkbox("Xem phẳng (2D) — nhìn rõ tủ pin, không bị cột H3 che", value=False)
+    ELEV_SCALE = 8
+    max_count = int(cell_counts["count"].max()) if len(cell_counts) else 0
+
     hex_layer = pdk.Layer(
         "H3HexagonLayer",
         cell_counts,
         get_hexagon="cell",
         get_fill_color="[255, 140 - count, 0, 160]",
         get_elevation="count",
-        elevation_scale=8,
-        extruded=True,
+        elevation_scale=ELEV_SCALE,
+        extruded=not flat,
         pickable=True,
     )
+    # nhấc trạm lên trên đỉnh cột cao nhất (+40m đệm) để không bị depth-test cắt
+    station_z = 0.0 if flat else max_count * ELEV_SCALE + 40.0
     stations_df = pd.DataFrame(
-        [{"lat": s.lat, "lon": s.lon, "name": f"Tủ pin {s.node_id}"} for s in result.grid.stations]
+        [{"lat": s.lat, "lon": s.lon, "z": station_z, "name": f"Tủ pin {s.node_id}",
+          "cell": "", "count": ""} for s in result.grid.stations]
     )
     station_layer = pdk.Layer(
         "ScatterplotLayer",
         stations_df,
-        get_position="[lon, lat]",
+        get_position="[lon, lat, z]",
         get_radius=60,
-        get_fill_color="[0, 122, 255, 220]",
+        radius_min_pixels=6,          # không teo mất khi zoom xa
+        get_fill_color="[0, 122, 255, 240]",
+        stroked=True,                 # viền trắng: nổi trên nền cam của hex
+        get_line_color=[255, 255, 255],
+        line_width_min_pixels=2,
+        billboard=True,               # luôn hướng về camera khi pitch != 0
         pickable=True,
     )
+    if len(cell_counts):              # tooltip sạch: hex không hiện "{name}" trống
+        cell_counts["name"] = ""
     deck = pdk.Deck(
-        layers=[hex_layer, station_layer],
-        initial_view_state=pdk.ViewState(latitude=21.013, longitude=105.825, zoom=13, pitch=40),
-        tooltip={"text": "{cell}\n{count} | {name}"},
+        layers=[hex_layer, station_layer],   # trạm vẽ SAU + ở trên → không bị che
+        initial_view_state=pdk.ViewState(latitude=21.013, longitude=105.825, zoom=13,
+                                         pitch=0 if flat else 40),
+        tooltip={"text": "{name}{cell} {count}"},
         map_style="light",
     )
     st.pydeck_chart(deck, width='stretch')
-    st.caption("Cột cam = số đơn/cuốc theo cell H3 res 9 · chấm xanh = 11 tủ đổi pin (OSM thật). MOCK.")
+    st.caption("Cột cam = số đơn/cuốc theo cell H3 res 9 · chấm xanh viền trắng = 11 tủ đổi pin "
+               "(OSM thật). Ở chế độ 3D, trạm được nhấc lên trên đỉnh cột để không bị che. MOCK.")
 
 with tab_time:
     tbh = trips_by_hour(result)

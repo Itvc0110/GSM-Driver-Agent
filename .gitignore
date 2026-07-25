@@ -31,5 +31,8 @@ runs/
 Thumbs.db
 .DS_Store
 
-# Mock data — parquet tái gen được từ seed (manifest + reports commit)
+# Mock data — tái gen được từ seed (chỉ commit manifest + report)
 data/mock/**/*.parquet
+# Bản CSV để review thủ công: CÙNG dữ liệu với parquet, chỉ khác định dạng.
+# Nếu không chặn thì `data/mock/realdata-v1/csv/` một mình đã là **279 MB** vào git.
+data/mock/**/*.csv

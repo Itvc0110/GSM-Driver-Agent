@@ -58,6 +58,10 @@ class World:
         self.accept_cost_km = float(bcfg.get("accept_cost_per_pickup_km_vnd", 3000.0))
         self.accept_center = float(bcfg.get("accept_logit_center_vnd", 6000.0))
         self.accept_scale = float(bcfg.get("accept_logit_scale_vnd", 8000.0))
+        # SIM-1 fix C: huỷ SAU KHI nhận (khách bom/khách huỷ/sự cố). Sim cũ hoàn thành
+        # 99.6% cuốc đã nhận — "quá sạch" so thực tế (~95%). Xảy ra khi tài xế ĐANG
+        # trên đường đón (chưa gặp khách) → tốn thời gian + pin, KHÔNG có doanh thu.
+        self.cancel_after_accept = float(bcfg.get("cancel_after_accept_rate", 0.05))
 
         # RNG stream riêng cho hành vi actor (nền CRN: ngoại sinh đã ở orders)
         self.rng = np.random.default_rng(seed ^ 0xBEEF)
@@ -109,7 +113,7 @@ class World:
     def _order_transition(self, oid: int, state: str) -> None:
         """M0-5: ghi chuyển trạng thái đơn (terminal chỉ ghi 1 lần — không ghi đè)."""
         cur = self.order_states.get(oid, ("CREATED", 0.0))[0]
-        if cur in ("COMPLETED", "EXPIRED", "CENSORED_END_OF_RUN"):
+        if cur in ("COMPLETED", "EXPIRED", "CENSORED_END_OF_RUN", "CANCELLED_AFTER_ACCEPT"):
             return  # terminal là bất biến
         self.order_states[oid] = (state, round(self.env.now, 3))
 
@@ -263,7 +267,10 @@ class World:
                 enough = actor.soc_pct - total_km * self._pct_per_km(actor) > 8.0
                 forced = actor.acceptance_rate < 0.5 and actor.orders_offered > 5
                 if not enough:
-                    actor.orders_cancelled += 1
+                    # SIM-1: KHÔNG còn tính là "cancelled" — tài xế chưa hề nhận đơn.
+                    # `orders_cancelled` từ nay CHỈ đếm huỷ SAU khi nhận (khớp nghĩa cột
+                    # `cancelled_count` trong `driver_statistic_daily`).
+                    actor.orders_soc_skipped += 1
                     continue
                 if not accept_order(actor, order.gross_vnd, asg.pickup_dist_km, forced, self.rng,
                                     self.accept_cost_km, self.accept_center, self.accept_scale):
@@ -286,6 +293,28 @@ class World:
         frm = (actor.lat, actor.lon)   # vị trí trước khi đi đón
         # tới điểm đón (quãng đường thực × detour / tốc độ hiệu dụng tại cell gốc)
         pickup_min = self._travel_min(asg.pickup_dist_km, hour, origin_cell)
+
+        # --- SIM-1 fix C: huỷ sau khi nhận, xảy ra GIỮA ĐƯỜNG ĐI ĐÓN ---
+        # Quyết định TRƯỚC khi timeout (không nhìn tương lai: chỉ dùng rng, không dùng
+        # kết quả cuốc). Tài xế đã đi được một phần quãng đón thì đơn bị huỷ.
+        if self.rng.random() < self.cancel_after_accept:
+            frac = float(self.rng.uniform(0.3, 1.0))    # đã đi được 30-100% quãng đón
+            spent = pickup_min * frac
+            yield self.env.timeout(spent)
+            actor.consume_soc(asg.pickup_dist_km * self.detour * frac, pct_per_km)
+            actor.empty_min += spent                    # THIỆT HẠI THẬT: thời gian + pin, 0đ
+            actor.orders_cancelled += 1
+            lat = actor.lat + (order.pickup_lat - actor.lat) * frac
+            lon = actor.lon + (order.pickup_lon - actor.lon) * frac
+            self._set_pos(actor, lat, lon)
+            self._seg(actor.actor_id, t_assign, self.env.now, "enroute", frm, (lat, lon),
+                      order_id=order.order_id)
+            self._order_transition(order.order_id, "CANCELLED_AFTER_ACCEPT")
+            self.log(actor.actor_id, "order_cancelled_after_accept", actor.cell,
+                     order_id=order.order_id, wasted_min=round(spent, 2))
+            actor.state = ActorState.IDLE
+            return
+
         yield self.env.timeout(pickup_min)
         actor.consume_soc(asg.pickup_dist_km * self.detour, pct_per_km)
         actor.empty_min += pickup_min

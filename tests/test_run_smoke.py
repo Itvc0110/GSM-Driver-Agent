@@ -19,7 +19,8 @@ def cfg():
 def test_run_completes(cfg):
     r = run_once(cfg, seed=1)
     assert len(r.events) > 0
-    assert len(r.actors) == 50
+    # SIM-1: đọc từ config (trước đây khoá cứng 50 → đỏ mỗi lần hiệu chỉnh cung)
+    assert len(r.actors) == int(cfg.get("actors.n"))
 
 
 def test_determinism_same_seed(cfg):
@@ -46,7 +47,8 @@ def test_invariants(cfg):
     m = summarize(r)
     # served rate hợp lý (không âm, không > 1)
     assert 0.0 <= m["served_rate"] <= 1.0
-    # với 50 actors / ~1200 đơn: có phục vụ được đáng kể
+    # với cung hiện tại / ~1200 đơn: có phục vụ được đáng kể
+    # (ngưỡng CHÍNH XÁC cho served nằm ở gate SIM-1 `tests/test_sim_realism.py`)
     assert m["orders_completed"] > 300
 
 

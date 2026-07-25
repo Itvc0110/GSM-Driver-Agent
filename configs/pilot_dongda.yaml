@@ -91,11 +91,14 @@ congestion:
 dispatcher:
   candidate_ring_k: 4              # grid_disk k ở res 9 (~ bán kính 1.4km); nới nếu rỗng
   candidate_ring_k_max: 6
-  eta_max_min: 8
+  eta_max_min: 10        # SIM-1: 8 → 10 (research cho dải 8-10ph; giờ cao điểm tắc đường
+                         # làm ETA tăng ⇒ 8ph loại gần hết tài xế dù họ đang RẢNH)
   # Patience khách 2 tầng (realism-benchmarks.md: patience ~5ph, không phải 90s):
   # tầng 1: chờ match ~ lognormal(median, sigma) cap max — per-order, exogenous (CRN-safe)
   # tầng 2: sau gán, hủy nếu pickup ETA > eta_max_min (đã có ở trên)
-  patience_median_min: 3.0
+  # SIM-1: 3.0 → 5.0. Nguồn GỐC (arXiv 2503.13200) nói khách huỷ sau ~5 PHÚT chưa match;
+  # calibration cũ đặt 3.0 chặt hơn nguồn ⇒ đơn chết trước khi kịp ghép (served 62%).
+  patience_median_min: 5.0
   patience_sigma: 0.5
   patience_max_min: 10.0
 
@@ -109,17 +112,48 @@ station:
 
 behavior:                          # math-audit A5: accept logit params ra config (VND)
   accept_cost_per_pickup_km_vnd: 3000
-  accept_logit_center_vnd: 6000
+  # SIM-1: center = NET TRUNG VỊ của thị trường (đo thật: median net ≈ 15.4k).
+  # Trước đây để 6000 (mốc "hoà vốn") ⇒ z = (15417−6000)/8000 = +1.18 với MỌI cuốc
+  # ⇒ số hạng kinh tế luôn dương, đẩy accept của mọi archetype lên 94-99%
+  # ⇒ accept_base vô nghĩa. Đặt center ≈ median để cuốc TRUNG BÌNH cho z≈0
+  # ⇒ realized accept bám accept_base; chỉ cuốc xa/rẻ mới bị từ chối nhiều hơn.
+  accept_logit_center_vnd: 15400
   accept_logit_scale_vnd: 8000
+  # SIM-1 fix C: tỷ lệ huỷ SAU KHI nhận (khách bom/khách huỷ/sự cố), xảy ra khi tài xế
+  # đang trên đường đón. Sim cũ hoàn thành 99.6% cuốc đã nhận — "quá sạch" (Cường §5.7).
+  # 0.05 = ASSUMPTION hiệu chỉnh để completion rơi vào dải thực tế [0.92, 0.97]
+  # (bảng chẩn đoán spec `00-sim-overhaul-master.md` §2: thực tế ~95%). Đo lại: 0.943.
+  cancel_after_accept_rate: 0.05
 
 actors:
-  n: 50
+  # SIM-1: 50 → 60. Căn cứ research `realism-benchmarks.md`: "nếu unserved vẫn >20% mới
+  # giảm demand về ~1.000-1.050 HOẶC tăng 55-60 tài xế". Ta GIỮ cầu 1200 (không vặn cầu)
+  # nên dùng đòn bẩy CUNG. Tính: phục vụ 85% × 1251 ≈ 1063 cuốc; ~18-20 cuốc/tài xế/ngày
+  # (đã trừ nghỉ/sạc/idle) ⇒ cần 53-59 tài xế.
+  #
+  # SIM-1 CHỐT: 50 → 74 (đo, không đoán). Ước tính 53-59 ở trên giả định 18-20 cuốc/tài
+  # xế/ngày — nhưng mix mới có NHIỀU part-time (P1 3-4h) nên số cuốc TRUNG BÌNH thấp hơn.
+  # Sweep thật (8 seed, đã bật huỷ-sau-nhận): n=65→77.7% · 70→78.8% · 74→80.4% · 78→81.2%.
+  # Chọn 74 = giá trị đầu tiên đạt dải mục tiêu 80-85% với ít cung dư nhất.
+  # GIỚI HẠN ĐÃ BIẾT: trips/driver/day ≈ 12.3 < 18-22 của research. Nguyên nhân CƠ CẤU,
+  # không phải bug: cầu 1 quận = 1200 đơn/ngày ⇒ trần tuyệt đối 1200/74 ≈ 16 cuốc/tài xế
+  # kể cả phục vụ 100%. Thực tế tài xế chạy LIÊN QUẬN. Mở rộng zone đã được Cường DEFER
+  # ⇒ ghi nhận là giới hạn phạm vi, mở lại khi enlarge zone (xem DEFERRED).
+  n: 74
   archetype_mix:                   # tỷ trọng (twin-world §5.1)
-    P1: 0.20
-    P2: 0.30
-    P3: 0.10
-    P4: 0.25
-    P5: 0.15
+    # SIM-1: tái phân bổ để CUNG phủ ĐƯỜNG CẦU 24h. Trước đây không ai bắt đầu <6h và
+    # ca tan sớm ⇒ 05-06h có 0 tài xế, 21-23h chỉ 8-10 người trong khi cầu 168 đơn
+    # (served chỉ 61.9%). GIỮ P4 (tân binh lệch khung) làm dư địa advisor THEO CÁ NHÂN,
+    # nhưng không để thị trường trống. KHÔNG đổi tổng cầu.
+    P1: 0.14                       # part-time tối
+    P2: 0.20                       # full-time phủ 2 đỉnh
+    P3: 0.06                       # top performer
+    P4: 0.18                       # tân binh lệch khung (dư địa advisor)
+    P5: 0.12                       # lão làng chiều-tối
+    # SIM-1 vòng 2: P6 0.14→0.18, bù từ P2/P3 (khung trưa DƯ cung: 1.1-1.5 đơn/tài xế,
+    # hết hạn 4-19%) sang khung 06h (4.9 đơn/tài xế, hết hạn 43% — giờ ĐÓI cung duy nhất).
+    P6: 0.18                       # ca SÁNG SỚM (5:00-6:30) — phủ khung vàng 6-8h
+    P7: 0.12                       # ca TỐI-ĐÊM (15-16h → 23-24h)
   charge_fleet_ratio_p3p5: 0.5     # P3/P5: 50% sạc cắm, còn lại swap (sim-policy-bundle §6)
 
 policy:                            # sim-policy-bundle-v0.md
@@ -158,7 +192,9 @@ environment:
     demand: {delta_peak: 0.22, r_peak_mmph: 8.0}      # unimodal: tăng rồi giảm
     speed:  {r_max: 0.28, r0_mmph: 9.0, v_floor_kmh: 7.0}
     supply: {r_s_mmph: 10.0, p_cap: 0.5,
-             alpha: {P1: 0.45, P2: 0.20, P3: 0.10, P4: 0.15, P5: 0.30}}   # MOCK — độ tin thấp, hỏi tài xế sau
+             alpha: {P1: 0.45, P2: 0.20, P3: 0.10, P4: 0.15, P5: 0.30,
+                     P6: 0.25, P7: 0.35}}   # MOCK — độ tin thấp, hỏi tài xế sau
+             # P6 sáng sớm / P7 đêm: nhạy mưa hơn TB (tầm nhìn kém, đường trơn) — ASSUMPTION
   temp:
     const_c: 28.0
     series: []

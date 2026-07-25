@@ -26,18 +26,27 @@ def grid():
 
 
 def test_sample_count(grid, cfg):
+    """SIM-1: đọc `actors.n` từ CONFIG, không hard-code. Trước đây khoá cứng 50 nên
+    mọi lần hiệu chỉnh cung đều làm test đỏ mà KHÔNG chỉ ra khuyết tật nào."""
     actors = sample_actors(grid, cfg, seed=1)
-    assert len(actors) == 50
+    assert len(actors) == int(cfg.get("actors.n"))
 
 
 def test_archetype_mix(grid, cfg):
+    """Kiểm tra SAMPLER tôn trọng tỷ trọng trong config (không kiểm tra chính config)."""
     actors = sample_actors(grid, cfg, seed=1)
     from collections import Counter
     c = Counter(a.archetype for a in actors)
-    # P2 nhiều nhất (30%), P3 ít nhất (10%)
-    assert c["P2"] == 15
-    assert c["P3"] == 5
-    assert sum(c.values()) == 50
+    n = int(cfg.get("actors.n"))
+    mix = cfg.get("actors.archetype_mix")
+    assert sum(c.values()) == n
+    for name, share in mix.items():
+        assert abs(c[name] - round(n * float(share))) <= 1, (
+            f"{name}: sampler cho {c[name]}, tỷ trọng {share} trên n={n} kỳ vọng "
+            f"{round(n * float(share))}")
+    # thứ tự tương đối phải giữ: archetype có tỷ trọng lớn hơn thì đông hơn (hoặc bằng)
+    ranked = sorted(mix, key=lambda k: -float(mix[k]))
+    assert c[ranked[0]] >= c[ranked[-1]]
 
 
 def test_actors_deterministic(grid, cfg):

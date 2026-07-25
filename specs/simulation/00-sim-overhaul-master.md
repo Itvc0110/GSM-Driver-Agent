@@ -1,6 +1,6 @@
 # SPEC — SIMULATION OVERHAUL (mảng riêng, Track A) — master
 
-Cập nhật: 2026-07-24 · Trạng thái: **DESIGN** · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
+Cập nhật: 2026-07-25 · Trạng thái: **SIM-1 DONE** (UPDATE-044), SIM-2 kế tiếp · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
 
 > **Sim là mảng ĐỘC LẬP.** UI app do **Khánh** phát triển; sim **không phụ thuộc UI**, chỉ nối **data output** vào sau (bên cạnh UI). Sim phục vụ: (1) kiểm chứng advisor bằng thế giới song song, (2) sinh/giải thích hành vi tài xế, (3) nguồn dữ liệu hành vi cho mock.
 
@@ -20,12 +20,22 @@ Cập nhật: 2026-07-24 · Trạng thái: **DESIGN** · Nguồn yêu cầu: `tr
 
 ## 2. CHẨN ĐOÁN HIỆN TRẠNG (đo thật, seed 42, `configs/pilot_dongda.yaml`)
 
+> ✅ **SIM-1 ĐÃ SỬA XONG cả 3 dòng dưới đây** (UPDATE-044, gate 30 seed):
+> **served 61.9% → 82.3%** · **completion 99.6% → 94.7%** · **accept 96.3% → 91.0% và
+> BÁM `accept_base` từng archetype** (P4 tân binh .781 vs P3 top .965). Giờ tệ nhất:
+> 05h 94% hết hạn → **06h 33%**. Bảng dưới giữ lại làm **bản ghi khuyết tật gốc**.
+
 | Metric | Sim hiện tại | Thực tế (research) | Kết luận |
 |---|---|---|---|
 | **served = matched/orders** | **61.9%** (774/1251) | mục tiêu **80–85%** (NYC 2015 ~82%; hệ cung cố định không surge 75–85%) | ❌ **38% cầu không ai nhận** — ĐÂY là "quá thấp" Cường nói |
 | completed = dropoff/matched | **99.6%** | ~95% (có huỷ sau nhận, khách bom, sự cố) | ⚠️ **quá sạch** — sim không có huỷ sau khi nhận |
 | accept = matched/(matched+declined) | **96.3%** (chỉ 30 decline) | **0.74–0.97 theo archetype** | ⚠️ **quá sạch** — tài xế gần như không từ chối |
 | order_expired | 477/1251 (38%) | — | nguyên nhân trực tiếp của served thấp |
+
+**ĐÍNH CHÍNH (SIM-1 đo lại kỹ hơn):** `realdata.py` KHÔNG "override mù" — nó **suy ngược**
+accept/cancel từ `profiles.target_acceptance`; trips của BIKE thì vốn đã là sim thật. Và
+tài xế **CAR/PREMIUM/RTO không có sim** nên target profile là cách sinh DUY NHẤT cho họ,
+không phải "vá". SIM-1 vì vậy chỉ nối BIKE về counter sim, giữ nguyên phần còn lại.
 
 **Phát hiện quan trọng (coherence bug xuyên tầng):** vì sim gần như không có `decline`, **data mock sinh ra từ sim từng có acceptance ≈ 1.00**. PI-2b đã vá ở **tầng data** (override theo archetype target 0.74–0.96) → **sim và data hiện KHÔNG NHẤT QUÁN** (data nói 0.88, sim hành xử 0.96). Overhaul phải sửa **tại gốc (sim)** rồi bỏ override ở tầng data.
 
@@ -38,6 +48,13 @@ Cập nhật: 2026-07-24 · Trạng thái: **DESIGN** · Nguồn yêu cầu: `tr
 - **Deterministic + CRN**: cùng seed → cùng kết quả; **thế giới song song dùng CHUNG random stream** cho phần ngoại sinh (đơn hàng, thời tiết) để so sánh công bằng (paired-seed).
 - **Hành vi random có cấu trúc**: mỗi archetype có phân phối riêng (accept, nghỉ, sạc, tốc độ phản ứng), không phải hằng số.
 - **Advisor không được nhìn tương lai**: actor chỉ dùng thông tin có tại thời điểm đó.
+
+## 3b. QUYẾT ĐỊNH ĐÃ CHỐT
+
+- **Thế giới song song dùng ADVISOR PIPELINE DETERMINISTIC** (solver + template, KHÔNG gọi LLM live)
+  — Cường chốt 2026-07-24 ("for now your default, update in future"). Lý do: tái lập được,
+  miễn phí, và LLM chỉ diễn đạt lại số chứ không đổi số. **Sẽ xem lại sau** khi cần đo ảnh
+  hưởng của câu chữ LLM tới adherence.
 
 ## 4. KIẾN TRÚC MỤC TIÊU
 
@@ -64,7 +81,7 @@ research benchmarks ──┘         │                                       
 
 | Phase | Nội dung | Tiêu chí xong |
 |---|---|---|
-| **SIM-1 Realism gate** | Chẩn đoán + sửa served 61.9%→**80–85%**; thêm **decline theo archetype** (accept 0.74–0.97) và **huỷ sau nhận** (complete ~95%); bỏ override acceptance ở tầng data | 3 tỷ lệ vào dải thực; **≥30 seed**; sim↔data nhất quán |
+| **SIM-1 Realism gate** ✅ **DONE** 2026-07-25 (UPDATE-044) | Đã sửa cả 3 tại GỐC: phủ ca (P6 sáng sớm/P7 tối-đêm, n=74, patience 5ph theo nguồn), logit accept (`accept_base` = mức trung bình, kinh tế chỉ điều biến), huỷ-sau-nhận 5% (mất thời gian+pin thật), data BIKE đọc counter sim | ✅ served 82.3% · completion 94.7% · accept bám base ±4.3đ% · **30 seed** · 10 gate test `tests/test_sim_realism.py` · suite 388 xanh |
 | **SIM-2 Driver journey** | `DriverJourney` timeline chi tiết 1 tài xế: phiên, từng offer (nhận/từ chối + lý do), di chuyển, nghỉ/sạc, thu nhập tích luỹ | Xuất được journey đầy đủ 1 driver-day; metric per-driver khớp tổng |
 | **SIM-3 Advice→Action** | `AdviceActionBridge` + adherence model; actor thực thi advice trong ca | Advice thay đổi hành vi đo được; không nhìn tương lai |
 | **SIM-4 Parallel worlds** | World A (tự làm) vs World B (theo chỉ dẫn), CRN paired; **baseline tài xế mới** | Δ(B−A) có CI trên ≥30 seed; baseline newbie tái lập được |

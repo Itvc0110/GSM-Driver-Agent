@@ -47,7 +47,8 @@ class Actor:
     orders_offered: int = 0
     orders_accepted: int = 0
     orders_completed: int = 0
-    orders_cancelled: int = 0
+    orders_cancelled: int = 0      # SIM-1: CHỈ huỷ SAU khi nhận (khớp `cancelled_count`)
+    orders_soc_skipped: int = 0    # SIM-1: bỏ qua vì pin không đủ — KHÔNG phải huỷ
     gross_vnd: int = 0
     payout_vnd: int = 0
     points: int = 0
