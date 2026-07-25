@@ -1,6 +1,6 @@
 # SPEC — SIMULATION OVERHAUL (mảng riêng, Track A) — master
 
-Cập nhật: 2026-07-25 · Trạng thái: **SIM-1 DONE** (UPDATE-044), SIM-2 kế tiếp · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
+Cập nhật: 2026-07-25 · Trạng thái: **SIM-1 + SIM-2 DONE** (UPDATE-044/045), SIM-3 kế tiếp · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
 
 > **Sim là mảng ĐỘC LẬP.** UI app do **Khánh** phát triển; sim **không phụ thuộc UI**, chỉ nối **data output** vào sau (bên cạnh UI). Sim phục vụ: (1) kiểm chứng advisor bằng thế giới song song, (2) sinh/giải thích hành vi tài xế, (3) nguồn dữ liệu hành vi cho mock.
 
@@ -82,7 +82,7 @@ research benchmarks ──┘         │                                       
 | Phase | Nội dung | Tiêu chí xong |
 |---|---|---|
 | **SIM-1 Realism gate** ✅ **DONE** 2026-07-25 (UPDATE-044) | Đã sửa cả 3 tại GỐC: phủ ca (P6 sáng sớm/P7 tối-đêm, n=74, patience 5ph theo nguồn), logit accept (`accept_base` = mức trung bình, kinh tế chỉ điều biến), huỷ-sau-nhận 5% (mất thời gian+pin thật), data BIKE đọc counter sim | ✅ served 82.3% · completion 94.7% · accept bám base ±4.3đ% · **30 seed** · 10 gate test `tests/test_sim_realism.py` · suite 388 xanh |
-| **SIM-2 Driver journey** | `DriverJourney` timeline chi tiết 1 tài xế: phiên, từng offer (nhận/từ chối + lý do), di chuyển, nghỉ/sạc, thu nhập tích luỹ | Xuất được journey đầy đủ 1 driver-day; metric per-driver khớp tổng |
+| **SIM-2 Driver journey** ✅ **DONE** 2026-07-25 (UPDATE-045) | `journey.py`: sessions · timeline (segment + idle suy ra) · từng offer kèm **LÝ DO** (`economics` vs `base_behavior`) + kết cục · thu nhập tích luỹ (cuốc **+ thưởng ngày**) · metric per-driver. Tab dashboard 🧭 + export JSON | ✅ 14 test bảo toàn trên **cả 7 archetype** (offer/thời gian/tiền/không chồng lấn/cộng ra hệ thống); **RNG không trôi** (so baseline seed 42+1000); suite 405 |
 | **SIM-3 Advice→Action** | `AdviceActionBridge` + adherence model; actor thực thi advice trong ca | Advice thay đổi hành vi đo được; không nhìn tương lai |
 | **SIM-4 Parallel worlds** | World A (tự làm) vs World B (theo chỉ dẫn), CRN paired; **baseline tài xế mới** | Δ(B−A) có CI trên ≥30 seed; baseline newbie tái lập được |
 | **SIM-5 Metrics + xuất data** | Bộ metric chung + per-driver; nối vào `mockgen` để sinh 13 bảng từ sim mới | Dashboard/CLI xem được; data sinh ra pass 4 vòng verify |

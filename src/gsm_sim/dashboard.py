@@ -25,6 +25,7 @@ import streamlit as st
 
 from gsm_sim.config import Config
 from gsm_sim.geo import build_grid
+from gsm_sim.journey import build_journey
 from gsm_sim.metrics import summarize, trips_by_hour
 from gsm_sim.runner import run_once
 
@@ -247,8 +248,8 @@ if result.env is not None and result.env.clamp_hits() > 0:
     st.warning(f"⚠️ demand factor bị bó (clamp) {result.env.clamp_hits()} lần — "
                f"factor tổng vượt [{result.env.m_min}, {result.env.m_max}]. Cân nhắc giảm cường độ.")
 
-tab_map, tab_time, tab_env, tab_actor = st.tabs(
-    ["🗺️ Bản đồ H3", "📈 Theo thời gian", "🌦️ Môi trường", "🛵 Tài xế"])
+tab_map, tab_time, tab_env, tab_actor, tab_journey = st.tabs(
+    ["🗺️ Bản đồ H3", "📈 Theo thời gian", "🌦️ Môi trường", "🛵 Tài xế", "🧭 Hành trình 1 tài xế"])
 
 # ---------- Data frames ----------
 
@@ -398,3 +399,61 @@ with tab_actor:
     fig3 = px.box(act, x="archetype", y="payout (đ)", points="all", title="Payout theo archetype (MOCK)")
     st.plotly_chart(fig3, width='stretch')
     st.dataframe(act.sort_values("payout (đ)", ascending=False), width='stretch', height=420)
+
+# ---------- SIM-2: hành trình chi tiết của MỘT tài xế ----------
+with tab_journey:
+    ARCH_LABEL = {"P1": "part-time tối", "P2": "full-time 2 đỉnh", "P3": "top performer",
+                  "P4": "TÂN BINH (lệch khung)", "P5": "lão làng chiều-tối",
+                  "P6": "ca sáng sớm", "P7": "ca tối-đêm"}
+    opts = sorted(result.actors, key=lambda a: (a.archetype, -a.trips_done))
+    pick = st.selectbox(
+        "Chọn tài xế", opts, index=0,
+        format_func=lambda a: (f"d-{a.actor_id} · {a.archetype} {ARCH_LABEL.get(a.archetype, '')}"
+                               f" · {a.trips_done} cuốc · {a.payout_vnd:,}đ"))
+    j = build_journey(result, pick.actor_id)
+    m = j.metrics
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Cuốc hoàn thành", m["trips_completed"], f"{m['cancelled_after_accept']} huỷ sau nhận")
+    c2.metric("Tỷ lệ nhận", f"{(m['acceptance_rate'] or 0):.0%}", f"{m['declined']} từ chối")
+    c3.metric("Hoàn thành", f"{(m['completion_rate'] or 0):.0%}")
+    c4.metric("Utilization", f"{m['utilization']:.0%}", f"idle {m['idle_min']:.0f}ph")
+    c5.metric("Payout", f"{m['payout_vnd']:,}đ",
+              f"{m['points']} điểm · thưởng {m['bonus_share']:.0%}")
+
+    st.markdown("**Timeline phiên làm việc** — mọi phút đều có nhãn; `idle` = chờ đơn tại chỗ")
+    tl = pd.DataFrame([{
+        "Hoạt động": b.kind,
+        "start": pd.Timestamp("2026-07-01") + pd.to_timedelta(b.t0, unit="m"),
+        "end": pd.Timestamp("2026-07-01") + pd.to_timedelta(b.t1, unit="m"),
+        "phút": round(b.minutes, 1), "đơn": b.order_id,
+    } for b in j.timeline])
+    figj = px.timeline(tl, x_start="start", x_end="end", y="Hoạt động", color="Hoạt động",
+                       hover_data=["phút", "đơn"], title=f"Hành trình d-{pick.actor_id} (MOCK)")
+    figj.update_yaxes(autorange="reversed")
+    st.plotly_chart(figj, width='stretch')
+
+    cA, cB = st.columns(2)
+    with cA:
+        st.markdown(f"**Thu nhập tích luỹ** — cuốc {m['trip_payout_vnd']:,}đ "
+                    f"+ **thưởng ngày {m['day_bonus_vnd']:,}đ** (bậc cuối)")
+        inc = pd.DataFrame(j.income_curve, columns=["t_min", "payout"])
+        inc["giờ"] = inc.t_min / 60
+        st.plotly_chart(px.line(inc, x="giờ", y="payout", markers=True), width='stretch')
+    with cB:
+        st.markdown("**Thời gian đi đâu?**")
+        mk = pd.DataFrame(sorted(m["minutes_by_kind"].items(), key=lambda kv: -kv[1]),
+                          columns=["Hoạt động", "phút"])
+        st.plotly_chart(px.bar(mk, x="phút", y="Hoạt động", orientation="h"), width='stretch')
+
+    dr = m["decline_reasons"]
+    st.markdown(
+        f"**Vì sao từ chối?** kinh tế (cuốc xa/rẻ): **{dr['economics']}** · "
+        f"tính cách/mệt/sắp kết ca: **{dr['base_behavior']}** · pin không đủ: **{m['skipped_soc']}**")
+    st.dataframe(pd.DataFrame([{
+        "phút": round(o.t_min, 1), "đơn": o.order_id, "quyết định": o.decision,
+        "lý do": o.reason, "gross (đ)": o.gross_vnd, "net (đ)": o.net_vnd,
+        "đón (km)": o.pickup_km, "P(nhận)": o.p_accept, "kết cục": o.outcome,
+    } for o in j.offers]), width='stretch', height=320)
+    st.caption("Mỗi dòng = một lần được chào đơn. `net` = gross − chi phí quãng đón; "
+               "`P(nhận)` = xác suất nhận tại thời điểm đó. MOCK — không phải số thật GSM.")

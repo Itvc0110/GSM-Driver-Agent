@@ -10,6 +10,7 @@ Slice v0: xấp xỉ utility model — đủ để actor hành xử hợp lý (c
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from enum import Enum
 
 from .entities import Actor, ActorState, FleetType, Station
@@ -39,33 +40,71 @@ def _logistic(x: float) -> float:
 ECON_WEIGHT = 0.7
 
 
+@dataclass(frozen=True)
+class AcceptDecision:
+    """SIM-2: quyết định nhận đơn kèm ĐỦ căn cứ để giải trình sau.
+
+    Trước đây `accept_order` chỉ trả bool ⇒ event `order_declined` không nói được **vì sao**
+    tài xế từ chối. Journey của Cường cần trả lời đúng câu đó cho TỪNG offer.
+    """
+    accepted: bool
+    p_accept: float       # xác suất nhận tại thời điểm đó
+    net_vnd: float        # gross − chi phí quãng đón
+    z: float              # độ lệch chuẩn hoá của net so trung vị thị trường (đã kẹp)
+    reason: str           # forced | base_behavior | economics
+
+
+def decide_accept(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng,
+                  cost_per_km_vnd: float = 3000.0, logit_center_vnd: float = 6000.0,
+                  logit_scale_vnd: float = 8000.0) -> AcceptDecision:
+    """Quyết định nhận đơn, kèm căn cứ. Đây là NƠI CHỨA mô hình thật.
+
+    MÔ HÌNH (hiệu chỉnh ở SIM-1, khuyết tật đã chứng minh bằng số):
+      Bản cũ `x = (net − center)/scale + logit(accept_base)` có số hạng kinh tế ÁP ĐẢO:
+      cuốc thường (gross 20k, pickup 1km → net 17k) cho (17000−6000)/8000 = **+1.375**,
+      khiến P4 (`accept_base` 0.80) thực tế nhận **94%** và P3 (0.98) nhận 99.5%
+      ⇒ **archetype gần như vô nghĩa** (accept tổng 96.3%, thực tế 0.74–0.97).
+
+      Bản hiện tại: **`accept_base` LÀ mức nhận trung bình của archetype**, kinh tế chỉ
+      **điều biến quanh** nó — `x = logit(accept_base) + w·z` với `z` **kẹp [−2, 2]** và
+      `w = ECON_WEIGHT` nhỏ. Khi net ≈ center → nhận đúng `accept_base`; chỉ cuốc xa/rẻ
+      (z âm) mới bị từ chối nhiều hơn. `logit_center_vnd` vì vậy mang nghĩa **net TRUNG VỊ
+      của thị trường**, KHÔNG phải mốc "hoà vốn" — phải đặt theo phân phối cuốc thật.
+
+    ⚠️ Tiêu **ĐÚNG 1** `rng.random()`, y như bản cũ. Tiêu thêm/bớt sẽ dịch chuỗi ngẫu nhiên
+    ⇒ đổi kết quả SIM-1 và phá nền CRN của SIM-4 (thế giới song song phải dùng chung dòng
+    ngoại sinh).
+
+    `reason` khi TỪ CHỐI:
+      - `economics`: cuốc dưới trung vị thị trường (z < 0) kéo xác suất xuống — tài xế chê
+        xa/rẻ. Đây là dư địa advisor.
+      - `base_behavior`: cuốc bình thường/tốt (z ≥ 0) nhưng vẫn rơi theo `accept_base` của
+        archetype (mệt, sắp kết ca, tính cách kén). KHÔNG phải do tiền.
+    """
+    if forced:
+        return AcceptDecision(True, 1.0, float(gross_vnd), 0.0, "forced")
+    net = gross_vnd - pickup_dist_km * cost_per_km_vnd
+    z = (net - logit_center_vnd) / max(1e-6, logit_scale_vnd)
+    z = max(-2.0, min(2.0, z))
+    base = min(0.999, max(0.001, actor.accept_base))
+    x = math.log(base / (1 - base)) + ECON_WEIGHT * z
+    p = _logistic(x)
+    accepted = rng.random() < p          # ← DUY NHẤT một lần rút
+    reason = "accepted" if accepted else ("economics" if z < 0 else "base_behavior")
+    return AcceptDecision(accepted, p, float(net), float(z), reason)
+
+
 def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng,
                  cost_per_km_vnd: float = 3000.0, logit_center_vnd: float = 6000.0,
                  logit_scale_vnd: float = 8000.0) -> bool:
-    """Quyết định nhận đơn. forced=True (auto-accept) → luôn nhận.
+    """Quyết định nhận đơn (chỉ bool). forced=True (auto-accept) → luôn nhận.
 
-    SIM-1 HIỆU CHỈNH LẠI (khuyết tật đã chứng minh bằng số):
-      Mô hình cũ `x = (net − center)/scale + logit(accept_base)` có số hạng kinh tế ÁP ĐẢO:
-      cuốc thường (gross 20k, pickup 1km → net 17k) cho (17000−6000)/8000 = **+1.375**,
-      khiến P4 (accept_base 0.80) thực tế nhận **94%** và P3 (0.98) nhận 99.5% →
-      **archetype gần như vô nghĩa**, accept tổng 96.3% (thực tế 0.74–0.97).
-
-      Mô hình mới: **`accept_base` LÀ mức nhận trung bình của archetype**; kinh tế chỉ
-      **điều biến quanh** nó. `x = logit(accept_base) + w · z`, với
-      `z = (net − center)/scale` **kẹp trong [−2, 2]** và `w = econ_weight` nhỏ (mặc định
-      0.7). Khi net ≈ center → nhận đúng `accept_base`; cuốc quá xa/rẻ (z âm) mới giảm.
-
-      `logit_center_vnd` giờ mang nghĩa **net TRUNG VỊ của thị trường** (không phải mốc
-      "hoà vốn"), nên cần đặt theo phân phối cuốc thật trong config.
+    SIM-2: giữ nguyên chữ ký cho caller/test cũ; mô hình thật nằm ở `decide_accept`
+    (xem docstring ở đó để hiểu vì sao `accept_base` là mức trung bình còn kinh tế chỉ
+    điều biến quanh nó — hiệu chỉnh SIM-1).
     """
-    if forced:
-        return True
-    net = gross_vnd - pickup_dist_km * cost_per_km_vnd
-    z = (net - logit_center_vnd) / max(1e-6, logit_scale_vnd)
-    z = max(-2.0, min(2.0, z))                      # kẹp: kinh tế KHÔNG được áp đảo
-    base = min(0.999, max(0.001, actor.accept_base))
-    x = math.log(base / (1 - base)) + ECON_WEIGHT * z
-    return rng.random() < _logistic(x)
+    return decide_accept(actor, gross_vnd, pickup_dist_km, forced, rng,
+                         cost_per_km_vnd, logit_center_vnd, logit_scale_vnd).accepted
 
 
 def soc_range_km(actor: Actor, cfg_vehicle: dict) -> float:

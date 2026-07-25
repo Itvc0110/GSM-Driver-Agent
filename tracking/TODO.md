@@ -51,8 +51,13 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    — trước đây chênh 5đ%, archetype gần như vô nghĩa). Data BIKE đọc counter sim (coherence).
    Gate 30 seed: `tests/test_sim_realism.py` (10 test). Suite **388** xanh.
    Flaw còn lại: F-SIM1-A (trips/driver 12.3 < 18-22 — cơ cấu 1 quận, đã defer), F-SIM1-B/D (LOW).
-2. **SIM-2 Driver journey (READY — kế tiếp):** `DriverJourney` timeline 1 tài xế (phiên, từng
-   offer nhận/từ chối + lý do, di chuyển, nghỉ/sạc, thu nhập tích luỹ); metric per-driver khớp tổng.
+2. ✅ **SIM-2 Driver journey — DONE 2026-07-25 (UPDATE-045).** `src/gsm_sim/journey.py` +
+   tab dashboard 🧭 + export JSON. Từng offer có **LÝ DO** (`economics` = chê xa/rẻ ⇒ dư địa
+   advisor; `base_behavior` = mệt/kén ⇒ khuyên tiền vô ích). Bug thật: `income_curve` từng bỏ
+   sót **thưởng ngày** (thiếu 60.000đ) — thưởng là thứ advisor tối ưu nên đây là lỗi nặng.
+   14 test, suite **405** xanh, RNG không trôi.
+   ⚠️ **F-SIM2-A (D-SIM-02) CHẶN baseline tân binh của SIM-4**: sim cho tài xế mới thưởng **0đ**,
+   trái thực tế Cường nêu (*"hồ sơ mới cũng có nhiều thưởng"*).
 3. **SIM-3 Advice→Action:** `AdviceActionBridge` + adherence model.
 4. **SIM-4 Parallel worlds:** World A (tự làm) vs B (theo chỉ dẫn), CRN paired, baseline tân binh.
    ⚠️ Advisor pipeline **deterministic** (Cường chốt 2026-07-24), không gọi LLM live.

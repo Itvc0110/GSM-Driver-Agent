@@ -194,8 +194,9 @@ Triệu chứng: `test_weekly_khoan.py::test_view_gross_matches_income_sum` đ�
 
 ## 9. Visual review
 
-**Status: `REVIEWED` — Cường xem dashboard 2026-07-25, báo lỗi *cột H3 đè lên trạm sạc*;
-đã fix (§6b.3) và yêu cầu commit.** Đây là *meaningful simulator update* (dynamics + default
+**Status: `DEFERRED` (V-01, V-02 trong `tracking/PENDING-REVIEW.md`).** Cường đã xem dashboard
+2026-07-25 và báo lỗi *cột H3 đè lên trạm sạc* → đã fix (§6b.3). Phần realism còn lại Cường
+**hoãn check** (2026-07-26: *"sẽ check sau"*) và cho phép chạy tiếp — **hoãn ≠ waive**. Đây là *meaningful simulator update* (dynamics + default
 parameters + metric mới) ⇒ theo harness §4b phải launch dashboard thật và chờ verdict
 **trước commit**. Seed/scenario đề nghị xem: **seed 1000** (`configs/pilot_dongda.yaml`) —
 kiểm tra bằng mắt: mật độ tài xế lúc 05-07h (trước đây trống trơn), đuôi đêm 21-23h, và

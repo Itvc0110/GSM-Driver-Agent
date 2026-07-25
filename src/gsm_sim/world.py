@@ -15,7 +15,7 @@ import h3
 import numpy as np
 import simpy
 
-from .behavior import IdleAction, accept_order, choose_idle_action, choose_station
+from .behavior import IdleAction, choose_idle_action, choose_station, decide_accept
 from .config import Config
 from .dispatcher import _speed_kmh, match_batch
 from .entities import Actor, ActorState, BatteryInStation, FleetType, Station
@@ -271,17 +271,31 @@ class World:
                     # `orders_cancelled` từ nay CHỈ đếm huỷ SAU khi nhận (khớp nghĩa cột
                     # `cancelled_count` trong `driver_statistic_daily`).
                     actor.orders_soc_skipped += 1
+                    # SIM-2: trước đây nhánh này CHỈ tăng counter ⇒ vô hình trên timeline.
+                    # Không giải thích được vì sao tài xế "biến mất" khỏi thị trường một lúc.
+                    self.log(actor.actor_id, "order_skipped_soc", actor.cell,
+                             order_id=order.order_id, soc_pct=round(actor.soc_pct, 1),
+                             need_km=round(total_km, 2))
                     continue
-                if not accept_order(actor, order.gross_vnd, asg.pickup_dist_km, forced, self.rng,
-                                    self.accept_cost_km, self.accept_center, self.accept_scale):
-                    self.log(actor.actor_id, "order_declined", actor.cell, order_id=order.order_id)
+                dec = decide_accept(actor, order.gross_vnd, asg.pickup_dist_km, forced, self.rng,
+                                    self.accept_cost_km, self.accept_center, self.accept_scale)
+                if not dec.accepted:
+                    # SIM-2: ghi ĐỦ căn cứ — trả lời được "vì sao từ chối cuốc NÀY?"
+                    self.log(actor.actor_id, "order_declined", actor.cell,
+                             order_id=order.order_id, reason=dec.reason,
+                             net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
+                             gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4))
                     continue
                 # nhận đơn
                 actor.orders_accepted += 1
                 self.open_orders.pop(order.order_id, None)
                 self.order_open_since.pop(order.order_id, None)
                 self._order_transition(order.order_id, "MATCHED")
-                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id)
+                # SIM-2: ghi cùng bộ số như lúc từ chối ⇒ so sánh được cuốc NHẬN vs cuốc BỎ
+                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id,
+                         net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
+                         gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4),
+                         reason=dec.reason)
                 actor.state = ActorState.ENROUTE
                 self.env.process(self._serve_trip(actor, order, asg))
 
