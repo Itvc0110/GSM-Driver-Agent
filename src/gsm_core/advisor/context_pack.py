@@ -74,7 +74,8 @@ def build_context_pack(feature: str, solver_reports: list[dict],
         # khai ở đây thì LLM/verifier KHÔNG thấy nội dung khoán tuần / mini-task.
         for k in ("feasible", "next_action", "top_pattern", "herding_avoided",
                   "quota_available", "gap_revenue_vnd", "clawback_risk_vnd",
-                  "expected_reward_vnd", "chosen_missions"):
+                  "expected_reward_vnd", "chosen_missions",
+                  "total_idle_min", "idle_share", "worst_window", "reposition_mission"):
             if k in sol and sol[k] is not None:
                 v = sol[k]
                 if isinstance(v, dict):

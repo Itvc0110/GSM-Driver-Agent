@@ -278,6 +278,56 @@ def derive_mission_select_input_l1r(driver_id: str, t_now: str, l1r: dict,
     }
 
 
+# ---------- S7: idle_reduction_input (UC5) ----------
+
+def derive_idle_reduction_input_l1r(driver_id: str, t_now: str, l1r: dict,
+                                    session_date: str | None = None,
+                                    idle_min_seconds: int = 300) -> dict:
+    """Khoảng chờ ĐO ĐƯỢC từ `public_driver_hex_tracking` + demand PROXY từ `trips`.
+
+    D-004b: `hex` chỉ để THỐNG KÊ; solver KHÔNG dùng nó để chỉ định chỗ đứng (B1).
+    `active_reposition` chỉ lấy khi data có `campaign_id` (nhiệm vụ CHÍNH THỨC GSM).
+    """
+    d = session_date or _date(t_now)
+    segs, repo = [], None
+    for r in _rows(l1r, "public_driver_hex_tracking"):
+        if r["driver_id"] != driver_id:
+            continue
+        seen = r.get("last_seen_at") or r.get("created_at") or ""
+        if seen[:10] != d:
+            continue
+        dur = int(r.get("stay_duration_seconds") or 0)
+        if r.get("tracking_status") == "idle" and dur >= idle_min_seconds:
+            start = r.get("entered_current_hex_at") or seen
+            segs.append({"hex": r.get("current_hex"), "start": start,
+                         "duration_seconds": dur, "hour": _hour(start)})
+        if repo is None and r.get("campaign_id"):  # nhiệm vụ reposition của GSM
+            repo = {"campaign_id": r.get("campaign_id"), "target_hex": r.get("target_hex"),
+                    "reached": r.get("reached_target")}
+
+    total_s = sum(s["duration_seconds"] for s in segs)
+    longest_s = max((s["duration_seconds"] for s in segs), default=0)
+
+    # demand PROXY theo giờ (chỉ đơn ĐÃ phục vụ) — chuẩn hoá [0,1]
+    by_hour: dict[int, int] = defaultdict(int)
+    for t in _rows(l1r, "trips"):
+        by_hour[_hour(t["request_time"])] += 1
+    peak = max(by_hour.values()) if by_hour else 0
+    demand = {str(h): round(n / peak, 3) for h, n in sorted(by_hour.items())} if peak else {}
+
+    onl = _online_row(l1r, driver_id, d)
+    return {
+        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now, "session_date": d,
+        "idle_segments": sorted(segs, key=lambda s: s["start"] or ""),
+        "total_idle_min": round(total_s / 60, 2),
+        "longest_idle_min": round(longest_s / 60, 2),
+        "online_hours": float(onl["online_time"]) if onl else None,
+        "demand_by_hour": demand,
+        "active_reposition": repo,
+        "view_version": VIEW_VERSION, "source": _provenance(onl),
+    }
+
+
 # ---------- S2: shift_plan_input ----------
 
 def derive_shift_plan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: PolicyBundle,

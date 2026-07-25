@@ -22,6 +22,9 @@ from gsm_core.schema_registry import L1R_ENTITIES
 
 ROOT = Path(__file__).resolve().parents[3]
 RUSH_HOURS = {6, 7, 8, 16, 17, 18}
+# Dwell dài hơn ngưỡng này = tài xế nghỉ/không vận doanh (KHÔNG phải "chờ khách").
+# Chống trạng thái bất khả: Σ idle không được vượt giờ online (BUG-PI5b-01).
+OFFLINE_DWELL_SECONDS = 90 * 60
 # demand shape theo giờ 6..22 (2 đỉnh sáng/chiều) — trọng số cho rule-based trips
 _HOUR_W = {6: 3, 7: 5, 8: 4, 9: 2, 10: 2, 11: 3, 12: 3, 13: 1, 14: 1, 15: 2,
            16: 4, 17: 5, 18: 5, 19: 3, 20: 3, 21: 2, 22: 1}
@@ -265,7 +268,12 @@ def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str
                         "reached_target": (rng.random() < 0.6) if reposition else None,
                         "reached_target_at": None, "hex_history": None, "created_at": seg_start,
                         "updated_at": prev_t, "schedule_job_id": None, "datastream_metadata": None,
-                        "tracking_status": "idle" if dur > 300 else "moving"})
+                        # BUG-PI5b-01: trước đây MỌI dwell >5 phút đều gán "idle" ⇒ khoảng
+                        # NGHỈ/OFFLINE dài (vd 20 giờ đứng yên) bị tính là "đang chờ khách"
+                        # → tổng idle 1300 phút > online 4.8h (bất khả). Dwell quá dài =
+                        # tài xế KHÔNG vận doanh → "offline" (enum schema đã có).
+                        "tracking_status": ("offline" if dur > OFFLINE_DWELL_SECONDS
+                                            else ("idle" if dur > 300 else "moving"))})
                     hx += 1
                 seg_hex, seg_start, prev_hex = h, p["t"], seg_hex
             prev_t = p["t"]

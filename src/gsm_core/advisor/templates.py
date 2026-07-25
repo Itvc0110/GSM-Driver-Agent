@@ -71,6 +71,32 @@ def _mission_sentence(solver_reports: list[dict], reg: dict) -> str:
     return s + "."
 
 
+def _idle_sentence(solver_reports: list[dict], reg: dict) -> str:
+    """UC5 idle (D-004b): CHỈ khuyên MỨC THỜI GIAN — không chỉ định ô/khu vực đứng.
+
+    Khu vực chỉ nhắc lại nhiệm vụ CHÍNH THỨC của hãng (nếu data có). Cảnh báo tỷ lệ
+    nhận + nhãn ước lượng nằm ở `caveats` của SolverReport (điều kiện 3 & 4).
+    """
+    r = _rep(solver_reports, "idle_reduction")
+    if not r:
+        return ""
+    sol = r.get("solution") or {}
+    if not sol.get("notable"):
+        return ""  # không bịa vấn đề khi tài xế không chờ nhiều
+    total = _vn(reg, sol.get("total_idle_min"), "minutes")
+    if not total:
+        return ""
+    s = f" Hôm nay anh/chị chờ tổng {total}"
+    w = sol.get("worst_window")
+    if w and w.get("hour") is not None:
+        s += (f", nhiều nhất quanh khung {int(w['hour']):02d}h — khung này nhu cầu thường "
+              "thấp, anh/chị có thể dồn nghỉ/đổi pin vào đó")
+    s += "."
+    if sol.get("reposition_mission"):
+        s += f" Ngoài ra, {sol['reposition_mission']}."
+    return s
+
+
 def _advice_spec(action: str | None, bucket: str | None) -> dict:
     """advice_spec hợp schema: action_type thường-hoá (adherence taxonomy), KHÔNG
     kèm `expiry` khi rỗng (schema: expiry là string date-time, không nullable)."""
@@ -122,6 +148,7 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
         reason_txt = f" — {reason}" if reason else ""
         progress = f" Anh/chị còn thiếu {n1} để đạt mốc thưởng {n2}." if n1 and n2 else ""
         msg = (f"Gợi ý lúc này: anh/chị nên {act_vn}{reason_txt}.{progress}"
+               f"{_idle_sentence(solver_reports, reg)}"
                f"{_mission_sentence(solver_reports, reg)}{disclaimer}")
         if na:
             advice_spec = _advice_spec(na.get("action"), na.get("bucket"))
@@ -131,12 +158,14 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
         progress = f" Ca này anh/chị đạt thêm {n1}, hướng tới mốc {n2}." if n1 and n2 else ""
         khoan = _khoan_sentence(solver_reports, reg)  # UC3 tiến độ tuần (PI-5a)
         if top:
-            msg = (f"Tổng kết ca: {top['heuristic_note']}{progress}{khoan} "
+            msg = (f"Tổng kết ca: {top['heuristic_note']}{progress}{khoan}"
+                   f"{_idle_sentence(solver_reports, reg)} "
                    f"Ca sau anh/chị thử điều chỉnh điểm này nhé.{disclaimer}")
         else:
             msg = (f"Tổng kết ca:{(progress + ' ') if progress else ' '}"
                    f"không có điểm nào cần điều chỉnh rõ rệt "
-                   f"— anh/chị chạy ổn định.{khoan}{disclaimer}")
+                   f"— anh/chị chạy ổn định.{khoan}"
+                   f"{_idle_sentence(solver_reports, reg)}{disclaimer}")
 
     return {
         "message": msg.strip(),

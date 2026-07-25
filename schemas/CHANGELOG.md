@@ -1,5 +1,11 @@
 # Schema changelog
 
+## 2026-07-24 (PI-5b, UPDATE-041) — additive
+
+- `l3/idle_reduction_input` (mới): input S7 IdleReduction (UC5). `hex` CHỈ để thống kê —
+  D-004b/B1 cấm dùng để chỉ định chỗ đứng; `active_reposition` chỉ từ campaign CHÍNH THỨC.
+- `advisor/solver_report.solver`: enum **+`idle_reduction`**.
+
 ## 2026-07-24 (PI-4b, UPDATE-038) — additive, KHÔNG phá contract cũ
 
 - `l0/policy_bundle`: **+`weekly_quota`** optional `{min_revenue_vnd, min_active_days,

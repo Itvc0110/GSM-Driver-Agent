@@ -15,8 +15,9 @@ FEATURE_SOLVERS = {
     "F0": {"solvers": ["bonus_feasibility"], "use_kb": True},
     "F1": {"solvers": ["bonus_feasibility", "shift_dp", "weekly_khoan", "mission_knapsack"],
            "use_kb": False},
-    "F2": {"solvers": ["shift_dp", "capacity_alloc", "mission_knapsack"], "use_kb": False},
-    "F3": {"solvers": ["f3_patterns", "weekly_khoan"], "use_kb": False},
+    "F2": {"solvers": ["shift_dp", "capacity_alloc", "mission_knapsack", "idle_reduction"],
+           "use_kb": False},
+    "F3": {"solvers": ["f3_patterns", "weekly_khoan", "idle_reduction"], "use_kb": False},
 }
 
 # keyword tiếng Việt (đã bỏ dấu, đ→d) per intent — dict viết tay, fixture test
@@ -29,6 +30,9 @@ _INTENT_KEYWORDS = {
     # UC8 mini-task
     "mission_task": ["nhiem vu", "mini task", "mission", "lam them viec",
                      "thuong nhiem vu", "task"],
+    # UC5 chờ/ế khách
+    "idle_wait": ["dung cho", "cho lau", "e khach", "khong co cuoc", "vang khach",
+                  "cho mai", "it don"],
     # UC3 khoán tuần / chỉ tiêu
     "weekly_target": ["khoan", "doanh so tuan", "chi tieu tuan", "kpi tuan",
                       "truy thu", "muc tieu tuan"],

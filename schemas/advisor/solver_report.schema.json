@@ -13,7 +13,8 @@
         "f3_patterns",
         "capacity_alloc",
         "weekly_khoan",
-        "mission_knapsack"
+        "mission_knapsack",
+        "idle_reduction"
       ]
     },
     "problem_digest": {
