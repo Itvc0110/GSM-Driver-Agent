@@ -1,5 +1,9 @@
 # TODO — Backlog công việc
 
+> **⚠ ĐỌC TRƯỚC: [`DIRECTIVES-2026-07-24.md`](DIRECTIVES-2026-07-24.md)** — chỉ thị chương trình
+> của Cường (data luôn MOCK + local-only; external API keys; **SIM overhaul là mảng riêng ưu tiên
+> cao nhất**; mock UI xem advice; C7 + rà soát định kỳ mô hình tối ưu). File đó THẮNG khi xung đột.
+
 Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T-030). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
 
 ## Thứ tự thực thi (theo độ quan trọng + phụ thuộc tuyến tính)
