@@ -1,0 +1,93 @@
+{
+  "$schema_note": "MỘT nguồn sự thật style cho Track UI — web sinh CSS vars, Flutter sinh ThemeData. Đổi file này = đổi cả 2 UI; ghi UPDATE khi đổi.",
+  "version": "1.0.0",
+  "updated": "2026-07-26",
+  "provenance": {
+    "brand_source": "Design system Stitch của Khánh (ui/demo_stitch_app.html + driver_app/lib/main.dart)",
+    "dataviz_method": "skill dataviz — palette PHẢI qua scripts/validate_palette.js, không ước bằng mắt",
+    "validation": {
+      "date": "2026-07-26",
+      "surface_light": "#ffffff",
+      "categorical_light_adjacent": "PASS 5/5 — worst pair CVD dE 23.1 (protan), normal 24.0",
+      "categorical_light_all_pairs": "PASS với CVD WARN: aqua<->magenta dE 6.1 (deutan, band 6-8) — HỢP LỆ CHỈ KHI có secondary encoding (2px gap giữa mark + direct label). Gantt/stack đã có.",
+      "contrast_relief": "aqua 2.82 / yellow 2.17 / magenta 2.69 dưới 3:1 trên trắng — BẮT BUỘC direct label hoặc table view ở chart dùng các màu này",
+      "categorical_dark": "bộ dark giữ từ UPDATE-057 (validated 5/5 trên #12181c) — dùng cho dark map mode"
+    }
+  },
+  "brand": {
+    "accent": "#00AFB9",
+    "accent_hover": "#0d9488",
+    "accent_soft": "#E0F7FA",
+    "ink": "#1C1C1E",
+    "page_bg": "#E8F1FA",
+    "surface": "#ffffff",
+    "surface_subtle": "#f8fafc",
+    "border_hairline": "rgba(28,28,30,0.10)",
+    "shadow_card": "0 2px 6px rgba(0,0,0,0.08)",
+    "shadow_float": "0 4px 12px rgba(0,0,0,0.12)",
+    "polyline_base": "#0f172a",
+    "polyline_top": "#00AFB9",
+    "note": "accent DUY NHẤT toàn trang = cyan brand (taste-skill); accent KHÔNG dùng làm series chart — series theo dataviz.categorical"
+  },
+  "typography": {
+    "family_ui": "'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    "numeric": "font-variant-numeric: tabular-nums cho cột số/axis; số tiền hiển thị lớn dùng weight 700",
+    "scale": { "xs": "11px", "sm": "12.5px", "base": "14px", "md": "15px", "lg": "18px", "xl": "22px", "hero": "28px" }
+  },
+  "radius": {
+    "pill": "9999px",
+    "card": "16px",
+    "sheet": "24px",
+    "chip": "12px",
+    "note": "một hệ bo góc theo Khánh: pill cho nút/badge, 16 cho card, 24 cho sheet/modal"
+  },
+  "text": {
+    "primary": "#1C1C1E",
+    "secondary": "#52514e",
+    "muted": "#898781",
+    "on_accent": "#ffffff",
+    "gridline": "#e1e0d9",
+    "axis_baseline": "#c3c2b7"
+  },
+  "dataviz": {
+    "note": "Màu THEO ENTITY vĩnh viễn — filter đổi số series không được đổi màu series còn lại. Text không mặc màu series.",
+    "categorical_light": {
+      "on_trip":  { "hex": "#1baf7a", "vi": "Chở khách" },
+      "enroute":  { "hex": "#2a78d6", "vi": "Đi đón" },
+      "charge":   { "hex": "#eda100", "vi": "Đổi pin/sạc" },
+      "rest":     { "hex": "#4a3aa7", "vi": "Nghỉ" },
+      "relocate": { "hex": "#e87ba4", "vi": "Dịch chuyển" },
+      "idle":     { "hex": "#eceff2", "vi": "Chờ đơn", "note": "KHÔNG phải series — nền mờ + nhãn trực tiếp" }
+    },
+    "categorical_dark": {
+      "on_trip": "#199e70", "enroute": "#3987e5", "charge": "#c98500",
+      "rest": "#9085e9", "relocate": "#d55181", "idle": "#242d33",
+      "surface": "#12181c",
+      "note": "bộ validated UPDATE-057 — chỉ dùng khi render trên nền tối (dark map)"
+    },
+    "sequential_cyan": {
+      "note": "MỘT hue (cyan brand) nhạt→đậm cho magnitude (mật độ cầu). Nhạt nhất = gần 0, được phép chìm vào nền.",
+      "steps": ["#e5f6f7", "#c3ebee", "#95dbe0", "#5ec4cc", "#22a9b4", "#068c96", "#046e77", "#035158"]
+    },
+    "diverging": {
+      "note": "Δ quanh 0 (A/B, heatmap độ nhạy): đỏ (xấu) ↔ cyan (tốt), midpoint XÁM trung tính — không hue ở 0.",
+      "negative_pole": "#c73a3a",
+      "midpoint": "#eef0f1",
+      "positive_pole": "#046e77"
+    },
+    "status": {
+      "good": "#0ca30c", "warning": "#fab219", "serious": "#ec835a", "critical": "#d03b3b",
+      "note": "cố định theo skill, KHÔNG đem làm series; luôn kèm icon + label, không màu-trần"
+    }
+  },
+  "map": {
+    "tiles_light": "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    "tiles_dark": "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    "waypoint_colors": ["#00AFB9", "#F59E0B", "#8B5CF6", "#F43F5E"],
+    "waypoint_note": "A/B/C/D theo demo Khánh — chỉ dùng cho ghim lộ trình, không phải series chart"
+  },
+  "labels": {
+    "mock_badge": "Dữ liệu mô phỏng",
+    "mock_badge_note": "BẮT BUỘC hiển thị ở mọi màn có số (CLAUDE §5); tiền tách 'Doanh thu gộp (gross)' / 'Thu nhập tài xế (payout)' — payout là mặc định"
+  }
+}

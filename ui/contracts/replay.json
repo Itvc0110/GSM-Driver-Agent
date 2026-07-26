@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReplayContract",
+  "description": "v1.0 (2026-07-26). Replay TOÀN đội xe một ngày sim: mỗi actor là dãy chặng có toạ độ + thời gian, client nội suy vị trí theo phút (Leaflet). Nguồn: RunResult.segments của engine — không gọi mạng, không OSRM lúc replay.",
+  "type": "object",
+  "properties": {
+    "seed": { "type": "integer" },
+    "data_mode": { "type": "string", "const": "sim-engine" },
+    "is_mock": { "type": "boolean", "const": true },
+    "t_min_range": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+    "actors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "actor_id": { "type": "integer" },
+          "archetype": { "type": "string" },
+          "legs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "t0_min": { "type": "integer" },
+                "t1_min": { "type": "integer" },
+                "kind": { "type": "string", "enum": ["on_trip", "enroute", "charge", "rest", "relocate", "idle"] },
+                "from": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                "to": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+              },
+              "required": ["t0_min", "t1_min", "kind", "from", "to"]
+            }
+          }
+        },
+        "required": ["actor_id", "archetype", "legs"]
+      }
+    },
+    "stations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "lat": { "type": "number" },
+          "lng": { "type": "number" },
+          "name": { "type": "string" }
+        },
+        "required": ["id", "lat", "lng"]
+      }
+    }
+  },
+  "required": ["seed", "data_mode", "is_mock", "t_min_range", "actors", "stations"]
+}

@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ABResultContract",
+  "description": "v1.0 (2026-07-26). Kết quả thế giới song song (CRN paired) từ gsm_sim.parallel.run_pair — MỘT seed. UI PHẢI hiển thị warning_text (1 seed = 1 ngày, kết luận cần 30 seed + CI); số nhiều-seed đọc từ file precomputed, không chạy trong request.",
+  "type": "object",
+  "properties": {
+    "seed": { "type": "integer" },
+    "data_mode": { "type": "string", "const": "sim-engine" },
+    "is_mock": { "type": "boolean", "const": true },
+    "channel": { "type": "string", "description": "kênh advice bật ở thế giới B (vd accept_lift)" },
+    "warning_text": { "type": "string" },
+    "delta": {
+      "type": "object",
+      "properties": {
+        "payout_vnd": { "type": "integer", "description": "tổng B − A trên actor đích" },
+        "served_total": { "type": "integer" },
+        "advice_events": { "type": "integer" }
+      },
+      "required": ["payout_vnd"]
+    },
+    "target_actors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "actor_id": { "type": "integer" },
+          "archetype": { "type": "string" },
+          "payout_a_vnd": { "type": "integer" },
+          "payout_b_vnd": { "type": "integer" },
+          "delta_vnd": { "type": "integer" }
+        },
+        "required": ["actor_id", "payout_a_vnd", "payout_b_vnd", "delta_vnd"]
+      }
+    },
+    "guardrail": {
+      "type": "object",
+      "description": "hệ thống không được xấu đi: served theo cell",
+      "properties": {
+        "worst_cell_delta_served": { "type": "integer" },
+        "flagged_cells": { "type": "array", "items": { "type": "string" } },
+        "ok": { "type": "boolean" }
+      },
+      "required": ["ok"]
+    },
+    "income_curves": {
+      "type": "object",
+      "description": "đường thu nhập cộng dồn của actor đích ở A và B để vẽ chồng",
+      "properties": {
+        "a": { "type": "array", "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } },
+        "b": { "type": "array", "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 } }
+      }
+    }
+  },
+  "required": ["seed", "data_mode", "is_mock", "channel", "warning_text", "delta", "guardrail"]
+}

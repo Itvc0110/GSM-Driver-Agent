@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AdviceContract",
+  "description": "v1.0 (2026-07-26). Advice từ solver/rule — agent KHÔNG tự bịa số (CLAUDE §5): mọi số trong numbers[] phải có source. Trạng thái 'im lặng' là hợp lệ và PHẢI biểu diễn được (advisor không thấy gì đáng khuyên = thông tin có giá trị).",
+  "type": "object",
+  "properties": {
+    "scenario_id": { "type": "string" },
+    "seed": { "type": "integer" },
+    "data_mode": { "type": "string", "enum": ["synthetic", "mock-realdata"] },
+    "is_mock": { "type": "boolean", "const": true },
+    "generated_at_min": { "type": "integer", "description": "phút trong ngày sim tại thời điểm tư vấn" },
+    "silent": {
+      "type": "object",
+      "description": "khi không có advice — nêu LÝ DO có cấu trúc, UI hiển thị tử tế thay vì trống",
+      "properties": {
+        "is_silent": { "type": "boolean" },
+        "reason_code": { "type": "string", "enum": ["already_on_track", "insufficient_budget_hours", "insufficient_history", "no_active_channel"] },
+        "message": { "type": "string" }
+      },
+      "required": ["is_silent"]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "advice_id": { "type": "string" },
+          "solver": { "type": "string", "description": "S1..S9 hoặc 'rule'" },
+          "kind": { "type": "string", "enum": ["bonus_gap", "rest_window", "charge_now", "demand_shift", "info"] },
+          "title": { "type": "string" },
+          "message": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "reason_code": { "type": "string" },
+          "numbers": {
+            "type": "array",
+            "description": "MỌI con số xuất hiện trong message phải có mặt ở đây kèm nguồn",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "value": { "type": "number" },
+                "unit": { "type": "string" },
+                "source": { "type": "string", "enum": ["THẬT", "PROXY", "ASSUMPTION", "MOCK", "SOLVER"] }
+              },
+              "required": ["name", "value", "source"]
+            }
+          },
+          "caveat": { "type": "string", "description": "bất định/điều kiện — không hứa chắc thu nhập" }
+        },
+        "required": ["advice_id", "solver", "kind", "title", "message", "confidence", "reason_code"]
+      }
+    }
+  },
+  "required": ["scenario_id", "seed", "data_mode", "is_mock", "silent", "items"]
+}

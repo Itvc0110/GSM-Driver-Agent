@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "JourneyContract",
+  "description": "v1.0 (2026-07-26). Hành trình MỘT tài xế MỘT ngày sim — serialize từ gsm_sim.journey.build_journey. UI CHỈ render, không tính lại số nào (income_curve đã cộng dồn sẵn ở engine).",
+  "type": "object",
+  "properties": {
+    "seed": { "type": "integer" },
+    "actor_id": { "type": "integer" },
+    "archetype": { "type": "string" },
+    "data_mode": { "type": "string", "const": "sim-engine" },
+    "is_mock": { "type": "boolean", "const": true },
+    "segments": {
+      "type": "array",
+      "description": "khối thời gian liên tiếp; kind theo dataviz.categorical (idle KHÔNG phải series)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t0_min": { "type": "integer" },
+          "t1_min": { "type": "integer" },
+          "kind": { "type": "string", "enum": ["on_trip", "enroute", "charge", "rest", "relocate", "idle"] },
+          "from": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[lat, lng] hoặc null" },
+          "to": { "type": ["array", "null"], "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+        },
+        "required": ["t0_min", "t1_min", "kind"]
+      }
+    },
+    "offers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t_min": { "type": "integer" },
+          "accepted": { "type": "boolean" },
+          "completed": { "type": ["boolean", "null"] },
+          "reason": { "type": "string" },
+          "fare_vnd": { "type": ["integer", "null"] },
+          "dist_km": { "type": ["number", "null"] }
+        },
+        "required": ["t_min", "accepted", "reason"]
+      }
+    },
+    "income_curve": {
+      "type": "array",
+      "description": "điểm (phút, payout cộng dồn) từ engine — 4 nguồn đã gom sort ở journey.py",
+      "items": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+    },
+    "events": {
+      "type": "array",
+      "description": "mốc đánh dấu trên timeline: advice/mission/thưởng/tân binh",
+      "items": {
+        "type": "object",
+        "properties": {
+          "t_min": { "type": "integer" },
+          "kind": { "type": "string", "enum": ["advice", "mission_completed", "day_bonus", "newbie_bonus", "trip_rated"] },
+          "label": { "type": "string" }
+        },
+        "required": ["t_min", "kind"]
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "từ journey.metrics — bảo toàn: trip+bonus+mission+newbie == payout",
+      "properties": {
+        "gross_vnd": { "type": "integer" },
+        "payout_vnd": { "type": "integer" },
+        "trip_payout_vnd": { "type": "integer" },
+        "day_bonus_vnd": { "type": "integer" },
+        "mission_reward_vnd": { "type": "integer" },
+        "newbie_vnd": { "type": "integer" },
+        "trips_completed": { "type": "integer" },
+        "orders_offered": { "type": "integer" },
+        "online_min": { "type": "integer" },
+        "points": { "type": "integer" }
+      },
+      "required": ["payout_vnd", "trip_payout_vnd", "day_bonus_vnd", "mission_reward_vnd", "newbie_vnd"]
+    }
+  },
+  "required": ["seed", "actor_id", "archetype", "data_mode", "is_mock", "segments", "offers", "income_curve", "metrics"]
+}
