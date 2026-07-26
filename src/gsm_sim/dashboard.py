@@ -24,15 +24,26 @@ import pydeck as pdk
 import streamlit as st
 
 from gsm_sim.config import Config
+from gsm_sim.dashboard_theme import (
+    ACCENT, ACTIVITY_COLORS, CSS, SEQ_AQUA, SERIES, STATUS, SURFACE_DIM, TEXT_2,
+    VN_KIND, register_template,
+)
 from gsm_sim.geo import build_grid
 from gsm_sim.journey import build_journey
 from gsm_sim.metrics import summarize, trips_by_hour
 from gsm_sim.runner import run_once
 
+register_template()   # plotly template chung — grid recessive, palette VALIDATED
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_PATH = ROOT / "configs" / "pilot_dongda.yaml"
 
-st.set_page_config(page_title="GSM Sim — Đống Đa (MOCK)", layout="wide")
+st.set_page_config(page_title="XanhSM Sim — Đống Đa (MOCK)", layout="wide")
+st.markdown(CSS, unsafe_allow_html=True)
+st.markdown(
+    '<div class="xanh-header"><span class="brand">XanhSM Sim</span>'
+    '<span class="sub">Đống Đa · đường thật OSRM · engine đa-ngày</span>'
+    '<span class="xanh-badge">MOCK DATA</span></div>', unsafe_allow_html=True)
 
 
 # ---------- Helpers ----------
@@ -248,8 +259,8 @@ if result.env is not None and result.env.clamp_hits() > 0:
     st.warning(f"⚠️ demand factor bị bó (clamp) {result.env.clamp_hits()} lần — "
                f"factor tổng vượt [{result.env.m_min}, {result.env.m_max}]. Cân nhắc giảm cường độ.")
 
-tab_map, tab_time, tab_env, tab_actor, tab_journey = st.tabs(
-    ["🗺️ Bản đồ H3", "📈 Theo thời gian", "🌦️ Môi trường", "🛵 Tài xế", "🧭 Hành trình 1 tài xế"])
+tab_map, tab_replay, tab_time, tab_env, tab_actor, tab_journey, tab_ab = st.tabs(
+    ["Bản đồ", "Replay", "Nhịp ngày", "Môi trường", "Đội xe", "Hành trình", "Thế giới song song"])
 
 # ---------- Data frames ----------
 
@@ -286,7 +297,8 @@ with tab_map:
         "H3HexagonLayer",
         cell_counts,
         get_hexagon="cell",
-        get_fill_color="[255, 140 - count, 0, 160]",
+        # sequential MỘT hue (aqua) — magnitude job; không rainbow/cam-đỏ tuỳ hứng
+        get_fill_color="[25 + count * 2, 158, 112, 170]",
         get_elevation="count",
         elevation_scale=ELEV_SCALE,
         extruded=not flat,
@@ -304,7 +316,7 @@ with tab_map:
         get_position="[lon, lat, z]",
         get_radius=60,
         radius_min_pixels=6,          # không teo mất khi zoom xa
-        get_fill_color="[0, 122, 255, 240]",
+        get_fill_color="[201, 133, 0, 240]",   # trạm = amber (job: điểm dịch vụ, khác cầu)
         stroked=True,                 # viền trắng: nổi trên nền cam của hex
         get_line_color=[255, 255, 255],
         line_width_min_pixels=2,
@@ -318,7 +330,7 @@ with tab_map:
         initial_view_state=pdk.ViewState(latitude=21.013, longitude=105.825, zoom=13,
                                          pitch=0 if flat else 40),
         tooltip={"text": "{name}{cell} {count}"},
-        map_style="light",
+        map_style="dark",
     )
     st.pydeck_chart(deck, width='stretch')
     st.caption("Cột cam = số đơn/cuốc theo cell H3 res 9 · chấm xanh viền trắng = 11 tủ đổi pin "
@@ -419,19 +431,39 @@ with tab_journey:
     c3.metric("Hoàn thành", f"{(m['completion_rate'] or 0):.0%}")
     c4.metric("Utilization", f"{m['utilization']:.0%}", f"idle {m['idle_min']:.0f}ph")
     c5.metric("Payout", f"{m['payout_vnd']:,}đ",
-              f"{m['points']} điểm · thưởng {m['bonus_share']:.0%}")
+              f"{m['points']} điểm · ngoài cuốc {m['bonus_share']:.0%}")
+    a_pick = next(x for x in result.actors if x.actor_id == pick.actor_id)
+    c6, c7, c8 = st.columns(3)
+    stars = (a_pick.ratings_sum / a_pick.ratings_n) if a_pick.ratings_n else None
+    c6.metric("Điểm sao (ngày)", f"{stars:.2f}" if stars else "chưa có",
+              f"{a_pick.ratings_5}/{a_pick.ratings_n} lượt 5 sao" if a_pick.ratings_n else None)
+    c7.metric("Mission", f"+{m['mission_reward_vnd']:,}đ",
+              " · ".join(f"{k.split('-')[1]} {v}" for k, v in a_pick.mission_progress.items()) or None)
+    c8.metric("Tân binh", f"+{m['newbie_vnd']:,}đ",
+              f"thâm niên {a_pick.tenure_days} ngày")
 
     st.markdown("**Timeline phiên làm việc** — mọi phút đều có nhãn; `idle` = chờ đơn tại chỗ")
     tl = pd.DataFrame([{
-        "Hoạt động": b.kind,
+        "kind": b.kind, "Hoạt động": VN_KIND.get(b.kind, b.kind),
         "start": pd.Timestamp("2026-07-01") + pd.to_timedelta(b.t0, unit="m"),
         "end": pd.Timestamp("2026-07-01") + pd.to_timedelta(b.t1, unit="m"),
         "phút": round(b.minutes, 1), "đơn": b.order_id,
     } for b in j.timeline])
+    color_map = {VN_KIND.get(k, k): v for k, v in ACTIVITY_COLORS.items()}
     figj = px.timeline(tl, x_start="start", x_end="end", y="Hoạt động", color="Hoạt động",
-                       hover_data=["phút", "đơn"], title=f"Hành trình d-{pick.actor_id} (MOCK)")
+                       color_discrete_map=color_map, hover_data=["phút", "đơn"],
+                       title=f"Hành trình d-{pick.actor_id} (MOCK)")
     figj.update_yaxes(autorange="reversed")
+    # SIM-XANH P4: đánh dấu các mốc ADVICE trên timeline (đọc từ event thật, không tự tính)
+    adv_events = [e for e in result.events if e.actor_id == pick.actor_id
+                  and e.kind in ("advice_given", "advice_bonus_gate", "advice_rest_window",
+                                 "mission_completed", "newbie_week1_bonus")]
+    for e in adv_events:
+        x = pd.Timestamp("2026-07-01") + pd.to_timedelta(e.t_min, unit="m")
+        figj.add_vline(x=x, line_width=1, line_dash="dot", line_color=ACCENT, opacity=0.7)
     st.plotly_chart(figj, width='stretch')
+    if adv_events:
+        st.caption(f"Vạch chấm = {len(adv_events)} mốc advice/mission/thưởng (đọc từ event sim).")
 
     cA, cB = st.columns(2)
     with cA:
@@ -457,3 +489,131 @@ with tab_journey:
     } for o in j.offers]), width='stretch', height=320)
     st.caption("Mỗi dòng = một lần được chào đơn. `net` = gross − chi phí quãng đón; "
                "`P(nhận)` = xác suất nhận tại thời điểm đó. MOCK — không phải số thật GSM.")
+
+
+# ---------- SIM-XANH P4: REPLAY — xem thị trường CHUYỂN ĐỘNG ----------
+with tab_replay:
+    st.markdown("**Replay chuyển động đội xe** — mỗi vệt là một chặng di chuyển thật của sim; "
+                "màu theo loại hoạt động (bảng màu cố định toàn dashboard).")
+    rc1, rc2 = st.columns([3, 1])
+    t_now = rc1.slider("Thời điểm trong ngày (phút)", 300, 1440, 700, step=5,
+                       format="%d ph")
+    trail = rc2.slider("Đuôi vệt (phút)", 10, 120, 45, step=5)
+
+    def _rgb(hexcol):
+        h = hexcol.lstrip("#")
+        return [int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)]
+
+    seg_rows = []
+    for sgm in result.segments:
+        if sgm["t1"] < t_now - trail or sgm["t0"] > t_now:
+            continue
+        seg_rows.append({
+            "path": [[sgm["from_lon"], sgm["from_lat"]], [sgm["to_lon"], sgm["to_lat"]]],
+            "timestamps": [sgm["t0"], min(sgm["t1"], t_now)],
+            "color": _rgb(ACTIVITY_COLORS.get(sgm["kind"], "#3987e5")),
+        })
+    trips_layer = pdk.Layer(
+        "TripsLayer", seg_rows, get_path="path", get_timestamps="timestamps",
+        get_color="color", width_min_pixels=3, trail_length=trail, current_time=t_now,
+        opacity=0.85,
+    )
+    # trạm pin: bán kính theo hàng chờ hiện KHÔNG có timeline per-phút trong RunResult —
+    # hiển thị vị trí (amber); queue động là follow-up (ghi UPDATE, không giả số)
+    st_layer = pdk.Layer(
+        "ScatterplotLayer",
+        [{"lat": s_.lat, "lon": s_.lon, "name": f"Tủ pin {s_.node_id}"} for s_ in result.grid.stations],
+        get_position="[lon, lat]", get_radius=45, radius_min_pixels=4,
+        get_fill_color=_rgb("#c98500") + [235], stroked=True,
+        get_line_color=[255, 255, 255], line_width_min_pixels=1, pickable=True,
+    )
+    active_now = sum(1 for sgm in result.segments if sgm["t0"] <= t_now <= sgm["t1"])
+    st.pydeck_chart(pdk.Deck(
+        layers=[trips_layer, st_layer],
+        initial_view_state=pdk.ViewState(latitude=21.013, longitude=105.825, zoom=13, pitch=45),
+        map_style="dark", tooltip={"text": "{name}"},
+    ), width="stretch")
+    hh, mm = int(t_now // 60), int(t_now % 60)
+    st.caption(f"{hh:02d}:{mm:02d} · {len(seg_rows)} chặng trong cửa sổ · "
+               f"{active_now} tài xế đang di chuyển. Chú giải: "
+               + " · ".join(f"{VN_KIND[k]}" for k in ("on_trip", "enroute", "charge", "relocate"))
+               + ". MOCK.")
+
+
+# ---------- SIM-XANH P4: THẾ GIỚI SONG SONG — trả nợ tab A/B từ SIM-4 ----------
+with tab_ab:
+    st.markdown("**Tự làm (A) vs làm theo chỉ dẫn (B)** — cùng seed, chung đơn hàng/thời tiết "
+                "(CRN); Δ là hiệu THEO CẶP. Mọi số từ máy đo `parallel.py`, dashboard không tự tính.")
+    ab1, ab2 = st.columns([1, 2])
+    with ab1:
+        ab_seed = st.number_input("Seed cặp A/B", 1, 99999, int(seed), step=1)
+        ch_lift = st.checkbox("Kênh accept_lift", value=True)
+        ch_ext = st.checkbox("Kênh shift_extend", value=False)
+        ch_rest = st.checkbox("Kênh rest_window", value=False)
+        run_ab = st.button("Chạy cặp A/B", type="primary")
+
+    @st.cache_resource(show_spinner="Đang chạy 2 thế giới (A + B)...")
+    def _run_pair_cached(seed_i: int, lift: bool, ext: bool, rest: bool):
+        from gsm_sim.parallel import CHANNEL_LADDER, pick_target, run_pair
+        base_cfg, _, _ = load_base()
+        channels = {"shift_plan": True, "accept_lift": lift,
+                    "shift_extend": ext, "rest_window": rest}
+        pr = run_pair(base_cfg, seed_i, channels=channels)
+        return pr
+
+    if run_ab or st.session_state.get("_ab_done"):
+        st.session_state["_ab_done"] = True
+        pr = _run_pair_cached(int(ab_seed), ch_lift, ch_ext, ch_rest)
+        with ab2:
+            st.markdown(f"Tài xế đích: `d-{pr.actor_id}` (P4 tân binh, người được chào đơn "
+                        f"nhiều nhất World A).")
+            rows = []
+            LBL = {"payout_vnd": "Payout (đ)", "day_bonus_vnd": "Thưởng ngày (đ)",
+                   "mission_reward_vnd": "Mission (đ)", "newbie_vnd": "Tân binh (đ)",
+                   "trips_completed": "Cuốc", "acceptance_rate": "Tỷ lệ nhận",
+                   "utilization": "Utilization", "idle_min": "Idle (phút)",
+                   "online_min": "Online (phút)"}
+            for k, lbl in LBL.items():
+                if k not in pr.a:
+                    continue
+                va, vb = pr.a[k], pr.b[k]
+                rows.append({"Chỉ số": lbl, "World A (tự làm)": va,
+                             "World B (theo chỉ dẫn)": vb,
+                             "Δ (B−A)": round((vb or 0) - (va or 0), 4)})
+            st.dataframe(pd.DataFrame(rows), width="stretch", height=360, hide_index=True)
+            g = pr.system_a["served_rate"], pr.system_b["served_rate"]
+            ok_guard = abs(g[1] - g[0]) < 0.02
+            (st.success if ok_guard else st.warning)(
+                f"Guardrail hệ thống: served A {g[0]:.3f} → B {g[1]:.3f} "
+                f"({'không đổi đáng kể' if ok_guard else 'CÓ dịch chuyển — xem lại'})")
+        st.caption("LƯU Ý ĐỌC SỐ: 1 seed = 1 ngày — kết luận cần 30 seed + CI "
+                   "(`uv run python scripts/run_parallel.py --seeds 30`). "
+                   "Δ dương một ngày không có nghĩa 'ngày nào cũng lợi'. MOCK.")
+
+    # kết quả sweep D-SIM-06 nếu đã chạy (đọc file, không tính lại)
+    sweep_path = ROOT / "research" / "experiments" / "sensitivity" / "dsim06_sweep.json"
+    if sweep_path.exists():
+        st.divider()
+        st.markdown("**Bản đồ độ nhạy D-SIM-06** (30 seed/ô, CI bootstrap — đọc từ file sweep):")
+        data = json.loads(sweep_path.read_text(encoding="utf-8"))
+        for arch in ("P4", "P1"):
+            if arch not in data:
+                continue
+            cells = data[arch]["cells"]
+            hm = []
+            for key, c in cells.items():
+                adh = float(key.split("|")[0].split("=")[1])
+                lift = float(key.split("|")[1].split("=")[1])
+                hm.append({"adherence": adh, "lift_max": lift,
+                           "delta": c["delta_mean"], "sig": c["significant"],
+                           "n_pos": c["n_positive"]})
+            df_hm = pd.DataFrame(hm)
+            piv = df_hm.pivot(index="adherence", columns="lift_max", values="delta")
+            fig_hm = px.imshow(piv, text_auto=",.0f", aspect="auto",
+                               color_continuous_scale=[[0, "#e66767"], [0.5, SURFACE_DIM],
+                                                       [1, ACCENT]],
+                               color_continuous_midpoint=0,
+                               title=f"{arch}: Δ payout (đ/ngày) theo adherence × lift_max")
+            st.plotly_chart(fig_hm, width="stretch")
+        st.caption("Ô sáng xanh = advice giúp; đỏ = hại; giữa xám = không rõ. "
+                   "Diverging đúng chuẩn: 2 cực + trung tính ở 0.")

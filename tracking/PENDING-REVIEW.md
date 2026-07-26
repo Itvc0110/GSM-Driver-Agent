@@ -21,6 +21,7 @@ Khi Cường cho verdict → chuyển sang phần "Đã xong", ghi ngày + kết
 | **V-06** | **SIM-5 data mới + bộ metric** — dashboard chạy trên bộ 90 ngày vừa regen; kiểm `sim_metrics.full_report` (chờ khách, mật độ hex×giờ). Tab ⚖️ A/B vẫn CHƯA làm (nợ SIM-4) | Dashboard + `scripts/regen_mock.py` | 2026-07-26 (UPDATE-049) |
 | **V-07** | **D-SIM-03 kênh `rest_window`** — kênh INERT có chủ ý (xem UPDATE-050 §3). Cần Cường xác nhận hướng đi: ưu tiên **sim nhiều ngày** (`D-SIM-10`) để mở khoá 5 solver hồi cứu? | UPDATE-050 | 2026-07-26 |
 | **V-08** | **Sim nhiều ngày + data liên tục** — (a) bảng ngày-qua-ngày UPDATE-052 §4 L1: biến động **5→18 cuốc/ngày** của cùng tài xế có hợp lý không? (b) UPDATE-053 §2: **autocorr ngày-qua-ngày ≈ 0** (chưa có persistence hành vi — ngày nghỉ/thói quen/ốm) có chấp nhận được cho bản publish mock, hay cần `D-SIM-16` trước? | UPDATE-052 §4 + UPDATE-053 §2 | 2026-07-26 |
+| **V-09** | **SIM-XANH dashboard mới** — thứ tự xem: tab **Replay** (kéo slider quanh 07:00/18:00), tab **Hành trình** (d-41 P4: Gantt palette mới + vạch advice + sao/mission/tân binh), tab **Thế giới song song** (bấm Chạy cặp A/B; heatmap độ nhạy nếu sweep xong) | `uv run --extra viz streamlit run src/gsm_sim/dashboard.py` (UPDATE-057 §7) | 2026-07-26 |
 
 ## ❓ QUYẾT ĐỊNH CẦN CƯỜNG CHỐT (không phải visual)
 

@@ -1,0 +1,9 @@
+# SIM-XANH P4 — theme dashboard (dataviz-skill: palette VALIDATED 5/5 checks,
+# dark surface #12181c; taste-skill: mot accent, khoa theme, khong AI-purple)
+[theme]
+base = "dark"
+primaryColor = "#199e70"
+backgroundColor = "#12181c"
+secondaryBackgroundColor = "#1a2126"
+textColor = "#f2f5f4"
+font = "sans serif"
