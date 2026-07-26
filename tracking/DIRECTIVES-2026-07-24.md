@@ -99,7 +99,7 @@ vào sau, bên cạnh UI app.
 | **A. SIM overhaul** | mảng riêng (§5) + chỉ thị SIM-XANH (§10) | ✅ **SIM-1..5 + SIM-XANH P0-P5 XONG** (UPDATE-044..058, manifest sạch `fda8e16`): đường THẬT OSRM (factor median 1.46) · rating/tân-binh/mission trong sim · sweep độ nhạy D-SIM-06 · dashboard palette-validated + Replay + tab A/B · data 90 ngày chuỗi liên tục. **Kế tiếp: Track UI** (§11) rồi **AUDIT** |
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
-| **UI. UI thật trên nền Khánh** | §11 | 🔨 **DOING** — U0 import xong (UPDATE-059); U1 tokens/palette/contracts → U2 web core → U3 khu Mô phỏng → U4 verify + V-10 |
+| **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063): web app data thật + advisor S1 thật + khu Mô phỏng (Replay/Hành trình/A-B/heatmap) + palette light validated + contract-first cho Khánh (T-009b). **Chờ verdict V-10**. Kế tiếp: **AUDIT** |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 

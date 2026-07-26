@@ -16,10 +16,10 @@ Flutter bám bảng này để bắt kịp — không ai sửa file của ngư�
 | **Chuyến của tôi** (vòng đời cuốc demo) | `trip_step` (giữ của Khánh) | `/api/v1/trip/step` | ✅ U2 | ❌ chưa có | Cước demo KHÔNG cộng vào payout (ranh giới data vs demo); không gắn advice vào cuốc cụ thể (CLAUDE §5) |
 | **Xe & Pin** | `driver_state` (soc, range) | `/api/v1/driver/state` | ✅ U2 | ❌ khung | SOC là PROXY deterministic (không có trong 13 bảng GSM) — ghi chú ngay trên màn |
 | **Cài đặt** (kèm picker hồ sơ) | catalog | `/api/v1/driver/catalog` | ✅ U2 | ❌ khung | Picker 150 driver × 90 ngày; rating + mission từ data; link khu Mô phỏng |
-| **Mô phỏng · Replay** | `replay` v1.0 | `/api/v1/sim/replay?seed=` | 🔨 U3 | ⬜ để sau (desktop-first) | Khu riêng theo chỉ thị Cường; Leaflet nội suy client |
-| **Mô phỏng · Hành trình** | `journey` v1.0 | `/api/v1/sim/journey?seed=&actor=` | 🔨 U3 | ⬜ để sau | Gantt + income curve 4 nguồn + mốc advice |
-| **Mô phỏng · A/B** | `ab_result` v1.0 | `/api/v1/sim/ab?seed=` | 🔨 U3 | ⬜ để sau | BẮT BUỘC hiện warning 1-seed |
-| **Mô phỏng · Độ nhạy** | (file precomputed) | `/api/v1/sim/sweep` | 🔨 U3 | ⬜ để sau | Đọc `research/experiments/sensitivity/dsim06_sweep.json`, không tính lại |
+| **Mô phỏng · Replay** | `replay` v1.0 | `/api/v1/sim/replay?seed=` | ✅ U3 | ⬜ để sau (desktop-first) | Nội suy tuyến tính giữa đầu chặng (chưa bám tim đường — F-U3-A); nút ▶ chạy |
+| **Mô phỏng · Hành trình** | `journey` v1.0 | `/api/v1/sim/journey?seed=&actor_id=` | ✅ U3 | ⬜ để sau | Gantt + income curve 4 nguồn + marker sự kiện + bảng offer có lý do |
+| **Mô phỏng · A/B** | `ab_result` v1.0 | `/api/v1/sim/ab?seed=` | ✅ U3 | ⬜ để sau | Warning 1-seed IN CỐ ĐỊNH (contract bắt); ~30-60s/lượt |
+| **Mô phỏng · Độ nhạy** | (file precomputed) | `/api/v1/sim/sweep` | ✅ U3 | ⬜ để sau | Heatmap diverging đỏ↔cyan midpoint xám tại 0; ✳ = CI không chứa 0 |
 
 Ký hiệu: ✅ xong · 🔨 đang làm (phase ghi kèm) · ❌ cần làm để parity · ⬜ chưa cần.
 

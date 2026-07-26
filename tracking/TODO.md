@@ -96,13 +96,15 @@ thưởng chấm REALIZED nên dip-alert cứu thưởng thật) · P4 dashboard
 TripsLayer + tab A/B + heatmap sweep (V-09) · P5 regen 90 ngày engine mới.
 → **D-SIM-18** (shrinkage estimator) chuyển MATH AUDIT. Thứ tự tiếp: ~~Track C~~ **Track UI → AUDIT toàn bộ**.
 
-**Track UI (chỉ thị Cường 2026-07-26 — DIRECTIVES §11, THAY Track C mock-UI) — DOING:**
-Import UI Khánh (`uiuxgsm` → `ui/`, UPDATE-059) làm nền UI THẬT. Web app chính (tách từ
-`ui/demo_stitch_app.html`) + Khánh làm Flutter song song qua contract-first (1 backend FastAPI chung,
-`ui/contracts/` versioned, `ui/design-tokens.json`, `ui/docs/SCREEN-PARITY.md`). Sim port hẳn vào
-khu "Mô phỏng" trong web UI; tông màu theo Khánh 100% (light + cyan #00AFB9, palette dataviz
-re-validate nền sáng). Phase: U0 import ✅ → U1 tokens/palette/contracts → U2 web core data thật +
-advisor thật → U3 khu Mô phỏng (Replay/Hành trình/A/B/heatmap) → U4 verify + visual gate V-10.
+**Track UI (chỉ thị Cường 2026-07-26 — DIRECTIVES §11, THAY Track C mock-UI) — ✅ U0-U4 XONG
+2026-07-26 (UPDATE-059..063, chờ verdict V-10):**
+Import UI Khánh (`uiuxgsm` → `ui/`) làm nền UI THẬT; web app 5 màn + khu Mô phỏng chạy trên
+backend FastAPI chung đọc mock 90 ngày + solver S1 thật + engine sim (Replay/Hành trình/A/B/
+heatmap sweep). Palette light VALIDATED (giữ hue theo entity; cyan brand = chrome accent).
+Contract-first cho Khánh làm Flutter song song (**T-009b READY** — `ui/contracts/` + tokens +
+SCREEN-PARITY). Nợ mở Track UI: F-U2-A (day_bonus/newbie không có bảng GSM riêng → AUDIT),
+F-U2-B (tỷ lệ granularity ngày → D-SIM-18/AUDIT), F-U3-A (replay chưa bám tim đường),
+D-UI-01 (nghỉ hưu dashboard sau V-10), D-UI-02 (vendor hoá CDN).
 
 **Việc đáng làm tiếp sau Track A** (cập nhật 2026-07-26, UPDATE-050): đã nối solver thứ 2 (S7
 `idle_reduction`, kênh `rest_window`) và **chẩn đoán ra nguyên nhân gốc**: S2 là solver DUY NHẤT
