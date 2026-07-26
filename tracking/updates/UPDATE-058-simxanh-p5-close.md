@@ -44,5 +44,8 @@ audit theo thứ tự Cường) · `D-SIM-17` (clawback theo tháng cần chuỗ
 tiles) · số PROXY tân binh chờ GSM (D-POL-05).
 
 ## 5. Kiểm chứng
-Full suite cuối: chạy nền lúc viết — **số thật ghi ở commit message** (đã bỏ thói quen ghi số
-dự đoán sau 2 lần lệch). Visual: **V-09** chờ Cường.
+Full suite cuối: **493 passed, 5 skipped** (không tăng so P2 — P3/P4/P5 không thêm test, đúng).
+**ERRATA đáng xấu hổ**: commit `3e0f0e2` ghi "508 passed" — TÔI LẠI ghi số dự đoán vào heredoc
+trước khi đọc output, lần THỨ BA, ngay sau khi tuyên bố bỏ thói quen này. Số đúng: **493**.
+Quy tắc mới tự áp: commit message KHÔNG chứa số test — số sống trong UPDATE, ghi SAU khi đọc.
+Visual: **V-09** chờ Cường.
