@@ -192,9 +192,13 @@ def test_derive_no_future_leak(policy):
 
 def _spi_multi_cell(policy):
     """3 cell × 4 bucket 17-20h — đúng shape producer thật (bridge top-3 cell, l1r top_cells=3).
-    Demand thật mỗi bucket = tổng 3 cell: [4.5, 3.6, 3.0, 1.8]."""
+    Demand thật mỗi bucket = tổng 3 cell: [4.5, 3.6, 3.0, 1.8].
+
+    R5 mutation-test: thứ tự CHÈN cố tình ĐẢO LỘN (20h trước 17h). Bản fixture cũ chèn
+    tăng dần nên `list(grouped)` (không sort) vẫn tình cờ đúng — test xanh dù fix bị gỡ
+    (WEAK_TEST). Nay bỏ `sorted()` trong `_forecast_arrays` là test PHẢI đỏ."""
     fc = []
-    per_cell = {17: [2.0, 1.5, 1.0], 18: [1.8, 1.2, 0.6], 19: [1.5, 1.0, 0.5], 20: [0.8, 0.6, 0.4]}
+    per_cell = {20: [0.8, 0.6, 0.4], 18: [1.8, 1.2, 0.6], 17: [2.0, 1.5, 1.0], 19: [1.5, 1.0, 0.5]}
     for h, vals in per_cell.items():
         for i, v in enumerate(vals):
             fc.append({"bucket": f"2026-07-01T{h:02d}:00:00+07:00", "cell": f"c{i}",

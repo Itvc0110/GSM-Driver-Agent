@@ -51,3 +51,30 @@ spot-check thủ công đã ghi ở UPDATE-070 §4. **Phải chạy lại sau 5:
 
 ---
 **⏳ PENDING-REVIEW:** V-01..V-09 · **V-10** · Q-03 · **ĐA-01..ĐA-06**.
+
+## 6. R5 SOLO double-check (agent bị chặn → tôi tự soi) — kết quả
+
+Agent workflow chết vì session limit, nên tôi tự chạy 2 vùng quan trọng nhất:
+
+### (a) DOCS overclaim — TỰ BẮT ĐƯỢC LỖI CỦA MÌNH
+Đếm lại từ chính file JSON thô: REPORT bản đầu ghi **"168 finding · 16 fix"** — SỐ THẬT là
+**179 finding** (110 A1 + 69 A3) và **21 hàng fix** (8+8+5 trong ba UPDATE). Số agent 152 và
+CONFIRMED 118 thì đúng. Đã sửa REPORT + ghi ĐÍNH CHÍNH ngay trong đó (không sửa lặng).
+*Đây đúng loại lỗi "viết vội, nói quá" mà Cường yêu cầu double-check.*
+
+### (b) MUTATION TEST — test mới có thật sự bắt được lỗi không?
+Revert TẠM từng fix trong bộ nhớ rồi chạy test tương ứng, khôi phục ngay:
+
+| Fix revert | Test | Kết quả |
+|---|---|---|
+| `sorted(grouped)` → `list(grouped)` (S2-2) | test_forecast_groups | **PASS ❌ WEAK** → đã sửa fixture (chèn bucket đảo thứ tự 20/18/17/19) → nay **đỏ ✓** |
+| `_NEG_RE` → substring cũ (VBYPASS-3) | 4 test negation | đỏ ✓ |
+| bỏ `complete_time <= t_now` (LAYEROUT-4) | test_within_day | đỏ ✓ |
+| bỏ nhánh fail-closed (R5-A) | test_poisoned | đỏ ✓ |
+
+⇒ 1 test yếu bị phát hiện và vá; 4 test còn lại chứng minh có giá trị thật (không tautology).
+Suite sau khi sửa fixture: **54 passed** (shift_dp + a3_fixes + ui backend).
+
+### (c) Còn nợ R5
+8 vùng khác (adapter mockdata, sim router, cards lifecycle, playback, batch 1/2 chi tiết, gates,
+test quality phần còn lại) **CHƯA soi** — chạy lại workflow sau 5:20am. Không tự nhận là đã xong.

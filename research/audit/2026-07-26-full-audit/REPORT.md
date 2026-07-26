@@ -6,15 +6,21 @@ Dữ liệu thô: `a1_math_findings.json` · `a1_verify11_verdicts.json` · `a3_
 
 ## 0. Kết quả một dòng
 
-**168 finding** qua find→refute đối kháng: **118 CONFIRMED** (13 CAO), 0 refuted khi có repro,
-**16 lỗi hẹp ĐÃ FIX** kèm regression test đỏ-trước (UPDATE-065/066/069/070), phần còn lại là
-3 đề án MODEL GAP + 9 câu hỏi thiết kế chờ Cường chốt.
+**179 finding** qua find→refute đối kháng: **118 CONFIRMED** (13 CAO), 0 refuted khi có repro,
+**21 lỗi hẹp ĐÃ FIX** kèm regression test đỏ-trước (UPDATE-065/066/069/070) **+ 1 fix R5-A**
+(UPDATE-071), phần còn lại là 6 đề án ĐA-01..06 + 9 câu hỏi thiết kế chờ Cường chốt.
 
-| Đợt | Phạm vi | Finding | CONFIRMED | CAO | Đã fix |
+> **ĐÍNH CHÍNH (R5 self-check 2026-07-27)**: bản đầu của REPORT này ghi "168 finding · 16 fix" —
+> đếm lại từ chính file JSON thô: **179 finding** (110 A1 + 69 A3) và **21 hàng fix** trong ba
+> UPDATE (8+8+5). Số agent 152 và CONFIRMED 118 thì đúng. Lỗi của tôi khi viết vội — ghi lại ở
+> đây thay vì sửa lặng.
+
+| Đợt | Phạm vi | Finding | CONFIRMED | CAO | Fix trong đợt |
 |---|---|---|---|---|---|
-| A1 | 9 solver · estimator · behavior/demand/physics/rating · statistics | 110 | 72 | 13 | 12 |
+| A1 | 9 solver · estimator · behavior/demand/physics/rating · statistics | 110 | 72 (61+11 verify-11) | 13 | 16 (batch 1+2) |
 | A2 | 13 bảng mock · gate schema · nhãn nguồn · F-U2-A | — | — | — | gate mở rộng (5 test) |
-| A3 | verifier · pipeline · router/KB · layer outputs · bridge · memory · cadence · time | 69 | 46 | 6 | 4 |
+| A3 | verifier · pipeline · router/KB · layer outputs · bridge · memory · cadence · time | 69 | 46 | 6 | 5 (batch 3) |
+| R5 | double-check việc đêm nay (tự soi, agent bị session limit chặn) | — | — | 1 | 1 (guardrail UI cards) |
 
 ## 1. Những lỗi NẶNG nhất (đã fix, có repro + test)
 
