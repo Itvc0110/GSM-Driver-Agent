@@ -60,6 +60,16 @@ class Actor:
     charge_min: float = 0.0     # đổi pin / sạc (gồm chờ)
     stranded_count: int = 0
     meals_taken: int = 0        # M0-7: nghỉ ăn tối đa 1 lần/ngày trong meal_hour
+    # SIM-XANH P2: rating trong sim (khách chấm sau cuốc) — reset theo ngày
+    ratings_n: int = 0
+    ratings_sum: int = 0
+    ratings_5: int = 0
+    # SIM-XANH P2: tài xế mới — tenure TĂNG theo ngày (KHÔNG reset; xem reset_for_new_day)
+    tenure_days: int = 365
+    newbie_topup_vnd: int = 0     # bù bảo lãnh doanh thu NGÀY (reset theo ngày)
+    # SIM-XANH P2: mission ngày — tiến độ reset theo ngày
+    mission_progress: dict = field(default_factory=dict)   # mission_id -> count
+    mission_reward_vnd: int = 0   # thưởng mission NGÀY (reset theo ngày)
     # SIM-4: mức NÂNG TẠM THỜI của accept_base khi tài xế nghe lời khuyên "tỷ lệ nhận của
     # anh đang dưới ngưỡng đủ điều kiện thưởng". Chỉ có hiệu lực trong ca, có trần.
     # KHÔNG phải khuyên nhận/từ chối một ĐƠN CỤ THỂ (ranh giới sản phẩm CLAUDE.md §5) —
@@ -98,7 +108,10 @@ class Actor:
     # hạn, thưởng ngày sai; reset nhầm ⇒ mất lịch sử, "học từ hôm qua" thành giả.
     _DAILY_RESET_INT = ("trips_done", "orders_offered", "orders_accepted", "orders_completed",
                         "orders_cancelled", "orders_soc_skipped", "gross_vnd", "payout_vnd",
-                        "points", "stranded_count", "meals_taken")
+                        "points", "stranded_count", "meals_taken",
+                        # SIM-XANH P2 (rating/newbie-ngày/mission-ngày là trạng thái NGÀY)
+                        "ratings_n", "ratings_sum", "ratings_5",
+                        "newbie_topup_vnd", "mission_reward_vnd")
     _DAILY_RESET_FLOAT = ("online_min", "empty_min", "occupied_min", "idle_min", "rest_min",
                           "charge_min", "accept_lift", "rest_deferred_min", "shift_extended_min")
 
@@ -115,7 +128,10 @@ class Actor:
         for name in self._DAILY_RESET_FLOAT:
             setattr(self, name, 0.0)
         self.idle_by_hour = {}
+        self.mission_progress = {}
         self.demand_prior = {}
+        # tenure TĂNG 1 mỗi sáng — thời gian trôi là danh tính động duy nhất
+        self.tenure_days += 1
         self.state = ActorState.OFFLINE
         self.soc_pct = float(soc_pct)          # sạc/đổi pin qua đêm
         self.shift_start_min = float(shift_start_min)

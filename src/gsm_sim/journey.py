@@ -157,33 +157,45 @@ def _offers_of(events, actor_id: int) -> list[Offer]:
     return offers
 
 
-def _income_curve(timeline, events, actor_id: int) -> tuple[list[tuple[float, int]], int, int]:
-    """Payout cộng dồn. Trả `(curve, trip_payout, day_bonus)`.
+def _income_curve(timeline, events, actor_id: int) -> tuple[list[tuple[float, int]], dict]:
+    """Payout cộng dồn. Trả `(curve, breakdown)` với breakdown tách theo nguồn.
 
-    HAI nguồn tiền, không được bỏ nguồn nào:
-      1. **payout từng cuốc** — cộng tại thời điểm TRẢ KHÁCH (tiền về khi xong cuốc).
-      2. **thưởng ngày** — cộng một cục lúc `end_shift` / `day_end_settle`.
+    SIM-XANH P2: payout có **BỐN nguồn** — không được bỏ nguồn nào (BUG-SIM2-01 từng thiếu
+    thưởng ngày và bị test bảo toàn tiền bắt):
+      1. payout từng cuốc (tại thời điểm TRẢ KHÁCH);
+      2. thưởng ngày (`end_shift`/`day_end_settle`);
+      3. thưởng mission (`mission_completed`, tại lúc chạm mốc);
+      4. tân binh (`newbie_guarantee_topup`/`newbie_week1_bonus`, tại settle).
 
-    Bỏ sót (2) là sai lệch NGHIÊM TRỌNG với sản phẩm này: thưởng chiếm 20-30% thu nhập tài
-    xế và chính là thứ advisor tối ưu. (Lỗi này bị test bảo toàn tiền bắt: journey thiếu
-    đúng 60.000đ so `actor.payout_vnd`.)
+    Cách dựng: gom MỌI sự kiện tiền thành (t, amount), sort theo t, rồi cộng dồn —
+    đơn giản và không thể sai thứ tự.
     """
-    total = 0
-    trip_payout = 0
-    curve: list[tuple[float, int]] = [(0.0, 0)]
+    money: list[tuple[float, int, str]] = []
     for b in timeline:
         if b.kind == "on_trip" and b.payout_vnd:
-            trip_payout += int(b.payout_vnd)
-            total += int(b.payout_vnd)
-            curve.append((b.t1, total))
-    day_bonus = 0
+            money.append((b.t1, int(b.payout_vnd), "trip"))
     for e in events:
-        if e.actor_id == actor_id and e.kind in ("end_shift", "day_end_settle"):
-            day_bonus += int(e.detail.get("day_bonus", 0) or 0)
-            if day_bonus:
-                total += int(e.detail.get("day_bonus", 0) or 0)
-                curve.append((e.t_min, total))
-    return curve, trip_payout, day_bonus
+        if e.actor_id != actor_id:
+            continue
+        if e.kind == "mission_completed":
+            money.append((e.t_min, int(e.detail.get("reward_vnd", 0) or 0), "mission"))
+        elif e.kind in ("newbie_guarantee_topup", "newbie_week1_bonus"):
+            amt = int(e.detail.get("topup_vnd", 0) or e.detail.get("bonus_vnd", 0) or 0)
+            money.append((e.t_min, amt, "newbie"))
+        elif e.kind in ("end_shift", "day_end_settle"):
+            amt = int(e.detail.get("day_bonus", 0) or 0)
+            if amt:
+                money.append((e.t_min, amt, "day_bonus"))
+    money.sort(key=lambda x: x[0])
+
+    curve: list[tuple[float, int]] = [(0.0, 0)]
+    breakdown = {"trip": 0, "day_bonus": 0, "mission": 0, "newbie": 0}
+    total = 0
+    for t, amt, src in money:
+        total += amt
+        breakdown[src] += amt
+        curve.append((t, total))
+    return curve, breakdown
 
 
 def build_journey(result, actor_id: int) -> DriverJourney:
@@ -201,7 +213,7 @@ def build_journey(result, actor_id: int) -> DriverJourney:
     by_kind: dict[str, float] = {}
     for b in timeline:
         by_kind[b.kind] = by_kind.get(b.kind, 0.0) + b.minutes
-    curve, trip_payout, day_bonus = _income_curve(timeline, result.events, actor_id)
+    curve, money = _income_curve(timeline, result.events, actor_id)
     occupied = by_kind.get("on_trip", 0.0)
     n_offer = len(offers)
     n_accept = sum(1 for o in offers if o.decision == "accept")
@@ -223,10 +235,13 @@ def build_journey(result, actor_id: int) -> DriverJourney:
         "acceptance_rate": round(n_accept / n_offer, 4) if n_offer else None,
         "completion_rate": round(n_done / n_accept, 4) if n_accept else None,
         "payout_vnd": actor.payout_vnd,
-        # tách rõ 2 nguồn tiền: cuốc vs thưởng — advisor tối ưu chủ yếu ở phần THƯỞNG
-        "trip_payout_vnd": trip_payout,
-        "day_bonus_vnd": day_bonus,
-        "bonus_share": round(day_bonus / actor.payout_vnd, 4) if actor.payout_vnd else 0.0,
+        # SIM-XANH P2: tách 4 nguồn tiền — advisor tối ưu chủ yếu ở phần NGOÀI cuốc
+        "trip_payout_vnd": money["trip"],
+        "day_bonus_vnd": money["day_bonus"],
+        "mission_reward_vnd": money["mission"],
+        "newbie_vnd": money["newbie"],
+        "bonus_share": round((actor.payout_vnd - money["trip"]) / actor.payout_vnd, 4)
+                       if actor.payout_vnd else 0.0,
         "gross_vnd": actor.gross_vnd,
         "points": actor.points,
         "soc_end_pct": round(actor.soc_pct, 1),

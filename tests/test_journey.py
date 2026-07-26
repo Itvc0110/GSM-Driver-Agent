@@ -96,9 +96,13 @@ def test_day_bonus_included_in_income(journeys):
     """
     for arch, j in journeys.items():
         m = j.metrics
-        assert m["trip_payout_vnd"] + m["day_bonus_vnd"] == m["payout_vnd"], (
-            f"{arch}: cuốc {m['trip_payout_vnd']} + thưởng {m['day_bonus_vnd']} "
-            f"!= tổng {m['payout_vnd']}")
+        # SIM-XANH P2: payout = BỐN nguồn (cuốc + thưởng ngày + mission + tân binh).
+        # Cộng thiếu nguồn nào là lặp lại BUG-SIM2-01.
+        parts = (m["trip_payout_vnd"] + m["day_bonus_vnd"]
+                 + m["mission_reward_vnd"] + m["newbie_vnd"])
+        assert parts == m["payout_vnd"], (
+            f"{arch}: cuốc {m['trip_payout_vnd']} + ngày {m['day_bonus_vnd']} + mission "
+            f"{m['mission_reward_vnd']} + newbie {m['newbie_vnd']} != tổng {m['payout_vnd']}")
     # ít nhất một tài xế phải THỰC SỰ nhận thưởng, nếu không test trên vacuous
     assert any(j.metrics["day_bonus_vnd"] > 0 for j in journeys.values()), \
         "không tài xế nào nhận thưởng ngày — kiểm tra lại policy/day_bonus"

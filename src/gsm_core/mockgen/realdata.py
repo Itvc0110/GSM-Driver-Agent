@@ -141,8 +141,16 @@ def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: fl
     acc_rate = round(accepted / req_accept, 4) if req_accept else 1.0
     ful_rate = round(completed / accepted, 4) if accepted else 1.0
     can_rate = round(cancelled / req_accept, 4) if req_accept else 0.0
-    n_5 = int(round(completed * _clamp(rng.gauss(0.78, 0.08), 0.4, 1.0)))
-    avg_star = _clamp(rng.gauss(4.7, 0.15), 3.5, 5.0)
+    # SIM-XANH P2: BIKE lấy rating THẬT từ sự kiện sim (khách chấm sao); car/rto vẫn
+    # gauss vì không có sim. Trước đây bike cũng gauss — hai tầng kể hai chuyện.
+    if sim_stats is not None and "ratings_n" in sim_stats:
+        rated_n = int(sim_stats["ratings_n"])
+        n_5 = int(sim_stats["ratings_5"])
+        total_rating = float(sim_stats["ratings_sum"])
+    else:
+        rated_n = completed
+        n_5 = int(round(completed * _clamp(rng.gauss(0.78, 0.08), 0.4, 1.0)))
+        total_rating = round(_clamp(rng.gauss(4.7, 0.15), 3.5, 5.0) * completed, 2)
 
     out["driver_statistic_daily"].append({
         "schema_version": "1.0.0", "source": "MOCK", "local_date": d, "driver_id": drv,
@@ -150,8 +158,8 @@ def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: fl
         "total_request_calculate_complete": accepted, "total_request_calculate_cancel": cancelled + declined,
         "total_request_calculate_accept": req_accept,
         "count_cancel_not_relate_driver": rng.randint(0, cancelled) if cancelled else 0,
-        "total_rating": round(avg_star * completed, 2), "total_order_rating": completed,
-        "count_rating_5_star": min(n_5, completed),
+        "total_rating": total_rating, "total_order_rating": rated_n,
+        "count_rating_5_star": min(n_5, rated_n),
         "acceptance_rate": acc_rate, "fulfillment_rate": ful_rate, "cancellation_rate": can_rate})
 
     out["driver_online_hours_sap_id"].append({
@@ -222,11 +230,22 @@ def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str
         pings_all += day.get("gps_ping", [])
     # SIM-1 fix D: counter accept/cancel THẬT từ sim, khoá theo (driver, ngày)
     sim_stats: dict[tuple[str, str], dict] = {}
+    sim_mission_events: list[dict] = []
+    sim_mission_catalog: list[dict] = []
     for day in day_outputs:
         sd = day.get("_sim_driver_day")
         if sd:
             for drv_id, stt in sd["stats"].items():
                 sim_stats[(drv_id, sd["date"])] = stt
+        sm = day.get("_sim_missions")
+        if sm:
+            sim_mission_events.extend(sm.get("completed", []))
+            if not sim_mission_catalog:
+                sim_mission_catalog = list(sm.get("catalog", []))
+    # kênh nội bộ (tiền tố "_") — generate_realdata sẽ POP trước khi ghi parquet
+    out["_sim_mission_events"] = sim_mission_events
+    out["_sim_mission_catalog"] = sim_mission_catalog
+    out["_sim_stats"] = sim_stats
     for day in day_outputs:  # tập ngày
         for t in day.get("trip_record", []):
             dates.add(_date_of(t["t_complete"]))
@@ -299,7 +318,10 @@ def build_tables(day_outputs: list[dict], universe: dict, seed: int) -> dict[str
     return out
 
 
-def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
+def build_weekly_and_missions(daily: dict, universe: dict, seed: int,
+                              sim_mission_events: list | None = None,
+                              sim_mission_catalog: list | None = None,
+                              sim_stats: dict | None = None) -> None:
     rng = random.Random(seed ^ 0xB0B)
     by_dw = defaultdict(list)
     for r in daily["driver_income_daily"]:
@@ -339,10 +361,70 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
             "qualify_execute_code": None, "status": "active", "datastream_metadata": None,
             "business_code": None, "show_only": False, "is_ddi_mission": False})
 
+    # SIM-XANH P2: catalog mission SIM (bike) vào public_mission — đúng mission mà actor
+    # THỰC SỰ chạy trong engine, thay vì chỉ catalog rule-based
+    for m in (sim_mission_catalog or []):
+        w = m.get("window")
+        daily["public_mission"].append({
+            "schema_version": "1.0.0", "source": "MOCK", "id": m["mission_id"],
+            "created_at": "2026-07-01T00:00:00+07:00",
+            "updated_at": None, "deleted_at": None, "created_by": "gsm", "updated_by": None,
+            "mission_type": "trip_count" if w is None else "rush_hour", "parent_id": None,
+            "name": m["name"], "state": "active", "audience": "bike_platform",
+            "description": m["name"], "start_time": "2026-07-01T00:00:00+07:00",
+            "end_time": "2026-12-31T23:59:00+07:00", "point_id": None,
+            "rewards": {"vnd": int(m["reward_vnd"]), "target_count": int(m["target"])},
+            "mission_claim": None, "mission_code": m["mission_id"],
+            "time_claim_reward": None, "rule_code": None, "meta_data": None, "contract_type": None,
+            "qualify_execute_code": None, "status": "active", "datastream_metadata": None,
+            "business_code": None, "show_only": False, "is_ddi_mission": False})
+
+    bike_set = {drv for drv, prf in universe.items() if prf.get("simulated")}
     eid = pid = 0
+    _targets = {m["mission_id"]: int(m["target"]) for m in (sim_mission_catalog or [])}
+    # SIM-XANH P2: earn_history BIKE = SỰ KIỆN mission_completed thật từ engine
+    for ev in sorted((sim_mission_events or []), key=lambda x: (x["driver_id"], x["t_iso"])):
+        daily["public_mission_earn_history"].append({
+            "schema_version": "1.0.0", "source": "MOCK", "id": f"eh-sim-{seed}-{eid}",
+            "created_at": ev["t_iso"], "updated_at": ev["t_iso"], "deleted_at": None,
+            "mission_id": ev["mission_id"], "order_id": None, "order_status": "completed",
+            "driver_id": ev["driver_id"], "customer_id": None, "service_type": "bike",
+            "order_time": ev["t_iso"], "complete_time": ev["t_iso"], "travel_mode": "bike",
+            "sap_contract_type": "platform", "type": "mission",
+            # schema đòi integer: số cuốc tính cho mission = target của mốc vừa chạm
+            "count_order": _targets.get(ev["mission_id"], 0),
+            "count_stoppoint": _targets.get(ev["mission_id"], 0),
+            "earn": int(ev["reward_vnd"]),
+            "description": ev.get("name") or ev["mission_id"], "datastream_metadata": None,
+            "reward_level": "1"})
+        eid += 1
+    # tiến độ mission BIKE: ngày CUỐI CÙNG quan sát được của từng (driver, mission)
+    if sim_stats and sim_mission_catalog:
+        last_prog: dict[tuple[str, str], tuple[str, int]] = {}
+        for (drv, d), stt in sim_stats.items():
+            for mid, cnt in (stt.get("mission_progress") or {}).items():
+                cur = last_prog.get((drv, mid))
+                if cur is None or d > cur[0]:
+                    last_prog[(drv, mid)] = (d, int(cnt))
+        targets = {m["mission_id"]: int(m["target"]) for m in sim_mission_catalog}
+        rewards = {m["mission_id"]: int(m["reward_vnd"]) for m in sim_mission_catalog}
+        for (drv, mid), (d, cnt) in sorted(last_prog.items()):
+            tgt = targets.get(mid, 0)
+            daily["public_user_mission_progress"].append({
+                "schema_version": "1.0.0", "source": "MOCK", "id": f"ump-sim-{seed}-{pid}",
+                "driver_id": drv, "mission_id": mid, "progress_count": cnt,
+                "target_count": tgt, "progress_value_vnd": 0,
+                "target_value_vnd": rewards.get(mid, 0),
+                "state": "completed" if cnt >= tgt else "in_progress",
+                "started_at": f"{d}T00:00:00+07:00", "updated_at": None, "claimed_at": None,
+                "datastream_metadata": None})
+            pid += 1
+
     trips_by_dd = {(r["driver_id"], r["order_date"]): r["total_order"] for r in daily["driver_income_daily"]}
     prog = defaultdict(int)
     for (drv, d), n in sorted(trips_by_dd.items()):
+        if drv in bike_set:
+            continue          # BIKE đã có mission từ SỰ KIỆN sim — rule-based chỉ cho car/rto
         if n >= 20:
             daily["public_mission_earn_history"].append({
                 # THỨ TỰ CỘT theo đúng spec GSM (21 cột) — id, audit, rồi nghiệp vụ
@@ -358,6 +440,8 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
             eid += 1
         prog[drv] += n
     for drv, total in sorted(prog.items()):
+        if drv in bike_set:
+            continue          # BIKE: tiến độ từ sim (ở trên)
         daily["public_user_mission_progress"].append({
             "schema_version": "1.0.0", "source": "MOCK", "id": f"ump-{seed}-{pid}", "driver_id": drv,
             "mission_id": "m-week250", "progress_count": min(total, 250), "target_count": 250,
@@ -439,7 +523,12 @@ def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Pat
     counts_kwargs = {} if extra_kinds else dict(n_bike_rto=0, n_car_platform=0, n_car_employee=0, n_car_premium=0)
     universe = build_profile_universe(bike_ids, seed_base, **counts_kwargs)
     tables = build_tables(day_outputs, universe, seed_base)
-    build_weekly_and_missions(tables, universe, seed_base)
+    sim_ev = tables.pop("_sim_mission_events", [])
+    sim_cat = tables.pop("_sim_mission_catalog", [])
+    sim_st = tables.pop("_sim_stats", {})
+    build_weekly_and_missions(tables, universe, seed_base,
+                              sim_mission_events=sim_ev, sim_mission_catalog=sim_cat,
+                              sim_stats=sim_st)
 
     counts = {}
     for entity, records in tables.items():

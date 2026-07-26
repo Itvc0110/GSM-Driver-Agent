@@ -106,6 +106,13 @@ def sample_actors(grid: Grid, cfg: Config, seed: int) -> list[Actor]:
                     meal_hour=arc.meal_hour,
                     cell=home,
                     soc_pct=float(rng.uniform(70, 100)),
+                    # SIM-XANH P2: tenure theo archetype — P4 là TÂN BINH THẬT (<60 ngày,
+                    # nằm trong cửa sổ newbie_program 90 ngày); còn lại là tài xế cũ.
+                    # RNG DẪN XUẤT riêng theo (seed, actor) — không tiêu stream sampling
+                    # chính ⇒ không làm trôi home/shift đã hiệu chỉnh.
+                    tenure_days=int(np.random.default_rng((seed, 0x7E4E, aid)).integers(
+                        5, 60) if name == "P4" else
+                        np.random.default_rng((seed, 0x7E4E, aid)).integers(90, 720)),
                 )
             )
             aid += 1

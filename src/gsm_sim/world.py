@@ -70,6 +70,18 @@ class World:
 
         # RNG stream riêng cho hành vi actor (nền CRN: ngoại sinh đã ở orders)
         self.rng = np.random.default_rng(seed ^ 0xBEEF)
+        # SIM-XANH P2: stream RIÊNG cho rating — chèn vào stream hành vi sẽ dịch chuỗi
+        # ngẫu nhiên và làm trôi TOÀN BỘ hiệu chỉnh SIM-1/P1 (bài học decide_accept).
+        self.rng_rating = np.random.default_rng(seed ^ 0x5A7E5)
+        rcfg2 = cfg.get("rating", {}) or {}
+        self.rating_p = float(rcfg2.get("p_rated", 0.75))
+        self.rating_p5 = dict(rcfg2.get("p5_by_archetype", {}) or {})
+        self.rating_p4s = float(rcfg2.get("p4_star", 0.75))
+        # SIM-XANH P2: chương trình tân binh + mission (số PROXY/MOCK có nhãn trong config)
+        ncfg = cfg.get("newbie_program", {}) or {}
+        self.newbie = ncfg if ncfg.get("enabled", False) else None
+        mcfg = cfg.get("missions", {}) or {}
+        self.mission_catalog = list(mcfg.get("daily_catalog", []) or [])             if mcfg.get("enabled", False) else []
 
         # SIM-3: cầu nối advice→action. Mặc định TẮT ⇒ World A (tự làm) không đổi gì.
         from .advice_bridge import AdviceActionBridge
@@ -227,10 +239,51 @@ class World:
         # 3. thưởng ngày cho actor vẫn online lúc hết run (chưa qua nhánh end_shift)
         for a in self.actors.values():
             if a.state != ActorState.OFFLINE:
+                self._newbie_settle(a)     # SIM-XANH P2: quyết toán tân binh trước chốt sổ
                 bonus = self.policy.day_bonus(a.points, a.acceptance_rate, a.completion_rate)
                 a.payout_vnd += bonus
                 self.log(a.actor_id, "day_end_settle", a.cell,
                          trips=a.trips_done, payout=a.payout_vnd, points=a.points, day_bonus=bonus)
+
+
+    def _newbie_settle(self, actor: Actor) -> None:
+        """SIM-XANH P2 — quyết toán TÂN BINH cuối ngày (gọi ở CẢ end_shift lẫn censor).
+
+        Cấu trúc THẬT (greensm.com, Q-01 fetch 2026-07-26); SỐ TIỀN là PROXY có nhãn ở
+        config. Hai lớp:
+        1. **Bảo lãnh doanh thu 90 ngày** (mức NGÀY): gross < sàn và online đủ chuyên cần
+           → bù phần thiếu. Điều kiện online chống lạm dụng (không vận doanh không bù).
+        2. **Mốc ≥50 cuốc trong 7 ngày đầu** (mức TÍCH LUỸ): đọc lịch sử các ngày ĐÃ XONG
+           từ DriverMemory (qua bridge, không rò tương lai) + hôm nay; trả MỘT lần.
+        """
+        if not self.newbie or actor.tenure_days > int(self.newbie["tenure_newbie_max_days"]):
+            return
+        # 1) bảo lãnh doanh thu ngày
+        if actor.tenure_days <= int(self.newbie["guarantee_days"]):
+            floor = int(self.newbie["guarantee_gross_floor_vnd"])
+            min_online = float(self.newbie["guarantee_min_online_h"]) * 60.0
+            if actor.online_min >= min_online and actor.gross_vnd < floor:
+                topup = int(round((floor - actor.gross_vnd)
+                                  * self.policy.driver_share))   # bù phần TÀI XẾ của khoảng thiếu
+                actor.newbie_topup_vnd += topup
+                actor.payout_vnd += topup
+                self.log(actor.actor_id, "newbie_guarantee_topup", actor.cell,
+                         tenure_days=actor.tenure_days, gross_day=actor.gross_vnd,
+                         floor_vnd=floor, topup_vnd=topup)
+        # 2) mốc 50 cuốc / 7 ngày đầu — cần lịch sử (multi-day); single-day chỉ xét hôm nay
+        if actor.tenure_days <= 7:
+            mem = (self.advice.memory or {}).get(actor.actor_id)
+            prior = sum(mem.trips_hist[-(actor.tenure_days - 1):]) if (
+                mem and actor.tenure_days > 1) else 0
+            already = bool(getattr(mem, "newbie_week1_paid", False)) if mem else False
+            total7 = prior + actor.trips_done
+            if not already and total7 >= int(self.newbie["first_week_trip_target"]):
+                bonus = int(self.newbie["first_week_bonus_vnd"])
+                actor.payout_vnd += bonus
+                self.log(actor.actor_id, "newbie_week1_bonus", actor.cell,
+                         tenure_days=actor.tenure_days, trips_7d=total7, bonus_vnd=bonus)
+                if mem:
+                    mem.newbie_week1_paid = True   # ghi SỰ KIỆN đã xong tại settle — không rò tương lai
 
     def _inject_orders(self):
         """Đưa các đơn tới thời điểm hiện tại vào open pool."""
@@ -388,6 +441,41 @@ class World:
         self._order_transition(order.order_id, "COMPLETED")
         self.log(actor.actor_id, "dropoff", order.drop_cell,
                  order_id=order.order_id, gross=order.gross_vnd, dist_km=order.dist_km)
+
+        # --- SIM-XANH P2: khách CHẤM SAO sau cuốc (stream rating riêng) ---
+        if self.rng_rating.random() < self.rating_p:
+            p5 = float(self.rating_p5.get(actor.archetype, 0.78))
+            u = self.rng_rating.random()
+            if u < p5:
+                stars = 5
+            elif u < p5 + (1 - p5) * self.rating_p4s:
+                stars = 4
+            else:
+                stars = int(self.rng_rating.integers(1, 4))   # 1-3★ hiếm
+            actor.ratings_n += 1
+            actor.ratings_sum += stars
+            actor.ratings_5 += int(stars == 5)
+            self.log(actor.actor_id, "trip_rated", order.drop_cell,
+                     order_id=order.order_id, stars=stars)
+
+        # --- SIM-XANH P2: tiến độ MISSION (deterministic, không RNG) ---
+        done_hour = int(self.env.now // 60) % 24
+        for m in self.mission_catalog:
+            w = m.get("window")
+            if w is not None and not (int(w[0]) <= done_hour < int(w[1])):
+                continue
+            mid = m["mission_id"]
+            cur = actor.mission_progress.get(mid, 0)
+            if cur >= int(m["target"]):
+                continue                               # đã xong — thưởng chỉ MỘT lần
+            actor.mission_progress[mid] = cur + 1
+            if cur + 1 == int(m["target"]):
+                reward = int(m["reward_vnd"])
+                actor.mission_reward_vnd += reward
+                actor.payout_vnd += reward
+                self.log(actor.actor_id, "mission_completed", order.drop_cell,
+                         mission_id=mid, reward_vnd=reward, name=m.get("name", mid))
+
         actor.state = ActorState.IDLE
 
     def _relocate_to_core(self, actor: Actor):
@@ -500,6 +588,7 @@ class World:
 
             if action == IdleAction.END_SHIFT:
                 actor.state = ActorState.OFFLINE
+                self._newbie_settle(actor)   # SIM-XANH P2: quyết toán tân binh trước chốt sổ
                 # lớp thưởng ngày (rule component — realism: thưởng chiếm 20-30% thu nhập)
                 bonus = self.policy.day_bonus(actor.points, actor.acceptance_rate, actor.completion_rate)
                 actor.payout_vnd += bonus

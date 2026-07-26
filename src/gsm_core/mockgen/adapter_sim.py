@@ -91,7 +91,21 @@ def _tables_from_run(r, cfg: Config, date: str) -> dict[str, list[dict]]:
         "stats": {f"d-{a.actor_id}": {
             "offered": a.orders_offered, "accepted": a.orders_accepted,
             "completed": a.orders_completed, "cancelled": a.orders_cancelled,
+            # SIM-XANH P2: rating + mission + tân binh — SỰ KIỆN sim, không phải gauss tầng data
+            "ratings_n": a.ratings_n, "ratings_sum": a.ratings_sum, "ratings_5": a.ratings_5,
+            "mission_reward_vnd": a.mission_reward_vnd,
+            "mission_progress": dict(a.mission_progress),
+            "newbie_topup_vnd": a.newbie_topup_vnd, "tenure_days": a.tenure_days,
         } for a in r.actors},
+    }
+    # SIM-XANH P2: sự kiện mission hoàn thành + catalog ngày (kênh nội bộ "_")
+    out["_sim_missions"] = {
+        "date": date,
+        "catalog": list(cfg.get("missions.daily_catalog", []) or []),
+        "completed": [{"driver_id": f"d-{e.actor_id}", "mission_id": e.detail["mission_id"],
+                       "name": e.detail.get("name"), "reward_vnd": e.detail["reward_vnd"],
+                       "t_iso": _iso(date, e.t_min)}
+                      for e in r.events if e.kind == "mission_completed"],
     }
 
     # ---- L0: station_registry ----

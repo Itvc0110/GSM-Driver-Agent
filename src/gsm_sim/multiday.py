@@ -71,6 +71,8 @@ class DriverMemory:
     week_gross_vnd: int = 0
     week_trips: int = 0
     weeks_hist: list[dict] = field(default_factory=list)   # [{week, gross_vnd, trips}]
+    # SIM-XANH P2: mốc tân binh 50-cuốc/7-ngày đã trả chưa (trả đúng MỘT lần)
+    newbie_week1_paid: bool = False
 
     def close_week(self) -> None:
         """Chốt tuần đang chạy vào lịch sử rồi mở tuần mới. Gọi tại RANH GIỚI tuần
