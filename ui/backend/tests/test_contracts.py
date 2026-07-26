@@ -78,3 +78,44 @@ def test_history_days_bounded(dv):
     assert 1 <= len(body["days"]) <= 14
     assert body["days"][-1]["date"] == dv["date"]
     assert all(d["payout_vnd"] <= d["gross_vnd"] for d in body["days"])
+
+
+# ---------- U3: khu Mô phỏng (sim-engine endpoints) ----------
+
+
+def test_sim_journey_matches_contract():
+    run = client.get("/api/v1/sim/run?seed=1000").json()
+    aid = run["actors"][0]["actor_id"]
+    r = client.get(f"/api/v1/sim/journey?seed=1000&actor_id={aid}")
+    assert r.status_code == 200
+    body = r.json()
+    validate(body, _schema("journey"))
+    # bảo toàn 4 nguồn (kế thừa BUG-SIM2-01): tổng breakdown == payout == cuối income_curve
+    m = body["metrics"]
+    parts = (m["trip_payout_vnd"] + m["day_bonus_vnd"]
+             + m["mission_reward_vnd"] + m["newbie_vnd"])
+    assert parts == m["payout_vnd"]
+    if body["income_curve"]:
+        assert body["income_curve"][-1][1] == m["payout_vnd"]
+
+
+def test_sim_replay_matches_contract():
+    r = client.get("/api/v1/sim/replay?seed=1000")
+    assert r.status_code == 200
+    body = r.json()
+    validate(body, _schema("replay"))
+    assert body["stations"], "mất trạm pin"
+    # legs phải có thứ tự thời gian trong từng actor
+    for a in body["actors"][:5]:
+        ts = [g["t0_min"] for g in a["legs"]]
+        assert ts == sorted(ts)
+
+
+def test_sim_ab_matches_contract_and_guardrail_fields():
+    r = client.get("/api/v1/sim/ab?seed=1000")
+    assert r.status_code == 200
+    body = r.json()
+    validate(body, _schema("ab_result"))
+    assert "1 seed" in body["warning_text"], "warning đọc-số bắt buộc bị mất"
+    t = body["target_actors"][0]
+    assert t["delta_vnd"] == t["payout_b_vnd"] - t["payout_a_vnd"]

@@ -3,27 +3,128 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Khu Mô phỏng — GSM Driver (đang xây U3)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+  <title>Khu Mô phỏng — GSM Driver</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
   <link rel="stylesheet" href="../theme.css">
+  <style>
+    /* layout desktop-first cho khu phân tích — vẫn tông Stitch light */
+    body { overflow-y: auto; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 18px 16px 60px; }
+    .head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .head h1 { font-size: 19px; }
+    .head .spacer { flex: 1; }
+    .seed-box { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+    .seed-box input {
+      width: 90px; padding: 8px 10px; border: 1px solid var(--border-hairline);
+      border-radius: var(--r-chip); font-family: inherit; font-size: 13px;
+    }
+    .tabs { display: flex; gap: 6px; margin: 14px 0; flex-wrap: wrap; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    #replay-map { height: 480px; border-radius: var(--r-card); }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; margin-top: 8px; }
+    .legend span::before {
+      content: ""; display: inline-block; width: 10px; height: 10px;
+      border-radius: 3px; margin-right: 5px; background: var(--c);
+    }
+    .controls { display: flex; align-items: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+    input[type="range"] { flex: 1; min-width: 200px; accent-color: var(--accent); }
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+    .warn-strip {
+      background: #fffbea; border: 1px solid #f0dfae; color: #8a6100;
+      border-radius: var(--r-chip); padding: 8px 12px; font-size: 12px; margin: 10px 0;
+    }
+    table.data { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.data th { text-align: left; color: var(--text-muted); font-weight: 600; padding: 6px 8px; }
+    table.data td { padding: 6px 8px; border-top: 1px solid var(--border-hairline); font-variant-numeric: tabular-nums; }
+  </style>
 </head>
 <body>
-<div style="max-width:720px;margin:8dvh auto;padding:0 16px">
-  <h1 style="font-size:20px">Khu Mô phỏng</h1>
-  <span class="mock-badge">Dữ liệu mô phỏng — engine sim</span>
-  <div class="card" style="margin-top:14px">
-    <h3>Đang xây (phase U3 — Track UI)</h3>
-    <p style="font-size:13px;line-height:1.7;margin-top:6px">
-      Khu này sẽ có: <b>Replay đội xe</b> theo phút · <b>Hành trình 1 tài xế</b>
-      (Gantt + đường thu nhập 4 nguồn + mốc advice) · <b>Thế giới song song A/B</b>
-      (Δ theo cặp CRN + guardrail) · <b>Heatmap độ nhạy</b> (đọc từ sweep D-SIM-06).
-    </p>
-    <p style="font-size:12px;color:var(--text-muted);margin-top:8px">
-      Trong lúc chờ: dashboard phân tích đầy đủ chạy bằng
-      <code>uv run --extra viz streamlit run src/gsm_sim/dashboard.py</code>
-    </p>
-    <a class="btn ghost" style="text-align:center;text-decoration:none" href="../">← Về app tài xế</a>
+<div class="wrap">
+  <div class="head">
+    <h1>Khu Mô phỏng</h1>
+    <span class="mock-badge">Dữ liệu mô phỏng — engine sim, seed ghi rõ</span>
+    <div class="spacer"></div>
+    <div class="seed-box">seed <input id="seed" type="number" value="1000" min="0">
+      <button class="chip active" id="btn-load">Nạp ngày sim</button></div>
+    <a class="chip" href="../">← App tài xế</a>
+  </div>
+
+  <div class="tabs">
+    <button class="chip active" data-tab="tab-replay">Replay đội xe</button>
+    <button class="chip" data-tab="tab-journey">Hành trình 1 tài xế</button>
+    <button class="chip" data-tab="tab-ab">Thế giới song song A/B</button>
+    <button class="chip" data-tab="tab-sweep">Độ nhạy (30 seed)</button>
+  </div>
+
+  <!-- REPLAY -->
+  <div id="tab-replay" class="tab-panel active">
+    <div class="card">
+      <div class="controls">
+        <button class="chip" id="btn-play">▶ Chạy</button>
+        <input type="range" id="time-slider" min="300" max="1439" value="700" step="1">
+        <b id="clock" style="font-variant-numeric:tabular-nums;font-size:15px">11:40</b>
+        <span id="active-count" style="font-size:11.5px;color:var(--text-muted)">–</span>
+      </div>
+      <div id="replay-map"></div>
+      <div class="legend">
+        <span style="--c:#1baf7a">Chở khách</span><span style="--c:#2a78d6">Đi đón</span>
+        <span style="--c:#eda100">Đổi pin/sạc</span><span style="--c:#4a3aa7">Nghỉ</span>
+        <span style="--c:#e87ba4">Dịch chuyển</span><span style="--c:#9aa4ab">Chờ đơn</span>
+        <span style="--c:#eda100;border:1px solid #b97f00">◆ Tủ pin</span>
+      </div>
+      <div class="note" style="font-size:11px;color:var(--text-muted);margin-top:6px">
+        Vị trí nội suy tuyến tính giữa hai đầu chặng của engine (không gọi mạng khi replay).
+      </div>
+    </div>
+  </div>
+
+  <!-- JOURNEY -->
+  <div id="tab-journey" class="tab-panel">
+    <div class="card">
+      <div class="controls">
+        <label style="font-size:12.5px">Tài xế:</label>
+        <select id="sel-actor" style="max-width:340px"></select>
+      </div>
+      <div class="kpi-row" id="j-kpis"></div>
+      <div class="section-label">Dòng thời gian hoạt động</div>
+      <div id="chart-gantt" style="height:180px"></div>
+      <div class="section-label">Đường thu nhập cộng dồn (payout 4 nguồn) + mốc sự kiện</div>
+      <div id="chart-income" style="height:240px"></div>
+      <div class="section-label">Offer trong ngày (có lý do)</div>
+      <div style="max-height:280px;overflow:auto"><table class="data" id="tbl-offers"></table></div>
+    </div>
+  </div>
+
+  <!-- A/B -->
+  <div id="tab-ab" class="tab-panel">
+    <div class="card">
+      <div class="warn-strip" id="ab-warning">
+        1 seed = 1 ngày mô phỏng — kết quả đơn lẻ KHÔNG phải kết luận. Kết luận cần ≥30 seed + CI (tab Độ nhạy).
+      </div>
+      <button class="chip active" id="btn-ab">Chạy cặp A/B (CRN cùng seed — ~30-60s)</button>
+      <div id="ab-body" style="margin-top:12px"><div class="silent-box">
+        Thế giới A: tài xế tự làm · Thế giới B: theo trợ lý (kênh accept_lift + shift_extend + rest_window).
+        Cùng seed — mọi khác biệt là do advice.</div></div>
+      <div class="section-label">Đường thu nhập A vs B (tài xế đích)</div>
+      <div id="chart-ab" style="height:240px"></div>
+    </div>
+  </div>
+
+  <!-- SWEEP -->
+  <div id="tab-sweep" class="tab-panel">
+    <div class="card">
+      <div class="note" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">
+        Quét độ nhạy D-SIM-06 — <b>30 seed/ô</b>, kênh accept_lift cô lập, hiệu theo cặp + CI bootstrap 95%.
+        Đọc từ file precomputed (<code>dsim06_sweep.json</code>) — không tính lại. Ô có ✳ = CI không chứa 0.
+      </div>
+      <div id="sweep-panels"></div>
+    </div>
   </div>
 </div>
+<script type="module" src="mo-phong.js"></script>
 </body>
 </html>

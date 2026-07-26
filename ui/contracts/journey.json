@@ -69,7 +69,7 @@
         "newbie_vnd": { "type": "integer" },
         "trips_completed": { "type": "integer" },
         "orders_offered": { "type": "integer" },
-        "online_min": { "type": "integer" },
+        "online_min": { "type": "number", "description": "phút — engine trả float (723.6)" },
         "points": { "type": "integer" }
       },
       "required": ["payout_vnd", "trip_payout_vnd", "day_bonus_vnd", "mission_reward_vnd", "newbie_vnd"]
