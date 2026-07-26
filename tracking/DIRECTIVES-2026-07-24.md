@@ -33,7 +33,7 @@ sắp mưa, hoặc **dữ liệu để mô hình hóa thành bài toán tối ư
 | **Stadia Maps** | ✅ OK (geocoding + **tiles**) | Bản đồ cho UI, geocode |
 | **Jina Reader** | ✅ OK (fetch greensm.com → 13k ký tự MD) | Crawl policy/sự kiện ảnh hưởng công việc |
 | **Langfuse** (US cloud) | ✅ cấu hình | Observability LLM |
-| **Google Maps** | ❌ **KEY KHÔNG HỢP LỆ** (`REQUEST_DENIED`, 64 hex ≠ `AIza…`) | → `D-EXT-02`, cần key đúng |
+| **Google Maps** | ✅ **KHÔNG CẦN** (Cường chốt 2026-07-26) — OSRM + Stadia + OSM thay thế đủ | D-EXT-02 ĐÓNG |
 
 **Lưu ý:** mọi API đều có free tier riêng → **bắt buộc cache local** + fallback offline;
 external chỉ là **PROXY/EXTERNAL có nhãn**, KHÔNG bao giờ thành số tài chính/policy (§5).
@@ -106,3 +106,10 @@ vào sau, bên cạnh UI app.
 - Generator mock 90 ngày / 110 profile (bike/rto/car/employee/premium), 4 vòng verify.
 - **9 solver** phủ UC1–UC8; advisor pipeline C6 (router→composer→verifier) template-mode.
 - Suite **378 test** xanh. Research đợt 1–4 (policy refresh + app features).
+
+## 10. Chỉ thị bổ sung 2026-07-26 (Cường)
+
+1. **SIM-XANH**: nâng cấp sim hết cỡ cho giống XanhSM thật — chi tiết state/actors/action, bám plan; **OSRM thay detour** những chỗ có thể; dashboard đẹp (taste-skill).
+2. **D-SIM-06 TRƯỚC D-SIM-16** (sensitivity trước persistence).
+3. **Q-01**: agent tự fetch trên mạng (đã fetch OK — xem PENDING-REVIEW).
+4. **Thứ tự**: SIM-XANH → **Track C** (mock UI advice) → **AUDIT toàn bộ** data + hệ thống agent + **math modelling (quan trọng nhất)**.

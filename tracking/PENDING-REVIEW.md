@@ -26,8 +26,8 @@ Khi Cường cho verdict → chuyển sang phần "Đã xong", ghi ngày + kết
 
 | Mã | Cần chốt gì | Vì sao cần Cường | Từ ngày |
 |---|---|---|---|
-| **Q-01** | **`D-SIM-02`: chính sách thưởng cho tài xế MỚI.** Sim hiện cho tân binh **0đ thưởng**; Cường nói *"hồ sơ mới cũng có nhiều thưởng"*. Cần biết: thưởng tân binh thực tế là gì (mốc? thời hạn? bao nhiêu?) | Đây là **số POLICY thật** — agent không được tự bịa (CLAUDE.md §5). **CHẶN** baseline tân binh của SIM-4 | 2026-07-25 |
-| **Q-02** | **`D-EXT-02`: Google Maps API key** hiện không hợp lệ (`REQUEST_DENIED`, 64 hex ≠ định dạng `AIza…`) | Cần key đúng từ Google Cloud Console | 2026-07-24 |
+| ~~Q-01~~ | ✅ **RESOLVED-BY-FETCH 2026-07-26** (Cường cho phép tự fetch): cấu trúc thật từ greensm.com — bike: combo 810k (clawback nếu <200 cuốc/tháng×2 tháng), mốc ≥50 cuốc/7 ngày đầu, bảo lãnh doanh thu 90 ngày (số image-locked → PROXY); taxi 3M/90 ngày làm tham chiếu. Mô hình hoá ở Phase 2 SIM-XANH với nhãn nguồn + confidence; SỐ THẬT vẫn chờ GSM (D-POL-05) | — | đóng 2026-07-26 |
+| ~~Q-02~~ | ✅ **CLOSED 2026-07-26** (Cường hỏi free alternatives): KHÔNG cần Google key — OSRM (routing, không key, đã test) + Stadia (tiles/geocode) + OSM data (geometry/trạm đã dùng từ đầu). OSRM đưa vào SIM ở Phase 1 SIM-XANH | — | đóng 2026-07-26 |
 | **Q-03** | **`D-POL-04`: corpus của Khánh** thiếu policy Vận Doanh 23/02/2026 (bỏ phạt ≤70% + khoán tuần) → F0 có thể trích dẫn policy CŨ | File thuộc claim của Khánh, agent không tự sửa | 2026-07-24 |
 
 ## ✅ ĐÃ CHECK XONG
