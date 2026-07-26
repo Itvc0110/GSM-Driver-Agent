@@ -1,0 +1,226 @@
+{
+ "P4": {
+  "target_actor": 38,
+  "cells": {
+   "adh=0.3|lift=0.1": {
+    "delta_mean": 6110.1,
+    "ci95": [
+     -3217.94,
+     15788.81
+    ],
+    "significant": false,
+    "n_positive": 10,
+    "delta_bonus": 7000.0,
+    "served_guard": 0.003
+   },
+   "adh=0.3|lift=0.15": {
+    "delta_mean": 9248.4,
+    "ci95": [
+     -3003.78,
+     21667.23
+    ],
+    "significant": false,
+    "n_positive": 11,
+    "delta_bonus": 10000.0,
+    "served_guard": 0.001
+   },
+   "adh=0.3|lift=0.19": {
+    "delta_mean": 11402.9,
+    "ci95": [
+     -1451.82,
+     24142.48
+    ],
+    "significant": false,
+    "n_positive": 12,
+    "delta_bonus": 12000.0,
+    "served_guard": -0.0009
+   },
+   "adh=0.75|lift=0.1": {
+    "delta_mean": 11940.9,
+    "ci95": [
+     1315.8,
+     23450.3
+    ],
+    "significant": true,
+    "n_positive": 14,
+    "delta_bonus": 10000.0,
+    "served_guard": 0.0033
+   },
+   "adh=0.75|lift=0.15": {
+    "delta_mean": 11687.83,
+    "ci95": [
+     -1453.93,
+     24380.65
+    ],
+    "significant": false,
+    "n_positive": 14,
+    "delta_bonus": 12000.0,
+    "served_guard": 0.0017
+   },
+   "adh=0.75|lift=0.19": {
+    "delta_mean": 16678.47,
+    "ci95": [
+     2131.5,
+     31292.78
+    ],
+    "significant": true,
+    "n_positive": 16,
+    "delta_bonus": 15000.0,
+    "served_guard": -0.0004
+   },
+   "adh=1.0|lift=0.1": {
+    "delta_mean": 11940.9,
+    "ci95": [
+     1315.8,
+     23450.3
+    ],
+    "significant": true,
+    "n_positive": 14,
+    "delta_bonus": 10000.0,
+    "served_guard": 0.0033
+   },
+   "adh=1.0|lift=0.15": {
+    "delta_mean": 10687.77,
+    "ci95": [
+     -3235.83,
+     23999.68
+    ],
+    "significant": false,
+    "n_positive": 14,
+    "delta_bonus": 11000.0,
+    "served_guard": 0.0003
+   },
+   "adh=1.0|lift=0.19": {
+    "delta_mean": 15678.4,
+    "ci95": [
+     10.65,
+     30901.91
+    ],
+    "significant": true,
+    "n_positive": 16,
+    "delta_bonus": 14000.0,
+    "served_guard": -0.0019
+   }
+  }
+ },
+ "P1": {
+  "target_actor": 3,
+  "cells": {
+   "adh=0.3|lift=0.1": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=0.3|lift=0.15": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=0.3|lift=0.19": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=0.75|lift=0.1": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=0.75|lift=0.15": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=0.75|lift=0.19": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=1.0|lift=0.1": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=1.0|lift=0.15": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   },
+   "adh=1.0|lift=0.19": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 0,
+    "delta_bonus": 0.0,
+    "served_guard": 0.0
+   }
+  }
+ },
+ "P2_silence_check": {
+  "target_actor": 13,
+  "cells": {
+   "adh=1.0|lift=0.19": {
+    "delta_mean": 52995.2,
+    "ci95": [
+     7793.2,
+     99400.8
+    ],
+    "significant": true,
+    "n_positive": 3,
+    "delta_bonus": 24000.0,
+    "served_guard": 0.0058
+   }
+  }
+ }
+}
