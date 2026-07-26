@@ -132,3 +132,18 @@ thành 1 phần của project… không cần build UI mock nữa mà build th�
 3. Tông màu **theo Khánh 100%**: light + cyan `#00AFB9` — palette dataviz re-validate trên nền sáng.
 
 Phase U0–U4, kế hoạch chi tiết: plan đã duyệt (xem UPDATE-059). Sau Track UI → AUDIT (giữ nguyên §10.4).
+
+## 12. Chỉ thị 2026-07-27 (Cường, rạng sáng — chốt qua AskUserQuestion)
+
+1. **Scope F0 ĐỔI: bỏ chat hỏi-đáp tự do → giữ dạng TỐI GIẢN**: mục "Chính sách" là FAQ CÓ CẤU
+   TRÚC (danh sách câu hỏi định sẵn → trả lời template + citation từ corpus; KHÔNG LLM tự do).
+   Corpus policy của Khánh (Q-03) giữ vai trò nguồn trích dẫn. Router/KB C6 phần free-text F0
+   thành legacy (không xóa, ghi deprecated khi chạm tới).
+2. **Hình thái advisor: PROACTIVE CARDS** (không chatbot): thẻ advice có cấu trúc xuất hiện đúng
+   lúc — trước ca (brief) · trong ca (nudge NGẮN chỉ lúc dừng xe/đổi pin — an toàn khi lái) ·
+   sau ca (recap); mỗi thẻ có nút **"Làm theo / Bỏ qua"** → log adherence EXPLICIT (nối với đo
+   adherence trong sim/D-SIM-04).
+3. **Việc song song được duyệt cả 4** (thứ tự tôi tự xếp): UX redesign theo cards + instrumentation
+   adherence → web research UX/HCI nuôi thiết kế → UI fancy cho stakeholder → CI draft.
+4. Loạt câu hỏi kiểm tra sâu (layer outputs, advice_bridge mapping, memory usage, time engineering,
+   "khi nào đưa advice"): nhập vào A3/A4 của AUDIT — chi tiết `tracking/BACKLOG-QUESTIONS-2026-07-27.md`.
