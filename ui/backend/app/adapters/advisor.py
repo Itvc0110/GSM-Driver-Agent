@@ -13,8 +13,10 @@ from pathlib import Path
 
 import polars as pl
 
+from gsm_core.advisor import verifier as V
 from gsm_core.policy import PolicyBundle as CorePolicy
 from gsm_core.solvers import bonus_feasibility
+from gsm_core.vn_format import render_number_vn
 
 from .mockdata import REPO_ROOT, _table, _stat_row
 
@@ -106,8 +108,9 @@ def _num_source(raw: str) -> str:
     return "SOLVER"
 
 
-def advice(driver_id: str, date: str, now_min: int,
-           shift_end_min: int = DEFAULT_SHIFT_END_MIN) -> dict:
+def _advice_raw(driver_id: str, date: str, now_min: int,
+                shift_end_min: int = DEFAULT_SHIFT_END_MIN) -> dict:
+    """Dựng advice THÔ từ solver. KHÔNG gọi trực tiếp — dùng `advice()` (có guardrail)."""
     if not driver_id.startswith(("d-", "r-")):
         # policy S1 hiện là policy BIKE — không áp bừa cho đội car/premium (không bịa policy)
         return {"scenario_id": f"mock-realdata:{date}", "seed": 0,
@@ -149,10 +152,10 @@ def advice(driver_id: str, date: str, now_min: int,
         item = {
             "advice_id": f"s1-{driver_id}-{date}-{now_min}",
             "solver": "S1", "kind": "bonus_gap",
-            "title": f"Còn với được mốc thưởng {sol['tier_vnd']:,}đ hôm nay".replace(",", "."),
-            "message": (f"Bạn thiếu {sol['gap_points']} điểm để chạm mốc kế "
-                        f"(~{sol['hours_needed']:.1f} giờ chạy nữa, khoảng "
-                        f"{sol['trips_needed']} cuốc). Quỹ giờ còn lại đủ."),
+            "title": f"Còn với được mốc thưởng {_vn(sol['tier_vnd'], 'vnd')} hôm nay",
+            "message": (f"Bạn thiếu {_vn(sol['gap_points'], 'points')} để chạm mốc kế "
+                        f"(khoảng {_vn(sol['hours_needed'], 'hours')} chạy nữa, "
+                        f"{_vn(sol['trips_needed'], 'trips')}). Quỹ giờ còn lại đủ."),
             "confidence": report["confidence"],
             "reason_code": "feasible_gap",
             "numbers": numbers, "caveat": caveat,
@@ -171,10 +174,71 @@ def advice(driver_id: str, date: str, now_min: int,
         "advice_id": f"s1-{driver_id}-{date}-{now_min}",
         "solver": "S1", "kind": "info",
         "title": "Mốc thưởng kế khó khả thi hôm nay",
-        "message": (report.get("infeasible_reason") or "Không đủ điều kiện đạt mốc kế.")
-                   + " Đừng cố quá — giữ tỷ lệ hoàn thành tốt cho ngày mai.",
+        "message": (_infeasible_text(constraints)
+                    + " Đừng cố quá — giữ tỷ lệ hoàn thành tốt cho ngày mai."),
         "confidence": report["confidence"],
         "reason_code": reason_code,
         "numbers": numbers, "caveat": caveat,
     }
     return {**base, "silent": {"is_silent": False}, "items": [item]}
+
+
+# ---------------------------------------------------------------------------
+# R5-A (UPDATE-071): GUARDRAIL cho đường UI cards.
+# Trước R5, `ui/backend/app/` KHÔNG gọi verifier ở bất kỳ đâu — nghĩa là mọi guardrail
+# của pipeline C6 (V1 số trần, V2 hứa thu nhập/khuyên đơn, V3 ngôn ngữ lẫn) KHÔNG bảo vệ
+# proactive cards, tức đường mà tài xế THỰC SỰ nhìn (DIRECTIVES §12). Nay: mỗi card phải
+# qua verifier tầng 1; hỏng thì IM LẶNG (fail-closed, cùng triết lý FAILCLOSED-1).
+
+
+def _vn(value, unit: str) -> str:
+    """Render số theo locale VN — CÙNG hàm với pipeline (không tự format f-string)."""
+    return render_number_vn(value, unit) if value is not None else ""
+
+
+def _infeasible_text(constraints: dict) -> str:
+    """Lý do (KHÔNG lặp lại title — bài học giọng văn A3 LAYEROUT-6)."""
+    if not constraints.get("enough_hours", True):
+        return "Quỹ giờ còn lại của ca không đủ để kiếm thêm số điểm còn thiếu."
+    if not constraints.get("ok_acceptance", True):
+        return ("Tỷ lệ nhận đang dưới ngưỡng chính sách — dù đủ điểm thì thưởng "
+                "vẫn không được trả.")
+    if not constraints.get("ok_completion", True):
+        return ("Tỷ lệ hoàn thành đang dưới ngưỡng chính sách — dù đủ điểm thì thưởng "
+                "vẫn không được trả.")
+    return "Điều kiện thưởng hôm nay chưa đạt."
+
+
+_UNIT_KEY = {"điểm": "points", "vnd": "vnd", "giờ": "hours", "cuốc": "trips"}
+
+
+def _verify_item(item: dict) -> list[str]:
+    """Verifier tầng 1 trên nội dung card (title + message)."""
+    rendered = [render_number_vn(n["value"], _UNIT_KEY.get(n.get("unit"), "count"))
+                for n in item.get("numbers", []) if n.get("value") is not None]
+    text = f"{item.get('title', '')} {item.get('message', '')}"
+    return (V.check_bare_numbers(text, rendered)
+            + V.check_blocklist(text, None))
+
+
+def advice(driver_id: str, date: str, now_min: int,
+           shift_end_min: int = DEFAULT_SHIFT_END_MIN) -> dict:
+    """Advice CHO UI — có guardrail. Card nào không qua verifier thì KHÔNG được trả."""
+    out = _advice_raw(driver_id, date, now_min, shift_end_min)
+    errors: list[str] = []
+    kept = []
+    for it in out.get("items", []):
+        errs = _verify_item(it)
+        if errs:
+            errors.extend(f"{it.get('advice_id')}: {e}" for e in errs)
+        else:
+            kept.append(it)
+    if errors and not kept:
+        return {**out, "items": [],
+                "silent": {"is_silent": True, "reason_code": "verify_failed",
+                           "message": "Hiện chưa có gợi ý nào đủ chắc chắn để đưa cho bạn. "
+                                      "Trợ lý sẽ báo lại khi thông tin rõ ràng hơn."},
+                "verify_errors": errors}
+    if errors:
+        return {**out, "items": kept, "verify_errors": errors}
+    return out

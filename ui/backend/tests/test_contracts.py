@@ -158,3 +158,47 @@ def test_advice_action_rejects_bad_action(dv):
         "advice_id": "x", "driver_id": dv["driver_id"], "date": dv["date"],
         "action": "maybe_later", "card_kind": "nudge"})
     assert r.status_code == 422, "action ngoài enum phải bị chặn ở validation"
+
+
+# ---------- R5-A (UPDATE-071): đường UI cards PHẢI có guardrail như pipeline ----------
+
+_UNIT_KEY = {"điểm": "points", "vnd": "vnd", "giờ": "hours", "cuốc": "trips"}
+
+
+def test_advice_items_pass_verifier(dv):
+    """Mọi card trả cho tài xế phải qua verifier tầng 1. Trước R5, đường này KHÔNG có
+    guardrail nào — mọi fix ở batch 3 chỉ bảo vệ pipeline C6, không bảo vệ cards."""
+    from gsm_core.advisor import verifier as V
+    from gsm_core.vn_format import render_number_vn
+    for now_min in (9 * 60, 14 * 60, 19 * 60):
+        body = client.get(f"/api/v1/advice?driver_id={dv['driver_id']}&date={dv['date']}"
+                          f"&now_min={now_min}").json()
+        for it in body["items"]:
+            rendered = [render_number_vn(n["value"], _UNIT_KEY.get(n["unit"], "count"))
+                        for n in it.get("numbers", [])]
+            text = f"{it['title']} {it['message']}"
+            assert V.check_bare_numbers(text, rendered) == [], \
+                f"card {it['advice_id']} có số trần không trace được"
+            assert V.check_blocklist(text, None) == [], \
+                "card vi phạm blocklist (hứa thu nhập / khuyên đơn cụ thể)"
+
+
+def test_poisoned_advice_never_reaches_response(dv, monkeypatch):
+    """Inject item độc (số trần + hứa thu nhập) → response phải IM LẶNG với
+    reason_code verify_failed, KHÔNG lọt ra ngoài (fail-closed như FAILCLOSED-1)."""
+    from app.adapters import advisor as adv
+
+    def poisoned(*a, **kw):
+        return {"scenario_id": "x", "seed": 0, "data_mode": "mock-realdata", "is_mock": True,
+                "generated_at_min": 840, "silent": {"is_silent": False},
+                "items": [{"advice_id": "poison-1", "solver": "S1", "kind": "bonus_gap",
+                           "title": "Chắc chắn anh kiếm được 5.000.000đ hôm nay",
+                           "message": "Cứ chạy đi, chắc chắn anh kiếm được 999.999đ.",
+                           "confidence": 0.9, "reason_code": "feasible_gap",
+                           "numbers": [], "caveat": ""}]}
+
+    monkeypatch.setattr(adv, "_advice_raw", poisoned)
+    body = client.get(f"/api/v1/advice?driver_id={dv['driver_id']}&date={dv['date']}").json()
+    validate(body, _schema("advice"))
+    assert body["items"] == [], "advice độc LỌT ra response"
+    assert body["silent"]["is_silent"] and body["silent"]["reason_code"] == "verify_failed"
