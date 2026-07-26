@@ -322,6 +322,11 @@ class AdviceActionBridge:
         """
         if not (self.ch_rest_window and self.covers(actor)):
             return None
+        # D-SIM-10: ưu tiên khung đã LÊN KẾ HOẠCH TỪ HÔM QUA. Đây là cách duy nhất lời khuyên
+        # HỒI CỨU của S7 có tác dụng: trong ngày, khung nó chỉ ra luôn nằm phía sau (đo được ở
+        # UPDATE-050, kênh inert hoàn toàn). Biết trước từ hôm qua thì khung còn ở phía TRƯỚC.
+        if actor.planned_rest_hour is not None:
+            return int(actor.planned_rest_hour)
         ii = self.build_idle_reduction_input(actor, now_min, demand_hint_fn)
         rep = idle_reduction.solve(ii)
         sol = rep.get("solution") or {}

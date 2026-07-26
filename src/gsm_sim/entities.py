@@ -70,6 +70,9 @@ class Actor:
     # đáng dồn nghỉ vào.
     idle_by_hour: dict = field(default_factory=dict)
     rest_deferred_min: float = 0.0   # D-SIM-03: tổng phút đã hoãn nghỉ theo lời khuyên
+    # D-SIM-10: khung giờ nên dồn nghỉ, do solver S7 rút ra từ idle NGÀY HÔM QUA.
+    # None ở ngày đầu (chưa có lịch sử) — đó là đúng, không phải thiếu sót.
+    planned_rest_hour: int | None = None
     shift_extended_min: float = 0.0   # SIM-4: số phút đã hoãn kết ca theo lời khuyên
 
     @property
@@ -89,6 +92,35 @@ class Actor:
 
     def consume_soc(self, dist_km: float, pct_per_km: float) -> None:
         self.soc_pct = max(0.0, self.soc_pct - dist_km * pct_per_km)
+
+    # D-SIM-10: danh sách TƯỜNG MINH những gì reset mỗi ngày. Để tường minh (thay vì "reset
+    # mọi thứ trừ…") vì chỗ này dễ sai theo cả HAI chiều: quên reset ⇒ điểm/cuốc cộng dồn vô
+    # hạn, thưởng ngày sai; reset nhầm ⇒ mất lịch sử, "học từ hôm qua" thành giả.
+    _DAILY_RESET_INT = ("trips_done", "orders_offered", "orders_accepted", "orders_completed",
+                        "orders_cancelled", "orders_soc_skipped", "gross_vnd", "payout_vnd",
+                        "points", "stranded_count", "meals_taken")
+    _DAILY_RESET_FLOAT = ("online_min", "empty_min", "occupied_min", "idle_min", "rest_min",
+                          "charge_min", "accept_lift", "rest_deferred_min", "shift_extended_min")
+
+    def reset_for_new_day(self, soc_pct: float, shift_start_min: float,
+                          shift_end_min: float) -> None:
+        """Sang ngày mới: xoá trạng thái NGÀY, giữ nguyên DANH TÍNH.
+
+        KHÔNG đụng: `actor_id`, `archetype`, `fleet`, `home_cell`, `accept_base`,
+        `demand_prior_sigma`, `fatigue_threshold_min`, `meal_hour` — đó là con người, không
+        phải trạng thái ngày. Lịch sử cuộn nằm ở `DriverMemory` (ngoài Actor) nên cũng an toàn.
+        """
+        for name in self._DAILY_RESET_INT:
+            setattr(self, name, 0)
+        for name in self._DAILY_RESET_FLOAT:
+            setattr(self, name, 0.0)
+        self.idle_by_hour = {}
+        self.demand_prior = {}
+        self.state = ActorState.OFFLINE
+        self.soc_pct = float(soc_pct)          # sạc/đổi pin qua đêm
+        self.shift_start_min = float(shift_start_min)
+        self.shift_end_min = float(shift_end_min)
+        self.cell = self.home_cell             # sáng ra xuất phát từ nhà
 
 
 @dataclass

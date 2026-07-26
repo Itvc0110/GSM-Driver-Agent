@@ -20,6 +20,7 @@ Khi Cường cho verdict → chuyển sang phần "Đã xong", ghi ngày + kết
 | **V-05** | **SIM-4 thế giới song song** — chạy `uv run python scripts/run_parallel.py --seeds 30`, đọc bảng Δ + CI + `n_pos`. Lưu ý 3 điểm dễ hiểu sai (xem UPDATE-047 §3) | CLI (tab dashboard A/B **chưa làm**) | 2026-07-26 (UPDATE-047) |
 | **V-06** | **SIM-5 data mới + bộ metric** — dashboard chạy trên bộ 90 ngày vừa regen; kiểm `sim_metrics.full_report` (chờ khách, mật độ hex×giờ). Tab ⚖️ A/B vẫn CHƯA làm (nợ SIM-4) | Dashboard + `scripts/regen_mock.py` | 2026-07-26 (UPDATE-049) |
 | **V-07** | **D-SIM-03 kênh `rest_window`** — kênh INERT có chủ ý (xem UPDATE-050 §3). Cần Cường xác nhận hướng đi: ưu tiên **sim nhiều ngày** (`D-SIM-10`) để mở khoá 5 solver hồi cứu? | UPDATE-050 | 2026-07-26 |
+| **V-08** | **Sim nhiều ngày** — xem bảng ngày-qua-ngày (UPDATE-052 §4 L1) và xác nhận biến động **5→18 cuốc/ngày** của cùng một tài xế có hợp lý với thực tế không | UPDATE-052 §4 | 2026-07-26 |
 
 ## ❓ QUYẾT ĐỊNH CẦN CƯỜNG CHỐT (không phải visual)
 

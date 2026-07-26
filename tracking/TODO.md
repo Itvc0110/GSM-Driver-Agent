@@ -97,7 +97,12 @@ nhìn về phía trước; phần còn lại HỒI CỨU/thông tin nên không 
 không giúp được, lỗ chỉ còn **4 seed**, lợi/hại ≈ **5,7:1**. Bản cũ luôn khuyên nên phần lớn
 seed không-lãi là lỗ thật. Bản cũ còn **bỏ sót hoàn toàn ràng buộc `completion`** ⇒ khuyên nâng
 tỷ lệ NHẬN trong khi chỗ nghẽn là tỷ lệ HOÀN THÀNH (sai địa chỉ).
-⇒ Còn lại: **`D-SIM-10` sim nhiều ngày** (đòn bẩy lớn nhất), `D-SIM-11` (S1 trả mã lý do có cấu
+✅ **`D-SIM-10` DONE 2026-07-26 (UPDATE-052)**: `run_multiday` + `DriverMemory` + `reset_for_new_day`.
+**Chẩn đoán UPDATE-050 được XÁC NHẬN**: cùng kênh S7 ở sim 1 ngày cho 0 event tuyệt đối, nay có
+event từ ngày 2 (lý do `defer_to_13h`). Carry-over có tác dụng thật (Δ +23.920đ/7 ngày).
+Bug thật: mọi ngày dùng CHUNG list actors ⇒ `days[0]` phản ánh ngày CUỐI (im lặng, không crash).
+Kiểm chứng CHẠY THẬT L1-L6 theo yêu cầu Cường. Suite **463**.
+⇒ Còn lại: **`D-SIM-13`** (nối DriverMemory vào S1 · reset tuần · mockgen dùng run_multiday), `D-SIM-11` (S1 trả mã lý do có cấu
 trúc thay vì để sim parse tiếng Việt), `D-SIM-12` (4 seed còn lỗ).
 ~~`D-SIM-03` mở rộng action-space (mới 1/9 solver có kênh tác
 động — giới hạn LỚN NHẤT của kết quả A/B), rồi Track B (external data) / C (mock UI) / D (C7) / E.
