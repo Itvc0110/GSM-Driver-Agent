@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DriverStateContract",
+  "type": "object",
+  "properties": {
+    "driver_id": { "type": "string" },
+    "driver_name": { "type": "string" },
+    "shift_status": { "type": "string", "enum": ["ON_SHIFT", "OFF_SHIFT", "BREAK"] },
+    "soc_percent": { "type": "integer" },
+    "vehicle_range_km": { "type": "number" },
+    "payout_summary": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number" },
+        "currency": { "type": "string" },
+        "trips_count": { "type": "integer" },
+        "scenario_id": { "type": "string" },
+        "seed": { "type": "integer" },
+        "data_mode": { "type": "string", "enum": ["synthetic"] },
+        "is_mock": { "type": "boolean" }
+      },
+      "required": ["value", "currency", "trips_count", "scenario_id", "seed", "data_mode", "is_mock"]
+    }
+  },
+  "required": ["driver_id", "driver_name", "shift_status", "soc_percent", "vehicle_range_km", "payout_summary"]
+}

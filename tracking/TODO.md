@@ -94,7 +94,15 @@ center 21.2k, eta 11, n=90; gate 13/13) · P2 rating/tân-binh-Q01/mission trong
 13 test) · P3 sweep D-SIM-06 (P4 dương-mỏng chỉ SIG ở lift 0.19; P1 zero CẤU TRÚC; P2 lật kỳ vọng —
 thưởng chấm REALIZED nên dip-alert cứu thưởng thật) · P4 dashboard palette-VALIDATED 5/5 + Replay
 TripsLayer + tab A/B + heatmap sweep (V-09) · P5 regen 90 ngày engine mới.
-→ **D-SIM-18** (shrinkage estimator) chuyển MATH AUDIT. Thứ tự tiếp: **Track C → AUDIT toàn bộ**.
+→ **D-SIM-18** (shrinkage estimator) chuyển MATH AUDIT. Thứ tự tiếp: ~~Track C~~ **Track UI → AUDIT toàn bộ**.
+
+**Track UI (chỉ thị Cường 2026-07-26 — DIRECTIVES §11, THAY Track C mock-UI) — DOING:**
+Import UI Khánh (`uiuxgsm` → `ui/`, UPDATE-059) làm nền UI THẬT. Web app chính (tách từ
+`ui/demo_stitch_app.html`) + Khánh làm Flutter song song qua contract-first (1 backend FastAPI chung,
+`ui/contracts/` versioned, `ui/design-tokens.json`, `ui/docs/SCREEN-PARITY.md`). Sim port hẳn vào
+khu "Mô phỏng" trong web UI; tông màu theo Khánh 100% (light + cyan #00AFB9, palette dataviz
+re-validate nền sáng). Phase: U0 import ✅ → U1 tokens/palette/contracts → U2 web core data thật +
+advisor thật → U3 khu Mô phỏng (Replay/Hành trình/A/B/heatmap) → U4 verify + visual gate V-10.
 
 **Việc đáng làm tiếp sau Track A** (cập nhật 2026-07-26, UPDATE-050): đã nối solver thứ 2 (S7
 `idle_reduction`, kênh `rest_window`) và **chẩn đoán ra nguyên nhân gốc**: S2 là solver DUY NHẤT
@@ -135,7 +143,9 @@ Source of truth sim: `specs/simulation-reliability-upgrade.md`. Mỗi milestone/
 
 **Track song song (không đụng files nhau):**
 
-- **Khánh: T-009 UI clone** (ưu tiên của Khánh — brief `planning/ui-clone-brief.md`).
+- **Khánh: T-009 UI clone** — ✅ **DONE 2026-07-26**: bàn giao `uiuxgsm-main.zip` (Stitch web demo +
+  Flutter + FastAPI), import vào `ui/` (UPDATE-059). Tiếp nối: **T-009b Flutter mobile song song**
+  (phạm vi `ui/driver_app/`, bắt kịp qua contracts — xem ASSIGNMENTS).
 - **Người thật (ai rảnh): T-013** join FB group + kiểm changelog app (chặn crawler).
 - **AI agent (khi Cường rảnh review): T-004 KB chính sách** (độc lập với sim; cần cho product F0 sau).
 - Dashboard sim (xong slice v0) — nâng cấp dần theo nhu cầu xem/control.
@@ -152,7 +162,8 @@ Source of truth sim: `specs/simulation-reliability-upgrade.md`. Mỗi milestone/
 | T-006 | Khung F1 trước ca: chỉ tiêu net mặc định + nhận xét chỉ tiêu theo hồ sơ | TODO | — | Phụ thuộc T-002, T-004 |
 | T-007 | Khung F2 trong ca: lời khuyên chạy/nghỉ/sạc từ phân phối mock | TODO | — | Phụ thuộc T-003 |
 | T-008 | Khung F3 sau ca: analyzer/advisor + danh mục hành vi chưa tối ưu | TODO | — | Phụ thuộc T-002 |
-| T-009 | UI/UX tạm: clone <https://rag-xanh-sm-v1.vercel.app/> bằng [ai-website-cloner-template](https://github.com/JCodesMore/ai-website-cloner-template), mobile-first | TODO (Khánh — ưu tiên) | Khánh | **Brief đầy đủ: `planning/ui-clone-brief.md`**. Làm song song simulator, phạm vi UI riêng không đụng `src/gsm_sim/` |
+| T-009 | UI/UX tạm: clone tham khảo, mobile-first | **DONE 2026-07-26** | Khánh | Kết quả vượt brief: Stitch web demo + Flutter + FastAPI (repo riêng `uiuxgsm`) → import `ui/` (UPDATE-059). Kế nhiệm: T-009b |
+| T-009b | Flutter mobile song song web (contract-first) | READY | Khánh | Phạm vi `ui/driver_app/`; đồng bộ qua `ui/contracts/` + `ui/design-tokens.json` + `ui/docs/SCREEN-PARITY.md` |
 | T-010 | Xác nhận scope luồng giải trình vi phạm (drawio file 2) | DONE | Cường | Chốt 2026-07-20: dự án khác, ngoài scope repo này — xem D-006 |
 | T-011 | Định nghĩa contract/schema mới cho scope v2 (hồ sơ tài xế, demand proxy, output tư vấn) | TODO | — | Contracts cũ deferred; contract mới phải version hóa policy bundle + money definition (`gross_revenue`, `driver_payout`, `estimated_net_income`, cost completeness) |
 | T-012 | Research đợt 2: bảng thưởng chi tiết + kinh nghiệm cộng đồng (FB groups, TikTok/YouTube) | DONE | AI agent | 2026-07-20: KHÔNG OCR/app. Bảng thưởng đã verify: `research/policy/bonus-programs.md`; cộng đồng: `research/community/community-insights.md`. FB groups cần join tay (T-013) |

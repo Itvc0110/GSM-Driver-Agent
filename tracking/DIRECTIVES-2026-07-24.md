@@ -80,10 +80,12 @@ vào sau, bên cạnh UI app.
 7. **Sim hiện còn nhiều phần rất tệ** — ví dụ **tỷ lệ hoàn thành chuyến tổng đang quá
    thấp so với thực tế** — và **chưa đủ chi tiết**.
 
-## 6. MOCK UI để xem advice
+## 6. MOCK UI để xem advice — **THAY THẾ bởi §11 (2026-07-26)**
 
-- Xây **mock UI** để **xem advice** (của phía ta; khác với UI clone của Khánh).
-- Có Stadia Maps tiles + OSRM → có thể vẽ bản đồ/hành trình.
+- ~~Xây **mock UI** để **xem advice** (của phía ta; khác với UI clone của Khánh).~~
+- Cường 2026-07-26: **không build UI mock nữa** — build thẳng UI thật trên nền UI của Khánh
+  (import vào `ui/`). Xem §11 + `tracking/updates/UPDATE-059-*`.
+- Ý "Stadia tiles + OSRM vẽ bản đồ/hành trình" vẫn sống — chuyển vào Track UI.
 
 ## 7. CÁCH LÀM VIỆC
 
@@ -94,9 +96,10 @@ vào sau, bên cạnh UI app.
 
 | Track | Nội dung | Trạng thái |
 |---|---|---|
-| **A. SIM overhaul** | mảng riêng (§5) + chỉ thị SIM-XANH (§10) | ✅ **SIM-1..5 + SIM-XANH P0-P5 XONG** (UPDATE-044..058): đường THẬT OSRM (factor median 1.46) · rating/tân-binh/mission trong sim · sweep độ nhạy D-SIM-06 · dashboard palette-validated + Replay + tab A/B · data 90 ngày chuỗi liên tục. **Kế tiếp: Track C** (mock UI advice) rồi **AUDIT** |
+| **A. SIM overhaul** | mảng riêng (§5) + chỉ thị SIM-XANH (§10) | ✅ **SIM-1..5 + SIM-XANH P0-P5 XONG** (UPDATE-044..058, manifest sạch `fda8e16`): đường THẬT OSRM (factor median 1.46) · rating/tân-binh/mission trong sim · sweep độ nhạy D-SIM-06 · dashboard palette-validated + Replay + tab A/B · data 90 ngày chuỗi liên tục. **Kế tiếp: Track UI** (§11) rồi **AUDIT** |
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
-| **C. Mock UI xem advice** | §6 | ⏳ chưa bắt đầu |
+| **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
+| **UI. UI thật trên nền Khánh** | §11 | 🔨 **DOING** — U0 import xong (UPDATE-059); U1 tokens/palette/contracts → U2 web core → U3 khu Mô phỏng → U4 verify + V-10 |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 
@@ -112,4 +115,20 @@ vào sau, bên cạnh UI app.
 1. **SIM-XANH**: nâng cấp sim hết cỡ cho giống XanhSM thật — chi tiết state/actors/action, bám plan; **OSRM thay detour** những chỗ có thể; dashboard đẹp (taste-skill).
 2. **D-SIM-06 TRƯỚC D-SIM-16** (sensitivity trước persistence).
 3. **Q-01**: agent tự fetch trên mạng (đã fetch OK — xem PENDING-REVIEW).
-4. **Thứ tự**: SIM-XANH → **Track C** (mock UI advice) → **AUDIT toàn bộ** data + hệ thống agent + **math modelling (quan trọng nhất)**.
+4. **Thứ tự**: SIM-XANH → ~~Track C (mock UI advice)~~ **Track UI (§11)** → **AUDIT toàn bộ** data + hệ thống agent + **math modelling (quan trọng nhất)**.
+
+## 11. Chỉ thị 2026-07-26 (Cường) — Track UI: UI thật trên nền UI của Khánh
+
+Nguyên văn ý chính: *"nghiên cứu uiuxgsm-main.zip — phần UI được làm cho tới giờ của Khánh, biến nó
+thành 1 phần của project… không cần build UI mock nữa mà build thẳng phần UI, gắn simulation vào
+1 phần riêng trong UI, thiết kế lại theo phong cách đó, tông màu…"*
+
+Đã chốt với Cường (AskUserQuestion 2026-07-26):
+1. **Web app** là nền chính (tách từ `ui/demo_stitch_app.html`); **Khánh làm Flutter mobile song
+   song** theo cơ chế contract-first: 1 backend FastAPI chung + `ui/contracts/` (JSON Schema
+   versioned) + `ui/design-tokens.json` + `ui/docs/SCREEN-PARITY.md`; ranh giới file trong ASSIGNMENTS.
+2. Sim **port hẳn vào web UI** thành khu "Mô phỏng" (Replay · Hành trình · A/B · heatmap) — UI chỉ
+   đọc JSON từ engine, không tự tính.
+3. Tông màu **theo Khánh 100%**: light + cyan `#00AFB9` — palette dataviz re-validate trên nền sáng.
+
+Phase U0–U4, kế hoạch chi tiết: plan đã duyệt (xem UPDATE-059). Sau Track UI → AUDIT (giữ nguyên §10.4).

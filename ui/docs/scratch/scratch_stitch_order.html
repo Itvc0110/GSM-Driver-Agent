@@ -1,0 +1,93 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Driver App UI Clone</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style data-purpose="custom-styles">@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+body {
+    font-family: "Inter", sans-serif;
+    /* Set exact dimensions of the image if needed, or fill screen */
+    width: 100vw;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+    background-color: #f3f4f6;
+    /* Fallback */
+    }
+/* Simulate the map background */
+.map-bg {
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuBhBydDZ4ALx_zCxj57Toi6_13tpdgdChbKjdGaXKZVZemeDRiglD54Q5dqRNBB4E6rL3WwHXVZ8Jp2wSPO145GoDuyezWR2j4d4XqJdm1qW6Nm4smfEzvKCZKJkLU9SgWdnP3OWjlKVr2E3a6VyBXoamsWEIkrVmPGA3uyhhMK_dvi4hcgJKb8gjo1IAMVhK7Xl84ozIvGj69Ekg8cV0cETzxkQmpt2R44qCNi2scOXkZtbYmuDauwvtqLXQeiAJered67kZ3fuSs);
+    background-size: cover;
+    background-position: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0
+    }
+/* iOS Status Bar styling area */
+.ios-status-bar {
+    height: 47px;
+    /* Approximate height */
+    padding: 0 20px;
+    padding-top: 10px;
+    z-index: 50
+    }
+.glass-effect {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px)
+    }</style>
+</head>
+<body class="relative bg-gray-100 h-screen w-full overflow-hidden text-gray-800">
+<!-- BEGIN: Map Background -->
+<div class="map-bg" data-purpose="map-background" style="background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuBs3Y-ooV8kuXgOtLxcQIO8QYxy0lHi7mB_NLZi1oiVWwFVi-uDnq1PUzFf063SYaVI4qM34KwnaegLiobyfD-dqQP_hx-jhmls4rsuMSo6OE5DERmhPQaqEqGdK9wMEEwloJmOzfOLQss7Cglw584x-5DgaaQJfKzTdVviGSX9T76vraa6ULglOkfN6H8BdetbFaQbfL9l12BQEByJeZi3OCqRU-DKCmcitiYrMovpKPGGi4tQBGj_Z5QMzh1DiGiqM38QXAfkVZI); background-size: cover; background-position: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;">
+<!-- Placeholders for map elements based on original image -->
+<div class="absolute top-[20%] left-[30%] bg-blue-500 rounded-full w-4 h-4 border-2 border-white shadow-md z-10">
+<div class="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-semibold text-gray-700">PHÚC LÝ</div>
+</div>
+</div>
+<!-- END: Map Background -->
+<!-- BEGIN: Top Overlay Elements -->
+<div class="absolute top-0 left-0 w-full z-40 pointer-events-none">
+<!-- iOS Status Bar (Simulated) -->
+<div class="ios-status-bar flex justify-between items-center text-black font-semibold text-[15px]">
+<div class="flex-1">9:41 <i class="fa-solid fa-location-arrow ml-1 text-xs"></i></div>
+<div class="flex-none flex justify-center items-start">
+<!-- Dynamic Island Fake -->
+</div>
+<div class="flex-1 flex justify-end items-center gap-1.5">
+<i class="fa-solid fa-signal text-[10px]"></i>
+<span class="text-xs">4G</span>
+<div class="w-6 h-3 border border-black rounded-[3px] relative flex items-center p-[1px]">
+<div class="bg-black h-full rounded-[1px] w-[64%]"></div>
+<div class="absolute -right-[2px] top-1/2 -translate-y-1/2 w-[2px] h-1 bg-black rounded-r-sm"></div>
+</div>
+</div>
+</div>
+<!-- Top Action Buttons -->
+<div class="px-4 mt-2 flex justify-between items-start pointer-events-auto">
+<!-- Menu Button -->
+<button class="w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors">
+<i class="fa-solid fa-bars text-lg"></i>
+</button>
+<!-- Earnings Badge -->
+<div class="bg-white px-5 py-2.5 rounded-full shadow-md font-bold text-[17px] mt-1 relative pointer-events-none text-black">
+        202.000đ
+        <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-white"></div>
+</div>
+<!-- Quota Button -->
+<button class="w-14 h-14 bg-white rounded-full shadow-md flex items-center justify-center text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors">
+        0.0/8
+      </button>
+</div>
+</div>
+<!-- END: Top Overlay Elements -->
+<!-- BEGIN: Right Side Floating Action Buttons -->
+<!-- END: Right Side Floating Action Buttons -->
+<!-- BEGIN: Bottom Section Overlay -->
+<div class="absolute bottom-0 left-0 w-full z-40 pointer-events-auto flex flex-col items-center pb-2"><div class="bg-white w-full rounded-t-[30px] shadow-xl p-4 flex flex-col gap-4 pb-8"><div class="flex justify-between items-start"><div class="flex flex-col"><span class="text-gray-600 text-sm">Khách gửi hàng</span><span class="text-xl font-bold">Nguyễn Đại</span></div><div class="flex gap-2"><button class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-[#00b4d8]"><i class="fa-solid fa-comment-dots text-xl"></i></button><button class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-[#00b4d8]"><i class="fa-solid fa-phone text-xl"></i></button></div></div><div class="flex items-start gap-3"><div class="mt-1.5"><div class="w-2.5 h-2.5 rounded-full bg-[#00b4d8]"></div></div><div class="flex flex-col"><span class="font-semibold text-[17px]">Hẻm 416 Phạm Văn Bạch</span><span class="text-gray-500 text-sm">Phường 15, Quận Tân Bình, Hồ Chí Minh, Việt Nam</span></div></div><div class="flex items-center justify-between border-t pt-4"><div class="flex flex-col"><span class="text-2xl font-bold text-black">116.000đ</span><div class="flex gap-2 mt-1"><span class="bg-blue-50 text-[#00b4d8] text-[10px] px-2 py-0.5 rounded font-medium">Tiền mặt</span><span class="bg-yellow-400/20 text-yellow-700 text-[10px] px-2 py-0.5 rounded font-medium">Giảm giá</span></div></div><button class="bg-[#00b4d8] text-white px-12 py-4 rounded-full font-bold text-lg shadow-lg active:scale-95 transition-transform">Đã đến nơi</button></div><div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-[35%] h-1 bg-black rounded-full"></div></div></div>
+<!-- END: Bottom Section Overlay -->
+</body></html>

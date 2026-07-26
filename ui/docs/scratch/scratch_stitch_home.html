@@ -1,0 +1,173 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>GSM Driver Home Screen Replica</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Be Vietnam Pro"', 'sans-serif'],
+          },
+          colors: {
+            'xanh-cyan': '#00afb9',
+            'map-bg': '#E8F1FA',
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="custom-utilities">
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 flex justify-center items-center min-h-screen">
+<!-- BEGIN: Mobile Container -->
+<div class="relative w-[390px] h-[844px] bg-white overflow-hidden shadow-2xl rounded-3xl ring-8 ring-gray-900 border-4 border-gray-800">
+<!-- BEGIN: Map Background -->
+<div class="absolute inset-0 z-0 bg-map-bg">
+<img alt="Map Background" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDY8i3aJ3ZLnZAwpc9ifR1nZNnCtkXiDQNJkYGLE7UMbeCYnUfnY8CQwY7Ik6rSrfKbAVngWR36mV0CaxhkuoVmKqKAsWJ_SSb3T6p103PoLV2TL8bX47E63bo2NwX1gVj1DuhbPSLFTeDhZt6gckW5RWQQkx2-qq-an5viwuhZ2huVu3yQSUIa5QhxaU8abUqhFpjHJ7yGNWSmZW8nmiZb9-m2wpBBIiPOXBC5f-bkuEn8nHP6krmvmGzGq294ALAVOxYkRI9RcFQ">
+<!-- Current Location Pin -->
+<div class="absolute top-[38%] left-[32%] w-8 h-8 bg-blue-100/50 rounded-full flex items-center justify-center">
+<div class="w-5 h-5 bg-blue-600 rounded-full border-2 border-white shadow-sm"></div>
+</div>
+<div class="absolute top-[41%] left-[26%] text-[10px] font-semibold text-gray-800 tracking-wide bg-white/70 px-1 rounded">PHÚC LÝ</div>
+</div>
+<!-- END: Map Background -->
+<!-- BEGIN: Top Status Bar (Mock) -->
+<div class="absolute top-0 w-full flex justify-between items-center px-6 py-3 z-50 text-black font-semibold text-[15px]">
+<div>9:41</div>
+<div class="flex space-x-2 items-center">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-sm">4G</span>
+<div class="w-6 h-3.5 border border-black rounded-sm p-[1px] relative">
+<div class="bg-black w-[80%] h-full rounded-[1px]"></div>
+<div class="absolute -right-1 top-1 w-[2px] h-1.5 bg-black rounded-r-sm"></div>
+</div>
+</div>
+</div>
+<!-- END: Top Status Bar (Mock) -->
+<!-- BEGIN: Header Elements -->
+<div class="absolute top-14 w-full flex justify-between items-start px-4 z-40">
+<!-- Menu Button -->
+<button class="w-[50px] h-[50px] bg-white rounded-full flex items-center justify-center shadow-md text-gray-800">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+</button>
+<!-- Balance Pill -->
+<div class="bg-white rounded-full px-5 py-3 shadow-md flex items-center font-bold text-gray-900 text-[15px]">
+        202.000đ
+      </div>
+<!-- Progress Circle -->
+<button class="w-[50px] h-[50px] bg-white rounded-full flex items-center justify-center shadow-md text-gray-900 font-semibold text-sm">
+        0.0/8
+      </button>
+</div>
+<!-- END: Header Elements -->
+<!-- BEGIN: Floating Action Buttons (Right Side) -->
+<div class="absolute top-56 right-4 flex flex-col space-y-4 z-40">
+<button class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md text-gray-800">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<div class="absolute bottom-[280px] right-4 flex flex-col space-y-4 z-40 items-center">
+<button class="w-[50px] h-[50px] bg-white rounded-full flex items-center justify-center shadow-md text-gray-900">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+<!-- Timer Ring -->
+<div class="relative w-[52px] h-[52px] bg-white rounded-full shadow-md flex items-center justify-center">
+<svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+<circle class="stroke-gray-200" cx="18" cy="18" fill="none" r="16" stroke-width="2"></circle>
+<circle class="stroke-xanh-cyan" cx="18" cy="18" fill="none" r="16" stroke-dasharray="100" stroke-dashoffset="40" stroke-width="2"></circle>
+</svg>
+<span class="text-[13px] font-semibold text-gray-900">01:04</span>
+</div>
+<button class="w-[50px] h-[50px] bg-white rounded-full flex items-center justify-center shadow-md text-gray-900">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+</button>
+<button class="w-[50px] h-[50px] bg-white rounded-full flex items-center justify-center shadow-md text-gray-900">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"></path></svg>
+</button>
+</div>
+<!-- END: Floating Action Buttons (Right Side) -->
+<!-- BEGIN: Main Action & Info Area -->
+<div class="absolute bottom-28 w-full px-4 z-40 flex flex-col items-center pb-2">
+<!-- Main Action Button -->
+<button class="w-[280px] bg-[#1c1c1e] text-white rounded-[32px] py-4 px-6 flex items-center justify-center space-x-3 shadow-lg mb-6">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="font-semibold text-[17px]">Mở nhận chuyến</span>
+</button>
+<!-- Info Cards Row -->
+<div class="w-full flex space-x-3 pr-[70px]"> <!-- padding right for robot space -->
+<!-- Card 1: Số dư ví -->
+<div class="flex-1 bg-white rounded-2xl p-4 shadow-sm flex flex-col justify-between h-[84px]">
+<div class="flex justify-between items-center text-gray-600 text-[13px]">
+<span>Số dư ví</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div class="font-bold text-gray-900 text-[15px]">***VND</div>
+</div>
+<!-- Card 2: Thông báo -->
+<div class="flex-1 bg-white rounded-2xl p-4 shadow-sm flex flex-col justify-between h-[84px]">
+<div class="flex justify-between items-center text-gray-600 text-[13px]">
+<span>Thông báo</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div></div>
+</div>
+</div>
+</div>
+<!-- END: Main Action & Info Area -->
+<!-- BEGIN: Floating Robot (Xanh Bot) -->
+<div class="absolute bottom-[110px] right-2 z-50">
+<div class="w-20 h-20 bg-blue-50/0 rounded-full flex items-center justify-center overflow-hidden">
+<img alt="Xanh Bot" class="w-[84px] h-[84px] object-cover drop-shadow-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDFpqnAKjwYMtvrEALWDDtGzDFcyOlojO7iqHvEEXwx3AWir_MuPgEHPL0b38ENsNgG3K8L0KxQcbbUvEIbmfkm4ly4jhdxW-Fxs2l2Y9sa5W0jK2rtIK1wNMs3TXtqtH2otvosdVtpThU8K_DKMuQ6-PQKaQZeP_jNQNi7b4A7q0cj0h4HC6_80DkQ3tRVjPTHNcf9qZohtEAGWmHAz18abEUNHKFVXtLlIW6m6T8YBDkgFsBvv6VvZd175Sk5AO5IhEXTk1-SVus">
+</div>
+</div>
+<!-- END: Floating Robot (Xanh Bot) -->
+<!-- BEGIN: Bottom Navigation Bar -->
+<div class="absolute bottom-0 w-full h-[100px] bg-white rounded-t-3xl shadow-[0_-4px_10px_rgba(0,0,0,0.05)] px-2 pt-4 pb-8 flex justify-between z-50">
+<button class="flex-1 flex flex-col items-center justify-center space-y-1 group">
+<div class="text-xanh-cyan group-hover:opacity-80">
+<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+</div>
+<span class="text-[11px] text-gray-600 font-medium">Xanh Now</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center space-y-1 group">
+<div class="text-xanh-cyan group-hover:opacity-80">
+<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"></path></svg>
+</div>
+<span class="text-[11px] text-gray-600 font-medium text-center leading-tight">Chọn điểm<br>đến</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center space-y-1 group relative">
+<div class="text-xanh-cyan group-hover:opacity-80">
+<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9h-2V7h-2v5H6v2h2v5h2v-5h2v-2z"></path></svg>
+</div>
+<span class="text-[11px] text-gray-600 font-medium text-center leading-tight">Chuyến<br>của tôi</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center space-y-1 group">
+<div class="text-xanh-cyan group-hover:opacity-80">
+<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"></path></svg>
+</div>
+<span class="text-[11px] text-gray-600 font-medium text-center leading-tight">Mua xe<br>VinFast</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center space-y-1 group">
+<div class="text-xanh-cyan group-hover:opacity-80">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<span class="text-[11px] text-gray-600 font-medium text-center">Cài đặt</span>
+</button>
+<!-- Home Indicator -->
+<div class="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-[134px] h-[5px] bg-black rounded-full"></div>
+</div>
+<!-- END: Bottom Navigation Bar -->
+</div>
+<!-- END: Mobile Container -->
+</body></html>
