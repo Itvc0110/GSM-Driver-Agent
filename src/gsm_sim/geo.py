@@ -222,6 +222,86 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+class RoadMatrix:
+    """SIM-XANH Phase 1 — hệ số đường THẬT theo CẶP CELL, từ ma trận OSRM cache offline.
+
+    Vấn đề: sim xấp xỉ mọi quãng đường = haversine × detour **1.3 cố định** cho cả quận.
+    Đường Hà Nội không đồng nhất — qua hồ Hoàn Kiếm/đường một chiều/ngõ, detour thực dao
+    động mạnh theo cặp điểm. OSRM (OSM, không cần key) cho khoảng cách lái thật.
+
+    Thiết kế GIỮ contract M0-9 (một nguồn khoảng cách duy nhất từ endpoint):
+        road_km = haversine(endpoint A, endpoint B) × factor(cell_A, cell_B)
+    với `factor = osrm_km / haversine(centroid_A, centroid_B)`, kẹp [1.0, 3.5]
+    (dưới 1 là lỗi dữ liệu; trên 3.5 là outlier OSRM — cầu/đường cấm cục bộ).
+    Thiếu cặp → caller dùng detour mặc định (fallback đếm được, offline-first).
+    """
+
+    FACTOR_MIN, FACTOR_MAX = 1.0, 3.5
+    _MIN_BASE_KM = 0.05          # cặp quá gần: tỷ số không ổn định → coi như thiếu
+
+    def __init__(self, factors: dict[tuple[str, str], float]):
+        self._f = factors
+        self.hits = 0
+        self.misses = 0
+
+    @classmethod
+    def load(cls, path, centroids: dict[str, tuple[float, float]]) -> "RoadMatrix":
+        import polars as pl
+        df = pl.read_parquet(path)
+        factors: dict[tuple[str, str], float] = {}
+        for a, b, km in zip(df["cell_from"], df["cell_to"], df["road_km"]):
+            ca, cb = centroids.get(a), centroids.get(b)
+            if ca is None:
+                ca = h3.cell_to_latlng(a)
+            if cb is None:
+                cb = h3.cell_to_latlng(b)
+            base = haversine_km(ca[0], ca[1], cb[0], cb[1])
+            if base < cls._MIN_BASE_KM or km <= 0:
+                continue
+            factors[(a, b)] = max(cls.FACTOR_MIN, min(cls.FACTOR_MAX, km / base))
+        return cls(factors)
+
+    def factor(self, a: str, b: str, default: float) -> float:
+        """Hệ số đường cho cặp (a→b); thiếu → `default` (detour cấu hình)."""
+        f = self._f.get((a, b))
+        if f is None:
+            self.misses += 1
+            return default
+        self.hits += 1
+        return f
+
+    @property
+    def fallback_rate(self) -> float:
+        tot = self.hits + self.misses
+        return self.misses / tot if tot else 0.0
+
+
+_ROAD_CACHE: dict[str, RoadMatrix] = {}
+
+
+def load_road_matrix(cfg, grid: Grid) -> RoadMatrix | None:
+    """Nạp RoadMatrix theo config `routing:` — cache module-level.
+
+    Cache vì ma trận ~100k cặp mà sweep/gate chạy hàng chục `run_once`; parse lại mỗi run
+    là phí vô ích. File tĩnh (fetch một lần) nên cache theo path là an toàn.
+    `routing.enabled: false` hoặc thiếu file → None ⇒ mọi call site rơi về detour cũ —
+    tắt cờ là trở về hành vi trước SIM-XANH từng con số (cổng an toàn).
+    """
+    rcfg = cfg.get("routing", {}) or {}
+    if not rcfg.get("enabled", False):
+        return None
+    path = cfg.resolve_path("world.data_dir") / str(rcfg.get("matrix_file",
+                                                             "osrm_matrix_dd.parquet"))
+    key = str(path)
+    if key in _ROAD_CACHE:
+        return _ROAD_CACHE[key]
+    if not path.exists():
+        return None
+    rm = RoadMatrix.load(path, grid.cell_centroid)
+    _ROAD_CACHE[key] = rm
+    return rm
+
+
 def cell_distance_km(grid: Grid, a: str, b: str) -> float:
     """Khoảng cách xấp xỉ giữa 2 cell theo centroid (haversine)."""
     if a == b:

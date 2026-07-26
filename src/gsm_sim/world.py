@@ -54,6 +54,11 @@ class World:
         self.disp_cfg = cfg.get("dispatcher")
         self.veh = cfg.get("vehicle")
         self.detour = float(cfg.get("demand.detour_factor", 1.3))  # A4
+        # SIM-XANH Phase 1: hệ số đường THẬT theo cặp cell (OSRM, cache offline).
+        # None (routing.enabled=false / thiếu file) → mọi chỗ rơi về detour hằng — hành vi
+        # y hệt trước SIM-XANH (cổng an toàn, có test).
+        from .geo import load_road_matrix
+        self.road = load_road_matrix(cfg, grid)
         bcfg = cfg.get("behavior", {})
         self.accept_cost_km = float(bcfg.get("accept_cost_per_pickup_km_vnd", 3000.0))
         self.accept_center = float(bcfg.get("accept_logit_center_vnd", 6000.0))
@@ -160,9 +165,20 @@ class World:
             return base
         return max(7.0, base * (1.0 - min(0.95, r_cong)))
 
-    def _travel_min(self, dist_km: float, hour: int, cell: str | None = None) -> float:
-        """Thời gian di chuyển = quãng đường THỰC (× detour) / tốc độ hiệu dụng (tại cell gốc)."""
-        return (dist_km * self.detour) / self._eff_speed(hour, cell) * 60.0
+    def _dfac(self, a: str | None, b: str | None) -> float:
+        """Hệ số đường cho cặp cell (a→b): OSRM nếu có, detour hằng nếu không."""
+        if self.road is None or a is None or b is None:
+            return self.detour
+        return self.road.factor(a, b, self.detour)
+
+    def _travel_min(self, dist_km: float, hour: int, cell: str | None = None,
+                    fac: float | None = None) -> float:
+        """Thời gian di chuyển = quãng đường thực (× hệ số đường) / tốc độ hiệu dụng.
+
+        SIM-XANH: `fac` là hệ số đường THEO CẶP CELL (`_dfac`); None → detour hằng (đường cũ).
+        """
+        f = self.detour if fac is None else fac
+        return (dist_km * f) / self._eff_speed(hour, cell) * 60.0
 
     def _pct_per_km(self, actor: Actor) -> float:
         """Tiêu pin/km, điều chỉnh theo nhiệt độ (range giảm → tiêu hao tăng)."""
@@ -253,7 +269,8 @@ class World:
             hour = int(self.env.now // 60) % 24
             assigns = match_batch(list(self.open_orders.values()), idle, self.grid, hour,
                                   self.speed_cfg, self.disp_cfg,
-                                  speed_fn=lambda cell, h: self._eff_speed(h, cell), detour=self.detour)
+                                  speed_fn=lambda cell, h: self._eff_speed(h, cell), detour=self.detour,
+                                  factor_fn=self._dfac if self.road else None)
             for asg in assigns:
                 order = self.open_orders.get(asg.order_id)
                 actor = self.actors.get(asg.actor_id)
@@ -266,8 +283,9 @@ class World:
                     continue
                 self.offer_history[pair] = self.env.now
                 actor.orders_offered += 1
-                # SOC đủ hoàn thành? (pickup + trip, quãng đường thực × detour)
-                total_km = (asg.pickup_dist_km + order.dist_km) * self.detour
+                # SOC đủ hoàn thành? (pickup + trip, quãng đường thực theo hệ số TỪNG chặng)
+                total_km = (asg.pickup_dist_km * self._dfac(actor.cell, order.pickup_cell)
+                            + order.dist_km * self._dfac(order.pickup_cell, order.drop_cell))
                 enough = actor.soc_pct - total_km * self._pct_per_km(actor) > 8.0
                 forced = actor.acceptance_rate < 0.5 and actor.orders_offered > 5
                 if not enough:
@@ -309,8 +327,10 @@ class World:
         origin_cell = actor.cell
         t_assign = self.env.now
         frm = (actor.lat, actor.lon)   # vị trí trước khi đi đón
-        # tới điểm đón (quãng đường thực × detour / tốc độ hiệu dụng tại cell gốc)
-        pickup_min = self._travel_min(asg.pickup_dist_km, hour, origin_cell)
+        # SIM-XANH: hệ số đường THẬT theo từng chặng (OSRM); fallback detour hằng
+        fac_pick = self._dfac(origin_cell, order.pickup_cell)
+        fac_trip = self._dfac(order.pickup_cell, order.drop_cell)
+        pickup_min = self._travel_min(asg.pickup_dist_km, hour, origin_cell, fac=fac_pick)
 
         # --- SIM-1 fix C: huỷ sau khi nhận, xảy ra GIỮA ĐƯỜNG ĐI ĐÓN ---
         # Quyết định TRƯỚC khi timeout (không nhìn tương lai: chỉ dùng rng, không dùng
@@ -319,7 +339,7 @@ class World:
             frac = float(self.rng.uniform(0.3, 1.0))    # đã đi được 30-100% quãng đón
             spent = pickup_min * frac
             yield self.env.timeout(spent)
-            actor.consume_soc(asg.pickup_dist_km * self.detour * frac, pct_per_km)
+            actor.consume_soc(asg.pickup_dist_km * fac_pick * frac, pct_per_km)
             actor.empty_min += spent                    # THIỆT HẠI THẬT: thời gian + pin, 0đ
             actor.orders_cancelled += 1
             lat = actor.lat + (order.pickup_lat - actor.lat) * frac
@@ -334,7 +354,7 @@ class World:
             return
 
         yield self.env.timeout(pickup_min)
-        actor.consume_soc(asg.pickup_dist_km * self.detour, pct_per_km)
+        actor.consume_soc(asg.pickup_dist_km * fac_pick, pct_per_km)
         actor.empty_min += pickup_min
         actor.state = ActorState.ON_TRIP
         self._set_pos(actor, order.pickup_lat, order.pickup_lon)  # vị trí = điểm đón THẬT
@@ -346,10 +366,10 @@ class World:
         # chở khách
         hour = int(self.env.now // 60) % 24
         t_pickup = self.env.now
-        trip_min = self._travel_min(order.dist_km, hour, order.pickup_cell)
+        trip_min = self._travel_min(order.dist_km, hour, order.pickup_cell, fac=fac_trip)
         yield self.env.timeout(trip_min)
         actor.occupied_min += trip_min
-        actor.consume_soc(order.dist_km * self.detour, pct_per_km)
+        actor.consume_soc(order.dist_km * fac_trip, pct_per_km)
         # kiểm tra stranded (variance): nếu SOC <= 0 giữa đường
         if actor.soc_pct <= 0.0:
             actor.stranded_count += 1
@@ -384,14 +404,15 @@ class World:
         if target is None:
             target = self.grid.core_cells[0]
         d = cell_distance_km(self.grid, actor.cell, target)
+        fac = self._dfac(actor.cell, target)
         hour = int(self.env.now // 60) % 24
         pct_per_km = self._pct_per_km(actor)
         t0 = self.env.now
         frm = (actor.lat, actor.lon)
-        t = self._travel_min(d, hour, actor.cell)
+        t = self._travel_min(d, hour, actor.cell, fac=fac)
         actor.state = ActorState.ENROUTE
         yield self.env.timeout(t)
-        actor.consume_soc(d * self.detour, pct_per_km)
+        actor.consume_soc(d * fac, pct_per_km)
         actor.empty_min += t
         clat, clon = self._cell_point(target)
         actor.state = ActorState.IDLE
@@ -500,11 +521,15 @@ class World:
                           (actor.lat, actor.lon), (actor.lat, actor.lon))
             elif action == IdleAction.RELOCATE and target:
                 d = cell_distance_km(self.grid, actor.cell, target)
+                fac_rel = self._dfac(actor.cell, target)
                 t0 = now
                 frm = (actor.lat, actor.lon)
-                t = self._travel_min(d, hour, actor.cell)
+                t = self._travel_min(d, hour, actor.cell, fac=fac_rel)
                 actor.state = ActorState.ENROUTE
                 yield self.env.timeout(t)
+                # relocate tự nguyện cũng tốn pin theo đường thật (trước đây block này
+                # KHÔNG trừ SOC — di chuyển miễn phí năng lượng là phi vật lý)
+                actor.consume_soc(d * fac_rel, self._pct_per_km(actor))
                 actor.empty_min += t
                 clat, clon = self._cell_point(target)
                 actor.state = ActorState.IDLE
@@ -557,11 +582,12 @@ class World:
             actor.state = ActorState.CHARGING
             if actor.cell != actor.home_cell:
                 d = cell_distance_km(self.grid, actor.cell, actor.home_cell)
+                fac = self._dfac(actor.cell, actor.home_cell)
                 t0 = self.env.now
                 frm = (actor.lat, actor.lon)
-                t = self._travel_min(d, hour, actor.cell)
+                t = self._travel_min(d, hour, actor.cell, fac=fac)
                 yield self.env.timeout(t)
-                actor.consume_soc(d * self.detour, pct_per_km)
+                actor.consume_soc(d * fac, pct_per_km)
                 actor.empty_min += t
                 hlat, hlon = self._cell_point(actor.home_cell)
                 self._set_pos(actor, hlat, hlon)  # M0-10
@@ -589,13 +615,14 @@ class World:
         hour = int(self.env.now // 60) % 24
         pct_per_km = self._pct_per_km(actor)
         d = cell_distance_km(self.grid, actor.cell, station.cell)
-        travel = self._travel_min(d, hour, actor.cell)
+        fac = self._dfac(actor.cell, station.cell)
+        travel = self._travel_min(d, hour, actor.cell, fac=fac)
         t0 = self.env.now
         frm = (actor.lat, actor.lon)
         actor.state = ActorState.CHARGING
         self.log(actor.actor_id, "go_swap", actor.cell, station=station.node_id)
         yield self.env.timeout(travel)
-        actor.consume_soc(d * self.detour, pct_per_km)
+        actor.consume_soc(d * fac, pct_per_km)
         self._set_pos(actor, station.lat, station.lon)  # vị trí = trạm THẬT; cell sync M0-10
         actor.empty_min += travel
         # đoạn di chuyển tới trạm (enroute-to-swap)

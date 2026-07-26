@@ -40,7 +40,7 @@ from .archetypes import sample_actors
 from .config import Config
 from .congestion import CongestionField
 from .demand import generate_orders
-from .geo import build_grid
+from .geo import build_grid, load_road_matrix
 from .journey import build_journey
 from .policy import PolicyBundle
 from .runner import RunResult, _data, build_environment
@@ -235,7 +235,8 @@ def run_multiday(cfg: Config, seed: int, days: int = 7,
                     mem.close_week()
 
         env = build_environment(grid, cfg, s_day)
-        orders = generate_orders(grid, cfg, policy, s_day, env=env)
+        orders = generate_orders(grid, cfg, policy, s_day, env=env,
+                                 road=load_road_matrix(cfg, grid))
         congestion = CongestionField(orders, cfg, env=env)
         world = World(grid, cfg, policy, orders, actors, s_day,
                       environment=env, congestion=congestion)

@@ -59,7 +59,9 @@ def run_once(cfg: Config, seed: int) -> RunResult:
     )
     policy = PolicyBundle.from_config(cfg)
     env = build_environment(grid, cfg, seed)
-    orders = generate_orders(grid, cfg, policy, seed, env=env)
+    from .geo import load_road_matrix
+    road = load_road_matrix(cfg, grid)      # SIM-XANH: fare theo đường thật (None = tắt)
+    orders = generate_orders(grid, cfg, policy, seed, env=env, road=road)
     congestion = CongestionField(orders, cfg, env=env)
     actors = sample_actors(grid, cfg, seed)
     world = World(grid, cfg, policy, orders, actors, seed, environment=env, congestion=congestion)

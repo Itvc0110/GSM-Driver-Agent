@@ -87,7 +87,8 @@ def expected_demand_field(grid: Grid, cfg: Config) -> dict[int, dict[str, float]
             for h, share in hour_share.items()}
 
 
-def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, env=None) -> list[Order]:
+def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, env=None,
+                    road=None) -> list[Order]:
     """Sinh exogenous trace deterministic theo seed.
 
     Số đơn/giờ ~ Poisson(orders_per_day × hour_share × env.demand_factor) + event.
@@ -117,6 +118,7 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
     pat_max = float(cfg.get("dispatcher.patience_max_min", 10.0))
     pat_mu = math.log(pat_med)
 
+    detour_f = float(cfg.get("demand.detour_factor", 1.3))   # fallback khi matrix thiếu cặp
     interp = bool(cfg.get("demand.hour_interp", False))
     hours_sorted = sorted(hour_share.keys())
 
@@ -141,7 +143,10 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
             # (lognormal chỉ để CHỌN drop cell — shape phân phối giữ qua distance-decay).
             # Fare/time/SOC đều đi từ dist_km × detour → một nguồn khoảng cách duy nhất.
             dist_km = haversine_km(p_lat, p_lon, d_lat, d_lon)
-            gross = policy.gross_fare(dist_km)
+            # SIM-XANH: cước tính trên QUÃNG ĐƯỜNG LÁI THẬT (XanhSM tính cước theo km lộ
+            # trình, không phải chim bay). road=None → giữ nguyên đường cũ (haversine).
+            fare_km = dist_km * road.factor(pickup, drop, detour_f) if road else dist_km
+            gross = policy.gross_fare(fare_km)
             orders.append(Order(oid, t_min, pickup, drop, round(dist_km, 3), gross, round(patience, 2),
                                 p_lat, p_lon, d_lat, d_lon))
             oid += 1
@@ -149,7 +154,8 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
     # event addend: sinh cuốc cộng thêm quanh venue (CỘNG không nhân)
     if env is not None and env.events:
         oid = _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
-                                buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt)
+                                buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt,
+                                road=road, detour_f=detour_f)
 
     orders.sort(key=lambda o: (o.t_min, o.order_id))
     # đánh lại order_id theo thứ tự thời gian để deterministic + ổn định
@@ -171,7 +177,8 @@ def _sample_pickup(cells, base_probs, grid, env, t_min, rng) -> str:
 
 
 def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
-                      buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt) -> int:
+                      buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt,
+                      road=None, detour_f=1.3) -> int:
     """Sinh cuốc sự kiện (cộng thêm) — sample thời điểm trong cửa sổ event, cell quanh venue."""
     for ev in env.events:
         # tổng cuốc kỳ vọng của event (xấp xỉ) = N·capture (rải theo time profile)
@@ -192,7 +199,8 @@ def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
             p_lat, p_lon = sample_point_in_cell(grid, cell, rng_pt)
             d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
             dist_km = haversine_km(p_lat, p_lon, d_lat, d_lon)  # M0-9 contract
-            orders.append(Order(oid, t, cell, drop, round(dist_km, 3), policy.gross_fare(dist_km),
+            fare_km = dist_km * road.factor(cell, drop, detour_f) if road else dist_km
+            orders.append(Order(oid, t, cell, drop, round(dist_km, 3), policy.gross_fare(fare_km),
                                 round(patience, 2), p_lat, p_lon, d_lat, d_lon))
             oid += 1
     return oid
