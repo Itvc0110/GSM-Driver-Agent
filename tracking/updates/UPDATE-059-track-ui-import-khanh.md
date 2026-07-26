@@ -21,7 +21,9 @@ palette dataviz sẽ re-validate trên nền sáng ở U1).
   `contracts/` (2 JSON Schema có `is_mock`/`seed`), `docs/`, `.env.example`, `.gitignore`, `.mcp.json`.
   Sửa nội dung DUY NHẤT: `ui/README.md` **thêm** mục Provenance (tác giả Khánh, upstream, ranh giới
   ownership) — phần trên giữ nguyên bản.
-- **XÓA** `uiuxgsm-main.zip` (untracked, đã import xong).
+- **XÓA** `uiuxgsm-main.zip`. **Đính chính trong lúc làm**: zip KHÔNG untracked như tôi tưởng —
+  nó bị cuốn nhầm vào commit errata `0308a12` (git add ẩu của tôi). Gỡ bằng commit riêng ngay sau
+  commit U0; nội dung đã sống dưới `ui/` dạng file thường nên không mất gì.
 - `tracking/DIRECTIVES-2026-07-24.md`: §6 đánh dấu THAY THẾ; bảng track thêm dòng **Track UI**,
   Track C ❌; **§11 mới** ghi nguyên văn chỉ thị + 3 quyết định đã chốt.
 - `tracking/TODO.md`: khối Track UI mới; T-009 → DONE (bàn giao vượt brief); **T-009b** mới cho Khánh.
