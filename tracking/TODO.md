@@ -102,7 +102,14 @@ tỷ lệ NHẬN trong khi chỗ nghẽn là tỷ lệ HOÀN THÀNH (sai địa 
 event từ ngày 2 (lý do `defer_to_13h`). Carry-over có tác dụng thật (Δ +23.920đ/7 ngày).
 Bug thật: mọi ngày dùng CHUNG list actors ⇒ `days[0]` phản ánh ngày CUỐI (im lặng, không crash).
 Kiểm chứng CHẠY THẬT L1-L6 theo yêu cầu Cường. Suite **463**.
-⇒ Còn lại: **`D-SIM-13`** (nối DriverMemory vào S1 · reset tuần · mockgen dùng run_multiday), `D-SIM-11` (S1 trả mã lý do có cấu
+✅ **`D-SIM-13` DONE 2026-07-26 (UPDATE-053)**: B (memory→S1) + C (tuần ISO-aligned, đóng tuần cuối)
++ D (mockgen chuỗi liên tục, regen 90 ngày, BIKE 6/6 PASS). **Review đối kháng 28-agent trên diff**:
+24 finding confirmed → 11 fix ngay (nặng nhất: vòng lặp tự tham chiếu C1/C6 — lịch sử ghi ngày
+đã-lift làm advisor tự tắt; manifest nói dối commit C7/C12) + 3 defer (D-SIM-14/15/16).
+**BUG-DSIM13-02** lộ khi viết test thiếu: 0/0→acceptance_rate=1.0 chặn nhầm advice đầu ca ⇒
+**đính chính UPDATE-051** (câu chuyện im-lặng-16/30 phần lớn là artifact của bug này; sau fix
+accept_lift về đúng +32.276đ/16-30).
+⇒ Còn lại: `D-SIM-11` (S1 trả mã lý do có cấu
 trúc thay vì để sim parse tiếng Việt), `D-SIM-12` (4 seed còn lỗ).
 ~~`D-SIM-03` mở rộng action-space (mới 1/9 solver có kênh tác
 động — giới hạn LỚN NHẤT của kết quả A/B), rồi Track B (external data) / C (mock UI) / D (C7) / E.

@@ -138,6 +138,10 @@ class AdviceActionBridge:
         self.trips_per_hour_est = float(adv.get("trips_per_hour_est", 1.5))
         # ghi lại các lần TỪ CHỐI khuyên — để đo "đã tránh được bao nhiêu lời khuyên có hại"
         self.skipped_advice: list[tuple[float, int, str]] = []
+        # D-SIM-13: lịch sử cuộn nhiều ngày (`{actor_id: DriverMemory}`), do `run_multiday`
+        # gán SAU khi tạo World — chữ ký constructor không đổi nên đường 1-ngày không đụng.
+        # Memory tại thời điểm gán chỉ chứa các ngày ĐÃ XONG ⇒ không rò tương lai.
+        self.memory: dict | None = None
         self.rng = np.random.default_rng(seed ^ 0xADD1CE)
         self._last_consult: dict[int, float] = {}
         self._share = float(adv.get("share", 0.0))
@@ -256,10 +260,13 @@ class AdviceActionBridge:
         # offer (phản ứng) ⇒ d-42 chỉ bò từ 0.79 lên 0.8235, **vẫn dưới ngưỡng 0.85**, thưởng
         # vẫn 0đ. Lời khuyên đúng phải là **PHÒNG NGỪA, từ đầu ca**.
         #
-        # Khi chưa đủ mẫu trong ngày, ước lượng bằng `accept_base` — đây là **dữ liệu LỊCH SỬ**
-        # của tài xế (thực tế đọc từ `driver_statistic_daily`), KHÔNG phải thông tin tương lai.
+        # Khi chưa đủ mẫu trong ngày, ước lượng bằng LỊCH SỬ: ưu tiên lịch sử cuộn nhiều ngày
+        # (D-SIM-13 — số ĐO thật của chính tài xế), thiếu thì `accept_base` (tham số archetype;
+        # thực tế đọc từ `driver_statistic_daily`). Cả hai đều là quá khứ, không rò tương lai.
         if actor.orders_offered < self.min_offers_before_lift:
-            acc = actor.accept_base
+            mem = (self.memory or {}).get(actor.actor_id)
+            acc = (mem.acceptance_avg if mem is not None and mem.acceptance_avg is not None
+                   else actor.accept_base)
         else:
             acc = actor.acceptance_rate
 
@@ -267,7 +274,7 @@ class AdviceActionBridge:
         # SIM-4 chứng minh hiệu ứng VÁCH ĐÁ: nâng tỷ lệ mà KHÔNG chạm ngưỡng làm tài xế
         # nhận thêm cuốc rẻ, chiếm chỗ cuốc tốt ⇒ mất 34k mà chẳng có thưởng bù. Thưởng
         # theo ngưỡng là được-ăn-cả-ngã-về-không, nên khuyên nửa vời TỆ HƠN không khuyên.
-        ok, why = self._advice_would_help(actor, now_min, thr)
+        ok, why = self._advice_would_help(actor, now_min, thr, acc_est=acc)
         if not ok:
             self.skipped_advice.append((now_min, actor.actor_id, why))
             return None
@@ -399,8 +406,18 @@ class AdviceActionBridge:
         """
         tiers = [[int(p), int(v)] for p, v in self.policy.day_bonus_tiers
                  if int(p) > int(actor.points)]
+        # D-SIM-13: ưu tiên LỊCH SỬ CUỘN nhiều ngày (giá trị chính của multi-day) — đó là
+        # đúng thứ S1 được thiết kế để nhận. Chưa có (ngày đầu / chế độ 1 ngày) mới rơi về
+        # ước lượng trong-ngày như cũ.
         hist = {}
-        if actor.online_min >= self.min_online_min_for_rate and actor.points > 0:
+        mem = (self.memory or {}).get(actor.actor_id)
+        # REVIEW-C9: so `is not None`, KHÔNG so truthiness — lịch sử 0.0 điểm/giờ là dữ
+        # liệu HỢP LỆ (tài xế lịch sử không kiếm được điểm ⇒ S1 phải thấy đúng điều đó
+        # và kết luận infeasible), không phải "thiếu lịch sử".
+        if mem is not None and mem.points_per_hour_avg is not None:
+            # lịch sử ngày TRỌN (trộn cả peak/offpeak) → điền cả 2 bucket
+            hist = {"peak": mem.points_per_hour_avg, "offpeak": mem.points_per_hour_avg}
+        elif actor.online_min >= self.min_online_min_for_rate and actor.points > 0:
             rate = actor.points / (actor.online_min / 60.0)
             hour = int(now_min // 60) % 24
             hist = {("peak" if self.policy.is_peak(hour) else "offpeak"): round(rate, 3)}
@@ -417,7 +434,8 @@ class AdviceActionBridge:
             "view_version": "sim-3", "source": "MOCK",
         }
 
-    def _advice_would_help(self, actor: Actor, now_min: float, thr: float) -> tuple[bool, str]:
+    def _advice_would_help(self, actor: Actor, now_min: float, thr: float,
+                           acc_est: float | None = None) -> tuple[bool, str]:
         """Lời khuyên nâng tỷ lệ nhận có ích không?
 
         **D-SIM-09 — ranh giới rõ ràng giữa solver và sim** (trước đây bridge tự chép lý lẽ
@@ -444,7 +462,13 @@ class AdviceActionBridge:
             blocked_elsewhere = ("quỹ" in reason) or ("hoàn thành" in reason)
             if blocked_elsewhere or "tỷ lệ nhận" not in reason:
                 return False, "blocked_elsewhere"
-        elif actor.acceptance_rate >= float(self.policy.bonus_min_acceptance):
+        # BUG-DSIM13-02 (lộ ra khi viết test cho REVIEW-C19): trước đây so
+        # `actor.acceptance_rate >= thr` — property này TRẢ 1.0 khi CHƯA có offer nào
+        # (0/0) ⇒ đầu ca luôn bị chặn nhầm là "đã đạt ngưỡng", giết đúng lời khuyên
+        # PHÒNG NGỪA đầu ca (loại giá trị nhất — PHÁT HIỆN SIM-4-B). Phải dùng CÙNG ước
+        # lượng mà check_bonus_gate đã chọn (lịch sử/base), không dùng số thoái hoá.
+        elif (acc_est if acc_est is not None
+              else actor.acceptance_rate) >= float(self.policy.bonus_min_acceptance):
             return False, "already_qualified"
 
         if not self._acceptance_recoverable(actor, now_min, thr):

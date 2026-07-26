@@ -45,13 +45,15 @@ def entity_tables(day: dict) -> dict[str, list[dict]]:
     return {k: v for k, v in day.items() if not k.startswith("_")}
 
 
-def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, list[dict]]:
-    """Chạy 1 sim run → dict {entity: records} đúng schema. Deterministic theo seed.
+def _tables_from_run(r, cfg: Config, date: str) -> dict[str, list[dict]]:
+    """Chuyển MỘT `RunResult` → dict {entity: records} đúng schema.
 
-    Ngoài các bảng L1R, trả thêm key nội bộ `_sim_driver_day` (xem `entity_tables`).
+    D-SIM-13(D): tách khỏi `generate_day` để dùng chung cho cả hai đường:
+    ngày ĐỘC LẬP (`generate_day`, giữ cho test cũ) và CHUỖI LIÊN TỤC
+    (`generate_days_continuous` — cùng nhóm tài xế qua các ngày, từ `run_multiday`).
+    ID trong bảng dùng `r.seed` (mỗi ngày một seed) ⇒ không đụng nhau giữa các ngày.
     """
-    cfg = Config.load(config_path)
-    r = run_once(cfg, seed)
+    seed = r.seed          # tiền tố ID; giữ tên biến cũ cho thân hàm
     out: dict[str, list[dict]] = {}
 
     # ---- L0: policy_bundle từ config sim (nguồn: sim-policy-bundle-v0 — research thật) ----
@@ -204,3 +206,31 @@ def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, lis
     out["gps_ping"] = pings
 
     return out
+
+
+def generate_day(config_path: str | Path, seed: int, date: str) -> dict[str, list[dict]]:
+    """Chạy 1 sim run ĐỘC LẬP → bảng. Deterministic theo seed.
+
+    Ngoài các bảng L1R, trả thêm key nội bộ `_sim_driver_day` (xem `entity_tables`).
+    LƯU Ý: các ngày sinh bằng hàm này KHÔNG liên hệ nhau (tài xế mỗi ngày một trạng thái
+    độc lập). Muốn chuỗi có tính liên tục → `generate_days_continuous`.
+    """
+    cfg = Config.load(config_path)
+    return _tables_from_run(run_once(cfg, seed), cfg, date)
+
+
+def generate_days_continuous(config_path: str | Path, seed: int,
+                             dates: list[str]) -> list[dict[str, list[dict]]]:
+    """D-SIM-13(D): sinh CHUỖI ngày liên tục — CÙNG nhóm tài xế, trạng thái mang sang.
+
+    Trước đây `generate_realdata` gọi `generate_day` 90 lần độc lập ⇒ tài xế ngày N và
+    N+1 không liên hệ gì (phi thực tế, hỏng phân tích chuỗi thời gian). Nay chạy
+    `run_multiday` MỘT lần rồi chuyển từng ngày thành bảng.
+    """
+    from gsm_sim.multiday import run_multiday
+    cfg = Config.load(config_path)
+    # REVIEW-C13: ranh giới tuần của DriverMemory phải trùng tuần ISO của bảng data tuần
+    # (`_week_key` dùng Thứ Hai) ⇒ truyền weekday của ngày đầu.
+    week_offset = datetime.fromisoformat(dates[0]).weekday() if dates else 0
+    md = run_multiday(cfg, seed=seed, days=len(dates), week_offset=week_offset)
+    return [_tables_from_run(r, cfg, date) for r, date in zip(md.days, dates)]

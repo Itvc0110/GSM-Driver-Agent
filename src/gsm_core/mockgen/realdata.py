@@ -16,7 +16,7 @@ from pathlib import Path
 
 import polars as pl
 
-from gsm_core.mockgen.adapter_sim import generate_day
+from gsm_core.mockgen.adapter_sim import generate_day, generate_days_continuous
 from gsm_core.mockgen.profiles import build_profile_universe, kind_distribution
 from gsm_core.schema_registry import L1R_ENTITIES
 
@@ -392,28 +392,50 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
 
 
 def _git_commit() -> str | None:
-    """Commit của engine đang sinh data. None nếu không phải git repo (không chặn việc gen)."""
+    """Commit của engine đang sinh data. None nếu không phải git repo (không chặn việc gen).
+
+    REVIEW-C7/C12: nếu working tree có thay đổi CHƯA COMMIT ở file được track thì gắn hậu tố
+    `+dirty` — commit ghi trong manifest khi đó KHÔNG tái lập được bộ data, và trường
+    truy vết này sinh ra chính là để chống data lạc hậu âm thầm. Nói dối ở đây phá đúng
+    mục đích của nó.
+    """
     import subprocess
     try:
         out = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
                              capture_output=True, text=True, timeout=10)
-        return out.stdout.strip() or None
+        sha = out.stdout.strip()
+        if not sha:
+            return None
+        st = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain",
+                             "--untracked-files=no"],
+                            capture_output=True, text=True, timeout=10)
+        return sha + ("+dirty" if st.stdout.strip() else "")
     except Exception:
         return None
 
 
 def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Path | None = None,
-                      start_date: str = "2026-07-01", extra_kinds: bool = True) -> dict:
+                      start_date: str = "2026-07-01", extra_kinds: bool = True,
+                      continuous: bool = True) -> dict:
+    """`continuous=True` (mặc định, D-SIM-13): các ngày BIKE là CHUỖI LIÊN TỤC — cùng nhóm
+    tài xế, trạng thái mang sang qua `run_multiday`. `False` = đường cũ (mỗi ngày một run
+    độc lập).
+
+    REVIEW-C4/C16 — LƯU Ý khi so hai chế độ: đây KHÔNG phải cặp A/B paired-seed. Lật cờ
+    làm đổi seed từng ngày (day_seed vs seed_base+i) VÀ dịch dòng RNG của cả nhánh
+    car/premium/rto ⇒ mọi chênh lệch giữa hai chế độ KHÔNG quy được riêng cho "tính liên
+    tục". Muốn A/B đúng phải dựng cặp chung ngoại sinh — chưa làm (xem DEFERRED).
+    """
     cfg_path = config_path or (ROOT / "configs" / "pilot_dongda.yaml")
     out_dir.mkdir(parents=True, exist_ok=True)
-    day_outputs = []
     d0 = _date.fromisoformat(start_date)
-    bike_ids = []
-    for i in range(days):
-        day = generate_day(cfg_path, seed=seed_base + i, date=(d0 + timedelta(days=i)).isoformat())
-        day_outputs.append(day)
-        if i == 0:
-            bike_ids = [p["driver_id"] for p in day["driver_profile"]]
+    dates = [(d0 + timedelta(days=i)).isoformat() for i in range(days)]
+    if continuous:
+        day_outputs = generate_days_continuous(cfg_path, seed=seed_base, dates=dates)
+    else:
+        day_outputs = [generate_day(cfg_path, seed=seed_base + i, date=dates[i])
+                       for i in range(days)]
+    bike_ids = [p["driver_id"] for p in day_outputs[0]["driver_profile"]]
     counts_kwargs = {} if extra_kinds else dict(n_bike_rto=0, n_car_platform=0, n_car_employee=0, n_car_premium=0)
     universe = build_profile_universe(bike_ids, seed_base, **counts_kwargs)
     tables = build_tables(day_outputs, universe, seed_base)
@@ -422,7 +444,7 @@ def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Pat
     counts = {}
     for entity, records in tables.items():
         counts[entity] = write_table_parquet(records, out_dir / f"{entity}.parquet")
-    manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v3 (sim-driven, SIM-1..4)",
+    manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v4 (multi-day continuous, D-SIM-13)",
                 # SIM-5: ghi COMMIT của engine đã sinh ra bộ này. Bộ v2 trước đây không truy vết
                 # được engine nào tạo ⇒ nó âm thầm lạc hậu sau SIM-1..4 mà không ai phát hiện.
                 "engine_commit": _git_commit(),

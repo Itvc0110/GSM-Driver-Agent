@@ -67,8 +67,9 @@ def main() -> None:
         print(f"đã giữ bộ cũ tại: {prev}")
 
     print(f"đang sinh {args.days} ngày (seed_base={args.seed_base})…")
-    # `generate_realdata` trả về MANIFEST (không phải counts) — counts nằm trong đó
-    manifest = generate_realdata(days=args.days, seed_base=args.seed_base, out_dir=out)
+    # `generate_realdata` trả {"tables","manifest","universe"} — counts nằm trong manifest
+    result = generate_realdata(days=args.days, seed_base=args.seed_base, out_dir=out)
+    manifest = result["manifest"]
     after = snapshot(out)
 
     print("\n=== record_counts ===")

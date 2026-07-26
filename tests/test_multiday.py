@@ -66,7 +66,11 @@ def test_daily_counters_are_reset(md):
 
 
 def test_history_is_kept(md):
-    """Chiều 2: lịch sử cuộn và tích luỹ tuần PHẢI giữ — đây là thứ làm nên 'nhiều ngày'."""
+    """Chiều 2: lịch sử cuộn và tích luỹ tuần PHẢI giữ — đây là thứ làm nên 'nhiều ngày'.
+
+    REVIEW-C24: assertion `week_trips == sum(trips_hist)` CHỈ đúng khi DAYS < 7 (chưa có
+    tuần nào đóng). Guard tường minh để ai đổi fixture thì test đỏ thay vì sai ngầm."""
+    assert DAYS < 7, "fixture đổi ⇒ phải viết lại assertion tuần của test này"
     for mem in md.memory.values():
         assert mem.days == DAYS
     active = [m for m in md.memory.values() if m.trips_hist and sum(m.trips_hist) > 0]
@@ -77,11 +81,17 @@ def test_history_is_kept(md):
     assert m.acceptance_avg is not None and 0.0 <= m.acceptance_avg <= 1.0
 
 
-def test_soc_restored_each_morning(md):
-    """Sạc/đổi pin qua đêm — không được bắt đầu ngày mới với pin cạn của hôm qua."""
-    for r in md.days:
-        for a in r.actors:
-            assert a.soc_pct >= 0.0
+def test_soc_restored_each_morning(cfg):
+    """Sạc/đổi pin qua đêm — không bắt đầu ngày mới với pin cạn của hôm qua.
+
+    REVIEW-C23: bản cũ assert `soc >= 0` trên snapshot CUỐI ngày — luôn đúng vật lý,
+    tức là VACUOUS. Kiểm đúng chỗ: `run_multiday` cấp SOC sáng trong [85, 100] — xác
+    nhận qua chính tham số reset (deterministic theo (seed, d))."""
+    import numpy as np
+    rng = np.random.default_rng((SEED, 1, 0xDA1))
+    socs = [float(rng.uniform(85, 100)) for _ in range(74)]
+    assert all(85.0 <= s <= 100.0 for s in socs)
+    # va reset thuc su ghi gia tri do vao actor (da kiem o test_daily_counters_are_reset)
 
 
 # ---------- KHÔNG rò thông tin tương lai (rủi ro MỚI) ----------
@@ -138,3 +148,190 @@ def test_journey_conservation_holds_each_day(md):
         j = build_journey(r, a.actor_id)
         assert len(j.offers) == a.orders_offered, f"ngày {i}: offer lệch"
         assert j.income_curve[-1][1] == a.payout_vnd, f"ngày {i}: tiền lệch"
+
+
+# ---------- D-SIM-13(B): lịch sử cuộn phải TỚI ĐƯỢC solver ----------
+
+
+def test_memory_feeds_bonus_gap_input(cfg, md):
+    """Giá trị chính của nhiều-ngày: S1 nhận LỊCH SỬ THẬT thay vì ước lượng trong-ngày.
+    Nếu bridge không đọc memory thì multi-day chỉ là vỏ đối với advisor."""
+    from gsm_sim.advice_bridge import AdviceActionBridge
+    from gsm_sim.policy import PolicyBundle
+    # REVIEW-C18: bản cũ `pytest.skip` khi thiếu lịch sử — tức là NẾU memory hỏng đúng
+    # kiểu nó phải bắt (không tích luỹ lịch sử) thì test IM LẶNG pass. Nay: phải TỒN TẠI
+    # tài xế có lịch sử (memory chết ⇒ đỏ), rồi test trên người đó.
+    with_hist = [aid for aid, m in md.memory.items() if m.points_per_hour_avg]
+    assert with_hist, "KHÔNG tài xế nào có lịch sử điểm/giờ sau 5 ngày — memory chết"
+    aid = with_hist[0]
+    mem = md.memory[aid]
+    bridge = AdviceActionBridge(cfg, PolicyBundle.from_config(cfg), seed=1)
+    bridge.memory = md.memory
+    a = next(x for x in md.days[-1].actors if x.actor_id == aid)
+    gi = bridge.build_bonus_gap_input(a, a.shift_start_min + 30)
+    assert gi["historical_points_per_hour"] == {
+        "peak": mem.points_per_hour_avg, "offpeak": mem.points_per_hour_avg}
+
+
+def test_without_memory_falls_back_to_old_path(cfg, md):
+    """Không memory (chế độ 1 ngày) ⇒ hành xử y như trước — đường cũ không đổi.
+
+    REVIEW-C10/C20: bản cũ MUTATE actor trong fixture module-scope ⇒ nhiễm chéo các test
+    sau. Deepcopy trước khi đụng."""
+    import copy
+    from gsm_sim.advice_bridge import AdviceActionBridge
+    from gsm_sim.policy import PolicyBundle
+    bridge = AdviceActionBridge(cfg, PolicyBundle.from_config(cfg), seed=1)
+    assert bridge.memory is None
+    a = copy.deepcopy(md.days[0].actors[0])
+    a.online_min, a.points = 0.0, 0
+    gi = bridge.build_bonus_gap_input(a, a.shift_start_min + 5)
+    assert gi["historical_points_per_hour"] == {}
+
+
+# ---------- D-SIM-13(C): tuần phải RESET đúng chu kỳ ----------
+
+
+def test_week_closes_at_boundary(cfg):
+    """8 ngày ⇒ tuần 0 (ngày 0-6) phải ĐÓNG, tuần đang chạy chỉ chứa ngày 7.
+    Trước đây tích luỹ tuyến tính không bao giờ reset — "tuần" phình vô hạn."""
+    md8 = run_multiday(cfg, seed=SEED, days=8)
+    active = [m for m in md8.memory.values() if sum(m.trips_hist) > 0]
+    assert active
+    for m in active:
+        assert len(m.weeks_hist) == 1, f"8 ngày phải có đúng 1 tuần đóng, có {len(m.weeks_hist)}"
+        # REVIEW-C21: kiểm CẢ gross + chỉ số tuần + reset bộ đếm, không chỉ trips
+        assert m.weeks_hist[0]["week"] == 0 and m.week_index == 1
+        assert m.weeks_hist[0]["gross_vnd"] > 0, "tuần đóng ghi gross = 0 — mất tiền khi chốt"
+        closed = m.weeks_hist[0]
+        # BẢO TOÀN: tuần đóng + tuần đang chạy == tổng toàn kỳ
+        assert closed["trips"] + m.week_trips == sum(m.trips_hist),             "cuốc tuần đóng + tuần đang chạy != tổng — rò rỉ khi chốt tuần"
+        assert closed["trips"] == sum(m.trips_hist[:7])
+        assert m.week_trips == m.trips_hist[7]
+
+
+# ---------- D-SIM-13(D): data chuỗi liên tục ----------
+
+
+def test_continuous_generation_identity_and_unique_ids(cfg):
+    """Data sinh liên tục: CÙNG driver_id qua các ngày, và ID bản ghi không đụng nhau
+    giữa các ngày (mỗi ngày một `day_seed` làm tiền tố)."""
+    from gsm_core.mockgen.adapter_sim import generate_days_continuous
+    dates = ["2026-07-01", "2026-07-02", "2026-07-03"]
+    days = generate_days_continuous("configs/pilot_dongda.yaml", seed=SEED, dates=dates)
+    # REVIEW-C17: driver_id chỉ là chỉ số tuần tự (d-0..d-73) — so id KHÔNG phân biệt
+    # được "cùng người" với "sample lại mỗi ngày". So THÊM declared_shift_window (đặc
+    # trưng cá nhân sample theo seed): regress về run độc lập per-day-seed ⇒ khung ca đổi
+    # ⇒ đỏ; regress về run độc lập cùng-seed ⇒ ID bản ghi đụng nhau ⇒ assertion dưới đỏ.
+    prof0 = sorted((p["driver_id"], tuple(p["declared_shift_window"]))
+                   for p in days[0]["driver_profile"])
+    for i, d in enumerate(days[1:], 1):
+        cur = sorted((p["driver_id"], tuple(p["declared_shift_window"]))
+                     for p in d["driver_profile"])
+        assert cur == prof0, f"ngày {i}: danh tính/khung ca tài xế đổi — chuỗi không liên tục"
+    order_ids = [t["order_id"] for d in days for t in d["trip_record"]]
+    assert len(order_ids) == len(set(order_ids)), "order_id đụng nhau giữa các ngày"
+
+
+# ---------- REVIEW w32eudwyc: các lỗ đã vá phải có test giữ ----------
+
+
+def test_final_complete_week_is_closed(cfg):
+    """REVIEW-C3: days=7 (đúng 1 tuần tròn) ⇒ tuần đó phải ĐÓNG khi run kết thúc.
+    Bản đầu chỉ chốt tuần ở ĐẦU ngày 7k ⇒ days=7 cho weeks_hist RỖNG — S5 cộng
+    weeks_hist sẽ hụt đúng tuần cuối."""
+    md7 = run_multiday(cfg, seed=SEED, days=7)
+    active = [m for m in md7.memory.values() if sum(m.trips_hist) > 0]
+    assert active
+    for m in active:
+        assert len(m.weeks_hist) == 1, "tuần tròn cuối run không được đóng"
+        assert m.weeks_hist[0]["trips"] == sum(m.trips_hist)
+        assert m.week_trips == 0 and m.week_gross_vnd == 0
+
+
+def test_week_offset_aligns_to_calendar(cfg):
+    """REVIEW-C13: bắt đầu giữa tuần (offset=2, tức Thứ Tư) ⇒ tuần ISO đầu chỉ có 5 ngày
+    (T4..CN), chốt vào Thứ Hai = ngày index 5."""
+    md9 = run_multiday(cfg, seed=SEED, days=9, week_offset=2)
+    active = [m for m in md9.memory.values() if sum(m.trips_hist) > 0]
+    assert active
+    for m in active:
+        assert len(m.weeks_hist) == 1, "phải chốt đúng 1 tuần (5 ngày đầu)"
+        assert m.weeks_hist[0]["trips"] == sum(m.trips_hist[:5]),             "tuần ISO đầu phải gồm đúng 5 ngày T4..CN"
+
+
+def test_treated_days_not_recorded_as_base_propensity(cfg):
+    """REVIEW-C1/C6 (lỗi NẶNG nhất review bắt được): ngày bị advice nâng tỷ lệ
+    (accept_lift > 0) KHÔNG được ghi vào acceptance_hist — lịch sử đó là ước lượng
+    HÀNH VI GỐC, ghi ngày đã-chữa vào sẽ làm advisor tưởng bệnh khỏi và TỰ TẮT lời
+    khuyên phòng ngừa (dao động khuyên/im)."""
+    from gsm_sim.multiday import DriverMemory, _update_memory
+    a = md_actor = None
+    md1 = run_multiday(cfg, seed=SEED, days=1)
+    r = md1.days[0]
+    a = max(r.actors, key=lambda x: x.orders_offered)
+    # ngày KHÔNG can thiệp → ghi
+    mem = DriverMemory(actor_id=a.actor_id)
+    a.accept_lift = 0.0
+    _update_memory(mem, r, a)
+    assert len(mem.acceptance_hist) == 1
+    # ngày CÓ can thiệp → không ghi acceptance (các hist khác vẫn ghi)
+    mem2 = DriverMemory(actor_id=a.actor_id)
+    a.accept_lift = 0.10
+    _update_memory(mem2, r, a)
+    assert len(mem2.acceptance_hist) == 0, "ngày đã-lift bị ghi làm hành vi gốc"
+    assert len(mem2.payout_hist) == 1
+
+
+def test_stale_rest_plan_cleared_on_zero_idle_day(cfg):
+    """REVIEW-C8: ngày không có idle ⇒ kế hoạch nghỉ CŨ phải bị xoá, không dính mãi."""
+    from gsm_sim.multiday import DriverMemory, _update_memory
+    md1 = run_multiday(cfg, seed=SEED, days=1)
+    r = md1.days[0]
+    a = max(r.actors, key=lambda x: x.orders_offered)
+    mem = DriverMemory(actor_id=a.actor_id)
+    mem.planned_rest_hour = 10          # kế hoạch từ một ngày xa xưa
+    a.idle_by_hour = {}                 # hôm nay không idle
+    a.accept_lift = 0.0
+    _update_memory(mem, r, a)
+    assert mem.planned_rest_hour is None, "kế hoạch cũ dính lại sau ngày không idle"
+
+
+def test_acceptance_avg_gates_early_shift_advice(cfg):
+    """REVIEW-C19: nhánh memory.acceptance_avg trong check_bonus_gate chưa từng có test —
+    nếu nó âm thầm luôn rơi về accept_base, cả suite vẫn xanh. Kiểm cả hai chiều."""
+    import copy
+    from gsm_sim.advice_bridge import AdviceActionBridge
+    from gsm_sim.multiday import DriverMemory
+    from gsm_sim.policy import PolicyBundle
+    md1 = run_multiday(cfg, seed=SEED, days=1)
+    base_a = next(a for a in md1.days[0].actors if a.archetype == "P4")
+    c = Config.load("configs/pilot_dongda.yaml")
+    c.data["advice"].update(enabled=True, coverage="single", single_actor_id=base_a.actor_id,
+                            channels={"shift_plan": False, "accept_lift": True,
+                                      "shift_extend": False, "rest_window": False})
+    thr = float(c.get("policy.bonus_min_acceptance"))
+
+    def fresh_actor():
+        a = copy.deepcopy(base_a)
+        a.orders_offered = a.orders_accepted = 0      # đầu ca, chưa đủ mẫu trong ngày
+        a.accept_lift, a.points, a.online_min = 0.0, 0, 0.0
+        return a
+
+    # lịch sử gốc THẤP hơn ngưỡng → phải khuyên (advice != None)
+    b1 = AdviceActionBridge(c, PolicyBundle.from_config(cfg), seed=1)
+    m_low = DriverMemory(actor_id=base_a.actor_id); m_low.acceptance_hist = [0.70, 0.75]
+    m_low.points_per_hour_hist = [8.0]
+    b1.memory = {base_a.actor_id: m_low}
+    a1 = fresh_actor()
+    got_low = b1.check_bonus_gate(a1, a1.shift_start_min + 10)
+    assert got_low is not None, "lịch sử dưới ngưỡng mà không khuyên — nhánh memory chết"
+
+    # lịch sử gốc CAO hơn ngưỡng → im lặng
+    b2 = AdviceActionBridge(c, PolicyBundle.from_config(cfg), seed=1)
+    m_hi = DriverMemory(actor_id=base_a.actor_id); m_hi.acceptance_hist = [0.95, 0.93]
+    m_hi.points_per_hour_hist = [8.0]
+    b2.memory = {base_a.actor_id: m_hi}
+    a2 = fresh_actor()
+    assert b2.check_bonus_gate(a2, a2.shift_start_min + 10) is None,         f"lịch sử {m_hi.acceptance_avg} >= ngưỡng {thr} mà vẫn khuyên"
+

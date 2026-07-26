@@ -28,7 +28,15 @@ trong khi thứ đang chặn thưởng của họ là tỷ lệ **hoàn thành**
 - **Giữ `_acceptance_recoverable()`** — S1 chỉ kiểm TĨNH (`acceptance ≥ ngưỡng`), không trả lời
   được *"tỷ lệ LUỸ KẾ còn gỡ kịp không?"*. Ranh giới solver/sim ghi rõ trong docstring.
 
-## 3. Kết quả: **mean giảm, độ chính xác tăng mạnh**
+> ⚠️ **ĐÍNH CHÍNH 2026-07-26 (UPDATE-053):** diễn giải mục này SAI. Mức sụt +32.276→+20.473 và
+> "advisor im lặng 16/30 ca" hoá ra phần lớn là **artifact của BUG-DSIM13-02**: ở đầu ca chưa có
+> offer nào, `actor.acceptance_rate` (0/0) mặc định **1.0**, khiến nhánh `already_qualified` chặn
+> NHẦM lời khuyên phòng ngừa đầu ca. Sau khi sửa (dùng đúng ước lượng lịch sử/base), kết quả 30
+> seed **trở lại đúng +32.276đ, 16/30** — tức các blocker THẬT của S1 (quỹ giờ, completion) hiếm
+> khi bind ở đầu ca trong config này. Giá trị còn lại của D-SIM-09 là KIẾN TRÚC (một nguồn sự
+> thật, ràng buộc completion được kiểm ở giữa ca) — không phải con số. Xem UPDATE-053.
+
+## 3. Kết quả: **mean giảm, độ chính xác tăng mạnh** (ĐÃ ĐÍNH CHÍNH — đọc khung trên)
 
 Đo lại 30 seed (cùng tài xế P4, cùng seed) và so với UPDATE-047:
 

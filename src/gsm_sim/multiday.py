@@ -64,9 +64,23 @@ class DriverMemory:
     trips_hist: list[int] = field(default_factory=list)
     # kế hoạch rút ra từ advice HÔM QUA, áp dụng HÔM NAY
     planned_rest_hour: int | None = None
-    # tích luỹ TUẦN (nền cho S5 khoán tuần — chưa nối, xem D-POL-01)
+    # tích luỹ TUẦN (nền cho S5 khoán tuần — chưa nối, xem D-POL-01).
+    # D-SIM-13(C): tuần ĐANG CHẠY + danh sách tuần ĐÃ ĐÓNG. Trước đây cộng dồn tuyến tính
+    # không bao giờ reset ⇒ chỉ đúng khi days ≤ 7; chạy dài hơn là "tuần" phình vô hạn.
+    week_index: int = 0
     week_gross_vnd: int = 0
     week_trips: int = 0
+    weeks_hist: list[dict] = field(default_factory=list)   # [{week, gross_vnd, trips}]
+
+    def close_week(self) -> None:
+        """Chốt tuần đang chạy vào lịch sử rồi mở tuần mới. Gọi tại RANH GIỚI tuần
+        (day_index % 7 == 0, trừ ngày 0)."""
+        self.weeks_hist.append({"week": self.week_index,
+                                "gross_vnd": self.week_gross_vnd,
+                                "trips": self.week_trips})
+        self.week_index += 1
+        self.week_gross_vnd = 0
+        self.week_trips = 0
 
     @property
     def acceptance_avg(self) -> float | None:
@@ -111,7 +125,13 @@ def _update_memory(mem: DriverMemory, result: RunResult, actor) -> None:
     trong ngày sẽ phụ thuộc chính kết quả của nó.
     """
     mem.days += 1
-    if actor.orders_offered:
+    # REVIEW-C1 (D-SIM-13): CHỈ ghi acceptance của ngày KHÔNG bị advice can thiệp.
+    # `acceptance_hist` được bridge dùng làm ước lượng HÀNH VI GỐC (base propensity) để
+    # quyết định có cần khuyên không. Nếu ghi cả ngày đã-lift (accept_lift > 0), lịch sử
+    # đo "hành vi đã được chữa" thay vì "bệnh nền" ⇒ advisor tưởng tài xế đã ổn, TỰ TẮT
+    # lời khuyên phòng ngừa ngày hôm sau, thưởng mất, tỷ lệ tụt, rồi lại khuyên — dao động
+    # khuyên/im tự tạo. (accept_lift chỉ reset sáng hôm sau nên tại đây còn giá trị cuối ngày.)
+    if actor.orders_offered and actor.accept_lift == 0.0:
         mem.acceptance_hist.append(round(actor.acceptance_rate, 4))
     if actor.orders_accepted:
         mem.completion_hist.append(round(actor.completion_rate, 4))
@@ -142,6 +162,11 @@ def _update_memory(mem: DriverMemory, result: RunResult, actor) -> None:
         sol = idle_reduction.solve(ii).get("solution") or {}
         w = sol.get("worst_window") if sol.get("notable") else None
         mem.planned_rest_hour = int(w["hour"]) if w else None
+    else:
+        # REVIEW-C8: ngày KHÔNG có idle ⇒ xoá kế hoạch cũ. Nếu giữ, kế hoạch từ một ngày
+        # xa xưa dính mãi (bridge short-circuit theo planned_rest_hour) — "memory chỉ được
+        # cập nhật từ ngày vừa xong" phải đúng theo CẢ chiều xoá, không chỉ chiều ghi.
+        mem.planned_rest_hour = None
 
 
 def _demand_index(result: RunResult) -> dict[str, float]:
@@ -157,11 +182,18 @@ def _demand_index(result: RunResult) -> dict[str, float]:
     return {str(h): round(by_hour.get(h, 0) / peak, 4) for h in range(24)}
 
 
-def run_multiday(cfg: Config, seed: int, days: int = 7) -> MultiDayResult:
+def run_multiday(cfg: Config, seed: int, days: int = 7,
+                 week_offset: int = 0) -> MultiDayResult:
     """Chạy `days` ngày LIÊN TIẾP với **cùng một nhóm tài xế**.
 
     Khác biệt cốt lõi so với gọi `run_once` nhiều lần: actor được sample **MỘT LẦN**. Sample
     lại mỗi ngày nghĩa là mỗi ngày một nhóm người khác — khi đó "học từ hôm qua" là vô nghĩa.
+
+    `week_offset` (REVIEW-C13): số ngày đã trôi của tuần ISO tại ngày 0 — tức `weekday()`
+    của ngày bắt đầu (0=Thứ Hai). Ranh giới tuần của `DriverMemory` nhờ đó TRÙNG với tuần
+    ISO mà bảng data tuần (`_week_key`, kpi_driver_platform...) dùng. Mặc định 0 = ngày 0
+    là Thứ Hai. Nếu hai định nghĩa tuần lệch nhau thì khoán tuần của S5 không join được
+    với data — hai nguồn sự thật về "tuần".
     """
     grid = build_grid(
         geom_path=_data(cfg, "geom_file"), stations_path=_data(cfg, "stations_file"),
@@ -173,9 +205,22 @@ def run_multiday(cfg: Config, seed: int, days: int = 7) -> MultiDayResult:
     base_shift = {a.actor_id: (a.shift_start_min, a.shift_end_min) for a in actors}
     memory = {a.actor_id: DriverMemory(actor_id=a.actor_id) for a in actors}
 
+    # REVIEW-C5/C11/C14: `day_seed` là hash 31-bit ⇒ hai ngày CÓ THỂ trùng seed (xác suất
+    # nhỏ nhưng khác 0). Trùng seed = trùng CẢ dòng ngoại sinh (hai ngày y hệt nhau) và
+    # trùng tiền tố ID mọi bản ghi (order_id/event_id đụng nhau xuyên ngày). Tính duy nhất
+    # phải CẤU TRÚC, không phải may mắn: rehash quyết định luận tới khi hết trùng.
+    day_seeds: list[int] = []
+    for d in range(days):
+        s = day_seed(seed, d)
+        bump = 0
+        while s in day_seeds:
+            bump += 1
+            s = int(np.random.default_rng((seed, d, 0xC0111DE, bump)).integers(0, 2**31 - 1))
+        day_seeds.append(s)
+
     out: list[RunResult] = []
     for d in range(days):
-        s_day = day_seed(seed, d)
+        s_day = day_seeds[d]
         if d > 0:
             rng = np.random.default_rng((seed, d, 0xDA1))
             for a in actors:
@@ -183,12 +228,20 @@ def run_multiday(cfg: Config, seed: int, days: int = 7) -> MultiDayResult:
                 a.reset_for_new_day(soc_pct=float(rng.uniform(85, 100)),
                                     shift_start_min=st_min, shift_end_min=en_min)
                 a.planned_rest_hour = memory[a.actor_id].planned_rest_hour
+            # D-SIM-13(C): ranh giới tuần — chốt tuần cũ, mở tuần mới.
+            # (d + week_offset) % 7 == 0 ⇔ ngày d là Thứ Hai theo lịch thật (REVIEW-C13).
+            if (d + week_offset) % 7 == 0:
+                for mem in memory.values():
+                    mem.close_week()
 
         env = build_environment(grid, cfg, s_day)
         orders = generate_orders(grid, cfg, policy, s_day, env=env)
         congestion = CongestionField(orders, cfg, env=env)
         world = World(grid, cfg, policy, orders, actors, s_day,
                       environment=env, congestion=congestion)
+        # D-SIM-13(B): trao lịch sử cuộn cho advisor TRƯỚC khi ngày chạy. An toàn vì memory
+        # lúc này chỉ chứa các ngày ĐÃ XONG (cập nhật ở cuối vòng lặp) — không rò tương lai.
+        world.advice.memory = memory
         events = world.run()
         # CHỤP ẢNH actor của NGÀY NÀY. Nếu để chung một list, `days[0].actors` sẽ phản ánh
         # trạng thái ngày CUỐI (vì actor bị reset tại chỗ mỗi ngày) ⇒ mọi journey/metric theo
@@ -201,4 +254,12 @@ def run_multiday(cfg: Config, seed: int, days: int = 7) -> MultiDayResult:
         out.append(r)
         for a in actors:                                # cập nhật SAU khi ngày đã xong
             _update_memory(memory[a.actor_id], r, a)
+
+    # REVIEW-C3: chốt nốt tuần cuối nếu nó VỪA TRÒN khi run kết thúc. Không có dòng này,
+    # days=7 cho weeks_hist RỖNG — consumer cộng weeks_hist (S5 khoán tuần) hụt đúng
+    # tuần cuối mỗi khi days chia hết cho 7. Tuần DỞ (days % 7 != 0) thì để mở — đúng
+    # nghĩa "tuần đang chạy".
+    if days > 0 and (days + week_offset) % 7 == 0:
+        for mem in memory.values():
+            mem.close_week()
     return MultiDayResult(seed=seed, days=out, memory=memory)
