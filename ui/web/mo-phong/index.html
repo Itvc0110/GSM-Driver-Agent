@@ -44,13 +44,13 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="head">
-    <h1>Khu Mô phỏng</h1>
-    <span class="mock-badge">Dữ liệu mô phỏng — engine sim, seed ghi rõ</span>
+  <div class="mp-topbar">
+    <a class="circle-btn" href="../" title="Về app tài xế" style="text-decoration:none">←</a>
+    <div class="pill">Khu Mô phỏng<span class="sub">cùng thế giới với app · engine sim</span></div>
+    <span class="mock-badge">Dữ liệu mô phỏng</span>
     <div class="spacer"></div>
     <div class="seed-box">seed <input id="seed" type="number" value="1000" min="0">
       <button class="chip active" id="btn-load">Nạp ngày sim</button></div>
-    <a class="chip" href="../">← App tài xế</a>
   </div>
 
   <div class="tabs">
@@ -63,8 +63,14 @@
   <!-- REPLAY -->
   <div id="tab-replay" class="tab-panel active">
     <div class="card">
+      <div class="tab-intro">Xem cả đội xe chuyển động trong một ngày mô phỏng — bấm <b>▶</b>,
+        chọn tốc độ, hoặc <b>⏭</b> nhảy thẳng tới sự kiện kế (advice · mission · thưởng).</div>
       <div class="controls">
         <button class="chip" id="btn-play">▶ Chạy</button>
+        <button class="chip speed-chip active" data-speed="1">×1</button>
+        <button class="chip speed-chip" data-speed="4">×4</button>
+        <button class="chip speed-chip" data-speed="16">×16</button>
+        <button class="chip" id="btn-next-event" title="Tới sự kiện kế">⏭ sự kiện</button>
         <input type="range" id="time-slider" min="300" max="1439" value="700" step="1">
         <b id="clock" style="font-variant-numeric:tabular-nums;font-size:15px">11:40</b>
         <span id="active-count" style="font-size:11.5px;color:var(--text-muted)">–</span>
@@ -76,8 +82,10 @@
         <span style="--c:#e87ba4">Dịch chuyển</span><span style="--c:#9aa4ab">Chờ đơn</span>
         <span style="--c:#eda100;border:1px solid #b97f00">◆ Tủ pin</span>
       </div>
+      <div id="event-feed" class="feed" aria-label="Dòng sự kiện"></div>
       <div class="note" style="font-size:11px;color:var(--text-muted);margin-top:6px">
-        Vị trí nội suy tuyến tính giữa hai đầu chặng của engine (không gọi mạng khi replay).
+        Vị trí nội suy tuyến tính giữa hai đầu chặng engine (không gọi mạng khi replay);
+        dòng sự kiện lấy từ hành trình 6 tài xế bận nhất.
       </div>
     </div>
   </div>
@@ -85,6 +93,7 @@
   <!-- JOURNEY -->
   <div id="tab-journey" class="tab-panel">
     <div class="card">
+      <div class="tab-intro">Một ngày của MỘT tài xế: dòng thời gian hoạt động, đường thu nhập 4 nguồn và từng offer kèm lý do — chọn tài xế để xem.</div>
       <div class="controls">
         <label style="font-size:12.5px">Tài xế:</label>
         <select id="sel-actor" style="max-width:340px"></select>
@@ -102,6 +111,7 @@
   <!-- A/B -->
   <div id="tab-ab" class="tab-panel">
     <div class="card">
+      <div class="tab-intro">Hai thế giới CÙNG một ngày, cùng khách, cùng thời tiết — khác duy nhất: thế giới B nghe Trợ Lý Xanh. Chênh lệch là giá trị (hoặc không) của advice.</div>
       <div class="warn-strip" id="ab-warning">
         1 seed = 1 ngày mô phỏng — kết quả đơn lẻ KHÔNG phải kết luận. Kết luận cần ≥30 seed + CI (tab Độ nhạy).
       </div>
@@ -117,6 +127,7 @@
   <!-- SWEEP -->
   <div id="tab-sweep" class="tab-panel">
     <div class="card">
+      <div class="tab-intro">Kết luận KHÔNG rút từ 1 ngày — bảng này là 30 ngày mô phỏng cho MỖI ô, quét theo mức độ nghe lời và trần thay đổi hành vi.</div>
       <div class="note" style="font-size:12px;color:var(--text-secondary);margin-bottom:10px">
         Quét độ nhạy D-SIM-06 — <b>30 seed/ô</b>, kênh accept_lift cô lập, hiệu theo cặp + CI bootstrap 95%.
         Đọc từ file precomputed (<code>dsim06_sweep.json</code>) — không tính lại. Ô có ✳ = CI không chứa 0.

@@ -23,7 +23,17 @@ const get = async (url) => {
   return r.json();
 };
 
-const S = { seed: 1000, replay: null, runInfo: null, playTimer: null };
+const S = {
+  seed: 1000, replay: null, runInfo: null, playTimer: null,
+  speed: 1,                 // ×1/×4/×16 — (step phút, interval ms) trong SPEEDS
+  events: [],               // events gộp từ top-6 tài xế bận nhất (đã sort theo t)
+  feedIdx: 0,               // con trỏ feed: đã đẩy tới event thứ mấy
+};
+const SPEEDS = { 1: { step: 1, ms: 150 }, 4: { step: 4, ms: 120 }, 16: { step: 16, ms: 90 } };
+const EV_COLORS = { advice: "#7fd4db", mission_completed: "#eda100",
+                    day_bonus: "#58c977", newbie_bonus: "#9085e9", trip_rated: "#9fb3bd" };
+const EV_VI = { advice: "advice", mission_completed: "mission", day_bonus: "thưởng ngày",
+                newbie_bonus: "tân binh", trip_rated: "chấm sao" };
 
 /* ================= REPLAY ================= */
 let map, actorLayer, stationLayer;
@@ -64,6 +74,8 @@ function posAt(legs, t) {
   return null; // ngoài mọi leg (offline)
 }
 
+let flashActor = null;      // actor vừa có sự kiện → vẽ ring nổi
+
 function renderFrame(t) {
   $("clock").textContent = hhmm(t);
   if (!S.replay) return;
@@ -73,13 +85,41 @@ function renderFrame(t) {
     const p = posAt(a.legs, t);
     if (!p) continue;
     active++;
+    const hot = flashActor === a.actor_id;
     L.circleMarker([p.lat, p.lng], {
-      radius: 5, weight: 1.5, color: "#ffffff",
+      radius: hot ? 9 : 5, weight: hot ? 3 : 1.5,
+      color: hot ? "#00AFB9" : "#ffffff",
       fillColor: KIND_COLORS[p.kind] || "#9aa4ab", fillOpacity: 0.95,
     }).bindTooltip(`d-${a.actor_id} · ${a.archetype} · ${KIND_VI[p.kind] || p.kind}`)
       .addTo(actorLayer);
   }
   $("active-count").textContent = `${active}/${S.replay.actors.length} tài xế trên đường`;
+}
+
+// feed CrewAI-terminal: đẩy dòng cho mọi event trong (tPrev, tNow]
+function pumpFeed(tPrev, tNow) {
+  const feed = $("event-feed");
+  while (S.feedIdx < S.events.length && S.events[S.feedIdx].t_min <= tNow) {
+    const e = S.events[S.feedIdx++];
+    if (e.t_min <= tPrev) continue;
+    const line = document.createElement("div");
+    line.className = "fl";
+    line.innerHTML = `<span class="t">[${hhmm(e.t_min)}]</span>
+      <span class="who">d-${e.actor_id}</span>
+      <span style="color:${EV_COLORS[e.kind] || "#d7e2e8"}">${EV_VI[e.kind] || e.kind}</span>
+      · ${e.label}`;
+    feed.appendChild(line);
+    while (feed.children.length > 40) feed.firstChild.remove();
+    feed.scrollTop = feed.scrollHeight;
+    flashActor = e.actor_id;
+    setTimeout(() => { if (flashActor === e.actor_id) flashActor = null; }, 1800);
+  }
+}
+
+function seekFeed(t) {
+  // slider kéo tay / nhảy: đặt lại con trỏ feed về vị trí t (không dội lại cả quá khứ)
+  S.feedIdx = S.events.findIndex((e) => e.t_min > t);
+  if (S.feedIdx < 0) S.feedIdx = S.events.length;
 }
 
 function togglePlay() {
@@ -89,13 +129,45 @@ function togglePlay() {
     return;
   }
   $("btn-play").textContent = "⏸ Dừng";
+  startTimer();
+}
+
+function startTimer() {
+  if (S.playTimer) clearInterval(S.playTimer);
+  const { step, ms } = SPEEDS[S.speed];
   S.playTimer = setInterval(() => {
     const sl = $("time-slider");
-    let t = parseInt(sl.value, 10) + 2;
-    if (t > parseInt(sl.max, 10)) t = parseInt(sl.min, 10);
+    const prev = parseInt(sl.value, 10);
+    let t = prev + step;
+    if (t > parseInt(sl.max, 10)) { t = parseInt(sl.min, 10); seekFeed(t); }
     sl.value = t;
     renderFrame(t);
-  }, 90);
+    pumpFeed(prev, t);
+  }, ms);
+}
+
+function jumpNextEvent() {
+  const sl = $("time-slider");
+  const t = parseInt(sl.value, 10);
+  const nxt = S.events.find((e) => e.t_min > t);
+  if (!nxt) return;
+  sl.value = nxt.t_min;
+  seekFeed(nxt.t_min - 1);
+  renderFrame(nxt.t_min);
+  pumpFeed(nxt.t_min - 1, nxt.t_min);
+}
+
+async function loadEvents() {
+  // gộp events của top-6 tài xế bận nhất (endpoint journey sẵn có; run đã cache nên rẻ)
+  const top = (S.runInfo?.actors || []).slice(0, 6);
+  const js = await Promise.all(top.map((a) =>
+    get(`/api/v1/sim/journey?seed=${S.seed}&actor_id=${a.actor_id}`).catch(() => null)));
+  S.events = js.filter(Boolean)
+    .flatMap((j) => j.events.map((e) => ({ ...e, actor_id: j.actor_id })))
+    .sort((a, b) => a.t_min - b.t_min);
+  S.feedIdx = 0;
+  $("event-feed").innerHTML =
+    `<div class="fl"><span class="t">[--:--]</span> nạp ${S.events.length} sự kiện từ 6 tài xế bận nhất — bấm ▶</div>`;
 }
 
 /* ================= JOURNEY ================= */
@@ -279,6 +351,7 @@ async function loadSeedDay() {
     renderFrame(parseInt(sl.value, 10));
     $("sel-actor").innerHTML = runInfo.actors.slice(0, 40).map((a) =>
       `<option value="${a.actor_id}">d-${a.actor_id} · ${a.archetype} · ${a.trips} cuốc · ${fmtVnd(a.payout_vnd)}</option>`).join("");
+    await loadEvents();
     await loadJourney(runInfo.actors[0].actor_id);
   } finally {
     $("btn-load").textContent = "Nạp ngày sim";
@@ -296,7 +369,19 @@ document.querySelectorAll(".tabs .chip").forEach((b) =>
   }));
 
 $("btn-play").addEventListener("click", togglePlay);
-$("time-slider").addEventListener("input", (e) => renderFrame(parseInt(e.target.value, 10)));
+$("btn-next-event").addEventListener("click", jumpNextEvent);
+document.querySelectorAll(".speed-chip").forEach((c) =>
+  c.addEventListener("click", () => {
+    document.querySelectorAll(".speed-chip").forEach((x) => x.classList.remove("active"));
+    c.classList.add("active");
+    S.speed = parseInt(c.dataset.speed, 10);
+    if (S.playTimer) startTimer();   // đang chạy thì đổi nhịp ngay
+  }));
+$("time-slider").addEventListener("input", (e) => {
+  const t = parseInt(e.target.value, 10);
+  seekFeed(t);
+  renderFrame(t);
+});
 $("btn-load").addEventListener("click", loadSeedDay);
 $("btn-ab").addEventListener("click", runAB);
 $("sel-actor").addEventListener("change", (e) => loadJourney(parseInt(e.target.value, 10)));

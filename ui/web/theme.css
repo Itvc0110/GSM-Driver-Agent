@@ -299,3 +299,23 @@ select, input[type="date"] {
 /* countup pill nhấn nhá khi số đổi */
 .pill.bump { animation: pill-bump 0.5s ease; }
 @keyframes pill-bump { 30% { transform: scale(1.06); } }
+
+/* ---- R1/R4 (UPDATE-068): khu Mô phỏng đồng ngôn ngữ app + playback ---- */
+.mp-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mp-topbar .spacer { flex: 1; }
+.speed-chip { min-width: 44px; text-align: center; }
+.feed {
+  margin-top: 8px; background: #10161a; color: #d7e2e8; border-radius: var(--r-chip);
+  font: 11px/1.7 ui-monospace, Consolas, monospace; padding: 8px 10px;
+  height: 128px; overflow-y: auto;
+}
+.feed .fl { opacity: 0; animation: feed-in 0.3s forwards; }
+@keyframes feed-in { to { opacity: 1; } }
+.feed .t { color: #7fd4db; }
+.feed .who { color: #9fb3bd; }
+.tab-intro { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.flash-ring { animation: flash-ring 1.8s ease-out; }
+@keyframes flash-ring {
+  0% { box-shadow: 0 0 0 0 rgba(0, 175, 185, 0.65); }
+  100% { box-shadow: 0 0 0 26px rgba(0, 175, 185, 0); }
+}
