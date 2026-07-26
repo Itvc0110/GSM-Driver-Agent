@@ -60,6 +60,17 @@ class Actor:
     charge_min: float = 0.0     # đổi pin / sạc (gồm chờ)
     stranded_count: int = 0
     meals_taken: int = 0        # M0-7: nghỉ ăn tối đa 1 lần/ngày trong meal_hour
+    # SIM-4: mức NÂNG TẠM THỜI của accept_base khi tài xế nghe lời khuyên "tỷ lệ nhận của
+    # anh đang dưới ngưỡng đủ điều kiện thưởng". Chỉ có hiệu lực trong ca, có trần.
+    # KHÔNG phải khuyên nhận/từ chối một ĐƠN CỤ THỂ (ranh giới sản phẩm CLAUDE.md §5) —
+    # đây là thay đổi ở mức TỶ LỆ, đúng cách policy đặt điều kiện.
+    accept_lift: float = 0.0
+    shift_extended_min: float = 0.0   # SIM-4: số phút đã hoãn kết ca theo lời khuyên
+
+    @property
+    def effective_accept_base(self) -> float:
+        """`accept_base` sau khi cộng lift, kẹp trần 0.98 (không ai nhận 100%)."""
+        return min(0.98, self.accept_base + self.accept_lift)
     # kinh nghiệm cá nhân: bảng demand prior theo (cell, hour) — khởi tạo lazily
     demand_prior: dict = field(default_factory=dict)
 

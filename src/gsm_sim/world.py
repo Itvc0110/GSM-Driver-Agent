@@ -435,6 +435,22 @@ class World:
             # ĐẶT SAU `choose_idle_action` CÓ CHỦ Ý: hành vi bản năng vẫn được tính (và tiêu
             # RNG) y như World A ⇒ bật advice KHÔNG dịch dòng ngẫu nhiên của actor. Advice
             # chỉ GHI ĐÈ kết quả. Đây là điều kiện để paired-seed (CRN) ở SIM-4 có nghĩa.
+            # SIM-4 kênh `accept_lift`: cảnh báo tỷ lệ nhận dưới ngưỡng ĐỦ ĐIỀU KIỆN thưởng.
+            # Đây là kênh giá trị nhất: `day_bonus` trả 0 khi acceptance < ngưỡng, BẤT KỂ điểm.
+            gate = self.advice.check_bonus_gate(actor, now)
+            if gate is not None:
+                self.log(actor.actor_id, "advice_bonus_gate", actor.cell,
+                         acceptance=gate.acceptance_now, threshold=gate.threshold,
+                         lift=gate.lift_applied, followed=gate.followed,
+                         accept_lift_total=round(actor.accept_lift, 4))
+
+            # SIM-4 kênh `shift_extend`: hoãn kết ca khi SÁT mốc điểm (có trần)
+            added = self.advice.check_shift_extend(actor, now)
+            if added:
+                self.log(actor.actor_id, "advice_shift_extend", actor.cell,
+                         added_min=round(added, 1), points=int(actor.points),
+                         new_shift_end=round(actor.shift_end_min, 1))
+
             adv = self.advice.consult(actor, now, self._actor_demand_hint, actor.shift_end_min)
             if adv is not None:
                 self.log(actor.actor_id, "advice_given", actor.cell,

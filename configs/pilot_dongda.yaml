@@ -226,6 +226,19 @@ advice:
   single_actor_id: null            # null = lấy tài xế P4 (tân binh) đầu tiên; xem runner
   share: 0.0                       # chỉ dùng khi coverage=share
   interval_min: 30                 # tài xế không mở app 30 giây/lần
+  # SIM-4: mỗi KÊNH tác động bật/tắt RIÊNG ⇒ đo được kênh nào tạo ra giá trị (attribution).
+  channels:
+    shift_plan: true               # S2 shift_dp → REST/SWAP/END (SIM-3)
+    accept_lift: false             # cảnh báo tỷ lệ nhận dưới ngưỡng ĐỦ ĐIỀU KIỆN thưởng
+    shift_extend: false            # hoãn kết ca khi SÁT mốc điểm
+  # Kênh accept_lift: nâng TẠM THỜI accept_base khi tỷ lệ nhận dưới `bonus_min_acceptance`.
+  # Căn cứ: policy.day_bonus() trả 0 khi acceptance < ngưỡng (0.85), BẤT KỂ điểm — nên tài
+  # xế accept_base 0.80 (P4 tân binh) mất TOÀN BỘ thưởng. Đây là sự thật policy, tác động ở
+  # mức TỶ LỆ, KHÔNG phải khuyên nhận/từ chối một đơn cụ thể (ranh giới sản phẩm §5).
+  accept_lift_step: 0.10           # mỗi lần nghe lời nâng 10 điểm %
+  accept_lift_max: 0.15            # trần: không biến tài xế thành người nhận mọi cuốc
+  min_offers_before_lift: 5        # đủ mẫu rồi mới kết luận tỷ lệ
+  shift_extend_max_min: 60         # trần hoãn kết ca (không "chạy vô hạn")
   bucket_min: 60                   # bucket của shift_dp (khớp derive_shift_plan_input_l1r)
   # Mức TUÂN THỦ theo archetype — ASSUMPTION có lập luận, CHƯA có số thật:
   # tân binh nghe nhiều nhất, top/lão làng đã có hệ thống riêng nên nghe ít nhất.

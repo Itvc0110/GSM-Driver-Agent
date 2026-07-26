@@ -66,8 +66,16 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    ⚠️ **F-SIM3-A**: cầu nối mới dùng **1/9 solver** ⇒ Δ(B−A)≈0 (−3.173đ, trong nhiễu).
    KHÔNG phải advisor vô dụng — kênh tác động còn hẹp. **SIM-4 phải đọc mục này trước khi
    diễn giải kết quả**, nếu không sẽ kết luận sai là advisor không có giá trị.
-4. **SIM-4 Parallel worlds:** World A (tự làm) vs B (theo chỉ dẫn), CRN paired, baseline tân binh.
-   ⚠️ Advisor pipeline **deterministic** (Cường chốt 2026-07-24), không gọi LLM live.
+4. ✅ **SIM-4 Parallel worlds — DONE 2026-07-26 (UPDATE-047).** `src/gsm_sim/parallel.py`
+   (A/B chung seed, hiệu theo cặp + CI bootstrap, thang bậc kênh, guardrail) +
+   `scripts/run_parallel.py`. **Kết quả 30 seed (tài xế P4):** `s2_only` Δ=**đúng 0** ⇒ xác nhận
+   định lượng F-SIM3-A; `+accept_lift` **+32.276đ** CI[+8.255,+58.480]; `all` +42.471đ.
+   Guardrail: served_rate KHÔNG đổi ⇒ không hại hệ thống.
+   ⚠️ Ba điều phải đọc kèm: (a) `shift_extend` tăng tiền bằng THÊM GIỜ — payout/giờ +19,3% <
+   accept_lift +21,5%; (b) chỉ **16/30 seed** Δ dương ⇒ đây là CANH BẠC, không phải chắc thắng;
+   (c) **vách đá**: tuân thủ nửa vời LỖ 34k vì thưởng theo ngưỡng là được-ăn-cả-ngã-về-không.
+   ⚠️ **F-SIM4-B nên làm TRƯỚC SIM-5**: chưa chặn lời khuyên khi tài xế không thể với tới ngưỡng.
+
 5. **SIM-5 Metrics + xuất data:** bộ metric chung/per-driver + regen 13 bảng l1r từ sim mới
    (bộ `data/mock/realdata-v1/` sinh TRƯỚC SIM-1 ⇒ phải regen + verify 4 vòng lại).
 

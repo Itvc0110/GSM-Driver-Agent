@@ -86,7 +86,9 @@ def decide_accept(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: b
     net = gross_vnd - pickup_dist_km * cost_per_km_vnd
     z = (net - logit_center_vnd) / max(1e-6, logit_scale_vnd)
     z = max(-2.0, min(2.0, z))
-    base = min(0.999, max(0.001, actor.accept_base))
+    # SIM-4: dùng `effective_accept_base` (= accept_base + lift từ advice, có trần).
+    # Khi không có advice, `accept_lift = 0` ⇒ giá trị y hệt trước ⇒ World A không đổi.
+    base = min(0.999, max(0.001, actor.effective_accept_base))
     x = math.log(base / (1 - base)) + ECON_WEIGHT * z
     p = _logistic(x)
     accepted = rng.random() < p          # ← DUY NHẤT một lần rút

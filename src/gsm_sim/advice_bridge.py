@@ -68,6 +68,26 @@ DEFAULT_ADHERENCE_FALLBACK = 0.50
 
 
 @dataclass(frozen=True)
+class BonusGateAdvice:
+    """SIM-4 — kênh `accept_lift`: cảnh báo tỷ lệ nhận dưới ngưỡng ĐỦ ĐIỀU KIỆN thưởng.
+
+    Vì sao đây là kênh giá trị NHẤT (đo được, không phỏng đoán): `policy.day_bonus()` trả **0**
+    khi `acceptance < bonus_min_acceptance` — *bất kể tài xế chạy bao nhiêu điểm*. Config pilot
+    đặt ngưỡng **0.85**, trong khi P4 tân binh có `accept_base = 0.80` ⇒ tân binh **bị loại khỏi
+    toàn bộ thưởng ngày**. SIM-2 đo đúng vậy: P4 và P1 nhận **0đ** thưởng, còn P2/P3/P5/P6/P7
+    (accept ≥ 0.90) nhận 30-60k.
+
+    Lời khuyên ở đây là **sự thật policy** ("tỷ lệ của anh dưới ngưỡng X nên đang mất thưởng"),
+    tác động ở **mức TỶ LỆ** — KHÔNG phải "nhận cuốc cụ thể này" (ranh giới sản phẩm §5).
+    """
+    t_min: float
+    acceptance_now: float
+    threshold: float
+    lift_applied: float
+    followed: bool
+
+
+@dataclass(frozen=True)
 class BridgedAdvice:
     """Một lần hỏi ý kiến advisor + kết cục."""
     t_min: float
@@ -101,6 +121,15 @@ class AdviceActionBridge:
         self.sim_policy = policy
         self.policy = CorePolicy.from_record(policy.to_core_record())
         self.bucket_min = int(adv.get("bucket_min", 60))
+        # SIM-4: mỗi kênh bật/tắt RIÊNG ⇒ đo được kênh nào tạo ra giá trị (attribution).
+        ch = adv.get("channels") or {}
+        self.ch_shift_plan = bool(ch.get("shift_plan", True))
+        self.ch_accept_lift = bool(ch.get("accept_lift", False))
+        self.ch_shift_extend = bool(ch.get("shift_extend", False))
+        self.lift_step = float(adv.get("accept_lift_step", 0.10))
+        self.lift_max = float(adv.get("accept_lift_max", 0.15))
+        self.min_offers_before_lift = int(adv.get("min_offers_before_lift", 5))
+        self.extend_max_min = float(adv.get("shift_extend_max_min", 60))
         self.rng = np.random.default_rng(seed ^ 0xADD1CE)
         self._last_consult: dict[int, float] = {}
         self._share = float(adv.get("share", 0.0))
@@ -171,7 +200,7 @@ class AdviceActionBridge:
     def consult(self, actor: Actor, now_min: float, demand_hint_fn,
                 horizon_min: float) -> BridgedAdvice | None:
         """Trả `BridgedAdvice` nếu có lời khuyên áp dụng được, None nếu không."""
-        if not self.covers(actor) or not self.due(actor, now_min):
+        if not (self.ch_shift_plan and self.covers(actor)) or not self.due(actor, now_min):
             return None
         self._last_consult[actor.actor_id] = now_min
 
@@ -198,6 +227,75 @@ class AdviceActionBridge:
             plan_next_action=na.get("action"), plan_next_bucket=na.get("bucket"),
             reason=na.get("reason"),
         )
+
+
+    # ---------- SIM-4 kênh 2: cảnh báo tỷ lệ nhận dưới ngưỡng thưởng ----------
+
+    def check_bonus_gate(self, actor: Actor, now_min: float) -> BonusGateAdvice | None:
+        """Nếu tỷ lệ nhận đang dưới ngưỡng đủ điều kiện thưởng → khuyên nâng tỷ lệ.
+
+        Chỉ khuyên khi CÒN GỠ ĐƯỢC: đã có đủ mẫu (`min_offers_before_lift`) và chưa hết ca.
+        Không khuyên khi đã đạt ngưỡng (không có gì để nói) hoặc đã lift kịch trần.
+        """
+        if not (self.ch_accept_lift and self.covers(actor)):
+            return None
+        if now_min >= actor.shift_end_min:
+            return None                       # hết ca, khuyên cũng vô ích
+        thr = float(self.policy.bonus_min_acceptance)
+
+        # PHÁT HIỆN SIM-4 (đo, không đoán): tỷ lệ nhận là **luỹ kế CẢ NGÀY**, nên những lần
+        # từ chối đầu ca KHÔNG gỡ lại được. Bản đầu chỉ khuyên sau `min_offers_before_lift`
+        # offer (phản ứng) ⇒ d-42 chỉ bò từ 0.79 lên 0.8235, **vẫn dưới ngưỡng 0.85**, thưởng
+        # vẫn 0đ. Lời khuyên đúng phải là **PHÒNG NGỪA, từ đầu ca**.
+        #
+        # Khi chưa đủ mẫu trong ngày, ước lượng bằng `accept_base` — đây là **dữ liệu LỊCH SỬ**
+        # của tài xế (thực tế đọc từ `driver_statistic_daily`), KHÔNG phải thông tin tương lai.
+        if actor.orders_offered < self.min_offers_before_lift:
+            acc = actor.accept_base
+        else:
+            acc = actor.acceptance_rate
+        if acc >= thr or actor.accept_lift >= self.lift_max:
+            return None
+        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
+        followed = bool(self.rng.random() < p)
+        applied = 0.0
+        if followed:
+            applied = min(self.lift_step, self.lift_max - actor.accept_lift)
+            actor.accept_lift += applied
+        return BonusGateAdvice(t_min=now_min, acceptance_now=round(acc, 4), threshold=thr,
+                               lift_applied=round(applied, 4), followed=followed)
+
+    # ---------- SIM-4 kênh 3: hoãn kết ca khi sát mốc điểm ----------
+
+    def check_shift_extend(self, actor: Actor, now_min: float) -> float:
+        """Trả số phút hoãn kết ca (0 = không hoãn).
+
+        Chỉ hoãn khi **sát mốc điểm kế tiếp** — nếu không thì hoãn chỉ làm tài xế mệt thêm mà
+        không thêm thưởng. Có TRẦN tổng thời gian hoãn để không biến thành "chạy vô hạn".
+        """
+        if not (self.ch_shift_extend and self.covers(actor)):
+            return 0.0
+        if actor.shift_extended_min >= self.extend_max_min:
+            return 0.0
+        gap = self.policy.next_tier_gap(int(actor.points))
+        if not gap:
+            return 0.0                        # đã ở mốc cao nhất → không có gì để với
+        gap_points = int(gap[0])
+        # ước lượng điểm/giờ từ CHÍNH tài xế này (không nhìn tương lai)
+        online_h = max(0.5, actor.online_min / 60.0)
+        rate = actor.points / online_h
+        if rate <= 0:
+            return 0.0
+        need_min = gap_points / rate * 60.0
+        if need_min > self.extend_max_min - actor.shift_extended_min:
+            return 0.0                        # không với tới trong trần cho phép
+        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
+        if not (self.rng.random() < p):
+            return 0.0
+        add = min(need_min * 1.15, self.extend_max_min - actor.shift_extended_min)
+        actor.shift_extended_min += add
+        actor.shift_end_min += add
+        return add
 
 
 def _map_action(solver_action: str, actor: Actor) -> IdleAction | None:
