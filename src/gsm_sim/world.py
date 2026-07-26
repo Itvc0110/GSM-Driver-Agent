@@ -464,6 +464,19 @@ class World:
                     action = adv.mapped_action
                     target = None      # advice không chỉ định cell (product boundary D-004)
 
+            # --- D-SIM-03 kênh `rest_window`: dồn nghỉ/đổi pin vào khung vắng khách (solver S7) ---
+            # Chỉ HOÃN, không bao giờ ÉP nghỉ: nếu bản năng chưa muốn nghỉ thì không can thiệp.
+            if action in (IdleAction.REST, IdleAction.GO_SWAP, IdleAction.GO_CHARGE):
+                defer, why = self.advice.should_defer_rest(
+                    actor, now, hour, self._actor_demand_hint,
+                    float(self.veh["swap_soc_threshold_pct"]))
+                if defer:
+                    actor.rest_deferred_min += 2.0
+                    self.log(actor.actor_id, "advice_rest_window", actor.cell,
+                             deferred_from=action.value, reason=why,
+                             deferred_total_min=round(actor.rest_deferred_min, 1))
+                    action, target = IdleAction.WAIT, None
+
             if action == IdleAction.END_SHIFT:
                 actor.state = ActorState.OFFLINE
                 # lớp thưởng ngày (rule component — realism: thưởng chiếm 20-30% thu nhập)
@@ -500,6 +513,8 @@ class World:
                 self.log(actor.actor_id, "relocate", target, reason="demand_seek")
             else:  # WAIT
                 actor.idle_min += 2.0
+                # D-SIM-03: ghi idle THEO GIỜ để solver S7 chỉ được khung nên dồn nghỉ
+                actor.idle_by_hour[hour] = actor.idle_by_hour.get(hour, 0.0) + 2.0
                 yield self.env.timeout(2.0)  # chờ đơn, kiểm lại sau 2 phút
 
     def _actor_demand_hint(self, actor: Actor, hour: int) -> dict[str, float]:

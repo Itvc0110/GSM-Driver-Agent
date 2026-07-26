@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from gsm_core.solvers import shift_dp
+from gsm_core.solvers import idle_reduction, shift_dp
 
 from .behavior import IdleAction
 from .entities import Actor, FleetType
@@ -126,6 +126,8 @@ class AdviceActionBridge:
         self.ch_shift_plan = bool(ch.get("shift_plan", True))
         self.ch_accept_lift = bool(ch.get("accept_lift", False))
         self.ch_shift_extend = bool(ch.get("shift_extend", False))
+        self.ch_rest_window = bool(ch.get("rest_window", False))
+        self.rest_defer_max_min = float(adv.get("rest_defer_max_min", 120))
         self.lift_step = float(adv.get("accept_lift_step", 0.10))
         self.lift_max = float(adv.get("accept_lift_max", 0.15))
         self.min_offers_before_lift = int(adv.get("min_offers_before_lift", 5))
@@ -279,6 +281,82 @@ class AdviceActionBridge:
             actor.accept_lift += applied
         return BonusGateAdvice(t_min=now_min, acceptance_now=round(acc, 4), threshold=thr,
                                lift_applied=round(applied, 4), followed=followed)
+
+    # ---------- D-SIM-03: kênh `rest_window` — dồn nghỉ/đổi pin vào khung vắng khách ----------
+
+    def build_idle_reduction_input(self, actor: Actor, now_min: float, demand_hint_fn) -> dict:
+        """`idle_reduction_input` (schema L3) dựng từ idle ĐÃ TÍCH LUỸ tới hiện tại.
+
+        `demand_by_hour` là **chỉ số 0..1 chuẩn hoá theo đỉnh trong ngày**, lấy từ belief cá nhân
+        của actor (`_actor_demand_hint`) — không đọc đơn tương lai (nguyên tắc SIM-3).
+        S7 coi `demand_index ≤ 0.5` là khung "thấp điểm".
+        """
+        segs, total, longest = [], 0.0, 0.0
+        for h, mins in sorted(actor.idle_by_hour.items()):
+            segs.append({"hour": int(h), "duration_seconds": float(mins) * 60.0})
+            total += float(mins)
+            longest = max(longest, float(mins))
+
+        raw = {h: sum((demand_hint_fn(actor, h) or {}).values()) for h in range(24)}
+        peak = max(raw.values()) or 1.0
+        demand_by_hour = {str(h): round(v / peak, 4) for h, v in raw.items()}
+
+        return {
+            "schema_version": "1.0.0", "driver_id": f"d-{actor.actor_id}",
+            "t_now": f"2026-07-01T{int(now_min) // 60 % 24:02d}:{int(now_min) % 60:02d}:00+07:00",
+            "session_date": "2026-07-01",
+            "idle_segments": segs,
+            "total_idle_min": round(total, 2),
+            "longest_idle_min": round(longest, 2),
+            "online_hours": round(max(0.0, actor.online_min) / 60.0, 3),
+            "demand_by_hour": demand_by_hour,
+            "active_reposition": None,      # sim chưa mô hình mission reposition của GSM (D-004b)
+            "view_version": "sim-3", "source": "MOCK",
+        }
+
+    def rest_window_hour(self, actor: Actor, now_min: float, demand_hint_fn) -> int | None:
+        """Khung giờ solver S7 khuyên dồn nghỉ/đổi pin vào. None = không có khuyến nghị.
+
+        Gọi **solver thật** (`idle_reduction.solve`) chứ không tự cài lại lý lẽ — tránh lặp lỗi
+        "hai nguồn sự thật" (xem `D-SIM-09`: `check_bonus_gate` đang mắc đúng lỗi đó).
+        """
+        if not (self.ch_rest_window and self.covers(actor)):
+            return None
+        ii = self.build_idle_reduction_input(actor, now_min, demand_hint_fn)
+        rep = idle_reduction.solve(ii)
+        sol = rep.get("solution") or {}
+        if not sol.get("notable"):
+            return None                      # S7 KHÔNG bịa vấn đề khi tài xế không chờ nhiều
+        w = sol.get("worst_window")
+        return int(w["hour"]) if w else None
+
+    def should_defer_rest(self, actor: Actor, now_min: float, hour: int,
+                          demand_hint_fn, soc_threshold: float) -> tuple[bool, str]:
+        """Có nên HOÃN nghỉ/đổi pin để dồn vào khung vắng khách không?
+
+        BA LAN CAN — thiếu bất kỳ cái nào là biến lời khuyên thành có hại:
+          1. **SOC thấp** ⇒ KHÔNG hoãn. Hoãn đổi pin làm tài xế hết pin giữa đường
+             (`battery_stranded`) — hỏng nặng hơn mọi lợi ích idle.
+          2. **Mệt thật** (`online_min > fatigue_threshold_min`) ⇒ KHÔNG hoãn. Sức khoẻ tài xế
+             không phải biến để tối ưu.
+          3. **Trần hoãn** `rest_defer_max_min` ⇒ không đẩy nghỉ đi vô hạn.
+        """
+        if actor.soc_pct <= soc_threshold:
+            return False, "soc_low"
+        if actor.online_min > actor.fatigue_threshold_min:
+            return False, "fatigued"
+        if actor.rest_deferred_min >= self.rest_defer_max_min:
+            return False, "defer_cap"
+        target = self.rest_window_hour(actor, now_min, demand_hint_fn)
+        if target is None or target == hour:
+            return False, "no_window" if target is None else "at_window"
+        # chỉ hoãn nếu khung đó còn Ở PHÍA TRƯỚC trong ca
+        minutes_to = ((target - hour) % 24) * 60
+        if minutes_to <= 0 or now_min + minutes_to > actor.shift_end_min:
+            return False, "window_past"
+        if actor.rest_deferred_min + minutes_to > self.rest_defer_max_min:
+            return False, "defer_cap"
+        return True, f"defer_to_{target:02d}h"
 
     # ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên nâng tỷ lệ ----------
 

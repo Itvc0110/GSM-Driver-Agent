@@ -65,6 +65,11 @@ class Actor:
     # KHÔNG phải khuyên nhận/từ chối một ĐƠN CỤ THỂ (ranh giới sản phẩm CLAUDE.md §5) —
     # đây là thay đổi ở mức TỶ LỆ, đúng cách policy đặt điều kiện.
     accept_lift: float = 0.0
+    # D-SIM-03: idle tích luỹ THEO GIỜ — đầu vào cho solver S7 `idle_reduction`.
+    # `idle_min` tổng không đủ: S7 cần biết chờ nhiều Ở KHUNG GIỜ NÀO mới chỉ được khung
+    # đáng dồn nghỉ vào.
+    idle_by_hour: dict = field(default_factory=dict)
+    rest_deferred_min: float = 0.0   # D-SIM-03: tổng phút đã hoãn nghỉ theo lời khuyên
     shift_extended_min: float = 0.0   # SIM-4: số phút đã hoãn kết ca theo lời khuyên
 
     @property

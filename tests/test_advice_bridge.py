@@ -225,6 +225,70 @@ def test_skipped_advice_is_recorded(base_cfg, run_a):
         "acceptance_unrecoverable", "no_tier_reachable")
 
 
+# ---------- D-SIM-03: kênh rest_window (S7) + BA LAN CAN AN TOÀN ----------
+
+
+def _rest_bridge(base_cfg, actor_id):
+    from gsm_sim.advice_bridge import AdviceActionBridge
+    c = _cfg_advice_on(actor_id)
+    c.data["advice"]["channels"] = {"shift_plan": True, "accept_lift": False,
+                                    "shift_extend": False, "rest_window": True}
+    b = AdviceActionBridge(c, PolicyBundle.from_config(base_cfg), seed=1)
+    return b
+
+
+def test_rest_window_defaults_off(base_cfg):
+    assert base_cfg.get("advice.channels")["rest_window"] is False
+
+
+def test_guardrail_soc_low_never_defers(base_cfg, run_a):
+    """LAN CAN 1: pin thấp ⇒ KHÔNG hoãn đi đổi pin. Hoãn = tài xế hết pin giữa đường
+    (`battery_stranded`) — hỏng nặng hơn mọi lợi ích tiết kiệm idle."""
+    a = run_a.actors[0]
+    b = _rest_bridge(base_cfg, a.actor_id)
+    a.soc_pct, a.online_min = 10.0, 60.0
+    defer, why = b.should_defer_rest(a, a.shift_start_min + 60, 10, lambda ac, h: {"c": 1.0}, 20.0)
+    assert not defer and why == "soc_low"
+
+
+def test_guardrail_fatigue_never_defers(base_cfg, run_a):
+    """LAN CAN 2: mệt thật ⇒ luôn cho nghỉ. Sức khoẻ tài xế không phải biến để tối ưu."""
+    a = run_a.actors[0]
+    b = _rest_bridge(base_cfg, a.actor_id)
+    a.soc_pct, a.online_min = 90.0, a.fatigue_threshold_min + 30
+    defer, why = b.should_defer_rest(a, a.shift_start_min + 60, 10, lambda ac, h: {"c": 1.0}, 20.0)
+    assert not defer and why == "fatigued"
+
+
+def test_guardrail_defer_cap(base_cfg, run_a):
+    """LAN CAN 3: có TRẦN hoãn — không đẩy nghỉ đi vô hạn."""
+    a = run_a.actors[0]
+    b = _rest_bridge(base_cfg, a.actor_id)
+    a.soc_pct, a.online_min = 90.0, 60.0
+    a.rest_deferred_min = b.rest_defer_max_min + 1
+    defer, why = b.should_defer_rest(a, a.shift_start_min + 60, 10, lambda ac, h: {"c": 1.0}, 20.0)
+    assert not defer and why == "defer_cap"
+
+
+def test_rest_window_input_uses_belief_not_future(base_cfg, run_a):
+    """Không rò tương lai (kế thừa nguyên tắc SIM-3): `demand_by_hour` phải đến từ belief."""
+    a = run_a.actors[0]
+    b = _rest_bridge(base_cfg, a.actor_id)
+    a.idle_by_hour = {9: 30.0, 13: 50.0}
+    ii = b.build_idle_reduction_input(a, 700.0, lambda ac, h: {"x": 1.0 if 9 <= h <= 15 else 0.1})
+    assert ii["total_idle_min"] == 80.0 and ii["longest_idle_min"] == 50.0
+    assert set(ii["demand_by_hour"]) == {str(h) for h in range(24)}
+    assert max(float(v) for v in ii["demand_by_hour"].values()) == 1.0   # chuẩn hoá theo đỉnh
+
+
+def test_rest_window_needs_notable_idle(base_cfg, run_a):
+    """S7 KHÔNG bịa vấn đề khi tài xế không chờ nhiều ⇒ bridge cũng không được khuyên."""
+    a = run_a.actors[0]
+    b = _rest_bridge(base_cfg, a.actor_id)
+    a.idle_by_hour = {9: 3.0}
+    assert b.rest_window_hour(a, 600.0, lambda ac, h: {"x": 0.1}) is None
+
+
 # ---------- Gate 6: bật advice vẫn giữ mọi bảo toàn của SIM-2 ----------
 
 

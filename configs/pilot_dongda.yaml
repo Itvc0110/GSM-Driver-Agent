@@ -231,6 +231,7 @@ advice:
     shift_plan: true               # S2 shift_dp → REST/SWAP/END (SIM-3)
     accept_lift: false             # cảnh báo tỷ lệ nhận dưới ngưỡng ĐỦ ĐIỀU KIỆN thưởng
     shift_extend: false            # hoãn kết ca khi SÁT mốc điểm
+    rest_window: false             # D-SIM-03: dồn nghỉ/đổi pin vào khung vắng khách (solver S7)
   # Kênh accept_lift: nâng TẠM THỜI accept_base khi tỷ lệ nhận dưới `bonus_min_acceptance`.
   # Căn cứ: policy.day_bonus() trả 0 khi acceptance < ngưỡng (0.85), BẤT KỂ điểm — nên tài
   # xế accept_base 0.80 (P4 tân binh) mất TOÀN BỘ thưởng. Đây là sự thật policy, tác động ở
@@ -238,6 +239,9 @@ advice:
   accept_lift_step: 0.10           # mỗi lần nghe lời nâng 10 điểm %
   accept_lift_max: 0.15            # trần: không biến tài xế thành người nhận mọi cuốc
   min_offers_before_lift: 5        # đủ mẫu rồi mới kết luận tỷ lệ
+  # D-SIM-03: trần HOÃN nghỉ. Lan can bắt buộc — không được đẩy nghỉ đi vô hạn; ngoài ra
+  # còn 2 lan can cứng trong code: SOC thấp và MỆT thật thì luôn cho nghỉ/đổi pin.
+  rest_defer_max_min: 120
   shift_extend_max_min: 60         # trần hoãn kết ca (không "chạy vô hạn")
   # D-SIM-05 — CHỈ khuyên khi lời khuyên thực sự có ích. SIM-4 chứng minh hiệu ứng VÁCH ĐÁ:
   # nâng tỷ lệ mà KHÔNG chạm ngưỡng ⇒ tài xế ôm cuốc rẻ, mất 34k, chẳng có thưởng bù.

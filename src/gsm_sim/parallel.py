@@ -33,9 +33,12 @@ from .runner import run_once
 # Bộ kênh dựng sẵn cho đo THANG BẬC — biết giá trị đến từ kênh nào (attribution).
 CHANNEL_LADDER = {
     "s2_only": {"shift_plan": True, "accept_lift": False, "shift_extend": False},
+    "rest_window": {"shift_plan": True, "accept_lift": False, "shift_extend": False,
+                    "rest_window": True},
     "accept_lift": {"shift_plan": True, "accept_lift": True, "shift_extend": False},
-    "all": {"shift_plan": True, "accept_lift": True, "shift_extend": True},
-    "none": {"shift_plan": False, "accept_lift": False, "shift_extend": False},
+    "all": {"shift_plan": True, "accept_lift": True, "shift_extend": True, "rest_window": True},
+    "none": {"shift_plan": False, "accept_lift": False, "shift_extend": False,
+             "rest_window": False},
 }
 
 

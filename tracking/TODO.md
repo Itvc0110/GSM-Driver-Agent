@@ -88,7 +88,12 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    Phát hiện: acceptance=1.00 tăng 12%→23% **KHÔNG phải hồi quy** — bản cũ mượt GIẢ TẠO do sinh
    bằng `gauss`; bản mới là tỷ số 2 số nguyên thật, giống dữ liệu thật. Suite **446**.
 
-**Việc đáng làm tiếp sau Track A:** `D-SIM-03` mở rộng action-space (mới 1/9 solver có kênh tác
+**Việc đáng làm tiếp sau Track A** (cập nhật 2026-07-26, UPDATE-050): đã nối solver thứ 2 (S7
+`idle_reduction`, kênh `rest_window`) và **chẩn đoán ra nguyên nhân gốc**: S2 là solver DUY NHẤT
+nhìn về phía trước; phần còn lại HỒI CỨU/thông tin nên không có kênh tác động thời gian thực.
+⇒ Ưu tiên: **`D-SIM-10` sim nhiều ngày** (mở khoá S3/S5/S7/S8/S9 cùng lúc — đòn bẩy lớn nhất),
+và **`D-SIM-09`** nối S1 vào bonus-gate (xoá nợ hai-nguồn-sự-thật).
+~~`D-SIM-03` mở rộng action-space (mới 1/9 solver có kênh tác
 động — giới hạn LỚN NHẤT của kết quả A/B), rồi Track B (external data) / C (mock UI) / D (C7) / E.
 
 **Track SIM/Advisor (PAUSE sau T-030 — resume sau khung core; reliability-first):**
