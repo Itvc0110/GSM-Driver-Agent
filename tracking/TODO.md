@@ -88,6 +88,14 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    Phát hiện: acceptance=1.00 tăng 12%→23% **KHÔNG phải hồi quy** — bản cũ mượt GIẢ TẠO do sinh
    bằng `gauss`; bản mới là tỷ số 2 số nguyên thật, giống dữ liệu thật. Suite **446**.
 
+**SIM-XANH (chỉ thị Cường 2026-07-26) — ✅ XONG 2026-07-26 (UPDATE-054..058, 5 commit):**
+P1 OSRM đường thật (fetch 1 lần, offline; factor median 1.46 > detour 1.3; re-baseline có tài liệu:
+center 21.2k, eta 11, n=90; gate 13/13) · P2 rating/tân-binh-Q01/mission trong sim (tiền 4 nguồn,
+13 test) · P3 sweep D-SIM-06 (P4 dương-mỏng chỉ SIG ở lift 0.19; P1 zero CẤU TRÚC; P2 lật kỳ vọng —
+thưởng chấm REALIZED nên dip-alert cứu thưởng thật) · P4 dashboard palette-VALIDATED 5/5 + Replay
+TripsLayer + tab A/B + heatmap sweep (V-09) · P5 regen 90 ngày engine mới.
+→ **D-SIM-18** (shrinkage estimator) chuyển MATH AUDIT. Thứ tự tiếp: **Track C → AUDIT toàn bộ**.
+
 **Việc đáng làm tiếp sau Track A** (cập nhật 2026-07-26, UPDATE-050): đã nối solver thứ 2 (S7
 `idle_reduction`, kênh `rest_window`) và **chẩn đoán ra nguyên nhân gốc**: S2 là solver DUY NHẤT
 nhìn về phía trước; phần còn lại HỒI CỨU/thông tin nên không có kênh tác động thời gian thực.

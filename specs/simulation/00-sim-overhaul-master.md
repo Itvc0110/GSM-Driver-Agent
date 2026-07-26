@@ -1,6 +1,6 @@
 # SPEC — SIMULATION OVERHAUL (mảng riêng, Track A) — master
 
-Cập nhật: 2026-07-25 · Trạng thái: **SIM-1..SIM-5 DONE — LỘ TRÌNH HOÀN TẤT** (UPDATE-044..049) · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
+Cập nhật: 2026-07-25 · Trạng thái: **SIM-1..5 + D-SIM-03/05/09/10/13 + SIM-XANH P0-P5 DONE** (UPDATE-044..058). Sim chạy ĐƯỜNG THẬT OSRM, có rating/tân-binh/mission, đo A/B có CI + sweep độ nhạy, dashboard palette-validated · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
 
 > **Sim là mảng ĐỘC LẬP.** UI app do **Khánh** phát triển; sim **không phụ thuộc UI**, chỉ nối **data output** vào sau (bên cạnh UI). Sim phục vụ: (1) kiểm chứng advisor bằng thế giới song song, (2) sinh/giải thích hành vi tài xế, (3) nguồn dữ liệu hành vi cho mock.
 

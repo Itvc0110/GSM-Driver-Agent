@@ -94,7 +94,7 @@ vào sau, bên cạnh UI app.
 
 | Track | Nội dung | Trạng thái |
 |---|---|---|
-| **A. SIM overhaul** | mảng riêng, docs+plan riêng (§5) | ✅ **XONG SIM-1..SIM-5** (UPDATE-044..049): realism đạt dải thực · hành trình từng tài xế có lý do · advice→action · A/B có CI · data 13 bảng regen từ engine mới. Suite 446. **Giới hạn lớn nhất còn lại: D-SIM-03** (mới 1/9 solver có kênh tác động) |
+| **A. SIM overhaul** | mảng riêng (§5) + chỉ thị SIM-XANH (§10) | ✅ **SIM-1..5 + SIM-XANH P0-P5 XONG** (UPDATE-044..058): đường THẬT OSRM (factor median 1.46) · rating/tân-binh/mission trong sim · sweep độ nhạy D-SIM-06 · dashboard palette-validated + Replay + tab A/B · data 90 ngày chuỗi liên tục. **Kế tiếp: Track C** (mock UI advice) rồi **AUDIT** |
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ⏳ chưa bắt đầu |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
