@@ -147,3 +147,7 @@ Phase U0–U4, kế hoạch chi tiết: plan đã duyệt (xem UPDATE-059). Sau 
    adherence → web research UX/HCI nuôi thiết kế → UI fancy cho stakeholder → CI draft.
 4. Loạt câu hỏi kiểm tra sâu (layer outputs, advice_bridge mapping, memory usage, time engineering,
    "khi nào đưa advice"): nhập vào A3/A4 của AUDIT — chi tiết `tracking/BACKLOG-QUESTIONS-2026-07-27.md`.
+5. **Bổ sung ~02:00 (làm SAU audit, plan kỹ từng mục — BACKLOG mục R1-R5)**: UI sim GIỐNG UI app
+   (một ngôn ngữ thiết kế); hướng người dùng — HIỂU + VISUALIZE quyết định advisor (decision-trace);
+   show tối giản tools/bước agent dùng (học cách show của **CrewAI**); sim TUA/DỪNG được, sinh
+   động (tốc độ, nhảy-tới-sự-kiện); **DOUBLE-CHECK lại mọi phần đã làm** — "làm thật kĩ" là chuẩn.

@@ -1,5 +1,20 @@
 # BACKLOG — loạt câu hỏi/ý tưởng Cường 2026-07-27 (rạng sáng)
 
+## 🎯 YÊU CẦU BỔ SUNG đợt 2 (Cường ~02:00) — LÀM SAU KHI XONG AUDIT, mỗi mục PLAN KỸ trước
+
+> Nguyên tắc Cường nhấn mạnh: *"các phần tôi đã yêu cầu phải được làm thật kĩ"* — cái đã làm
+> **càng phải double-check lại**; *"luôn plan kĩ trước khi làm bất cứ thứ gì"*.
+
+| # | Yêu cầu | Ghi chú triển khai |
+|---|---|---|
+| R1 | **UI sim phải GIỐNG UI app** | Khu Mô phỏng hiện là trang desktop riêng — phải đưa về CÙNG ngôn ngữ thiết kế với app tài xế (shell, components, tokens); cân nhắc nhúng thành tab/màn trong app thay vì trang rời |
+| R2 | **Hướng người dùng: HIỂU và VISUALIZE quyết định của advisor** | Không chỉ hiện advice — vẽ được VÌ SAO: input nào (điểm/tỷ lệ/quỹ giờ) → solver nào → ràng buộc nào bind → kết luận; dạng decision-trace trực quan (flow ngắn, không phải log thô) |
+| R3 | **Show TỐI GIẢN tools/tính năng agent dùng** — học cách show của **CrewAI** | Kiểu agent-execution-trace: mỗi bước 1 dòng gọn (solver được gọi · input digest · output digest · verifier pass/fail), collapse/expand; nghiên cứu UI CrewAI (web research) trước khi thiết kế |
+| R4 | **Sim TUA/DỪNG được, SINH ĐỘNG** | Replay đã có ▶/slider — nâng: pause/tốc độ ×1/×4/×16, tua tới sự kiện kế (advice/mission/thưởng), hiệu ứng chuyển động mượt, âm lượng sự kiện (đơn nổ ra, trạm pin bận) |
+| R5 | **DOUBLE-CHECK PASS toàn bộ phần đã làm trong đêm** | Track UI (U0-U4) + UX-CARDS + 7 fix audit + A2 gate: rà lại thật kỹ từng cái (một phần trùng A3/A4 + V-10 — phần KHÔNG trùng phải rà riêng, đặc biệt cards.js flow + adapter tiền) |
+
+Thứ tự sau audit: R5 (double-check) → R1+R2+R3 (một cycle UI-sim redesign có plan) → R4 (cùng cycle R1 nếu gọn).
+
 Nguồn: message Cường trong lúc chờ quota reset. Phân loại theo KHẢ THI NGAY (solo, không cần
 subagent) / SAU QUOTA (cần agent/workflow) / CẦN CƯỜNG CHỐT. Trạng thái cập nhật tại chỗ.
 
