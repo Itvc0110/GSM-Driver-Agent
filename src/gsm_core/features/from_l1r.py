@@ -77,7 +77,11 @@ def derive_bonus_gap_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: Po
     today = _date(t_now)
     stat = _stat_row(l1r, driver_id, today)
     onl = _online_row(l1r, driver_id, today)
-    trips_today = _driver_trips(l1r, driver_id, today)
+    # AUDIT A3 LAYEROUT-4 (UPDATE-070): CẮT tại t_now — bản cũ lọc theo NGÀY nên 08:00 sáng
+    # đã cộng điểm của cuốc chạy chiều ⇒ S1 tuyên bố "đã đạt mốc cao nhất" lúc 8h (rò tương
+    # lai TRONG ngày). UI adapter vốn đã cắt đúng (`_points_until`) — nay hai đường khớp nhau.
+    trips_today = [t for t in _driver_trips(l1r, driver_id, today)
+                   if t["complete_time"] <= t_now]
 
     points_now = _points_from_trips(trips_today, policy)
 

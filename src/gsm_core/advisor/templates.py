@@ -17,18 +17,32 @@ def _rep(solver_reports: list[dict], solver: str) -> dict | None:
     return next((r for r in solver_reports if r["solver"] == solver), None)
 
 
+# AUDIT A3 LAYEROUT-1 (UPDATE-070): tolerance PHẢI theo unit. Bản cũ dùng 0.5 tuyệt đối
+# cho mọi unit ⇒ với `ratio` (thang [0,1]) mọi giá trị đều "khớp" nhau: ngưỡng policy 0.85
+# bị render thành tỷ lệ hiện tại 0.739 → message nói "mức tối thiểu 74%" (sai chính sách).
+_UNIT_TOL = {"ratio": 0.005, "hours": 0.05, "points": 0.5, "trips": 0.5,
+             "vnd": 0.5, "minutes": 0.5, "count": 0.5, "vnd_per_order": 0.5,
+             "points_per_hour": 0.05, "vnd_per_hour": 0.5}
+
+
 def _vn(reg: dict, value, unit: str) -> str:
     """Chuỗi số VN cho (value, unit) CHỈ KHI có trong numbers_registry.
 
     Bắt buộc tra registry (không tự format từ solution) → mọi số hiển thị đều trace
     được về `SolverReport.numbers[]`; verifier V1 (số trần) vì thế không bị vi phạm.
+    Khớp theo tolerance RIÊNG của unit và chọn entry GẦN NHẤT (không phải entry đầu).
     """
     if value is None:
         return ""
+    tol = _UNIT_TOL.get(unit, 0.5)
+    best, best_d = None, None
     for n in reg.values():
-        if n["unit"] == unit and abs(float(n["value"]) - float(value)) < 0.5:
-            return render_number_vn(n["value"], n["unit"])
-    return ""
+        if n["unit"] != unit:
+            continue
+        d = abs(float(n["value"]) - float(value))
+        if d < tol and (best_d is None or d < best_d):
+            best, best_d = n, d
+    return render_number_vn(best["value"], best["unit"]) if best else ""
 
 
 def _khoan_sentence(solver_reports: list[dict], reg: dict) -> str:
@@ -161,6 +175,33 @@ def _anomaly_sentence(solver_reports: list[dict], reg: dict) -> str:
     return s
 
 
+def _gap_sentence(solver_reports: list[dict], reg: dict, n1: str, n2: str) -> str:
+    """AUDIT A3 LAYEROUT-2 (UPDATE-070): câu 'còn thiếu X để đạt mốc Y' CHỈ được nói khi
+    solver bảo KHẢ THI. Bản cũ chỉ kiểm 'render được số' ⇒ hứa mốc trong khi S1 kết luận
+    infeasible (đối lập cả với UI adapter vốn nói thật 'khó khả thi hôm nay')."""
+    r = _rep(solver_reports, "bonus_feasibility")
+    if not r or not (n1 and n2):
+        return ""
+    sol = r.get("solution") or {}
+    if sol.get("already_maxed"):
+        return " Anh/chị đã đạt mốc thưởng cao nhất hôm nay."
+    if sol.get("feasible"):
+        return f" Anh/chị còn thiếu {n1} để chạm mốc thưởng {n2}."
+    # KHÔNG chèn `infeasible_reason` thô: chuỗi đó chứa số chưa neo registry ⇒ V1 veto
+    # (bài học BUG-PI5d-01). Diễn giải lý do bằng NHÃN cấu trúc từ constraints.
+    cons = sol.get("constraints") or {}
+    if not cons.get("enough_hours", True):
+        why = " vì quỹ giờ còn lại không đủ"
+    elif not cons.get("ok_acceptance", True):
+        why = " vì tỷ lệ nhận đang dưới ngưỡng chính sách"
+    elif not cons.get("ok_completion", True):
+        why = " vì tỷ lệ hoàn thành đang dưới ngưỡng chính sách"
+    else:
+        why = ""
+    return (f" Mốc thưởng {n2} hôm nay khó khả thi{why} — anh/chị còn thiếu {n1}. "
+            "Giữ tỷ lệ tốt cho ngày mai vẫn hơn cố quá sức.")
+
+
 def _advice_spec(action: str | None, bucket: str | None) -> dict:
     """advice_spec hợp schema: action_type thường-hoá (adherence taxonomy), KHÔNG
     kèm `expiry` khi rỗng (schema: expiry là string date-time, không nullable)."""
@@ -196,7 +237,7 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
         # digest S2 là câu dẫn (solver-authored, deterministic) nếu có
         dp = next((r for r in solver_reports if r["solver"] == "shift_dp"), None)
         plan = (dp["problem_digest"].strip() + " ") if dp else ""
-        gap_txt = f"Anh/chị còn thiếu {n1} để chạm mốc thưởng {n2}." if (n1 and n2) else ""
+        gap_txt = _gap_sentence(solver_reports, reg, n1, n2).strip()
         # UC3 khoán tuần + UC8 mini-task (PI-5a)
         msg = (f"{plan}{gap_txt}{_khoan_sentence(solver_reports, reg)}"
                f"{_mission_sentence(solver_reports, reg)}{disclaimer}")
@@ -210,7 +251,7 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
                   "END": "cân nhắc kết ca"}.get((na or {}).get("action", ""), "tiếp tục chạy")
         reason = (na or {}).get("reason", "")
         reason_txt = f" — {reason}" if reason else ""
-        progress = f" Anh/chị còn thiếu {n1} để đạt mốc thưởng {n2}." if n1 and n2 else ""
+        progress = _gap_sentence(solver_reports, reg, n1, n2)
         msg = (f"Gợi ý lúc này: anh/chị nên {act_vn}{reason_txt}.{progress}"
                f"{_idle_sentence(solver_reports, reg)}"
                f"{_mission_sentence(solver_reports, reg)}{disclaimer}")

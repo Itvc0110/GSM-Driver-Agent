@@ -68,13 +68,23 @@ def check_bare_numbers(message: str, rendered_numbers: list[str],
     return errors
 
 
-_NEGATIONS = ("khong phai", "khong", "chang", "dung", "chua")
+# AUDIT A3 VBYPASS-3 (UPDATE-070): bản cũ substring-match tập ("khong phai","khong",
+# "chang","dung","chua") trong 15 ký tự trước ⇒ (a) "dung" là substring của "ung dung"/
+# "su dung"/"dung" (đúng) nên câu quảng cáo "Ứng dụng này chắc chắn giúp anh kiếm được
+# nhiều hơn" LỌT; (b) "khong" bổ nghĩa cho từ khác ("Khong sai dau, chac chan anh kiem
+# duoc...") cũng defuse. Nay: phủ định phải là TOKEN nguyên và phải đứng NGAY TRƯỚC
+# trigger (≤ 12 ký tự, không có dấu ngắt câu chen giữa) — nghĩa là thật sự chi phối nó.
+_NEGATION_TOKENS = ("khong phai", "khong", "chang", "chua")
+_NEG_RE = re.compile(r"\b(" + "|".join(_NEGATION_TOKENS) + r")\b[^,.;:!?]{0,12}$")
 
 
 def _negated(q: str, start: int) -> bool:
-    """Match có phủ định trong ~15 ký tự trước → là DISCLAIMER, không phải lời hứa."""
-    prefix = q[max(0, start - 15):start]
-    return any(neg in prefix for neg in _NEGATIONS)
+    """True khi có phủ định TOKEN chi phối trực tiếp match (không qua dấu ngắt câu).
+
+    Ví dụ giữ nguyên hành vi đúng: "Con so nay khong chac chan, kiem duoc bao nhieu
+    phu thuoc thi truong." → disclaimer hợp lệ."""
+    prefix = q[max(0, start - 24):start]
+    return bool(_NEG_RE.search(prefix))
 
 
 def check_blocklist(message: str, advice_spec, cited_texts=None) -> list[str]:

@@ -118,7 +118,7 @@ class AdvisorPipeline:
                         cited_texts=cited_titles)
         self.last_verify_result = vres
         if llm_gave_up or not vres["passed"]:
-            # veto/bỏ cuộc → template fallback (fail-closed; template pass by construction)
+            # veto/bỏ cuộc → template fallback
             composed = render_template(feature, solver_reports, kb_excerpts,
                                        pack["numbers_registry"])
             vres2 = V.verify(composed["message"], composed.get("advice_spec"),
@@ -126,11 +126,39 @@ class AdvisorPipeline:
                              used_kb=bool(kb_excerpts), rendered_numbers=rendered,
                              cited_texts=cited_titles)
             self.last_verify_result = vres2
+            # AUDIT A3 FAILCLOSED-1 (UPDATE-070): giả định "template pass by construction"
+            # là SAI (vd mission thiếu name → template in mission_id có chữ số → V1 veto).
+            # Trước đây rơi thẳng xuống _finish ⇒ FAIL-OPEN: trả message CHƯA verify cho
+            # tài xế. Nay degrade sang message an toàn không chứa số + đánh dấu residual.
+            if not vres2["passed"]:
+                composed = self.safe_degrade(composed, vres2)
 
         return self._finish(req, r, composed,
                             list(pack["numbers_registry"].values()),
                             residual=composed.get("residual_path"),
                             solver_reports=solver_reports)
+
+    # AUDIT A3 FAILCLOSED-1 (UPDATE-070) — lối thoát AN TOÀN khi verify hỏng cả 2 lần.
+    # Nguyên tắc: thà IM LẶNG/nói chung chung còn hơn đưa message chưa qua guardrail
+    # (đúng mô hình proactive card DIRECTIVES §12: không có gì chắc chắn thì không nói).
+    SAFE_MESSAGE = ("Hiện chưa có gợi ý nào đủ chắc chắn để đưa cho anh/chị. "
+                    "Anh/chị cứ chạy theo nhịp của mình; khi có thông tin rõ ràng "
+                    "trợ lý sẽ báo lại.")
+
+    def safe_degrade(self, composed: dict, vres: dict) -> dict:
+        """Trả bản advice AN TOÀN (không số, không hứa) + đánh dấu để truy vết."""
+        return {
+            **composed,
+            "message": self.SAFE_MESSAGE,
+            "citations": [],
+            "advice_spec": None,
+            "caveats": list(composed.get("caveats") or []) + [
+                "advice gốc không qua được kiểm tra nội bộ — đã hạ về thông báo an toàn"],
+            "fallback_used": True,
+            "verify_failed": True,
+            "verify_errors": list(vres.get("errors") or []),
+            "residual_path": "R6_verify_fail",
+        }
 
     def _finish(self, req, r, composed, numbers, residual=None,
                 solver_reports=None) -> dict:

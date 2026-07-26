@@ -96,12 +96,14 @@
         "string",
         "null"
       ],
+      "description": "R6_verify_fail = AUDIT A3 FAILCLOSED-1 (UPDATE-070): verify hỏng cả 2 lần → advice bị hạ về thông báo an toàn (trước đây FAIL-OPEN: trả message chưa verify)",
       "enum": [
         "R1",
         "R2",
         "R3",
         "R4",
         "R5",
+        "R6_verify_fail",
         null
       ]
     },

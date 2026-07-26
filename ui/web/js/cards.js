@@ -110,6 +110,7 @@ export const Cards = {
   async recap() {
     const { driverId, date } = this.ctx.profile();
     const st = this.ctx.state();
+    if (!st) return null;   // R5 double-check: bấm recap trước khi hồ sơ tải xong
     const m = st.money;
     const bd = m.payout_breakdown || {};
     const a = await api.advice(driverId, date, KIND_HOURS.recap);

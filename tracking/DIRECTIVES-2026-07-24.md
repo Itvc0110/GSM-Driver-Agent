@@ -99,7 +99,8 @@ vào sau, bên cạnh UI app.
 | **A. SIM overhaul** | mảng riêng (§5) + chỉ thị SIM-XANH (§10) | ✅ **SIM-1..5 + SIM-XANH P0-P5 XONG** (UPDATE-044..058, manifest sạch `fda8e16`): đường THẬT OSRM (factor median 1.46) · rating/tân-binh/mission trong sim · sweep độ nhạy D-SIM-06 · dashboard palette-validated + Replay + tab A/B · data 90 ngày chuỗi liên tục. **Kế tiếp: Track UI** (§11) rồi **AUDIT** |
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
-| **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063): web app data thật + advisor S1 thật + khu Mô phỏng (Replay/Hành trình/A-B/heatmap) + palette light validated + contract-first cho Khánh (T-009b). **Chờ verdict V-10**. Kế tiếp: **AUDIT** |
+| **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063) + **UX-CARDS** (UPDATE-067: proactive cards + đo adherence + CI draft) + **R1/R4** (UPDATE-068: mo-phong đồng ngôn ngữ app, playback ×1/×4/×16, feed sự kiện). **Chờ verdict V-10** |
+| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · 168 finding · 118 CONFIRMED · **16 fix hẹp có regression test**. Còn lại: **6 đề án ĐA-01..06 chờ Cường duyệt** + D-A3-01..06. Kế tiếp: **R5 double-check** rồi R2/R3 |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 
