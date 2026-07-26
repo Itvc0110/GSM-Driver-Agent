@@ -92,7 +92,13 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 `idle_reduction`, kênh `rest_window`) và **chẩn đoán ra nguyên nhân gốc**: S2 là solver DUY NHẤT
 nhìn về phía trước; phần còn lại HỒI CỨU/thông tin nên không có kênh tác động thời gian thực.
 ⇒ Ưu tiên: **`D-SIM-10` sim nhiều ngày** (mở khoá S3/S5/S7/S8/S9 cùng lúc — đòn bẩy lớn nhất),
-và **`D-SIM-09`** nối S1 vào bonus-gate (xoá nợ hai-nguồn-sự-thật).
+✅ **`D-SIM-09` DONE 2026-07-26 (UPDATE-051)**: đã nối S1. Phát hiện quan trọng về cách ĐỌC SỐ —
+Δ mean giảm (+32.276→+20.473) nhưng đó là **cải thiện**: advisor nay **im lặng ở 16/30 ca**
+không giúp được, lỗ chỉ còn **4 seed**, lợi/hại ≈ **5,7:1**. Bản cũ luôn khuyên nên phần lớn
+seed không-lãi là lỗ thật. Bản cũ còn **bỏ sót hoàn toàn ràng buộc `completion`** ⇒ khuyên nâng
+tỷ lệ NHẬN trong khi chỗ nghẽn là tỷ lệ HOÀN THÀNH (sai địa chỉ).
+⇒ Còn lại: **`D-SIM-10` sim nhiều ngày** (đòn bẩy lớn nhất), `D-SIM-11` (S1 trả mã lý do có cấu
+trúc thay vì để sim parse tiếng Việt), `D-SIM-12` (4 seed còn lỗ).
 ~~`D-SIM-03` mở rộng action-space (mới 1/9 solver có kênh tác
 động — giới hạn LỚN NHẤT của kết quả A/B), rồi Track B (external data) / C (mock UI) / D (C7) / E.
 

@@ -197,19 +197,40 @@ def test_unrecoverable_when_too_late(base_cfg, run_a):
     assert not b._acceptance_recoverable(a, a.shift_end_min - 20.0, 0.85)
 
 
-def test_no_advice_when_no_tier_reachable(base_cfg, run_a):
-    """Sửa tỷ lệ mà KHÔNG đủ điểm chạm mốc nào ⇒ thưởng vẫn 0 ⇒ lời khuyên vô nghĩa."""
+def test_no_advice_when_hours_budget_too_short(base_cfg, run_a):
+    """D-SIM-09: quyết định khả thi giờ do **solver S1** đưa ra. Còn 5 phút thì không thể đủ
+    điểm chạm mốc ⇒ nâng tỷ lệ nhận là vô nghĩa (thưởng vẫn 0)."""
     a = run_a.actors[0]
     b = _bridge(base_cfg, a.actor_id)
-    a.points, a.online_min = 0, 300.0
-    assert not b._tier_reachable(a, a.shift_end_min - 5.0)   # còn 5 phút, không thể đủ điểm
+    a.points, a.online_min, a.orders_offered, a.orders_accepted = 0, 300.0, 20, 14
+    ok, why = b._advice_would_help(a, a.shift_end_min - 5.0, 0.85)
+    assert not ok and why == "blocked_elsewhere"
 
 
-def test_tier_reachable_with_full_shift(base_cfg, run_a):
+def test_no_advice_when_completion_is_the_blocker(base_cfg, run_a):
+    """**Lỗi bản cũ bỏ sót.** `day_bonus` cần CẢ acceptance ≥ ngưỡng VÀ completion ≥ ngưỡng.
+    Bridge cũ chỉ kiểm acceptance ⇒ có thể khuyên tài xế nâng tỷ lệ NHẬN trong khi thứ đang
+    chặn thưởng của họ là tỷ lệ **HOÀN THÀNH** — lời khuyên sai địa chỉ.
+    Nay S1 kiểm cả hai và bridge tôn trọng `infeasible_reason`."""
     a = run_a.actors[0]
     b = _bridge(base_cfg, a.actor_id)
-    a.points, a.online_min = 0, 0.0
-    assert b._tier_reachable(a, a.shift_end_min - 600.0)     # còn 10h → thừa sức
+    a.points, a.online_min = 60, 240.0
+    a.orders_offered, a.orders_accepted, a.orders_completed = 20, 20, 5   # accept 1.0, comp 0.25
+    ok, why = b._advice_would_help(a, a.shift_start_min + 240.0, 0.85)
+    assert not ok, "completion mới là chỗ nghẽn — không được khuyên nâng tỷ lệ nhận"
+
+
+def test_bonus_gap_input_matches_schema_keys(base_cfg, run_a):
+    """Input gửi solver chỉ được chứa khoá trong schema L3 — chống nhét thêm dữ liệu (kể cả
+    dữ liệu tương lai) vào cho solver."""
+    allowed = {"schema_version", "driver_id", "t_now", "points_now", "next_tiers",
+               "historical_points_per_hour", "hours_budget_remaining", "acceptance_rate",
+               "completion_rate", "policy_bundle_version", "view_version", "source"}
+    a = run_a.actors[0]
+    gi = _bridge(base_cfg, a.actor_id).build_bonus_gap_input(a, a.shift_start_min + 120)
+    assert set(gi) <= allowed, f"khoá lạ: {set(gi) - allowed}"
+    assert all(int(t[0]) > int(gi["points_now"]) for t in gi["next_tiers"]), \
+        "next_tiers phải là các mốc CHƯA đạt"
 
 
 def test_skipped_advice_is_recorded(base_cfg, run_a):
@@ -222,7 +243,7 @@ def test_skipped_advice_is_recorded(base_cfg, run_a):
     a.accept_lift = 0.0
     assert b.check_bonus_gate(a, a.shift_end_min - 20.0) is None
     assert b.skipped_advice and b.skipped_advice[-1][2] in (
-        "acceptance_unrecoverable", "no_tier_reachable")
+        "acceptance_unrecoverable", "blocked_elsewhere", "already_maxed", "already_qualified")
 
 
 # ---------- D-SIM-03: kênh rest_window (S7) + BA LAN CAN AN TOÀN ----------

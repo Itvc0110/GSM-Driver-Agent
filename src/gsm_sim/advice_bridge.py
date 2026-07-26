@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from gsm_core.solvers import idle_reduction, shift_dp
+from gsm_core.solvers import bonus_feasibility, idle_reduction, shift_dp
 
 from .behavior import IdleAction
 from .entities import Actor, FleetType
@@ -385,30 +385,65 @@ class AdviceActionBridge:
             return False
         return (a + p * R) / (o + R) >= thr
 
-    def _tier_reachable(self, actor: Actor, now_min: float) -> bool:
-        """Có chạm nổi mốc điểm nào trước khi hết ca không?
+    def build_bonus_gap_input(self, actor: Actor, now_min: float) -> dict:
+        """`bonus_gap_input` (schema L3) từ trạng thái HIỆN TẠI của actor.
 
-        Sửa tỷ lệ mà KHÔNG đủ điểm thì thưởng vẫn **0** — lời khuyên vô nghĩa nhưng vẫn bắt
-        tài xế ôm cuốc rẻ. Đây là nửa còn lại của vách đá, dễ bị bỏ sót.
+        `historical_points_per_hour` ước từ **chính tài xế trong ca**; chưa đủ lịch sử thì để
+        rỗng để S1 dùng fallback lý thuyết của nó (`points_per_trip_estimate`) — không tự chế
+        ước lượng song song.
         """
-        gap = self.policy.next_tier_gap(int(actor.points))
-        if gap is None:
-            return True                            # đã ở mốc cao nhất → không cần thêm điểm
-        gap_points = int(gap[0])
-        remaining_h = max(0.0, actor.shift_end_min - now_min) / 60.0
+        tiers = [[int(p), int(v)] for p, v in self.policy.day_bonus_tiers
+                 if int(p) > int(actor.points)]
+        hist = {}
         if actor.online_min >= self.min_online_min_for_rate and actor.points > 0:
-            rate = actor.points / (actor.online_min / 60.0)          # lịch sử CHÍNH mình
-        else:
-            # chưa đủ lịch sử trong ca → ước lượng lý thuyết (đúng cách S1 làm)
+            rate = actor.points / (actor.online_min / 60.0)
             hour = int(now_min // 60) % 24
-            rate = self.policy.points_per_trip_estimate(hour) * self.trips_per_hour_est
-        return rate * remaining_h >= gap_points
+            hist = {("peak" if self.policy.is_peak(hour) else "offpeak"): round(rate, 3)}
+        return {
+            "schema_version": "1.0.0", "driver_id": f"d-{actor.actor_id}",
+            "t_now": f"2026-07-01T{int(now_min) // 60 % 24:02d}:{int(now_min) % 60:02d}:00+07:00",
+            "points_now": int(actor.points),
+            "next_tiers": tiers,
+            "historical_points_per_hour": hist,
+            "hours_budget_remaining": round(max(0.0, actor.shift_end_min - now_min) / 60.0, 3),
+            "acceptance_rate": round(actor.acceptance_rate, 4),
+            "completion_rate": round(actor.completion_rate, 4),
+            "policy_bundle_version": self.policy.version,
+            "view_version": "sim-3", "source": "MOCK",
+        }
 
     def _advice_would_help(self, actor: Actor, now_min: float, thr: float) -> tuple[bool, str]:
+        """Lời khuyên nâng tỷ lệ nhận có ích không?
+
+        **D-SIM-09 — ranh giới rõ ràng giữa solver và sim** (trước đây bridge tự chép lý lẽ
+        advisor, đúng lỗi "hai nguồn sự thật" mà SIM-1/SIM-3 phải đi sửa):
+
+        - **SOLVER S1 `bonus_feasibility` quyết định**: còn mốc để với không · quỹ giờ có đủ
+          không · ràng buộc `acceptance` **và `completion`** có đạt không. Bridge KHÔNG được
+          tính lại mấy thứ này.
+        - **SIM bổ sung DUY NHẤT một thứ S1 không trả lời được**: tỷ lệ nhận là **luỹ kế cả
+          ngày** — *"tới giờ này còn gỡ kịp không?"* (`_acceptance_recoverable`). S1 chỉ kiểm
+          TĨNH (`acceptance >= ngưỡng`) nên không thay thế được phần này.
+        """
+        rep = bonus_feasibility.solve(self.build_bonus_gap_input(actor, now_min), self.policy)
+        sol = rep.get("solution") or {}
+        if sol.get("already_maxed"):
+            return False, "already_maxed"        # kịch mốc rồi, khuyên thêm là thừa
+
+        reason = (rep.get("infeasible_reason") or "")
+        if not sol.get("feasible"):
+            # S1 nói KHÔNG khả thi. Kênh này CHỈ sửa được tỷ lệ NHẬN, nên chỉ đáng khuyên khi
+            # nghẽn **DUY NHẤT** ở đó. Nếu còn nghẽn ở quỹ GIỜ hoặc ở tỷ lệ HOÀN THÀNH thì
+            # nâng tỷ lệ nhận là **sai địa chỉ** — tài xế ôm thêm cuốc rẻ mà vẫn không có
+            # thưởng. (Bản trước bỏ sót hoàn toàn ràng buộc completion.)
+            blocked_elsewhere = ("quỹ" in reason) or ("hoàn thành" in reason)
+            if blocked_elsewhere or "tỷ lệ nhận" not in reason:
+                return False, "blocked_elsewhere"
+        elif actor.acceptance_rate >= float(self.policy.bonus_min_acceptance):
+            return False, "already_qualified"
+
         if not self._acceptance_recoverable(actor, now_min, thr):
             return False, "acceptance_unrecoverable"
-        if not self._tier_reachable(actor, now_min):
-            return False, "no_tier_reachable"
         return True, ""
 
     # ---------- SIM-4 kênh 3: hoãn kết ca khi sát mốc điểm ----------
