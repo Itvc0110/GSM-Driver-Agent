@@ -81,8 +81,15 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    có chạm nổi mốc điểm). Đo lại: **INERT** ở config hiện tại (không chặn lần nào) — giữ lại làm
    lan can cho ca ngắn/ngày xấu, nhưng KHÔNG phải nguồn cải thiện.
 
-5. **SIM-5 Metrics + xuất data:** bộ metric chung/per-driver + regen 13 bảng l1r từ sim mới
-   (bộ `data/mock/realdata-v1/` sinh TRƯỚC SIM-1 ⇒ phải regen + verify 4 vòng lại).
+5. ✅ **SIM-5 Metrics + xuất data — DONE 2026-07-26 (UPDATE-049). LỘ TRÌNH TRACK A HOÀN TẤT.**
+   `src/gsm_sim/sim_metrics.py` + `scripts/regen_mock.py` + manifest ghi `engine_commit`.
+   **Regen 90 ngày** từ engine mới: acceptance data **0.909** ≈ sim **0.910** (trước 0.88 vs 0.96).
+   4 vòng verify xanh, **BIKE 6/6 PASS 0 GAP** (giờ online median 8.79h — trước là gap ~4.5h).
+   Phát hiện: acceptance=1.00 tăng 12%→23% **KHÔNG phải hồi quy** — bản cũ mượt GIẢ TẠO do sinh
+   bằng `gauss`; bản mới là tỷ số 2 số nguyên thật, giống dữ liệu thật. Suite **446**.
+
+**Việc đáng làm tiếp sau Track A:** `D-SIM-03` mở rộng action-space (mới 1/9 solver có kênh tác
+động — giới hạn LỚN NHẤT của kết quả A/B), rồi Track B (external data) / C (mock UI) / D (C7) / E.
 
 **Track SIM/Advisor (PAUSE sau T-030 — resume sau khung core; reliability-first):**
 

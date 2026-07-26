@@ -18,6 +18,7 @@ Khi Cường cho verdict → chuyển sang phần "Đã xong", ghi ngày + kết
 | **V-03** | **SIM-2 hành trình tài xế** — Gantt timeline, bảng offer có LÝ DO, và đường thu nhập **không có bậc thưởng** ở tân binh (đó là `D-SIM-02`) | Dashboard tab 🧭 Hành trình 1 tài xế → **seed 1000 → `d-30 · P4 TÂN BINH`** | 2026-07-25 (UPDATE-045) |
 | **V-04** | **SIM-3 cầu nối advice→action** — bật `advice.enabled=true` + `single_actor_id` = tài xế P4, xem các mốc advice trên timeline và cột theo/không-theo | Dashboard tab 🧭 | 2026-07-26 (UPDATE-046) |
 | **V-05** | **SIM-4 thế giới song song** — chạy `uv run python scripts/run_parallel.py --seeds 30`, đọc bảng Δ + CI + `n_pos`. Lưu ý 3 điểm dễ hiểu sai (xem UPDATE-047 §3) | CLI (tab dashboard A/B **chưa làm**) | 2026-07-26 (UPDATE-047) |
+| **V-06** | **SIM-5 data mới + bộ metric** — dashboard chạy trên bộ 90 ngày vừa regen; kiểm `sim_metrics.full_report` (chờ khách, mật độ hex×giờ). Tab ⚖️ A/B vẫn CHƯA làm (nợ SIM-4) | Dashboard + `scripts/regen_mock.py` | 2026-07-26 (UPDATE-049) |
 
 ## ❓ QUYẾT ĐỊNH CẦN CƯỜNG CHỐT (không phải visual)
 

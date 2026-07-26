@@ -391,6 +391,17 @@ def build_weekly_and_missions(daily: dict, universe: dict, seed: int) -> None:
             fid += 1
 
 
+def _git_commit() -> str | None:
+    """Commit của engine đang sinh data. None nếu không phải git repo (không chặn việc gen)."""
+    import subprocess
+    try:
+        out = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+                             capture_output=True, text=True, timeout=10)
+        return out.stdout.strip() or None
+    except Exception:
+        return None
+
+
 def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Path | None = None,
                       start_date: str = "2026-07-01", extra_kinds: bool = True) -> dict:
     cfg_path = config_path or (ROOT / "configs" / "pilot_dongda.yaml")
@@ -411,7 +422,13 @@ def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Pat
     counts = {}
     for entity, records in tables.items():
         counts[entity] = write_table_parquet(records, out_dir / f"{entity}.parquet")
-    manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v2 (profile-driven)",
+    manifest = {"label": "MOCK", "generator": "gsm_core.mockgen.realdata v3 (sim-driven, SIM-1..4)",
+                # SIM-5: ghi COMMIT của engine đã sinh ra bộ này. Bộ v2 trước đây không truy vết
+                # được engine nào tạo ⇒ nó âm thầm lạc hậu sau SIM-1..4 mà không ai phát hiện.
+                "engine_commit": _git_commit(),
+                "engine_note": ("hành vi sim sau SIM-1 (served ~82%, accept bám accept_base, "
+                                "completion ~95%, có huỷ-sau-nhận) và SIM-3 fix D "
+                                "(driver BIKE đọc counter sim, không suy ngược từ target)"),
                 "days": days, "seed_base": seed_base, "start_date": start_date, "record_counts": counts,
                 "profile_universe": kind_distribution(universe),
                 "schema_versions": {e: "1.0.0" for e in tables}}

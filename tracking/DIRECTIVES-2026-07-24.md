@@ -94,7 +94,7 @@ vào sau, bên cạnh UI app.
 
 | Track | Nội dung | Trạng thái |
 |---|---|---|
-| **A. SIM overhaul** | mảng riêng, docs+plan riêng (§5) | 🟡 **ĐANG LÀM** — **SIM-1 DONE** 2026-07-25 (UPDATE-044): served 61.9%→**82.3%**, completion 99.6%→**94.7%**, accept bám `accept_base` từng archetype, +huỷ-sau-nhận. Gate 30 seed `tests/test_sim_realism.py`. **Kế tiếp: SIM-2 driver journey** |
+| **A. SIM overhaul** | mảng riêng, docs+plan riêng (§5) | ✅ **XONG SIM-1..SIM-5** (UPDATE-044..049): realism đạt dải thực · hành trình từng tài xế có lý do · advice→action · A/B có CI · data 13 bảng regen từ engine mới. Suite 446. **Giới hạn lớn nhất còn lại: D-SIM-03** (mới 1/9 solver có kênh tác động) |
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ⏳ chưa bắt đầu |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |

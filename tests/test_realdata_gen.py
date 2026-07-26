@@ -110,6 +110,24 @@ def test_acceptance_realistic_not_degenerate(gen):
     assert st.pstdev(accs) > 0.02, "acceptance phải có variance (randomness)"
 
 
+def test_acceptance_ones_are_explainable(gen):
+    """SIM-5: sau khi BIKE đọc counter sim (bỏ tổng hợp bằng gauss), tỷ lệ nhận trở thành
+    **tỷ số hai số nguyên thật** nên dồn ở 1.00 nhiều hơn — 12% → 23% trên bộ 90 ngày.
+
+    Đó KHÔNG phải hồi quy: bản cũ mượt vì sinh bằng `gauss(target, 0.04)`, tức là **mượt giả
+    tạo**; dữ liệu thật của GSM cũng là tỷ số nguyên nên cũng dồn ở 1.00. Với archetype accept
+    cao (P3 .98, P5 .97) thì nhận trọn 15 offer có xác suất ~0.74 — hoàn toàn bình thường.
+
+    Nhưng vẫn phải có LAN CAN: nếu tỷ lệ 1.00 phình quá mức thì đó là dấu hiệu mô hình nhận
+    đơn hỏng (đúng khuyết tật PI-2b cũ, khi acceptance ≈ 1.00 gần như mọi nơi).
+    """
+    accs = [s["acceptance_rate"] for s in gen["driver_statistic_daily"]]
+    frac_one = sum(1 for a in accs if a >= 0.999) / len(accs)
+    assert frac_one < 0.40, f"{frac_one:.1%} driver-day có acceptance = 1.00 — nghi thoái hoá"
+    assert sum(1 for a in accs if a < 0.85) / len(accs) > 0.15, \
+        "phải còn tỷ lệ đáng kể tài xế DƯỚI ngưỡng thưởng (dư địa advisor)"
+
+
 def test_profile_universe_diverse(res):
     kinds = {p["kind"] for p in res["universe"].values()}
     assert {"bike_platform", "car_platform", "car_employee", "car_premium"} <= kinds

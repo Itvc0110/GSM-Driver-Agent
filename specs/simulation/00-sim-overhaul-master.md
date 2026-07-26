@@ -1,6 +1,6 @@
 # SPEC — SIMULATION OVERHAUL (mảng riêng, Track A) — master
 
-Cập nhật: 2026-07-25 · Trạng thái: **SIM-1/2/3/4 DONE** (UPDATE-044..047), SIM-5 kế tiếp · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
+Cập nhật: 2026-07-25 · Trạng thái: **SIM-1..SIM-5 DONE — LỘ TRÌNH HOÀN TẤT** (UPDATE-044..049) · Nguồn yêu cầu: `tracking/DIRECTIVES-2026-07-24.md` §5 (Cường: *"phần này rất quan trọng"*, *"nên tập trung làm thành riêng 1 mảng, có docs và plan riêng"*).
 
 > **Sim là mảng ĐỘC LẬP.** UI app do **Khánh** phát triển; sim **không phụ thuộc UI**, chỉ nối **data output** vào sau (bên cạnh UI). Sim phục vụ: (1) kiểm chứng advisor bằng thế giới song song, (2) sinh/giải thích hành vi tài xế, (3) nguồn dữ liệu hành vi cho mock.
 
@@ -85,7 +85,7 @@ research benchmarks ──┘         │                                       
 | **SIM-2 Driver journey** ✅ **DONE** 2026-07-25 (UPDATE-045) | `journey.py`: sessions · timeline (segment + idle suy ra) · từng offer kèm **LÝ DO** (`economics` vs `base_behavior`) + kết cục · thu nhập tích luỹ (cuốc **+ thưởng ngày**) · metric per-driver. Tab dashboard 🧭 + export JSON | ✅ 14 test bảo toàn trên **cả 7 archetype** (offer/thời gian/tiền/không chồng lấn/cộng ra hệ thống); **RNG không trôi** (so baseline seed 42+1000); suite 405 |
 | **SIM-3 Advice→Action** ✅ **DONE** 2026-07-26 (UPDATE-046) | `advice_bridge.py`: S2 `shift_dp` → `IdleAction` + mô hình tuân thủ theo archetype; hook khi IDLE, mặc định TẮT; policy hợp nhất qua `to_core_record()` | ✅ 15 test: World A không đổi khi tắt · **không rò tương lai** · ánh xạ đúng ngữ nghĩa (BUG-SIM3-01) · bảo toàn SIM-2 giữ nguyên. Suite 420. ⚠️ **F-SIM3-A**: mới dùng 1/9 solver ⇒ Δ(B−A)≈0, SIM-4 sẽ ĐÁNH GIÁ THẤP advisor nếu chỉ đo với S2 |
 | **SIM-4 Parallel worlds** ✅ **DONE** 2026-07-26 (UPDATE-047) | `parallel.py`: A/B chung seed (CRN), **hiệu theo cặp + CI bootstrap**, đo **thang bậc kênh** (attribution), guardrail hệ thống. Mở 2 kênh mới: `accept_lift` (cảnh báo tỷ lệ dưới ngưỡng thưởng) + `shift_extend` | ✅ 30 seed: `s2_only` Δ=**0** (xác nhận F-SIM3-A) · `+accept_lift` **+32.276đ** CI[+8.255,+58.480] · `all` **+42.471đ**. Guardrail served_rate không đổi. **Vách đá**: tuân thủ nửa vời LỖ 34k. 12 test, suite 432 |
-| **SIM-5 Metrics + xuất data** | Bộ metric chung + per-driver; nối vào `mockgen` để sinh 13 bảng từ sim mới | Dashboard/CLI xem được; data sinh ra pass 4 vòng verify |
+| **SIM-5 Metrics + xuất data** ✅ **DONE** 2026-07-26 (UPDATE-049) | `sim_metrics.py` (chờ khách, mật độ hex×giờ, gộp per-driver TỪ journey) + manifest ghi `engine_commit` + `scripts/regen_mock.py`; **regen 90 ngày** từ engine mới | ✅ 4 vòng verify xanh; **BIKE 6/6 PASS, 0 GAP** (giờ online median 8.79h, trước gap ~4.5h); nhất quán sim↔data: acceptance data **0.909** ≈ sim **0.910**; suite 446 |
 
 ## 6. METRIC BẮT BUỘC (đo ở mọi phase)
 
