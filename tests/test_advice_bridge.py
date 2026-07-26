@@ -170,6 +170,61 @@ def test_newbie_listens_more_than_veteran():
     assert DEFAULT_ADHERENCE["P4"] > DEFAULT_ADHERENCE["P5"]
 
 
+# ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên ----------
+
+
+def _bridge(base_cfg, actor_id):
+    from gsm_sim.advice_bridge import AdviceActionBridge
+    return AdviceActionBridge(_cfg_advice_on(actor_id), PolicyBundle.from_config(base_cfg), seed=1)
+
+
+def test_recoverable_at_shift_start(base_cfg, run_a):
+    """Đầu ca (chưa được chào đơn nào) ⇒ chưa mất gì ⇒ luôn gỡ được.
+    Lời khuyên PHÒNG NGỪA đầu ca là loại có giá trị nhất (PHÁT HIỆN SIM-4-B)."""
+    a = run_a.actors[0]
+    b = _bridge(base_cfg, a.actor_id)
+    a.orders_offered, a.orders_accepted = 0, 0
+    assert b._acceptance_recoverable(a, a.shift_start_min, 0.85)
+
+
+def test_unrecoverable_when_too_late(base_cfg, run_a):
+    """Từ chối nhiều + gần hết ca ⇒ tỷ lệ LUỸ KẾ không thể gỡ ⇒ KHÔNG được khuyên.
+    Khuyên lúc này chỉ khiến tài xế ôm cuốc rẻ mà vẫn mất thưởng."""
+    a = run_a.actors[0]
+    b = _bridge(base_cfg, a.actor_id)
+    a.orders_offered, a.orders_accepted = 40, 20        # 0.50, hố quá sâu
+    a.online_min = 400.0
+    assert not b._acceptance_recoverable(a, a.shift_end_min - 20.0, 0.85)
+
+
+def test_no_advice_when_no_tier_reachable(base_cfg, run_a):
+    """Sửa tỷ lệ mà KHÔNG đủ điểm chạm mốc nào ⇒ thưởng vẫn 0 ⇒ lời khuyên vô nghĩa."""
+    a = run_a.actors[0]
+    b = _bridge(base_cfg, a.actor_id)
+    a.points, a.online_min = 0, 300.0
+    assert not b._tier_reachable(a, a.shift_end_min - 5.0)   # còn 5 phút, không thể đủ điểm
+
+
+def test_tier_reachable_with_full_shift(base_cfg, run_a):
+    a = run_a.actors[0]
+    b = _bridge(base_cfg, a.actor_id)
+    a.points, a.online_min = 0, 0.0
+    assert b._tier_reachable(a, a.shift_end_min - 600.0)     # còn 10h → thừa sức
+
+
+def test_skipped_advice_is_recorded(base_cfg, run_a):
+    """Từ chối khuyên phải được GHI LẠI — im lặng bỏ qua thì không đo được là ta đã tránh
+    được bao nhiêu lời khuyên vô ích."""
+    a = run_a.actors[0]
+    b = _bridge(base_cfg, a.actor_id)
+    b.ch_accept_lift = True
+    a.orders_offered, a.orders_accepted, a.online_min = 40, 20, 400.0
+    a.accept_lift = 0.0
+    assert b.check_bonus_gate(a, a.shift_end_min - 20.0) is None
+    assert b.skipped_advice and b.skipped_advice[-1][2] in (
+        "acceptance_unrecoverable", "no_tier_reachable")
+
+
 # ---------- Gate 6: bật advice vẫn giữ mọi bảo toàn của SIM-2 ----------
 
 

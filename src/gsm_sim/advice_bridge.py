@@ -130,6 +130,12 @@ class AdviceActionBridge:
         self.lift_max = float(adv.get("accept_lift_max", 0.15))
         self.min_offers_before_lift = int(adv.get("min_offers_before_lift", 5))
         self.extend_max_min = float(adv.get("shift_extend_max_min", 60))
+        # D-SIM-05: tham số của điều kiện khả thi
+        self.max_realized_accept = float(adv.get("max_realized_accept", 0.93))
+        self.min_online_min_for_rate = float(adv.get("min_online_min_for_rate", 30))
+        self.trips_per_hour_est = float(adv.get("trips_per_hour_est", 1.5))
+        # ghi lại các lần TỪ CHỐI khuyên — để đo "đã tránh được bao nhiêu lời khuyên có hại"
+        self.skipped_advice: list[tuple[float, int, str]] = []
         self.rng = np.random.default_rng(seed ^ 0xADD1CE)
         self._last_consult: dict[int, float] = {}
         self._share = float(adv.get("share", 0.0))
@@ -254,6 +260,15 @@ class AdviceActionBridge:
             acc = actor.accept_base
         else:
             acc = actor.acceptance_rate
+
+        # --- D-SIM-05: CHỈ khuyên khi lời khuyên THỰC SỰ có ích ---
+        # SIM-4 chứng minh hiệu ứng VÁCH ĐÁ: nâng tỷ lệ mà KHÔNG chạm ngưỡng làm tài xế
+        # nhận thêm cuốc rẻ, chiếm chỗ cuốc tốt ⇒ mất 34k mà chẳng có thưởng bù. Thưởng
+        # theo ngưỡng là được-ăn-cả-ngã-về-không, nên khuyên nửa vời TỆ HƠN không khuyên.
+        ok, why = self._advice_would_help(actor, now_min, thr)
+        if not ok:
+            self.skipped_advice.append((now_min, actor.actor_id, why))
+            return None
         if acc >= thr or actor.accept_lift >= self.lift_max:
             return None
         p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
@@ -264,6 +279,59 @@ class AdviceActionBridge:
             actor.accept_lift += applied
         return BonusGateAdvice(t_min=now_min, acceptance_now=round(acc, 4), threshold=thr,
                                lift_applied=round(applied, 4), followed=followed)
+
+    # ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên nâng tỷ lệ ----------
+
+    def _acceptance_recoverable(self, actor: Actor, now_min: float, thr: float) -> bool:
+        """Tỷ lệ nhận (LUỸ KẾ cả ngày) còn gỡ lại kịp trước khi hết ca không?
+
+        Với `o` offer đã được chào, `a` đã nhận, `R` offer kỳ vọng còn lại, và `p` là tỷ lệ
+        nhận cao nhất **đạt được thực tế** khi lift kịch trần (đo được ≈0.93 — không bịa):
+
+            final = (a + p·R) / (o + R)   ⇒ khả thi khi final ≥ ngưỡng
+
+        `R` ước lượng từ tốc độ nhận offer của CHÍNH tài xế này trong ca, nhân thời gian
+        còn lại. Chỉ dùng dữ liệu **tới hiện tại** ⇒ không rò thông tin tương lai.
+
+        `o = 0` (đầu ca): chưa từ chối gì nên chưa mất gì ⇒ luôn khả thi. Đúng bản chất —
+        lời khuyên PHÒNG NGỪA đầu ca là loại tốt nhất (PHÁT HIỆN SIM-4-B).
+        """
+        o, a = actor.orders_offered, actor.orders_accepted
+        if o == 0:
+            return True
+        remaining_min = max(0.0, actor.shift_end_min - now_min)
+        elapsed = max(1.0, actor.online_min)
+        R = (o / elapsed) * remaining_min          # offer kỳ vọng còn lại
+        p = self.max_realized_accept
+        if o + R <= 0:
+            return False
+        return (a + p * R) / (o + R) >= thr
+
+    def _tier_reachable(self, actor: Actor, now_min: float) -> bool:
+        """Có chạm nổi mốc điểm nào trước khi hết ca không?
+
+        Sửa tỷ lệ mà KHÔNG đủ điểm thì thưởng vẫn **0** — lời khuyên vô nghĩa nhưng vẫn bắt
+        tài xế ôm cuốc rẻ. Đây là nửa còn lại của vách đá, dễ bị bỏ sót.
+        """
+        gap = self.policy.next_tier_gap(int(actor.points))
+        if gap is None:
+            return True                            # đã ở mốc cao nhất → không cần thêm điểm
+        gap_points = int(gap[0])
+        remaining_h = max(0.0, actor.shift_end_min - now_min) / 60.0
+        if actor.online_min >= self.min_online_min_for_rate and actor.points > 0:
+            rate = actor.points / (actor.online_min / 60.0)          # lịch sử CHÍNH mình
+        else:
+            # chưa đủ lịch sử trong ca → ước lượng lý thuyết (đúng cách S1 làm)
+            hour = int(now_min // 60) % 24
+            rate = self.policy.points_per_trip_estimate(hour) * self.trips_per_hour_est
+        return rate * remaining_h >= gap_points
+
+    def _advice_would_help(self, actor: Actor, now_min: float, thr: float) -> tuple[bool, str]:
+        if not self._acceptance_recoverable(actor, now_min, thr):
+            return False, "acceptance_unrecoverable"
+        if not self._tier_reachable(actor, now_min):
+            return False, "no_tier_reachable"
+        return True, ""
 
     # ---------- SIM-4 kênh 3: hoãn kết ca khi sát mốc điểm ----------
 

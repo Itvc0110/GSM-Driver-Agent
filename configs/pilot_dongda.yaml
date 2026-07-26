@@ -239,6 +239,11 @@ advice:
   accept_lift_max: 0.15            # trần: không biến tài xế thành người nhận mọi cuốc
   min_offers_before_lift: 5        # đủ mẫu rồi mới kết luận tỷ lệ
   shift_extend_max_min: 60         # trần hoãn kết ca (không "chạy vô hạn")
+  # D-SIM-05 — CHỈ khuyên khi lời khuyên thực sự có ích. SIM-4 chứng minh hiệu ứng VÁCH ĐÁ:
+  # nâng tỷ lệ mà KHÔNG chạm ngưỡng ⇒ tài xế ôm cuốc rẻ, mất 34k, chẳng có thưởng bù.
+  max_realized_accept: 0.93        # tỷ lệ nhận cao nhất ĐẠT ĐƯỢC khi lift kịch trần (ĐO, không bịa)
+  min_online_min_for_rate: 30      # dưới mức này chưa đủ lịch sử trong ca → dùng ước lượng lý thuyết
+  trips_per_hour_est: 1.5          # ước lượng cuốc/giờ khi chưa có lịch sử (đo được ~1.4-1.5)
   bucket_min: 60                   # bucket của shift_dp (khớp derive_shift_plan_input_l1r)
   # Mức TUÂN THỦ theo archetype — ASSUMPTION có lập luận, CHƯA có số thật:
   # tân binh nghe nhiều nhất, top/lão làng đã có hệ thống riêng nên nghe ít nhất.

@@ -54,7 +54,12 @@ xấu hệ thống**. Đạt yêu cầu spec §6.
 
 ## 4. Bug/phát hiện mô hình trong cycle
 
-**PHÁT HIỆN SIM-4-A — hiệu ứng VÁCH ĐÁ (threshold cliff): tuân thủ MỘT NỬA còn tệ hơn không làm gì.**
+> ⚠️ **ĐÍNH CHÍNH 2026-07-26 (UPDATE-048): mục SIM-4-A dưới đây SAI vì suy rộng từ 1 seed.**
+> Đo lại 30 seed: ngưỡng được chạm **27/30 lần** ngay ở `lift_max=0.15`; nhóm KHÔNG chạm
+> (3 seed) có Δpayout **+18.207đ**, tức **không có bằng chứng** tuân thủ nửa vời gây hại.
+> Bảng dưới là **một seed cá biệt**. Kết luận đúng nằm ở UPDATE-048.
+
+**PHÁT HIỆN SIM-4-A (ĐÃ BỊ BÁC BỎ) — giả thuyết vách đá, chỉ đúng trên seed 1000:**
 Quét trần lift trên seed 1000:
 
 | `lift_max` | eff. base | realized accept | ≥0.85? | thưởng | payout |

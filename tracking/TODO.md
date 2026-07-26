@@ -73,8 +73,13 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
    Guardrail: served_rate KHÔNG đổi ⇒ không hại hệ thống.
    ⚠️ Ba điều phải đọc kèm: (a) `shift_extend` tăng tiền bằng THÊM GIỜ — payout/giờ +19,3% <
    accept_lift +21,5%; (b) chỉ **16/30 seed** Δ dương ⇒ đây là CANH BẠC, không phải chắc thắng;
-   (c) **vách đá**: tuân thủ nửa vời LỖ 34k vì thưởng theo ngưỡng là được-ăn-cả-ngã-về-không.
-   ⚠️ **F-SIM4-B nên làm TRƯỚC SIM-5**: chưa chặn lời khuyên khi tài xế không thể với tới ngưỡng.
+   (c) ~~vách đá: tuân thủ nửa vời LỖ 34k~~ **ĐÃ BÁC BỎ (UPDATE-048)** — chỉ đúng trên 1 seed;
+   30 seed cho thấy ngưỡng được chạm 27/30 lần và nhóm không-chạm vẫn Δ dương.
+   Kết luận ĐÚNG: **median Δ ≈ +394đ** dù mean +33.839đ ⇒ mean bị vài ngày thắng lớn kéo lên;
+   advice là **xổ số**, phần lớn ngày gần như không đổi.
+   ✅ **D-SIM-05 DONE 2026-07-26 (UPDATE-048)**: đã cài điều kiện khả thi (tỷ lệ còn gỡ được +
+   có chạm nổi mốc điểm). Đo lại: **INERT** ở config hiện tại (không chặn lần nào) — giữ lại làm
+   lan can cho ca ngắn/ngày xấu, nhưng KHÔNG phải nguồn cải thiện.
 
 5. **SIM-5 Metrics + xuất data:** bộ metric chung/per-driver + regen 13 bảng l1r từ sim mới
    (bộ `data/mock/realdata-v1/` sinh TRƯỚC SIM-1 ⇒ phải regen + verify 4 vòng lại).
