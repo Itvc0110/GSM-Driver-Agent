@@ -27,6 +27,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ waypoints }),
     }).then((r) => r.json()),
+  // UX-CARDS: đo adherence explicit
+  adviceAction: (body) =>
+    fetch(BASE + "/api/v1/advice/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => r.json()),
+  adviceActions: (driverId) =>
+    get(`/api/v1/advice/actions${driverId ? `?driver_id=${driverId}` : ""}`),
 };
 
 export const fmtVnd = (v) =>

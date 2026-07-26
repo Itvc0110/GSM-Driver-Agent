@@ -132,3 +132,28 @@ def test_sim_ab_guardrail_is_real_per_cell():
         assert g["ok"] is False, "có cell bị cờ thì không được nói 'ổn'"
     else:
         assert g["worst_cell_delta_served"] > -3
+
+
+# ---------- UX-CARDS (UPDATE-067): adherence action round-trip ----------
+
+
+def test_advice_action_roundtrip_and_contract(dv, tmp_path, monkeypatch):
+    """POST action → GET actions thấy lại đúng bản ghi, khớp schema advice_action;
+    log vào file tạm (không bẩn data/ui-telemetry thật của phiên review)."""
+    from app.routers import advice as advice_router
+    monkeypatch.setattr(advice_router, "TELEMETRY_DIR", tmp_path)
+    monkeypatch.setattr(advice_router, "ACTIONS_FILE", tmp_path / "a.jsonl")
+    body = {"advice_id": "s1-test-1", "driver_id": dv["driver_id"], "date": dv["date"],
+            "action": "followed", "card_kind": "nudge", "at_min": 840}
+    r = client.post("/api/v1/advice/action", json=body)
+    assert r.status_code == 200 and r.json()["ok"]
+    validate(r.json()["logged"], _schema("advice_action"))
+    got = client.get(f"/api/v1/advice/actions?driver_id={dv['driver_id']}").json()
+    assert got["is_mock"] and got["actions"][0]["advice_id"] == "s1-test-1"
+
+
+def test_advice_action_rejects_bad_action(dv):
+    r = client.post("/api/v1/advice/action", json={
+        "advice_id": "x", "driver_id": dv["driver_id"], "date": dv["date"],
+        "action": "maybe_later", "card_kind": "nudge"})
+    assert r.status_code == 422, "action ngoài enum phải bị chặn ở validation"

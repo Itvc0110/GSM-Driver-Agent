@@ -1,0 +1,60 @@
+# CI DRAFT (UPDATE-067, BACKLOG N5) — CHƯA ACTIVE: repo hiện làm việc local, kích hoạt khi
+# Cường push remote GitHub. Thiết kế 2 tầng: PR-fast (suite chính + ui-backend + gate schema)
+# và NIGHTLY (sim nặng 30-seed). Sim-heavy tests hiện nằm lẫn trong suite chính (~11-12 phút
+# cả suite) — chấp nhận cho PR job; tách marker `slow` là follow-up khi bật CI thật.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "30 19 * * *"   # 02:30 giờ VN — nightly
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - name: Sync deps (đủ extras — thiếu extra là uv gỡ package của extra khác)
+        run: uv sync --extra dev --extra ui --extra viz
+      - name: Suite chính (sim + core + advisor)
+        run: uv run pytest -q
+        env:
+          PYTHONIOENCODING: utf-8
+      - name: UI backend (contract tests)
+        run: uv run pytest ui/backend/tests -q
+        env:
+          PYTHONIOENCODING: utf-8
+
+  palette-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: JS syntax gate (web app không có build step — check là gate duy nhất)
+        run: |
+          node --check ui/web/js/app.js
+          node --check ui/web/js/api.js
+          node --check ui/web/js/cards.js
+          node --check ui/web/mo-phong/mo-phong.js
+
+  nightly-calibration:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --extra dev --extra ui --extra viz
+      - name: Realism gate + verify data 30-seed
+        run: |
+          uv run pytest tests/test_sim_realism.py -q
+          uv run python scripts/verify_realdata_stats.py
+        env:
+          PYTHONIOENCODING: utf-8

@@ -260,3 +260,42 @@ select, input[type="date"] {
   background: var(--surface); color: var(--text-primary);
 }
 .leaflet-container { font-family: inherit; }
+
+/* ---- UX-CARDS (UPDATE-067): proactive advice cards ---- */
+#card-stack {
+  position: absolute; bottom: 176px; left: 14px; right: 14px; z-index: 520;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.adv-card {
+  pointer-events: auto;
+  background: var(--surface); border: 1.5px solid rgba(0, 175, 185, 0.35);
+  border-radius: var(--r-card); box-shadow: var(--shadow-float);
+  padding: 12px 13px;
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+.adv-card.enter { animation: card-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15); }
+@keyframes card-in {
+  from { transform: translateY(26px) scale(0.97); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+.adv-card.followed  { transform: translateX(110%); opacity: 0; }
+.adv-card.dismissed { transform: translateX(-110%); opacity: 0; }
+.adv-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;
+}
+.adv-kind { font-size: 10.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.2px; }
+.adv-title { font-size: 13.5px; display: block; }
+.adv-msg { font-size: 12.5px; line-height: 1.5; margin-top: 4px; color: var(--text-primary); }
+.adv-why { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-hairline); }
+.adv-actions { display: flex; gap: 6px; margin-top: 10px; }
+.adv-btn {
+  flex: 1; padding: 8px 4px; border: none; border-radius: var(--r-chip);
+  font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer;
+  background: var(--surface-subtle); color: var(--text-primary);
+}
+.adv-btn.follow { background: var(--accent); color: var(--on-accent); }
+.adv-btn.why { flex: 0.7; }
+
+/* countup pill nhấn nhá khi số đổi */
+.pill.bump { animation: pill-bump 0.5s ease; }
+@keyframes pill-bump { 30% { transform: scale(1.06); } }

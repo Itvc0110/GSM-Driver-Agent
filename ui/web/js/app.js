@@ -1,8 +1,10 @@
-// app.js — GSM Driver web app (Track UI U2).
+// app.js — GSM Driver web app (Track UI U2 + UX-CARDS UPDATE-067).
 // Nguyên tắc: UI CHỈ RENDER số từ backend (contract-first). Cuốc "demo" là mô phỏng
 // interaction — cước demo KHÔNG được cộng vào payout (payout đến từ data mock).
+// UX-CARDS (DIRECTIVES §12): advisor là PROACTIVE CARDS, không phải chatbot.
 
 import { api, fmtVnd } from "./api.js";
+import { Cards } from "./cards.js";
 
 const S = {
   driverId: null, date: null,
@@ -77,8 +79,20 @@ async function loadProfile(driverId, date) {
 
 function renderHeader() {
   const m = S.state.money;
-  $("pill-payout").innerHTML = `${fmtVnd(m.payout_vnd)}
-    <span class="sub">Thu nhập tài xế (payout) · ${S.date} · mô phỏng</span>`;
+  const pill = $("pill-payout");
+  // countup nhẹ cho stakeholder demo — số cuối luôn là số THẬT từ data
+  const target = m.payout_vnd;
+  const start = performance.now();
+  const dur = 650;
+  const tick = (t) => {
+    const f = Math.min(1, (t - start) / dur);
+    const v = Math.round(target * (0.4 + 0.6 * f));
+    pill.innerHTML = `${fmtVnd(f >= 1 ? target : v)}
+      <span class="sub">Thu nhập tài xế (payout) · ${S.date} · mô phỏng</span>`;
+    if (f < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump");
   $("pill-trips").textContent = `${S.state.payout_summary.trips_count} cuốc`;
   const soc = S.state.soc_percent;
   const socEl = $("pill-soc");
@@ -163,33 +177,31 @@ async function fillCatalog() {
     `<option ${d === S.date ? "selected" : ""}>${d}</option>`).join("");
 }
 
-/* ================= TRỢ LÝ XANH ================= */
-async function showAdvice(nowMin) {
-  const body = $("advice-body");
-  body.innerHTML = `<div class="silent-box">Đang hỏi trợ lý…</div>`;
-  try {
-    const a = await api.advice(S.driverId, S.date, nowMin);
-    if (a.silent.is_silent) {
-      body.innerHTML = `<div class="silent-box"><span class="big-ico">✅</span>
-        ${a.silent.message}<br><small style="color:var(--text-muted)">mã: ${a.silent.reason_code}</small></div>`;
-      return;
-    }
-    body.innerHTML = a.items.map((it) => `
-      <div class="advice-item ${it.kind === "info" ? "info" : ""}">
-        <b>${it.title}</b>
-        <p>${it.message}</p>
-        <table class="num-table">${(it.numbers || []).map((n) => `
-          <tr><td>${n.name.replaceAll("_", " ")}</td>
-              <td>${n.unit === "vnd" ? fmtVnd(n.value) : n.value + " " + (n.unit || "")}</td>
-              <td>${n.source}</td></tr>`).join("")}
-        </table>
-        <div class="confidence-track"><div class="confidence-fill" style="width:${it.confidence * 100}%"></div></div>
-        <div class="meta">độ tin ${(it.confidence * 100).toFixed(0)}% · solver ${it.solver} · mã ${it.reason_code}
-          ${it.caveat ? `<br>⚠ ${it.caveat}` : ""}</div>
-      </div>`).join("");
-  } catch (e) {
-    body.innerHTML = `<div class="silent-box">Không gọi được trợ lý (${e.message})</div>`;
-  }
+/* ================= HUB TRỢ LÝ (không chat — cards ở cards.js) ================= */
+function renderCardHistory() {
+  $("card-history").innerHTML = Cards.history.length
+    ? Cards.history.map((h) => `<div style="padding:4px 0;border-top:1px solid var(--border-hairline)">
+        ${h.at} · <b>${h.kind}</b> — ${h.title}</div>`).join("")
+    : "chưa có";
+}
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function runDayDemo() {
+  // "Một ngày của tài xế" ~90s: brief → nhận cuốc demo → nudge (sau khi trả khách) → recap
+  $("bot-sheet").classList.add("hidden");
+  switchScreen("screen-now");
+  await Cards.brief();
+  await wait(7000);
+  if (S.tripStep === 0) await startIncomingTrip();
+  await wait(3000);
+  if (S.tripStep === 1) acceptTrip();
+  await wait(6000);
+  if (S.tripStep === 2) navNext();          // đã đến điểm đón
+  await wait(6000);
+  if (S.tripStep === 3) navNext();          // hoàn thành → tự bắn nudge (xem navNext)
+  await wait(8000);
+  await Cards.recap();
 }
 
 /* ================= TRIP LIFECYCLE DEMO (port từ demo Khánh) ================= */
@@ -278,6 +290,8 @@ function navNext() {
     $("cta-text").textContent = "Tìm cuốc demo tiếp";
     clearRoute();
     S.tripStep = 0;
+    // UX-CARDS: nudge CHỈ sau khi trả khách xong (đang dừng — NHTSA); im lặng = không card
+    Cards.nudge({ isDriving: false });
   }
 }
 
@@ -297,19 +311,17 @@ function bindEvents() {
   $("bot-fab").addEventListener("click", () => {
     $("bot-sheet").classList.remove("hidden");
     $("bot-dot").classList.add("hidden");
-    const h = document.querySelector("#advice-hours .chip.active");
-    showAdvice(parseInt(h.dataset.h, 10));
+    renderCardHistory();
   });
   $("btn-bot-close").addEventListener("click", () => $("bot-sheet").classList.add("hidden"));
   $("bot-sheet").addEventListener("click", (e) => {
     if (e.target === $("bot-sheet")) $("bot-sheet").classList.add("hidden");
   });
-  document.querySelectorAll("#advice-hours .chip").forEach((c) =>
-    c.addEventListener("click", () => {
-      document.querySelectorAll("#advice-hours .chip").forEach((x) => x.classList.remove("active"));
-      c.classList.add("active");
-      showAdvice(parseInt(c.dataset.h, 10));
-    }));
+  $("btn-day-demo").addEventListener("click", runDayDemo);
+  $("btn-show-brief").addEventListener("click", () => { $("bot-sheet").classList.add("hidden"); Cards.brief(); });
+  $("btn-show-nudge").addEventListener("click", () => { $("bot-sheet").classList.add("hidden"); Cards.nudge({ isDriving: S.tripStep >= 2 }); });
+  $("btn-show-recap").addEventListener("click", () => { $("bot-sheet").classList.add("hidden"); Cards.recap(); });
+  $("btn-adherence-refresh").addEventListener("click", refreshAdherence);
   $("btn-cta").addEventListener("click", () => {
     if (S.tripStep === 0) startIncomingTrip();
   });
@@ -326,11 +338,33 @@ function bindEvents() {
   });
 }
 
+/* ================= ADHERENCE LOG (Cài đặt) ================= */
+async function refreshAdherence() {
+  try {
+    const r = await api.adviceActions(S.driverId);
+    $("adherence-rows").innerHTML = r.actions.length
+      ? r.actions.slice(0, 12).map((a) => `
+        <div style="padding:5px 0;border-top:1px solid var(--border-hairline)">
+          <b>${{ followed: "✅ Làm theo", dismissed: "✖ Bỏ qua", expanded: "？Vì sao" }[a.action] || a.action}</b>
+          · ${a.card_kind} · ${a.date}
+          <span style="color:var(--text-muted);font-size:10.5px">· ${a.advice_id}</span></div>`).join("")
+      : "chưa có bản ghi";
+  } catch (e) {
+    $("adherence-rows").textContent = `không đọc được nhật ký (${e.message})`;
+  }
+}
+
 /* ================= INIT ================= */
 (async function init() {
   initMap();
   bindEvents();
   const dv = await api.defaultView();
+  Cards.init($("card-stack"), {
+    profile: () => ({ driverId: S.driverId, date: S.date }),
+    state: () => S.state,
+  });
   await loadProfile(dv.driver_id, dv.date);
   await fillCatalog();
+  await refreshAdherence();
+  Cards.brief();   // F1: brief tự hiện khi mở app (không cần bấm)
 })();

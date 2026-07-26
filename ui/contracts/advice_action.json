@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AdviceActionContract",
+  "description": "v1.0 (2026-07-27, DIRECTIVES §12). Đo adherence EXPLICIT: tài xế bấm nút trên card advice. Đây là MỘT trong hai đường đo — đường IMPLICIT (hành vi thật đổi sau advice) nằm ở sim/A-B (advice_given/followed events). Log local nhãn mock, không phải telemetry thật.",
+  "type": "object",
+  "properties": {
+    "advice_id": { "type": "string" },
+    "driver_id": { "type": "string" },
+    "date": { "type": "string", "description": "ngày hồ sơ đang xem (YYYY-MM-DD)" },
+    "action": { "type": "string", "enum": ["followed", "dismissed", "expanded"] },
+    "card_kind": { "type": "string", "enum": ["brief", "nudge", "recap"] },
+    "at_min": { "type": "integer", "minimum": 0, "maximum": 1440, "description": "phút trong ngày sim/demo lúc bấm" },
+    "client_ts": { "type": "string", "description": "ISO timestamp máy client (chỉ để debug, không dùng phân tích)" },
+    "is_mock": { "type": "boolean", "const": true }
+  },
+  "required": ["advice_id", "driver_id", "date", "action", "card_kind", "is_mock"]
+}
