@@ -1,7 +1,7 @@
 {
   "label": "MOCK",
   "generator": "gsm_core.mockgen.realdata v4 (multi-day continuous, D-SIM-13)",
-  "engine_commit": "317a268",
+  "engine_commit": "c1fe9a2",
   "engine_note": "hành vi sim sau SIM-1 (served ~82%, accept bám accept_base, completion ~95%, có huỷ-sau-nhận) và SIM-3 fix D (driver BIKE đọc counter sim, không suy ngược từ target)",
   "days": 90,
   "seed_base": 7000,
