@@ -63,7 +63,7 @@
         "trips_count": { "type": "integer" },
         "scenario_id": { "type": "string" },
         "seed": { "type": "integer" },
-        "data_mode": { "type": "string", "enum": ["synthetic"] },
+        "data_mode": { "type": "string", "enum": ["synthetic", "mock-realdata"] },
         "is_mock": { "type": "boolean" }
       },
       "required": ["value", "currency", "trips_count", "scenario_id", "seed", "data_mode", "is_mock"]

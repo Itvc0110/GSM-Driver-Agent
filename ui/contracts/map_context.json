@@ -5,7 +5,7 @@
   "properties": {
     "scenario_id": { "type": "string" },
     "seed": { "type": "integer" },
-    "data_mode": { "type": "string", "enum": ["synthetic"] },
+    "data_mode": { "type": "string", "enum": ["synthetic", "mock-realdata"] },
     "timestamp": { "type": "string" },
     "driver_location": {
       "type": "object",
@@ -40,9 +40,9 @@
           "name": { "type": "string" },
           "lat": { "type": "number" },
           "lng": { "type": "number" },
-          "available_ports": { "type": "integer" },
-          "total_ports": { "type": "integer" },
-          "distance_km": { "type": "number" }
+          "available_ports": { "type": ["integer", "null"], "description": "null khi nguồn (OSM) không có số cổng — không bịa" },
+          "total_ports": { "type": ["integer", "null"] },
+          "distance_km": { "type": ["number", "null"] }
         },
         "required": ["id", "name", "lat", "lng"]
       }

@@ -1,0 +1,262 @@
+/* theme.css — SINH TỪ ui/design-tokens.json (v1.0.0, 2026-07-26).
+   Đổi token thì đổi Ở FILE TOKENS trước rồi cập nhật đây (U4 có test đồng bộ).
+   Phong cách: Stitch UI của Khánh — light, cyan accent duy nhất, bo góc pill/16/24. */
+
+:root {
+  --accent: #00AFB9;
+  --accent-hover: #0d9488;
+  --accent-soft: #E0F7FA;
+  --ink: #1C1C1E;
+  --page-bg: #E8F1FA;
+  --surface: #ffffff;
+  --surface-subtle: #f8fafc;
+  --border-hairline: rgba(28, 28, 30, 0.10);
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-float: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --text-primary: #1C1C1E;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --on-accent: #ffffff;
+  --r-pill: 9999px;
+  --r-card: 16px;
+  --r-sheet: 24px;
+  --r-chip: 12px;
+  /* dataviz — màu theo ENTITY (validated 2026-07-26, xem tokens.provenance) */
+  --viz-on-trip: #1baf7a;
+  --viz-enroute: #2a78d6;
+  --viz-charge: #eda100;
+  --viz-rest: #4a3aa7;
+  --viz-relocate: #e87ba4;
+  --viz-idle: #eceff2;
+  --status-good: #0ca30c;
+  --status-warning: #fab219;
+  --status-critical: #d03b3b;
+  --polyline-base: #0f172a;
+  --polyline-top: #00AFB9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--page-bg);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+/* ---- App shell: mobile-first full-viewport; desktop = cột 420px giữa màn ---- */
+#shell {
+  position: relative;
+  height: 100dvh;
+  max-width: 420px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: var(--page-bg);
+}
+@media (min-width: 480px) {
+  #shell {
+    height: min(880px, 94dvh);
+    top: 3dvh;
+    border-radius: 32px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-hairline);
+  }
+}
+
+.screen { position: absolute; inset: 0; overflow-y: auto; padding-bottom: 92px; }
+.screen.with-map { overflow: hidden; padding-bottom: 0; }
+.hidden { display: none !important; }
+
+/* ---- Map ---- */
+#map { position: absolute; inset: 0; z-index: 0; }
+
+/* ---- Pills & floating chrome ---- */
+.top-bar {
+  position: absolute; top: 14px; left: 14px; right: 14px; z-index: 500;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+.top-bar > * { pointer-events: auto; }
+.circle-btn {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--surface); border: none; box-shadow: var(--shadow-card);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; color: var(--ink); cursor: pointer;
+}
+.pill {
+  background: var(--surface); border-radius: var(--r-pill);
+  padding: 10px 18px; box-shadow: var(--shadow-card);
+  font-weight: 700; font-size: 15px; white-space: nowrap;
+}
+.pill .sub { font-weight: 500; font-size: 10px; color: var(--text-muted); display: block; }
+.pill-soc {
+  border-radius: var(--r-pill); padding: 7px 10px;
+  color: var(--on-accent); background: var(--accent);
+  font-weight: 700; font-size: 12px; box-shadow: var(--shadow-card);
+}
+.pill-soc.low { background: var(--status-critical); }
+
+/* ---- Badge mock — BẮT BUỘC mọi màn có số ---- */
+.mock-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #fff7e0; color: #8a6100; border: 1px solid #f0dfae;
+  border-radius: var(--r-pill); padding: 3px 10px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
+}
+.mock-badge::before { content: "◦"; font-weight: 900; }
+
+/* ---- Cards ---- */
+.card {
+  background: var(--surface); border-radius: var(--r-card);
+  box-shadow: var(--shadow-card); padding: 14px;
+}
+.card h3 { font-size: 13px; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
+.card .big { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card .note { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.alert-card {
+  background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 175, 185, 0.3);
+  border-radius: var(--r-card); box-shadow: var(--shadow-card);
+  padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start;
+}
+.alert-card .ico {
+  width: 34px; height: 34px; border-radius: 50%; flex: none;
+  background: var(--accent-soft); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.alert-card b { font-size: 12.5px; }
+.alert-card p { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ---- CTA ---- */
+.cta {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 250px; margin: 0 auto; padding: 15px 0;
+  border: none; border-radius: var(--r-pill); cursor: pointer;
+  background: var(--ink); color: var(--on-accent);
+  font-family: inherit; font-weight: 700; font-size: 15px;
+  box-shadow: var(--shadow-float); transition: background 0.2s;
+}
+.cta.online { background: var(--accent); }
+
+/* ---- Bottom nav ---- */
+#bottom-nav {
+  position: absolute; bottom: 0; left: 0; right: 0; z-index: 600;
+  background: var(--surface); border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.08);
+  display: flex; justify-content: space-around;
+  padding: 10px 4px calc(12px + env(safe-area-inset-bottom));
+}
+.nav-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-family: inherit; font-size: 10px; line-height: 1.15;
+}
+.nav-btn .ni { font-size: 17px; }
+.nav-btn.active { color: var(--accent); font-weight: 700; }
+
+/* ---- FAB bot ---- */
+#bot-fab {
+  position: absolute; bottom: 108px; right: 12px; z-index: 550;
+  width: 56px; height: 56px; border-radius: 50%; border: 2px solid #fff;
+  background: var(--accent); color: var(--on-accent); font-size: 24px;
+  box-shadow: var(--shadow-float); cursor: pointer;
+}
+#bot-fab .dot {
+  position: absolute; top: 2px; right: 2px; width: 12px; height: 12px;
+  border-radius: 50%; background: var(--status-critical); border: 2px solid #fff;
+}
+
+/* ---- Bottom sheet ---- */
+.sheet-backdrop {
+  position: absolute; inset: 0; z-index: 700;
+  background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-end;
+}
+.sheet {
+  background: var(--surface); width: 100%;
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  padding: 18px 20px calc(20px + env(safe-area-inset-bottom));
+  max-height: 78%; overflow-y: auto;
+}
+.sheet .grab { width: 40px; height: 4px; border-radius: 2px; background: #e2e8f0; margin: 0 auto 14px; }
+.sheet h2 { font-size: 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sheet h2 .ico {
+  width: 38px; height: 38px; border-radius: 50%; flex: none;
+  background: var(--accent-soft); color: var(--accent);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+
+.advice-item {
+  border: 1px solid rgba(0, 175, 185, 0.3); background: #f0fdf9;
+  border-radius: var(--r-card); padding: 12px; margin-bottom: 10px;
+}
+.advice-item.info { border-color: #f0dfae; background: #fffbea; }
+.advice-item b { font-size: 13.5px; }
+.advice-item p { font-size: 12.5px; line-height: 1.55; margin-top: 5px; color: var(--text-primary); }
+.advice-item .meta { font-size: 10.5px; color: var(--text-muted); margin-top: 8px; }
+.confidence-track {
+  height: 4px; border-radius: 2px; background: #e2e8f0; margin-top: 8px; overflow: hidden;
+}
+.confidence-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+.num-table { width: 100%; font-size: 11.5px; margin-top: 8px; border-collapse: collapse; }
+.num-table td { padding: 3px 4px; border-top: 1px solid var(--border-hairline); }
+.num-table td:nth-child(2) { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.num-table td:nth-child(3) { text-align: right; color: var(--text-muted); font-size: 10px; }
+.silent-box {
+  text-align: center; padding: 22px 14px; border-radius: var(--r-card);
+  background: var(--surface-subtle); border: 1px dashed var(--border-hairline);
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+}
+.silent-box .big-ico { font-size: 30px; display: block; margin-bottom: 8px; }
+
+/* ---- Buttons ---- */
+.btn {
+  display: block; width: 100%; padding: 12px; margin-top: 12px;
+  border: none; border-radius: var(--r-card); cursor: pointer;
+  background: var(--accent); color: var(--on-accent);
+  font-family: inherit; font-weight: 700; font-size: 13px;
+}
+.btn.ghost { background: var(--surface-subtle); color: var(--text-primary); }
+.chip {
+  display: inline-block; padding: 6px 12px; border-radius: var(--r-chip);
+  border: 1px solid var(--border-hairline); background: var(--surface);
+  font-size: 11.5px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.chip.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* ---- Trip overlay (vòng đời cuốc demo) ---- */
+.trip-card {
+  position: absolute; bottom: 104px; left: 12px; right: 12px; z-index: 560;
+  background: var(--surface); border: 2px solid var(--accent);
+  border-radius: 20px; padding: 14px; box-shadow: var(--shadow-float);
+}
+.trip-card .tag {
+  background: var(--accent-soft); color: #0f766e; border-radius: var(--r-pill);
+  font-size: 10.5px; font-weight: 700; padding: 3px 10px;
+}
+.trip-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; margin-top: 8px; }
+.trip-row .wp {
+  width: 20px; height: 20px; border-radius: 50%; flex: none;
+  color: #fff; font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ---- Screens nội dung (Thu nhập, Chuyến, ...) ---- */
+.screen-pad { padding: 52px 14px 100px; }
+.screen-pad > h1 { font-size: 17px; margin-bottom: 4px; }
+.row-item {
+  background: var(--surface); border-radius: var(--r-card); box-shadow: var(--shadow-card);
+  padding: 11px 13px; margin-top: 8px; display: flex; justify-content: space-between;
+  align-items: center; gap: 8px; font-size: 12.5px;
+}
+.row-item .amt { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.section-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin: 16px 0 6px; }
+select, input[type="date"] {
+  font-family: inherit; font-size: 13px; padding: 9px 10px; width: 100%;
+  border: 1px solid var(--border-hairline); border-radius: var(--r-chip);
+  background: var(--surface); color: var(--text-primary);
+}
+.leaflet-container { font-family: inherit; }

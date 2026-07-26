@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>GSM Driver — Xanh SM (Dữ liệu mô phỏng)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div id="shell">
+
+  <!-- ============ MÀN 1: XANH NOW (map) ============ -->
+  <section id="screen-now" class="screen with-map">
+    <div id="map"></div>
+
+    <div class="top-bar">
+      <button class="circle-btn" id="btn-menu" title="Chọn tài xế / ngày">☰</button>
+      <div class="pill" id="pill-payout">
+        —<span class="sub">Thu nhập tài xế (payout) · <span class="mock-inline">mô phỏng</span></span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="pill" id="pill-trips" style="padding:10px 12px;font-size:12px">–</div>
+        <div class="pill-soc" id="pill-soc">⚡ –%</div>
+      </div>
+    </div>
+
+    <div style="position:absolute;top:74px;left:14px;right:14px;z-index:490" id="alert-slot"></div>
+
+    <div style="position:absolute;bottom:170px;left:0;right:0;z-index:480;text-align:center">
+      <span class="mock-badge">Dữ liệu mô phỏng — không phải số thật GSM</span>
+    </div>
+
+    <div id="cta-area" style="position:absolute;bottom:104px;left:14px;right:14px;z-index:500">
+      <button class="cta" id="btn-cta" title="Demo vòng đời cuốc trên lộ trình OSRM">
+        ⚡ <span id="cta-text">Mở nhận chuyến (demo)</span>
+      </button>
+    </div>
+
+    <!-- Trip lifecycle demo (port từ demo Stitch của Khánh) -->
+    <div id="trip-incoming" class="trip-card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="tag">CUỐC DEMO · lộ trình OSRM thật</span>
+        <b id="inc-km" style="color:var(--accent);font-size:12px">–</b>
+      </div>
+      <div id="inc-stops"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border-hairline)">
+        <div>
+          <div style="font-size:10px;color:var(--text-muted)">Cước phí (demo — không phải thu nhập)</div>
+          <div id="inc-fare" style="font-size:19px;font-weight:700">–</div>
+        </div>
+        <span class="tag">Tiền mặt</span>
+      </div>
+      <div class="grid-2" style="margin-top:10px">
+        <button class="btn ghost" style="margin:0" id="btn-decline">Từ chối</button>
+        <button class="btn" style="margin:0" id="btn-accept">Chấp nhận</button>
+      </div>
+    </div>
+
+    <div id="trip-active" class="trip-card hidden">
+      <span class="tag" id="nav-state">ĐANG ĐẾN ĐIỂM ĐÓN</span>
+      <div style="font-size:12px;margin-top:8px">Khách: <b id="nav-cust">–</b></div>
+      <div style="font-size:12px;margin-top:4px;color:var(--text-secondary)" id="nav-route">–</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <b id="nav-fare" style="font-size:17px">–</b>
+        <span style="font-size:10.5px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-weight:700" id="nav-km">–</span>
+      </div>
+      <button class="btn" id="btn-nav-next">ĐÃ ĐẾN NƠI ĐÓN KHÁCH</button>
+    </div>
+
+    <button id="bot-fab" title="Trợ Lý Xanh">🤖<span class="dot hidden" id="bot-dot"></span></button>
+  </section>
+
+  <!-- ============ MÀN 2: THU NHẬP ============ -->
+  <section id="screen-income" class="screen hidden">
+    <div class="screen-pad">
+      <h1>Thu nhập</h1>
+      <span class="mock-badge">Dữ liệu mô phỏng</span>
+      <div class="card" style="margin-top:12px;background:linear-gradient(135deg,var(--accent),#0d9488);color:#fff">
+        <h3 style="color:rgba(255,255,255,0.85)">Thu nhập tài xế (payout) — <span id="inc-date">–</span></h3>
+        <div class="big" id="inc-payout" style="font-size:26px">–</div>
+        <div class="note" style="color:rgba(255,255,255,0.8)" id="inc-breakdown">–</div>
+      </div>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="card">
+          <h3>Doanh thu gộp (gross)</h3>
+          <div class="big" id="inc-gross">–</div>
+          <div class="note">chưa trừ phần nền tảng</div>
+        </div>
+        <div class="card">
+          <h3>Thu nhập ròng ước tính</h3>
+          <div class="big" id="inc-net">—</div>
+          <div class="note">chưa đủ chi phí đã biết — không hiển thị số</div>
+        </div>
+      </div>
+      <div class="section-label">14 ngày gần nhất (payout/ngày)</div>
+      <div class="card"><div id="chart-income" style="height:190px"></div></div>
+      <div class="section-label">Từng ngày</div>
+      <div id="income-rows"></div>
+    </div>
+  </section>
+
+  <!-- ============ MÀN 3: CHUYẾN CỦA TÔI ============ -->
+  <section id="screen-trips" class="screen hidden">
+    <div class="screen-pad">
+      <h1>Chuyến của tôi</h1>
+      <span class="mock-badge">Phiên demo — vòng đời cuốc mô phỏng</span>
+      <div id="trip-history"><div class="silent-box" style="margin-top:12px">
+        <span class="big-ico">🛵</span>Chưa có cuốc demo nào trong phiên này.<br>
+        Sang <b>Xanh Now</b> bấm "Mở nhận chuyến" để chạy thử vòng đời cuốc.
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ============ MÀN 4: XE & PIN ============ -->
+  <section id="screen-ev" class="screen hidden">
+    <div class="screen-pad">
+      <h1>Xe &amp; Pin</h1>
+      <span class="mock-badge">Dữ liệu mô phỏng</span>
+      <div class="card" style="margin-top:12px">
+        <h3>Xe điện (đội bike mô phỏng)</h3>
+        <div class="big" id="ev-name">VinFast (bike điện)</div>
+        <div class="note" id="ev-plate">Hồ sơ mô phỏng</div>
+      </div>
+      <div class="grid-2" style="margin-top:10px">
+        <div class="card"><h3>Pin (SOC)</h3><div class="big" id="ev-soc">–</div>
+          <div class="note">ước lượng mô phỏng (proxy)</div></div>
+        <div class="card"><h3>Tầm đi còn lại</h3><div class="big" id="ev-range">–</div>
+          <div class="note">giả định ~110 km/100%</div></div>
+      </div>
+      <div class="section-label">Tủ đổi pin gần đây (OSM — vị trí thật)</div>
+      <div id="station-rows"></div>
+    </div>
+  </section>
+
+  <!-- ============ MÀN 5: CÀI ĐẶT ============ -->
+  <section id="screen-settings" class="screen hidden">
+    <div class="screen-pad">
+      <h1>Cài đặt</h1>
+      <div class="card" style="margin-top:12px">
+        <h3>Hồ sơ đang xem (dữ liệu mô phỏng 90 ngày)</h3>
+        <div class="section-label">Tài xế</div>
+        <select id="sel-driver"></select>
+        <div class="section-label">Ngày</div>
+        <select id="sel-date"></select>
+        <button class="btn" id="btn-apply-profile">Xem hồ sơ này</button>
+        <div class="note" style="margin-top:8px">
+          Đội <b>bike-sim (d-*)</b> có trợ lý S1 (policy bike). Nguồn:
+          <span id="prov-line">data/mock/realdata-v1</span>
+        </div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <h3>Đánh giá của khách</h3>
+        <div class="big" id="set-rating">–</div>
+        <div class="note" id="set-rating-note">từ sự kiện chấm sao trong mô phỏng</div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <h3>Nhiệm vụ (mission)</h3>
+        <div id="mission-rows" style="font-size:12.5px">–</div>
+      </div>
+      <div class="card" style="margin-top:10px">
+        <h3>Khu Mô phỏng (cho reviewer)</h3>
+        <div class="note">Replay đội xe · hành trình · thế giới song song A/B · độ nhạy</div>
+        <a class="btn ghost" style="text-align:center;text-decoration:none" href="mo-phong/">Mở khu Mô phỏng →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SHEET: TRỢ LÝ XANH ============ -->
+  <div id="bot-sheet" class="sheet-backdrop hidden">
+    <div class="sheet">
+      <div class="grab"></div>
+      <h2><span class="ico">🤖</span>Trợ Lý Xanh <span class="mock-badge" style="margin-left:auto">mô phỏng</span></h2>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="advice-hours">
+        <button class="chip" data-h="540">Đầu ca 9h</button>
+        <button class="chip active" data-h="840">Giữa ca 14h</button>
+        <button class="chip" data-h="1170">Cuối ca 19h30</button>
+      </div>
+      <div id="advice-body"><div class="silent-box">Đang hỏi trợ lý…</div></div>
+      <button class="btn" id="btn-bot-close">Đã hiểu</button>
+    </div>
+  </div>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-screen="screen-now"><span class="ni">⚡</span>Xanh Now</button>
+    <button class="nav-btn" data-screen="screen-income"><span class="ni">📊</span>Thu nhập</button>
+    <button class="nav-btn" data-screen="screen-trips"><span class="ni">🧾</span>Chuyến<br>của tôi</button>
+    <button class="nav-btn" data-screen="screen-ev"><span class="ni">🔋</span>Xe &amp; Pin</button>
+    <button class="nav-btn" data-screen="screen-settings"><span class="ni">⚙️</span>Cài đặt</button>
+  </nav>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

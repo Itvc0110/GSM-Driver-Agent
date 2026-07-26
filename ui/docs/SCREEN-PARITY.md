@@ -10,12 +10,12 @@ Flutter bám bảng này để bắt kịp — không ai sửa file của ngư�
 
 | Màn | Contract dùng | Endpoint | Web | Flutter (Khánh) | Ghi chú |
 |---|---|---|---|---|---|
-| **Xanh Now** (map + pills + CTA) | `driver_state` v1.1 · `map_context` v1.0 | `/api/v1/driver/state` · `/api/v1/map-context` | 🔨 U2 | ✅ v0 (data synthetic) | v1.1 additive — Flutter v0 vẫn parse được; nâng cấp: money tách gross/payout + badge "Dữ liệu mô phỏng" |
-| **Bot Trợ Lý Xanh** (bottom sheet) | `advice` v1.0 | `/api/v1/advice` | 🔨 U2 | ✅ v0 (text CỨNG) | Flutter cần thay text cứng bằng render items[] + confidence + trạng thái im lặng |
-| **Thu nhập** (thống kê ca/ngày) | `driver_state.money` + history | `/api/v1/driver/history` (U2) | 🔨 U2 | ❌ chưa có | Payout mặc định; gross ghi nhãn rõ; nguồn: mock 90 ngày |
-| **Chuyến của tôi** (vòng đời cuốc demo) | `trip_step` (giữ của Khánh) | `/api/v1/trip/step` | 🔨 U2 (port từ demo) | ❌ chưa có | Giữ interaction demo (skip/auto/reset); KHÔNG gắn advice vào cuốc cụ thể (ranh giới CLAUDE §5) |
-| **Xe & Pin** | `driver_state` (soc, range) | `/api/v1/driver/state` | 🔨 U2 (khung) | ❌ khung | |
-| **Cài đặt** | — | — | 🔨 U2 (khung) | ❌ khung | |
+| **Xanh Now** (map + pills + CTA) | `driver_state` v1.1 · `map_context` v1.0 | `/api/v1/driver/state` · `/api/v1/map-context` | ✅ U2 | ✅ v0 (data synthetic) | v1.1 additive — Flutter v0 vẫn parse được; nâng cấp cần làm: money tách gross/payout + badge "Dữ liệu mô phỏng"; demand zones giờ là SỐ ĐƠN THẬT từ bảng trips (hex×giờ) |
+| **Bot Trợ Lý Xanh** (bottom sheet) | `advice` v1.0 | `/api/v1/advice` | ✅ U2 | ✅ v0 (text CỨNG) | Web đã render items[] + confidence + bảng numbers[].source + trạng thái im lặng; Flutter thay text cứng theo đúng mẫu đó |
+| **Thu nhập** (thống kê ca/ngày) | `driver_state.money` + history | `/api/v1/driver/history` | ✅ U2 | ❌ chưa có | Payout mặc định (card cyan); gross card riêng nhãn rõ; est_net hiển thị "—" (không đủ known costs); chart Plotly 14 ngày |
+| **Chuyến của tôi** (vòng đời cuốc demo) | `trip_step` (giữ của Khánh) | `/api/v1/trip/step` | ✅ U2 | ❌ chưa có | Cước demo KHÔNG cộng vào payout (ranh giới data vs demo); không gắn advice vào cuốc cụ thể (CLAUDE §5) |
+| **Xe & Pin** | `driver_state` (soc, range) | `/api/v1/driver/state` | ✅ U2 | ❌ khung | SOC là PROXY deterministic (không có trong 13 bảng GSM) — ghi chú ngay trên màn |
+| **Cài đặt** (kèm picker hồ sơ) | catalog | `/api/v1/driver/catalog` | ✅ U2 | ❌ khung | Picker 150 driver × 90 ngày; rating + mission từ data; link khu Mô phỏng |
 | **Mô phỏng · Replay** | `replay` v1.0 | `/api/v1/sim/replay?seed=` | 🔨 U3 | ⬜ để sau (desktop-first) | Khu riêng theo chỉ thị Cường; Leaflet nội suy client |
 | **Mô phỏng · Hành trình** | `journey` v1.0 | `/api/v1/sim/journey?seed=&actor=` | 🔨 U3 | ⬜ để sau | Gantt + income curve 4 nguồn + mốc advice |
 | **Mô phỏng · A/B** | `ab_result` v1.0 | `/api/v1/sim/ab?seed=` | 🔨 U3 | ⬜ để sau | BẮT BUỘC hiện warning 1-seed |
