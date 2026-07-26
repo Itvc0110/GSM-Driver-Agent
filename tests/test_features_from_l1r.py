@@ -176,3 +176,32 @@ def test_provenance_label_follows_source(l1r, policy, sample):
     v = derive_bonus_gap_input_l1r(drv, f"{d}T18:00:00+07:00", l1r, policy)
     assert v["source"] in ("MOCK", "REAL")
     assert v["source"] == "MOCK"  # data hiện tại là mock
+
+
+# ---------- AUDIT A1 (UPDATE-065): S5-1 — view tuần không được rò tương lai ----------
+
+
+def test_weekly_view_no_future_leak(l1r, policy):
+    """`revenue_so_far` đứng ở NGÀY GIỮA tuần không được gộp doanh thu các ngày SAU đó.
+
+    Dataset fixture có đủ 8 ngày — nếu view lọc theo cả tuần thì revenue(giữa tuần)
+    == revenue(cuối tuần) → rò tương lai (S5-1)."""
+    from datetime import date as _date_cls
+    from collections import defaultdict
+    from gsm_core.features.from_l1r import derive_weekly_khoan_input_l1r
+    drv = l1r["driver_income_daily"][0]["driver_id"]
+    dates = sorted({r["order_date"] for r in l1r["driver_income_daily"]
+                    if r["driver_id"] == drv})
+    by_week: dict = defaultdict(list)
+    for d in dates:
+        iso = _date_cls.fromisoformat(d).isocalendar()
+        by_week[(iso.year, iso.week)].append(d)
+    week_dates = max(by_week.values(), key=len)   # tuần có nhiều ngày nhất trong fixture
+    assert len(week_dates) >= 3, "fixture 8 ngày phải có 1 tuần ISO chứa ≥3 ngày"
+    first, last = week_dates[0], week_dates[-1]
+    v_mid = derive_weekly_khoan_input_l1r(drv, f"{first}T23:59:00+07:00", l1r, policy)
+    v_last = derive_weekly_khoan_input_l1r(drv, f"{last}T23:59:00+07:00", l1r, policy)
+    assert v_mid["week_key"] == v_last["week_key"]
+    assert v_mid["revenue_so_far_vnd"] < v_last["revenue_so_far_vnd"], \
+        "đứng đầu tuần mà revenue bằng cuối tuần — view đang đọc TƯƠNG LAI"
+    assert v_mid["days_active"] < v_last["days_active"]

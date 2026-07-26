@@ -53,6 +53,10 @@ def solve(pi: dict) -> dict:
         numbers.append(_num(amt, "vnd", f"penalization:{p['penalization_id']}"))
     if total:
         numbers.append(_num(total, "vnd", "penalization:total"))
+    if pens:
+        # AUDIT A1 S8S9-1 (UPDATE-065): template render "(N khoản)" — N phải có trong
+        # registry, nếu không verifier V1 coi là số trần và veto cả advice F3.
+        numbers.append(_num(len(pens), "count", "penalization:count"))
 
     # rủi ro: metric đang DƯỚI hoặc SÁT ngưỡng chính sách (nêu khoảng cách cần cải thiện)
     risks = []
@@ -69,6 +73,9 @@ def solve(pi: dict) -> dict:
         elif val < lim + CLIFF_MARGIN:
             risks.append({"metric": label, "value": val, "threshold": lim, "state": "near",
                           "gap": round(val - lim, 4)})
+            # AUDIT A1 S8S9-1: nhánh 'near' cũng render threshold trong template/digest
+            # — phải đăng ký như nhánh 'below', nếu không V1 veto
+            numbers.append(_num(lim, "ratio", "policy_v:threshold"))
 
     # Quyền giải trình trực tuyến (official 15/12/2025): BẮT BUỘC trong 48 GIỜ với cuốc
     # bị nghi vấn; quá hạn ảnh hưởng tài khoản. Chỉ NHẮC quyền + hạn — không xây quy

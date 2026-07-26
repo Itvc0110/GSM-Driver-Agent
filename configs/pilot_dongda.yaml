@@ -72,7 +72,8 @@ demand:
   detour_factor: 1.3              # A4: khoảng cách thực / chim bay (đô thị ~1.3-1.4)
   drop_km_per_cell: 0.35          # A3: đường kính cell res9 (~0.35km)
   drop_softness_km: 0.5           # A3: bán kính mềm chọn cell trả
-  hour_interp: true               # A2: nội suy tuyến tính giữa mốc giờ (giảm răng cưa)
+  # (AUDIT A1 DEMAND-1: cờ `hour_interp` đã GỠ — nó là cờ chết, code chưa từng nội suy.
+  #  Muốn nội suy thật → D-SIM-19, kèm regate 30 seed vì đổi phân phối cầu.)
 
 speed_kmh:                         # world-parameters.md §2
   peak: 17                         # 6-9h, 16.5-19h

@@ -99,3 +99,18 @@ def test_evening_peak_higher_than_midday(grid, cfg, policy):
 def test_pickup_in_core(grid, cfg, policy):
     orders = generate_orders(grid, cfg, policy, seed=3)
     assert all(grid.is_core(o.pickup_cell) for o in orders)
+
+
+# ---------- AUDIT A1 DEMAND-1 (UPDATE-065): vệ sinh config — không nuôi cờ chết ----------
+
+
+def test_no_dead_demand_config_keys():
+    """Mọi key dưới `demand:` trong config PHẢI được demand.py đọc — cờ chết làm
+    người chỉnh config tưởng mình đang đổi hành vi (hour_interp từng như vậy)."""
+    from pathlib import Path
+    import yaml
+    root = Path(__file__).resolve().parent.parent
+    cfg = yaml.safe_load((root / "configs" / "pilot_dongda.yaml").read_text(encoding="utf-8"))
+    src = (root / "src" / "gsm_sim" / "demand.py").read_text(encoding="utf-8")
+    dead = [k for k in cfg["demand"] if f"demand.{k}" not in src]
+    assert dead == [], f"key demand.* không được code đọc (cờ chết): {dead}"

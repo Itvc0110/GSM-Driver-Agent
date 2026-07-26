@@ -135,8 +135,11 @@ def advice(driver_id: str, date: str, now_min: int,
     numbers = [{"name": n, "value": v, "unit": u, "source": s} for n, v, u, s in [
         ("diem_con_thieu", sol["gap_points"], "điểm", "MOCK"),
         ("thuong_moc_ke", sol["tier_vnd"], "vnd", "MOCK"),
-        ("gio_can_them", sol["hours_needed"], "giờ", _num_source(report["numbers"][2]["source"])),
     ]]
+    # AUDIT S1: hours_needed = None nghĩa là "không đạt được trong hôm nay" — không ép thành số
+    if sol.get("hours_needed") is not None:
+        numbers.append({"name": "gio_can_them", "value": sol["hours_needed"], "unit": "giờ",
+                        "source": _num_source(report["numbers"][2]["source"])})
     if sol.get("trips_needed") is not None:
         numbers.append({"name": "cuoc_can_them", "value": sol["trips_needed"],
                         "unit": "cuốc", "source": "SOLVER"})

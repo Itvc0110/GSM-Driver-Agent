@@ -201,14 +201,17 @@ def derive_weekly_khoan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy:
         week_start, week_end = monday.isoformat(), (monday + timedelta(days=6)).isoformat()
 
     field = "total_fee" if money_basis == "gross" else "commission"
+    # AUDIT A1 S5-1 (UPDATE-065): "so_far" nghĩa là TỚI t_now — cắt tại `today`, nếu không
+    # dataset chứa cả tuần (mock 90 ngày) sẽ RÒ TƯƠNG LAI vào revenue/days_active/avg_rate.
+    cutoff = min(today, week_end)
     in_week = [r for r in _rows(l1r, "driver_income_daily")
-               if r["driver_id"] == driver_id and week_start <= r["order_date"] <= week_end]
+               if r["driver_id"] == driver_id and week_start <= r["order_date"] <= cutoff]
     revenue = sum(int(r[field]) for r in in_week)
     days_active = sum(1 for r in in_week if r["total_order"] > 0)
 
-    # giờ ĐO ĐƯỢC trong tuần → avg revenue/giờ (null nếu chưa đủ dữ liệu)
+    # giờ ĐO ĐƯỢC trong tuần (tới t_now) → avg revenue/giờ (null nếu chưa đủ dữ liệu)
     onl_week = [r for r in _rows(l1r, "driver_online_hours_sap_id")
-                if r["driver_id"] == driver_id and week_start <= r["local_date"] <= week_end]
+                if r["driver_id"] == driver_id and week_start <= r["local_date"] <= cutoff]
     online_h = sum(float(r["online_time"]) for r in onl_week)
     avg_rev_per_hour = round(revenue / online_h, 2) if online_h > 0 else None
 

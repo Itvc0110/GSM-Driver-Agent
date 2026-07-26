@@ -321,3 +321,37 @@ def test_pipeline_f3_end_to_end(reg, tmp_path):
     for w in ACCUSATION_WORDS + EVASION_WORDS:
         assert w not in msg, f"message vi phạm guardrail: '{w}'"
     assert "chưa phải kết luận vi phạm" in advice["message"]
+
+
+# ---------- AUDIT A1 S8S9-1 (UPDATE-065): số trong câu penalty phải neo registry ----------
+
+
+def test_penalty_sentence_survives_v1_bare_number_check():
+    """Template F3 render `penalty_count` và threshold nhánh 'near' — nếu không neo
+    numbers_registry thì V1 veto TOÀN BỘ advice F3 có khoản trừ (fail-closed thành
+    câm). Test gọi thẳng check_bare_numbers trên câu template."""
+    from gsm_core.solvers.penalty_explain import solve as solve_s8
+    from gsm_core.advisor.templates import render_template
+    from gsm_core.advisor.verifier import check_bare_numbers
+    from gsm_core.vn_format import render_number_vn
+
+    pi = {
+        "schema_version": "1.0.0", "driver_id": "d-9",
+        "t_now": "2026-07-05T21:00:00+07:00", "view_version": "1.0.0",
+        "penalties": [
+            {"penalization_id": "p1", "penalty_type": "cancel", "amount_vnd": 50000, "status": "applied"},
+            {"penalization_id": "p2", "penalty_type": "other", "amount_vnd": 20000, "status": "applied"},
+            {"penalization_id": "p3", "penalty_type": "cancel", "amount_vnd": 30000, "status": "applied"},
+        ],
+        # NEAR threshold (0.86 sát 0.85) — nhánh 'near' KHÔNG register lim (bug gốc)
+        "rates": {"acceptance": 0.86, "fulfillment": 0.95},
+        "thresholds": {"min_acceptance": 0.85, "min_completion": 0.85},
+        "khoan_gap_vnd": None,
+    }
+    rep = solve_s8(pi)
+    assert rep["solution"]["notable"] and rep["solution"]["penalty_count"] == 3
+    reg = {f"N{i}": n for i, n in enumerate(rep["numbers"])}
+    rendered = [render_number_vn(n["value"], n["unit"]) for n in reg.values()]
+    out = render_template("F3", [rep], [], reg)
+    errors = check_bare_numbers(out["message"], rendered)
+    assert errors == [], f"câu penalty chứa số trần không trace được: {errors}\nMSG: {out['message']}"

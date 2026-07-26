@@ -181,3 +181,44 @@ def test_already_max_tier(policy):
     r = solve(_gap_input(points_now=210), policy)
     assert r["solution"].get("already_maxed") is True
     assert r["infeasible_reason"] is None
+
+
+# ---------- AUDIT A1 (UPDATE-065): S1-1/2/3/4/5 — failing-first ----------
+
+
+def test_already_maxed_below_threshold_flags_risk(policy):
+    """S1-1: đã đủ điểm mốc cao nhất NHƯNG acceptance dưới ngưỡng → thưởng SẼ MẤT.
+    Solver cũ trả feasible=True vô điều kiện — nói dối tài xế."""
+    r = solve(_gap_input(points_now=210, acceptance=0.80), policy)
+    assert r["solution"].get("already_maxed") is True
+    assert r["solution"]["feasible"] is False, "dưới ngưỡng tỷ lệ thì thưởng KHÔNG được trả"
+    assert "nhận" in (r["infeasible_reason"] or "")
+
+
+def test_after_point_window_infeasible(policy):
+    """S1-3: 22h30 — NGOÀI khung tính điểm (6-21h), quỹ giờ còn lại cũng ngoài khung.
+    Solver cũ dùng point_normal=5 làm ppt → báo feasible cho điểm không thể kiếm."""
+    r = solve(_gap_input(t_now="2026-07-01T22:30:00+07:00", hours_budget=1.0,
+                         hist={"offpeak": 15.0}), policy)
+    assert r["solution"]["feasible"] is False
+    assert "khung" in (r["infeasible_reason"] or "").lower()
+
+
+def test_blended_rate_uses_remaining_window(policy):
+    """S1-2/S1-5: 15h00 (offpeak), quỹ 3h phủ 16-17h PEAK. Rate phải là hỗn hợp
+    theo giờ còn lại, không phải rate của bucket tại t_now.
+    Walk: 15-16h @15đ/h → 15đ; 16h+ @25đ/h → đạt gap 50đ tại ~2.4h ≤ 3h → FEASIBLE.
+    Solver cũ: 50/15 = 3.33h > 3h → báo infeasible SAI."""
+    r = solve(_gap_input(points_now=110, hours_budget=3.0,
+                         t_now="2026-07-01T15:00:00+07:00",
+                         hist={"offpeak": 15.0, "peak": 25.0}), policy)
+    assert r["solution"]["feasible"] is True
+    assert r["solution"]["hours_needed"] == pytest.approx(2.4, abs=0.05)
+
+
+def test_fallback_rate_uses_measured_trips_per_hour(policy):
+    """S1-4: fallback lý thuyết phải dùng 1.5 cuốc/giờ (số ĐO trong repo),
+    không phải 3.0 bịa — 18h offpeak ppt=5 → rate 7.5đ/h."""
+    r = solve(_gap_input(hist={}), policy)
+    rate_nums = [n for n in r["numbers"] if n["unit"] == "points_per_hour"]
+    assert rate_nums and rate_nums[0]["value"] == pytest.approx(7.5, abs=0.01)

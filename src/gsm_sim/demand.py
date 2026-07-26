@@ -119,7 +119,10 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
     pat_mu = math.log(pat_med)
 
     detour_f = float(cfg.get("demand.detour_factor", 1.3))   # fallback khi matrix thiếu cặp
-    interp = bool(cfg.get("demand.hour_interp", False))
+    # AUDIT A1 DEMAND-1 (UPDATE-065): cờ `demand.hour_interp` là cờ CHẾT — đọc rồi không
+    # dùng, trong khi config khai true kèm chú thích "nội suy" (nói dối người đọc config).
+    # Đã gỡ cả hai phía; nội suy cường độ giữa mốc giờ nếu muốn là việc CALIBRATION có
+    # regate 30 seed (ghi DEFERRED D-SIM-19), không phải flip cờ.
     hours_sorted = sorted(hour_share.keys())
 
     orders: list[Order] = []
@@ -132,7 +135,7 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
         n_h = int(rng.poisson(lam))
         for _ in range(n_h):
             t_min = hour * 60 + rng.uniform(0, 60)
-            # A2: nội suy cường độ giữa giờ → rải theo trọng số (giảm răng cửa biên giờ)
+            # t rải ĐỀU trong giờ (không nội suy cường độ giữa mốc giờ — xem D-SIM-19)
             pickup = _sample_pickup(cells, base_probs, grid, env, t_min, rng)
             target_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
             drop = _sample_drop(grid, pickup, target_km, buffer_k, km_per_cell, softness, rng)

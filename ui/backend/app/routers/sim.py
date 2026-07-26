@@ -141,6 +141,22 @@ def get_ab(seed: int = Query(1000, ge=0)):
     d_others = sb["others_payout_vnd"] - sa["others_payout_vnd"]
     n_advice = sum(1 for e in rb.events
                    if e.actor_id == aid and e.kind.startswith("advice_"))
+    # AUDIT A1 STATS-2 (UPDATE-065): guardrail per-cell THẬT thay vì tổng chợ dán nhãn
+    # "worst_cell". Hoàn thành = event `dropoff` (mang order_id) → map về PICKUP cell.
+    from collections import Counter
+
+    def _served_by_cell(r):
+        pick = {o.order_id: o.pickup_cell for o in r.orders}
+        return Counter(pick[e.detail["order_id"]] for e in r.events
+                       if e.kind == "dropoff" and e.detail.get("order_id") in pick)
+
+    served_a, served_b = _served_by_cell(ra), _served_by_cell(rb)
+    cell_delta = {c: served_b.get(c, 0) - served_a.get(c, 0)
+                  for c in set(served_a) | set(served_b)}
+    worst_cell_delta = min(cell_delta.values()) if cell_delta else 0
+    # ngưỡng cờ −3 đơn/cell là NGƯỠNG THÔ CHO DEMO 1-SEED (nhiễu Poisson 1 ngày);
+    # kết luận hệ thống thật nằm ở sweep 30-seed (tab Độ nhạy) — warning_text đã nói rõ
+    flagged = sorted(c for c, d in cell_delta.items() if d <= -3)
     return {
         "seed": seed, "data_mode": "sim-engine", "is_mock": True,
         "channel": "all (accept_lift + shift_extend + rest_window + shift_plan)",
@@ -151,9 +167,9 @@ def get_ab(seed: int = Query(1000, ge=0)):
             a.archetype for a in ra.actors if a.actor_id == aid),
             "payout_a_vnd": ma["payout_vnd"], "payout_b_vnd": mb["payout_vnd"],
             "delta_vnd": mb["payout_vnd"] - ma["payout_vnd"]}],
-        "guardrail": {"worst_cell_delta_served": d_served,
-                      "flagged_cells": [],
-                      "ok": d_served >= -2 and d_others > -50_000},
+        "guardrail": {"worst_cell_delta_served": worst_cell_delta,
+                      "flagged_cells": flagged,
+                      "ok": not flagged and d_others > -50_000},
         "metrics_a": ma, "metrics_b": mb,
         "income_curves": {"a": [[float(t), int(v)] for t, v in ja.income_curve],
                           "b": [[float(t), int(v)] for t, v in jb.income_curve]},

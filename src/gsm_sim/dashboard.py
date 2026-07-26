@@ -98,25 +98,52 @@ seed = st.sidebar.number_input("Seed", 0, 9999, 1)
 
 overrides: dict = {"demand": {}, "actors": {}, "dispatcher": {}, "behavior": {}, "environment": {}}
 
+# AUDIT A1 BEHAV-2 (UPDATE-065): default slider = giá trị CONFIG đã hiệu chỉnh —
+# hardcode cũ (center 6000, n 50, eta 8...) làm mọi run dashboard chạy kinh tế học SIM-1.
+from gsm_sim.dashboard_defaults import SLIDER_KEYS, slider_defaults  # noqa: E402
+
+_DEF = slider_defaults(base)
+_RNG = SLIDER_KEYS
+
 with st.sidebar.expander("📦 Nhu cầu (demand)", expanded=True):
-    overrides["demand"]["orders_per_day"] = st.slider("Đơn/ngày (kỳ vọng)", 600, 2400, 1200, step=100)
-    overrides["demand"]["trip_km_median"] = st.slider("Quãng đường median (km)", 2.0, 6.0, 3.5, step=0.1)
-    overrides["demand"]["detour_factor"] = st.slider("Hệ số đường vòng (detour)", 1.0, 1.6, 1.3, step=0.05,
-                                                      help="A4: quãng đường thực / chim bay. Đô thị ~1.3–1.4.")
+    lo, hi = _RNG["demand.orders_per_day"]
+    overrides["demand"]["orders_per_day"] = st.slider(
+        "Đơn/ngày (kỳ vọng)", int(lo), int(hi), int(_DEF["demand.orders_per_day"]), step=100)
+    lo, hi = _RNG["demand.trip_km_median"]
+    overrides["demand"]["trip_km_median"] = st.slider(
+        "Quãng đường median (km)", lo, hi, float(_DEF["demand.trip_km_median"]), step=0.1)
+    lo, hi = _RNG["demand.detour_factor"]
+    overrides["demand"]["detour_factor"] = st.slider(
+        "Hệ số detour FALLBACK (đường thật đã dùng OSRM)", lo, hi,
+        float(_DEF["demand.detour_factor"]), step=0.05,
+        help="Chỉ áp cho cặp cell NGOÀI ma trận OSRM (fallback) — factor thật median 1.46.")
 
 with st.sidebar.expander("🛵 Tài xế (actors)"):
-    overrides["actors"]["n"] = st.slider("Số tài xế", 20, 100, 50, step=5)
+    lo, hi = _RNG["actors.n"]
+    overrides["actors"]["n"] = st.slider("Số tài xế", int(lo), int(hi), int(_DEF["actors.n"]), step=5)
 
 with st.sidebar.expander("🎯 Dispatcher"):
-    overrides["dispatcher"]["eta_max_min"] = st.slider("ETA max (phút)", 4.0, 15.0, 8.0, step=0.5)
-    overrides["dispatcher"]["candidate_ring_k"] = st.slider("Bán kính tìm tài xế (rings res9)", 2, 8, 4)
-    overrides["dispatcher"]["patience_median_min"] = st.slider("Kiên nhẫn khách median (phút)", 1.0, 8.0, 3.0, step=0.5,
-                                                               help="Khách hủy nếu chưa match sau ~ lognormal(median).")
+    lo, hi = _RNG["dispatcher.eta_max_min"]
+    overrides["dispatcher"]["eta_max_min"] = st.slider(
+        "ETA max (phút)", lo, hi, float(_DEF["dispatcher.eta_max_min"]), step=0.5)
+    lo, hi = _RNG["dispatcher.candidate_ring_k"]
+    overrides["dispatcher"]["candidate_ring_k"] = st.slider(
+        "Bán kính tìm tài xế (rings res9)", int(lo), int(hi), int(_DEF["dispatcher.candidate_ring_k"]))
+    lo, hi = _RNG["dispatcher.patience_median_min"]
+    overrides["dispatcher"]["patience_median_min"] = st.slider(
+        "Kiên nhẫn khách median (phút)", lo, hi, float(_DEF["dispatcher.patience_median_min"]),
+        step=0.5, help="Khách hủy nếu chưa match sau ~ lognormal(median).")
 
 with st.sidebar.expander("🤝 Hành vi nhận đơn (behavior)"):
-    overrides["behavior"]["accept_logit_center_vnd"] = st.slider("Ngưỡng net hấp dẫn (đ)", 2000, 12000, 6000, step=500,
-                                                                 help="A5: net cao hơn ngưỡng → xác suất nhận > 50%.")
-    overrides["behavior"]["accept_cost_per_pickup_km_vnd"] = st.slider("Chi phí cảm nhận /km đón (đ)", 1000, 6000, 3000, step=500)
+    lo, hi = _RNG["behavior.accept_logit_center_vnd"]
+    overrides["behavior"]["accept_logit_center_vnd"] = st.slider(
+        "Ngưỡng net hấp dẫn (đ)", int(lo), int(hi),
+        int(_DEF["behavior.accept_logit_center_vnd"]), step=500,
+        help="A5: net cao hơn ngưỡng → xác suất nhận > 50%. Đã re-baseline theo đường THẬT (21.2k).")
+    lo, hi = _RNG["behavior.accept_cost_per_pickup_km_vnd"]
+    overrides["behavior"]["accept_cost_per_pickup_km_vnd"] = st.slider(
+        "Chi phí cảm nhận /km đón (đ)", int(lo), int(hi),
+        int(_DEF["behavior.accept_cost_per_pickup_km_vnd"]), step=500)
 
 # ---------- Sidebar: kịch bản MÔI TRƯỜNG ----------
 

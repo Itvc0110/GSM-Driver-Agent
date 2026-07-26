@@ -119,3 +119,16 @@ def test_sim_ab_matches_contract_and_guardrail_fields():
     assert "1 seed" in body["warning_text"], "warning đọc-số bắt buộc bị mất"
     t = body["target_actors"][0]
     assert t["delta_vnd"] == t["payout_b_vnd"] - t["payout_a_vnd"]
+
+
+def test_sim_ab_guardrail_is_real_per_cell():
+    """AUDIT A1 STATS-2: guardrail phải là số per-cell THẬT — worst_cell là MIN của
+    delta theo cell (không phải tổng chợ), flagged nhất quán với worst."""
+    body = client.get("/api/v1/sim/ab?seed=1000").json()
+    g = body["guardrail"]
+    assert isinstance(g["flagged_cells"], list)
+    if g["flagged_cells"]:
+        assert g["worst_cell_delta_served"] <= -3
+        assert g["ok"] is False, "có cell bị cờ thì không được nói 'ổn'"
+    else:
+        assert g["worst_cell_delta_served"] > -3

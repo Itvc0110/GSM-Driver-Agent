@@ -161,7 +161,10 @@ def test_end_to_end_from_realdata(reg, policy_with_quota):
 
 
 def test_view_gross_matches_income_sum(policy_with_quota):
-    """revenue_so_far = Σ total_fee (GROSS) trong tuần — đúng quyết định (d)."""
+    """revenue_so_far = Σ total_fee (GROSS) trong tuần TÍNH ĐẾN t_now — quyết định (d).
+
+    AUDIT A1 S5-1 (UPDATE-065): bản cũ của test này cộng CẢ TUẦN (kể cả ngày sau
+    t_now) — chính là hiện thân của bug rò tương lai; kỳ vọng đúng phải cắt tại today."""
     import tempfile
     with tempfile.TemporaryDirectory() as td:
         tables = generate_realdata(days=8, seed_base=401, out_dir=Path(td))["tables"]
@@ -169,5 +172,9 @@ def test_view_gross_matches_income_sum(policy_with_quota):
     d = tables["driver_income_daily"][0]["order_date"]
     v = derive_weekly_khoan_input_l1r(drv, f"{d}T18:00:00+07:00", tables, policy_with_quota)
     expected = sum(r["total_fee"] for r in tables["driver_income_daily"]
-                   if r["driver_id"] == drv and v["week_start"] <= r["order_date"] <= v["week_end"])
+                   if r["driver_id"] == drv and v["week_start"] <= r["order_date"] <= d)
     assert v["revenue_so_far_vnd"] == expected
+    leaked = sum(r["total_fee"] for r in tables["driver_income_daily"]
+                 if r["driver_id"] == drv and d < r["order_date"] <= v["week_end"])
+    if leaked:
+        assert v["revenue_so_far_vnd"] < expected + leaked, "vẫn rò doanh thu tương lai"

@@ -108,11 +108,18 @@ def _penalty_sentence(solver_reports: list[dict], reg: dict) -> str:
     total = _vn(reg, sol.get("total_deducted_vnd"), "vnd")
     s = ""
     if total and sol.get("penalty_count"):
-        s += f" Kỳ này anh/chị bị trừ tổng {total} ({sol['penalty_count']} khoản)."
+        # AUDIT A1 S8S9-1 (UPDATE-065): count phải neo registry như mọi số khác
+        # (bài học BUG-PI5d-01) — không trace được thì bỏ "(N khoản)", giữ tổng.
+        cnt = _vn(reg, sol["penalty_count"], "count")
+        s += (f" Kỳ này anh/chị bị trừ tổng {total} ({cnt} khoản)." if cnt
+              else f" Kỳ này anh/chị bị trừ tổng {total}.")
     for risk in (sol.get("risks") or [])[:1]:
         state = "đang dưới" if risk["state"] == "below" else "đang sát"
-        s += (f" {risk['metric'].capitalize()} {state} mức tối thiểu "
-              f"{risk['threshold']:.0%} theo chính sách.")
+        th = _vn(reg, risk["threshold"], "ratio")
+        if th:
+            s += f" {risk['metric'].capitalize()} {state} mức tối thiểu {th} theo chính sách."
+        else:
+            s += f" {risk['metric'].capitalize()} {state} mức tối thiểu theo chính sách."
     acts = sol.get("actions") or []
     if acts:
         s += f" Để cải thiện: {acts[0]}."
