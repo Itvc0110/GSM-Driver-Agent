@@ -222,5 +222,9 @@
     "served_guard": 0.0058
    }
   }
+ },
+ "_meta": {
+  "STALE": true,
+  "note": "AUDIT UPDATE-069: artifact này sinh TRƯỚC các fix STATS-3/4/5/7 và S2-bundle — max_realized_accept lạc quan (0.98 vs anchor đo 0.93 tại lift 0.15), significant chưa gate n>=30 (P2 5-seed), nhãn P2_silence_check đã bị data bác, thiếu n_advice_events. Con số vẫn đọc THAM KHẢO XU HƯỚNG được nhưng KHÔNG trích dẫn làm kết luận. Chạy lại scripts/run_sensitivity.py SAU khi chốt đề án ĐA-01 (estimator)."
  }
 }

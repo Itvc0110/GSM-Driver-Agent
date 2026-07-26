@@ -267,9 +267,11 @@ async function runAB() {
           <h3>B (theo trợ lý)</h3><div class="big">${fmtVnd(t.payout_b_vnd)}</div>
           <div class="note">${ab.delta.advice_events} sự kiện advice</div></div>
         <div class="card" style="box-shadow:none;border:1px solid var(--border-hairline)">
-          <h3>Guardrail hệ thống</h3>
-          <div class="big">${g.ok ? "✅ ổn" : "⚠ xấu đi"}</div>
-          <div class="note">Δ đơn hoàn thành toàn chợ: ${ab.delta.served_total}</div></div>
+          <h3>Guardrail hệ thống (quan sát)</h3>
+          <div class="big">${g.ok === null ? "— (1 seed)" : g.ok ? "✅ ổn" : "⚠ xấu đi"}</div>
+          <div class="note">worst-cell Δ served: ${g.worst_cell_delta_served}
+            · cell bị soi: ${g.flagged_cells.length}
+            · phán quyết thật: tab Độ nhạy (30 seed)</div></div>
       </div>
       <div class="note" style="font-size:11px;color:var(--text-muted);margin-top:8px">
         Kênh: ${ab.channel} · CRN cùng seed — khác biệt duy nhất là advice.</div>`;
@@ -299,7 +301,12 @@ async function loadSweep() {
   try {
     const sw = await get("/api/v1/sim/sweep");
     panel.innerHTML = "";
+    if (sw._meta?.STALE) {
+      panel.insertAdjacentHTML("beforeend",
+        `<div class="warn-strip">⚠ Artifact sweep này STALE — ${sw._meta.note}</div>`);
+    }
     for (const [arch, data] of Object.entries(sw)) {
+      if (arch.startsWith("_")) continue;
       if (!data.cells) {
         panel.insertAdjacentHTML("beforeend", `<div class="section-label">${arch}</div>
           <div class="note" style="font-size:12px">${JSON.stringify(data)}</div>`);

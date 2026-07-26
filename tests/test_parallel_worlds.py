@@ -148,3 +148,32 @@ def test_lift_does_not_change_rng_draw_count(cfg, target):
     rb = run_once(_cfg_with(cfg, enabled=True, actor_id=target,
                             channels=CHANNEL_LADDER["accept_lift"]), SEED)
     assert len(ra.orders) == len(rb.orders)
+
+
+# ---------- AUDIT STATS-5 (UPDATE-069): significant phải gate theo n ----------
+
+
+def test_significant_requires_min_seeds():
+    """n nhỏ → bootstrap CI degenerate (n=1: CI rộng 0 ⇒ mọi Δ≠0 'significant').
+    compare() phải trả significant=False + n_insufficient=True khi n < 30."""
+    from gsm_sim.parallel import PairResult, compare, bootstrap_ci
+    lo, hi = bootstrap_ci([12345.0])
+    assert lo == hi == 12345.0, "degenerate case nền tảng của bug"
+    pairs = [PairResult(seed=1, actor_id=0,
+                        a={"payout_vnd": 0}, b={"payout_vnd": 12345},
+                        system_a={"served_rate": 0.8}, system_b={"served_rate": 0.8})]
+    c = compare(pairs)
+    assert c["n_insufficient"] is True
+    assert c["driver"]["payout_vnd"]["significant"] is False, \
+        "1 seed mà significant=True — chuẩn ≥30 seed CLAUDE §4b bị vi phạm"
+
+
+def test_significant_allowed_at_30_seeds():
+    from gsm_sim.parallel import PairResult, compare
+    pairs = [PairResult(seed=i, actor_id=0,
+                        a={"payout_vnd": 0}, b={"payout_vnd": 10_000 + i * 10},
+                        system_a={"served_rate": 0.8}, system_b={"served_rate": 0.8})
+             for i in range(30)]
+    c = compare(pairs)
+    assert c["n_insufficient"] is False
+    assert c["driver"]["payout_vnd"]["significant"] is True

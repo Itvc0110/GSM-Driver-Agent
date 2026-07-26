@@ -167,9 +167,12 @@ def get_ab(seed: int = Query(1000, ge=0)):
             a.archetype for a in ra.actors if a.actor_id == aid),
             "payout_a_vnd": ma["payout_vnd"], "payout_b_vnd": mb["payout_vnd"],
             "delta_vnd": mb["payout_vnd"] - ma["payout_vnd"]}],
+        # AUDIT STATS-1 (UPDATE-069): 1 seed KHÔNG đủ để phán "ổn/xấu" — ok=null, chỉ đưa
+        # số quan sát; ngưỡng -50k cũ là số bịa đã gỡ. Kết luận hệ thống: tab Độ nhạy (30 seed).
         "guardrail": {"worst_cell_delta_served": worst_cell_delta,
                       "flagged_cells": flagged,
-                      "ok": not flagged and d_others > -50_000},
+                      "others_payout_delta_vnd": d_others,
+                      "ok": None},
         "metrics_a": ma, "metrics_b": mb,
         "income_curves": {"a": [[float(t), int(v)] for t, v in ja.income_curve],
                           "b": [[float(t), int(v)] for t, v in jb.income_curve]},

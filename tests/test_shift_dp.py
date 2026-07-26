@@ -185,3 +185,78 @@ def test_derive_no_future_leak(policy):
     fc_full = {f["bucket"]: f["expected_orders"] for f in spi_full["demand_forecast"]}
     fc_cut = {f["bucket"]: f["expected_orders"] for f in spi_cut["demand_forecast"]}
     assert fc_full == fc_cut, "forecast phụ thuộc realized hôm nay = future leak"
+
+
+# ---------- AUDIT A1 verify-11 (UPDATE-069): S2-2/3/6/7 — failing-first ----------
+
+
+def _spi_multi_cell(policy):
+    """3 cell × 4 bucket 17-20h — đúng shape producer thật (bridge top-3 cell, l1r top_cells=3).
+    Demand thật mỗi bucket = tổng 3 cell: [4.5, 3.6, 3.0, 1.8]."""
+    fc = []
+    per_cell = {17: [2.0, 1.5, 1.0], 18: [1.8, 1.2, 0.6], 19: [1.5, 1.0, 0.5], 20: [0.8, 0.6, 0.4]}
+    for h, vals in per_cell.items():
+        for i, v in enumerate(vals):
+            fc.append({"bucket": f"2026-07-01T{h:02d}:00:00+07:00", "cell": f"c{i}",
+                       "expected_orders": v})
+    return {"schema_version": "1.0.0", "driver_id": "d-1",
+            "t_now": "2026-07-01T17:00:00+07:00", "buckets_remaining": 4,
+            "points_now": 0, "soc_pct": 90.0, "demand_forecast": fc,
+            "view_version": "1.0.0", "source": "MOCK"}
+
+
+def test_forecast_groups_by_bucket_not_index(policy):
+    """S2-2 (CAO, sai ×2): 3 dòng/bucket phải được GỘP theo timestamp — không đọc theo index.
+    Nếu đọc index: hrs=[17,17,17,18], demand 19-20h biến mất, E[payout] ~nửa sự thật."""
+    from gsm_core.solvers.shift_dp import _forecast_arrays, DEFAULT_PARAMS
+    p = {**DEFAULT_PARAMS, "service_min_per_trip": 5.0}   # cap rộng để nhìn demand gộp thô
+    B, eo, hrs, buckets = _forecast_arrays(_spi_multi_cell(policy), p, 1.0)
+    assert hrs == [17, 18, 19, 20], f"bucket giờ lệch: {hrs}"
+    assert eo == pytest.approx([4.5, 3.6, 3.0, 1.8]), f"demand không được gộp theo cell: {eo}"
+    assert all(b and b[11:13] == f"{h}" for b, h in zip(buckets, ("17", "18", "19", "20")))
+
+
+def test_schedule_covers_all_buckets_multicell(policy):
+    from gsm_core.solvers.shift_dp import solve
+    r = solve(_spi_multi_cell(policy), policy)
+    hours = {s["bucket"][11:13] for s in r["solution"]["schedule"] if s["bucket"]}
+    assert hours == {"17", "18", "19", "20"}, f"schedule mất bucket: {hours}"
+
+
+def test_terminal_bonus_gated_by_rates(policy):
+    """S2-3 (CAO): tài xế dưới ngưỡng tỷ lệ → terminal bonus KHÔNG được cộng vào E[payout]
+    (cùng chính sách với S1-1). Truyền tỷ lệ qua params."""
+    from gsm_core.solvers.shift_dp import solve
+    spi = {**_spi_multi_cell(policy), "points_now": 150}   # điểm đã sát mốc — thưởng CÓ giá trị
+    ok = solve(spi, policy, params={"acceptance_rate": 0.95, "completion_rate": 0.95})
+    bad = solve(spi, policy, params={"acceptance_rate": 0.70, "completion_rate": 0.95})
+    assert ok["solution"]["projected_bonus_tier"] > 0, "fixture phải có thưởng thật để test gate"
+    assert bad["solution"]["projected_bonus_tier"] == 0, "dưới ngưỡng vẫn hứa mốc thưởng"
+    assert bad["solution"]["expected_payout"] < ok["solution"]["expected_payout"]
+    assert any("ngưỡng" in c for c in bad["caveats"])
+
+
+def test_required_rest_respects_bucket_minutes(policy):
+    """S2-6: nghỉ tối thiểu phải theo PHÚT thật của bucket (60' hay 30'), không hardcode 30."""
+    from gsm_core.solvers.shift_dp import _required_rest, DEFAULT_PARAMS
+    p30 = {**DEFAULT_PARAMS, "bucket_min": 30}
+    p60 = {**DEFAULT_PARAMS, "bucket_min": 60}
+    # ca 12h: 24 bucket×30' → 3 lần nghỉ; 12 bucket×60' → cũng phải ~3 lần (12h/4h)
+    assert _required_rest(24, p30) == 3
+    assert _required_rest(12, p60) == 3, "bucket 60' bị tính như 30' → nghỉ thiếu một nửa"
+
+
+def test_expected_trips_capped_by_service_time(policy):
+    """S2-7 (mitigation hẹp): kỳ vọng cuốc/bucket không thể vượt sức chứa thời gian phục vụ
+    (~25'/cuốc) — demand CẢ CELL không thể dồn hết vào 1 tài xế."""
+    from gsm_core.solvers.shift_dp import solve
+    spi = _spi_multi_cell(policy)
+    for row in spi["demand_forecast"]:
+        row["expected_orders"] = 40.0   # demand phi lý — 120 đơn/bucket sau gộp
+    r = solve(spi, policy, params={"bucket_min": 60})
+    ppo_max_trips = 60 / 25.0
+    per_bucket_pay = r["solution"]["expected_payout"] / max(1, len(r["solution"]["schedule"]))
+    from gsm_core.solvers.shift_dp import _payout_per_order, DEFAULT_PARAMS
+    assert per_bucket_pay <= _payout_per_order(policy, DEFAULT_PARAMS["avg_dist_km"]) \
+        * ppo_max_trips * 1.5 + policy.bonus_at(10**6), \
+        "E[payout] phồng theo demand cả cell — thiếu cap sức chứa"

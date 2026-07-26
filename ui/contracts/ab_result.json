@@ -34,11 +34,12 @@
     },
     "guardrail": {
       "type": "object",
-      "description": "hệ thống không được xấu đi: served theo cell",
+      "description": "quan sát per-cell — v1.1 (AUDIT STATS-1): 1 seed KHÔNG đủ phán 'ổn/xấu' ⇒ ok=null; verdict hệ thống thật nằm ở sweep ≥30 seed (tab Độ nhạy)",
       "properties": {
         "worst_cell_delta_served": { "type": "integer" },
-        "flagged_cells": { "type": "array", "items": { "type": "string" } },
-        "ok": { "type": "boolean" }
+        "flagged_cells": { "type": "array", "items": { "type": "string" }, "description": "cell delta ≤ -3 đơn — QUAN SÁT để soi, không phải phán quyết" },
+        "others_payout_delta_vnd": { "type": "integer" },
+        "ok": { "type": ["boolean", "null"], "description": "null khi n-seed không đủ kết luận (luôn null ở endpoint 1-seed)" }
       },
       "required": ["ok"]
     },

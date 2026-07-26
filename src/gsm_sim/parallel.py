@@ -142,9 +142,23 @@ def bootstrap_ci(diffs: list[float], n_boot: int = 5000, alpha: float = 0.05,
     return (float(np.quantile(means, alpha / 2)), float(np.quantile(means, 1 - alpha / 2)))
 
 
+# AUDIT STATS-5 (UPDATE-069): bootstrap CI degenerate với n nhỏ (n=1 → CI rộng 0, MỌI Δ≠0
+# thành "significant"; n=2 → đồng xu 50%). Chuẩn CLAUDE §4b: kết luận distribution cần ≥30 seed.
+MIN_SEEDS_FOR_SIGNIFICANCE = 30
+
+
+def _sig(lo: float, hi: float, n: int) -> bool:
+    return bool(n >= MIN_SEEDS_FOR_SIGNIFICANCE and (lo > 0 or hi < 0))
+
+
 def compare(pairs: list[PairResult]) -> dict:
-    """Tổng hợp: hiệu theo cặp cho từng metric + CI bootstrap + guardrail hệ thống."""
-    out: dict = {"n_seeds": len(pairs), "driver": {}, "system": {}}
+    """Tổng hợp: hiệu theo cặp cho từng metric + CI bootstrap + guardrail hệ thống.
+
+    `significant` chỉ được bật khi n ≥ MIN_SEEDS_FOR_SIGNIFICANCE — dưới đó flag luôn
+    False và `n_insufficient`=True để consumer không đọc nhầm nhiễu thành hiệu ứng."""
+    n = len(pairs)
+    out: dict = {"n_seeds": n, "n_insufficient": n < MIN_SEEDS_FOR_SIGNIFICANCE,
+                 "driver": {}, "system": {}}
     if not pairs:
         return out
     for key in pairs[0].a:
@@ -155,8 +169,7 @@ def compare(pairs: list[PairResult]) -> dict:
             "mean_b": round(st.mean(float(p.b[key] or 0) for p in pairs), 2),
             "delta_mean": round(st.mean(diffs), 2),
             "ci95": (round(lo, 2), round(hi, 2)),
-            # "có ý nghĩa" = CI KHÔNG chứa 0. Ghi thẳng để không ai đọc nhầm Δ nhiễu thành hiệu ứng.
-            "significant": bool(lo > 0 or hi < 0),
+            "significant": _sig(lo, hi, n),
             "n_positive": sum(1 for d in diffs if d > 0),
         }
     for key in pairs[0].system_a:
@@ -164,7 +177,7 @@ def compare(pairs: list[PairResult]) -> dict:
         lo, hi = bootstrap_ci(diffs)
         out["system"][key] = {"delta_mean": round(st.mean(diffs), 4),
                               "ci95": (round(lo, 4), round(hi, 4)),
-                              "significant": bool(lo > 0 or hi < 0)}
+                              "significant": _sig(lo, hi, n)}
     return out
 
 
