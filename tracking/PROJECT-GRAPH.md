@@ -145,6 +145,7 @@ Columns: **ID · primary topic · state · task/route · dependency or correctio
 | [UPDATE-067](updates/UPDATE-067-uxcards-adherence-ci.md) | Proactive cards, adherence contract, CI draft | `DONE-CODE / WAITING-VERDICT` | ui / V-10 / cards | F0 chat replaced by FAQ/cards directive |
 | [UPDATE-068](updates/UPDATE-068-r1r4-mophong-playback.md) | R1/R4 app-language simulation playback | `DONE-CODE / WAITING-VERDICT` | ui / V-10 / playback | top-6 feed cap is explicit limitation |
 | [UPDATE-071](updates/UPDATE-071-r5a-ui-guardrail.md) | R5-A cards guardrail and solo double-check | `DONE-CODE / QUOTA-BLOCKED` | ui / audit / R5 | `CORRECTS` audit summary 168/16 → 179/21; R5-B did not run |
+| [UPDATE-073](updates/UPDATE-073-simulator-web-fare-unification.md) | Simulator/Web Driver canonical MOCK fare quote | `DONE-CODE / WAITING-VERDICT` | ui / V-11 | UI-FARE-01; `PolicyBundle` owns arithmetic; active GSM fare deferred |
 
 ### 3.6 Audit A1/A2/A3
 

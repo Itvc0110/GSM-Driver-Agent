@@ -18,6 +18,7 @@ Cơ chế: công việc sống trong `tracking/TODO.md` và có thể được c
 | Ngày | Người | Việc (T-###) | Phạm vi files/folders | Trạng thái | Ghi chú |
 | --- | --- | --- | --- | --- | --- |
 | 2026-07-26 | Khánh | T-009b (Flutter mobile song song) | `ui/driver_app/` — KHÔNG ai khác đụng | READY | Bắt kịp web qua `ui/contracts/` + `ui/design-tokens.json` + `ui/docs/SCREEN-PARITY.md`; cùng backend FastAPI với web |
+| 2026-07-27 | Cường | UI-FARE-01 (đồng nhất giá cuốc demo) | `ui/backend/`, `ui/web/`, pricing tests và tracking/docs liên quan; KHÔNG đụng `ui/driver_app/` | WAITING-VERDICT | Code/tests/technical visual flow complete; user verdict V-11 is required before commit/push |
 
 ## Lịch sử
 

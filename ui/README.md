@@ -185,6 +185,18 @@ tests/test_routing_api.py::test_routing_calculate_multistop PASSED       [100%]
 - **Repository**: [https://github.com/Quockhanh0712/uiuxgsm.git](https://github.com/Quockhanh0712/uiuxgsm.git)
 - **License**: MIT License. Commercial and non-commercial use permitted.
 
+### Canonical demo fare (UI-FARE-01)
+
+The Web Driver UI never calculates fare in JavaScript and never uses the legacy
+`distance * 24000` formula. `GET /api/v1/routing/calculate` delegates to the
+Simulator's `gsm_sim.PolicyBundle` loaded from `configs/pilot_dongda.yaml`.
+The response contains gross fare (`fare_vnd`), trip payout
+(`driver_payout_vnd`), `driver_share`, `fare_policy_version`, `data_mode` and
+`is_mock`. The `/trip/step` lifecycle endpoint intentionally returns
+`fare_vnd: null`; it does not replace a route quote or mutate the income ledger.
+Current policy is `sim-policy-v0` / `synthetic` / `MOCK`, not an active GSM fare
+table. See `tracking/updates/UPDATE-073-simulator-web-fare-unification.md`.
+
 ---
 
 ## Provenance & tích hợp vào GSM-Driver-Agent (2026-07-26)

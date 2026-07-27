@@ -202,6 +202,7 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 
 | ID | Việc | Trạng thái | Evidence / gate |
 |---|---|---|---|
+| UI-FARE-01 | Unify Simulator and Web Driver demo fare through `PolicyBundle` | DONE-CODE / WAITING-VERDICT | UPDATE-073; V-11; do not touch Flutter `ui/driver_app/` |
 | UX-CARDS | Proactive cards + explicit adherence contract | DONE-CODE / WAITING-VERDICT | UPDATE-067; V-10 |
 | R1/R4 | App-language simulation shell + playback/feed | DONE-CODE / WAITING-VERDICT | UPDATE-068; V-10 |
 | AUDIT-A1/A2/A3 | Math, integrity, agent-system audit + narrow fix batches | DONE-CODE | UPDATE-064..066, 069..070; ĐA-01..06 and D-A3-01..06 remain open |
