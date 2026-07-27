@@ -1,6 +1,6 @@
 # CLAUDE.md — Harness cho AI coding agent (GSM Driver Income Agent)
 
-Cập nhật: 2026-07-22. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
+Cập nhật: 2026-07-27. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
 
 ## 1. Dự án là gì
 
@@ -20,15 +20,17 @@ Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image
 | `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`, `simulation/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
 | `specs/` | Đặc tả kỹ thuật để code (`mock-order-distribution`, `simulation-twin-world`, `advice-timing-state-memory`, `community-source-risk-control`) |
 | `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###) |
+| `tracking/PROJECT-GRAPH.md` | Bản đồ canonical của 66 UPDATE hiện hành: route đọc theo task, dependency/correction edges, trạng thái hiện hành, pending gates và quota loop |
 | `flow image/` | drawio luồng dự kiến — `...v2.drawio` hiện hành (7 trang), `...v1.drawio` đối chiếu (source of truth về flow) |
 | `docs/`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` | **DEFERRED** — pack cũ theo hướng full optimization scaffold; chỉ dùng tham khảo, không phải scope hiện hành |
 
 ## 3. Quy trình BẮT BUỘC trước khi làm bất kỳ việc gì
 
-1. **Đọc lại docs trước khi thực thi** — tối thiểu: **`tracking/DIRECTIVES-2026-07-24.md` (chỉ thị chương trình — ĐỌC ĐẦU TIÊN)**, `planning/SCOPE.md`, `tracking/TODO.md`, `tracking/DEFERRED.md`, `tracking/ASSIGNMENTS.md`, **`tracking/PENDING-REVIEW.md` (việc Cường đang chờ check — phải NHẮC LẠI sau mỗi update)**, và 2–3 file UPDATE mới nhất trong `tracking/updates/`. Task chạm vào phần nào thì đọc thêm docs liên quan phần đó. Không được bỏ qua bước này kể cả khi task "có vẻ nhỏ".
+1. **Bootstrap theo graph, không đọc lại toàn bộ lịch sử** — đọc `tracking/PROJECT-GRAPH.md` sau file này; chọn route theo task, mở các source docs và correction chain mà graph chỉ ra. `DIRECTIVES-2026-07-24.md` vẫn là nguồn chỉ thị chương trình; `SCOPE`, `TODO`, `DEFERRED`, `ASSIGNMENTS`, **`PENDING-REVIEW.md` (việc Cường đang chờ check — phải NHẮC LẠI sau mỗi update)** được mở đầy đủ khi task chạm scope, status, claim, policy, UI/sim output hoặc architecture. Không mặc định đọc lại toàn bộ UPDATE.
 2. **Vào plan mode trước** (EnterPlanMode) với mọi thay đổi code, cấu trúc, contract hoặc docs quan trọng. Trong plan mode, **phải hỏi lại** (AskUserQuestion) những điểm chưa rõ hoặc quan trọng (ảnh hưởng scope, dữ liệu, ranh giới sản phẩm, phân công) trước khi chốt plan. Không tự đoán rồi làm.
 3. **Tôn trọng bảng tự nhận việc** `tracking/ASSIGNMENTS.md`: không có ai là người giao việc — Cường/Khánh **tự claim** việc đầu mỗi session. Agent làm việc **dưới claim của người đang điều khiển nó**: kiểm tra bảng claim trước khi sửa file, không tự claim, không làm ngoài phạm vi claim, không đụng files trong claim đang hoạt động của người kia.
 4. **Defer thay vì phình scope**: ý tưởng/việc ngoài minimum scope → ghi vào `tracking/DEFERRED.md` (kèm lý do + điều kiện mở lại), không tự triển khai.
+5. **Parallel/quota guard**: tối đa 2 phiên đồng thời (primary + reviewer). Nếu cần 5 phiên, queue `2 → 2 → 1`; persist findings/decision/failure trước batch kế tiếp. Quota/session-limit lỗi: retry tối đa một lần, sau đó ghi `QUOTA-BLOCKED` và hạ cap xuống 1. Không mở worker thứ hai trên cùng claim/path.
 
 ## 4. Quy trình BẮT BUỘC sau khi thay đổi
 
@@ -40,7 +42,9 @@ Sau mỗi thay đổi có ý nghĩa (code, docs, data, cấu trúc), tạo file 
 - **Kiểm chứng** (đã test/chạy thử gì, cái gì chưa kiểm chứng);
 - **Follow-up/defer** phát sinh.
 
-Đồng thời cập nhật trạng thái mục tương ứng trong `tracking/TODO.md`. Thay đổi không có UPDATE đi kèm được coi là chưa hoàn thành.
+Đồng thời cập nhật trạng thái mục tương ứng trong `tracking/TODO.md` và node/cạnh liên quan trong `tracking/PROJECT-GRAPH.md`. Thay đổi không có UPDATE đi kèm được coi là chưa hoàn thành. Graph là index, không thay thế evidence trong UPDATE hoặc source docs.
+
+Trạng thái routing chuẩn: `HISTORY-COMPLETE`, `DONE-CODE`, `WAITING-VERDICT`, `READY`, `DOING`, `BLOCKED`, `QUOTA-BLOCKED`, `DEFERRED`, `CORRECTED`. Không gọi một mục là `DONE`/`reviewed` khi `PENDING-REVIEW` còn mở; dùng `DONE-CODE` hoặc `WAITING-VERDICT`.
 
 ## 4b. Quy trình implementation, debug, self-review và visual verification BẮT BUỘC
 
