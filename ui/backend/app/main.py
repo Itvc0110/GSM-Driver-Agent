@@ -3,7 +3,8 @@
 Tiến hoá từ gateway của Khánh (T-009): giữ nguyên OSRM routing proxy + trip/step demo;
 map-context và driver/state nay đọc **bộ mock 90 ngày** (`data/mock/realdata-v1`) qua
 adapter thay vì synthetic random — `scenario_id="synthetic"` giữ generator cũ của Khánh
-cho mục đích demo. Contract shapes: `ui/contracts/*.json`.
+cho mục đích demo. Route fare là quote MOCK từ `gsm_sim.PolicyBundle`; `/trip/step`
+chỉ mô tả lifecycle và không tự tính fare. Contract shapes: `ui/contracts/*.json`.
 
 Chạy (từ repo root):
     uv run uvicorn app.main:app --app-dir ui/backend --port 8000

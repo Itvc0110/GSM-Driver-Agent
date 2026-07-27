@@ -3,6 +3,7 @@ import math
 import urllib.request
 from typing import List
 from fastapi import APIRouter, HTTPException
+from app.adapters.sim_pricing import quote_distance
 from app.models import RouteCalculateRequest, RouteCalculateResponse, WaypointItem
 
 router = APIRouter()
@@ -58,7 +59,7 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
                         coords = [[c[1], c[0]] for c in route["geometry"]["coordinates"]]
                         total_dist_km = round(route["distance"] / 1000.0, 1)
                         total_duration_min = max(1, round(route["duration"] / 60.0))
-                        fare_vnd = int(round(total_dist_km * 24000))
+                        quote = quote_distance(total_dist_km)
 
                         turn_instruction = "Chạy theo vạch chỉ đường OSRM thực tế"
                         if route.get("legs") and len(route["legs"]) > 0:
@@ -70,7 +71,7 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
                             coords=coords,
                             total_dist_km=total_dist_km,
                             total_duration_min=total_duration_min,
-                            fare_vnd=fare_vnd,
+                            **quote,
                             turn_instruction=turn_instruction,
                             source="openstreetmap_de_osrm_real"
                         )
@@ -93,13 +94,13 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
 
     total_dist_km = round(total_dist, 1)
     total_duration_min = max(1, round(total_dist_km * 2.5))
-    fare_vnd = int(round(total_dist_km * 24000))
+    quote = quote_distance(total_dist_km)
 
     return RouteCalculateResponse(
         coords=all_coords,
         total_dist_km=total_dist_km,
         total_duration_min=total_duration_min,
-        fare_vnd=fare_vnd,
+        **quote,
         turn_instruction="Chạy theo vạch chỉ đường phố Hà Nội",
         source="hanoi_street_graph_engine"
     )

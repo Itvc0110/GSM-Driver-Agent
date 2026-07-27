@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
 
 class DriverLocation(BaseModel):
@@ -63,7 +63,8 @@ class TripStepResponse(BaseModel):
     customer_phone: str
     pickup_address: str
     dropoff_address: str
-    fare_vnd: int
+    # Giá hợp lệ cần route distance; endpoint lifecycle chỉ trả metadata nên để null.
+    fare_vnd: Optional[int] = None
     payment_method: str
     step: str  # SEARCHING, INCOMING, PICKING_UP, IN_PROGRESS, COMPLETED
     pickup_lat: float
@@ -85,7 +86,12 @@ class RouteCalculateResponse(BaseModel):
     coords: List[List[float]]  # Array of [lat, lng]
     total_dist_km: float
     total_duration_min: int
-    fare_vnd: int
+    fare_vnd: int  # gross fare từ sim-policy, giữ tên field để tương thích client cũ
+    driver_payout_vnd: int  # payout cuốc, chưa gồm bonus
+    driver_share: float
+    fare_policy_version: str
+    data_mode: Literal["synthetic"] = "synthetic"
+    is_mock: bool = True
     turn_instruction: str
     source: str = "osrm_real_proxy"
 
