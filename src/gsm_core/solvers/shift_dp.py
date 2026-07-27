@@ -48,7 +48,7 @@ def _required_rest(B: int, params: dict) -> int:
 def _soc_cost(params: dict) -> int:
     """SOC band/bucket online — chuẩn theo 30', scale theo bucket_min (S2-6)."""
     bucket_min = int(params.get("bucket_min", 30))
-    return max(1, round(int(params["soc_cost_per_bucket"]) * bucket_min / 30.0))
+    return int(params["soc_cost_per_bucket"])   # MUT10: bo scale bucket_min
 
 
 def _bonus_eligible(params: dict, policy: PolicyBundle) -> tuple[bool, bool]:

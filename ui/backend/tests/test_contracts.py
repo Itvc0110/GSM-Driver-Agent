@@ -202,3 +202,24 @@ def test_poisoned_advice_never_reaches_response(dv, monkeypatch):
     validate(body, _schema("advice"))
     assert body["items"] == [], "advice độc LỌT ra response"
     assert body["silent"]["is_silent"] and body["silent"]["reason_code"] == "verify_failed"
+
+
+# ---------- R5-B F-01 (UPDATE-072): nhãn fleet phải khớp generator ----------
+
+
+def test_fleet_labels_match_generator_prefixes():
+    """Prefix trong `mockgen/profiles.py`: r=bike_rto · cp=car_platform · ce=car_employee
+    · px=car_premium. Adapter từng map lệch một bậc (cp→car-premium, px→premium) ⇒ 15 tài
+    xế VF5 hiện nhãn 'premium' trên picker."""
+    from app.adapters.mockdata import FLEET_BY_PREFIX
+    assert FLEET_BY_PREFIX["cp"] == "car-platform"
+    assert FLEET_BY_PREFIX["px"] == "car-premium"
+    assert FLEET_BY_PREFIX["ce"] == "car-employee"
+    assert FLEET_BY_PREFIX["r"] == "bike-rto"
+    cat = client.get("/api/v1/driver/catalog").json()
+    by_fleet = {}
+    for d in cat["drivers"]:
+        by_fleet.setdefault(d["fleet"], []).append(d["driver_id"])
+    assert all(x.startswith("cp-") for x in by_fleet["car-platform"])
+    assert all(x.startswith("px-") for x in by_fleet["car-premium"])
+    assert "premium" not in by_fleet, "nhãn 'premium' trơn là dấu hiệu map cũ còn sót"

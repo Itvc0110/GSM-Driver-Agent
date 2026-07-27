@@ -39,8 +39,11 @@ def manifest() -> dict:
 
 # prefix → đội (theo generator realdata.py: d-* là 90 tài xế BIKE mô phỏng bằng sim engine;
 # các đội khác rule-based). Advisor S1 (policy bike) chỉ phủ đội bike.
-FLEET_BY_PREFIX = {"d": "bike-sim", "r": "bike-rto", "cp": "car-premium",
-                   "ce": "car-employee", "px": "premium"}
+# R5-B F-01 (UPDATE-072): map SAI một bậc — generator `mockgen/profiles.py:65` gán
+# cp=car_platform (VF5) và px=car_premium (VF8 Luxury); bản cũ ghi cp→"car-premium",
+# px→"premium" ⇒ 15 tài xế VF5 hiện nhãn "premium" ngay trên picker của Cường.
+FLEET_BY_PREFIX = {"d": "bike-sim", "r": "bike-rto", "cp": "car-platform",
+                   "ce": "car-employee", "px": "car-premium"}
 
 
 @lru_cache(maxsize=1)
