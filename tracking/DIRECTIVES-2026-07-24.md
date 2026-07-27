@@ -100,7 +100,7 @@ vào sau, bên cạnh UI app.
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
 | **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063) + **UX-CARDS** (UPDATE-067: proactive cards + đo adherence + CI draft) + **R1/R4** (UPDATE-068: mo-phong đồng ngôn ngữ app, playback ×1/×4/×16, feed sự kiện). **Chờ verdict V-10** |
-| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · 168 finding · 118 CONFIRMED · **16 fix hẹp có regression test**. Còn lại: **6 đề án ĐA-01..06 chờ Cường duyệt** + D-A3-01..06. Kế tiếp: **R5 double-check** rồi R2/R3 |
+| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): **152 agent · 179 finding · 118 CONFIRMED · 21 fix rows** (UPDATE-071 correction). Còn lại: **6 đề án ĐA-01..06 chờ Cường duyệt** + D-A3-01..06. **R5-A xong; R5-B QUOTA-BLOCKED**; sau đó R2/R3 |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 
