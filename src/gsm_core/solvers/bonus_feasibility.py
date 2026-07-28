@@ -127,7 +127,12 @@ def solve(gi: dict, policy: PolicyBundle) -> dict:
             "schema_version": "1.0.0", "solver": "bonus_feasibility",
             "problem_digest": digest,
             "inputs_used": inputs_used,
-            "solution": {"already_maxed": True, "feasible": not at_risk, "gap_points": 0},
+            # C2 (UPDATE-076): trả LUÔN `constraints` như nhánh thường. Thiếu nó thì consumer
+            # (templates/bridge/UI adapter) biết "không khả thi" nhưng không biết nghẽn ở ĐÂU,
+            # nên không nói được với tài xế điều duy nhất còn cứu được.
+            "solution": {"already_maxed": True, "feasible": not at_risk, "gap_points": 0,
+                         "constraints": {"ok_acceptance": ok_acc, "ok_completion": ok_comp,
+                                         "enough_hours": True}},
             "numbers": [_num(bonus, "vnd", pv)],
             "sensitivity": [], "confidence": 0.95 if not at_risk else 0.85,
             "caveats": (["thưởng chỉ được trả khi tỷ lệ nhận/hoàn thành giữ trên ngưỡng đến cuối ngày"]

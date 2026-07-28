@@ -62,6 +62,26 @@ def _khoan_sentence(solver_reports: list[dict], reg: dict) -> str:
     gap = _vn(reg, gap_val, "vnd")
     if not gap:
         return ""  # không trace được số → không nói (thà thiếu còn hơn bịa)
+
+    # C2 §1c (UPDATE-076): PHẢI đọc `feasible`. Trước đây câu này chỉ nhìn `gap_revenue_vnd`
+    # nên khi solver kết luận KHÔNG khả thi (quỹ giờ tuần không đủ / thiếu ngày hoạt động) nó
+    # vẫn nói "còn thiếu Xđ để đạt khoán … có thể bị truy thu Yđ" — vừa ngụ ý với tới được,
+    # vừa treo doạ truy thu, đẩy tài xế đuổi theo thứ không thể đạt.
+    # Đây ĐÚNG nguyên tắc AUDIT A3 LAYEROUT-2 đã áp cho `_gap_sentence` (S1) nhưng bỏ sót S5.
+    if not sol.get("feasible", True):
+        cons = sol.get("constraints") or {}
+        if not cons.get("enough_hours", True):
+            why = " vì quỹ giờ còn lại trong tuần không đủ"
+        elif not cons.get("ok_active_days", True):
+            why = " vì số ngày hoạt động không đạt yêu cầu"
+        else:
+            why = ""
+        s = f" Tuần này còn thiếu {gap} doanh số, nhưng khoán tuần khó đạt{why}."
+        claw_s = _vn(reg, claw_val, "vnd") if claw_val > 0 else ""
+        if claw_s:
+            s += f" Phần chưa đạt có thể bị truy thu khoảng {claw_s}."
+        return s + " Giữ nhịp bền và tỷ lệ tốt cho tuần sau vẫn hơn cố quá sức."
+
     s = f" Tuần này còn thiếu {gap} doanh số để đạt khoán."
     claw = _vn(reg, claw_val, "vnd") if claw_val > 0 else ""
     if claw:
@@ -183,13 +203,27 @@ def _gap_sentence(solver_reports: list[dict], reg: dict, n1: str, n2: str) -> st
     if not r or not (n1 and n2):
         return ""
     sol = r.get("solution") or {}
-    if sol.get("already_maxed"):
-        return " Anh/chị đã đạt mốc thưởng cao nhất hôm nay."
-    if sol.get("feasible"):
-        return f" Anh/chị còn thiếu {n1} để chạm mốc thưởng {n2}."
     # KHÔNG chèn `infeasible_reason` thô: chuỗi đó chứa số chưa neo registry ⇒ V1 veto
     # (bài học BUG-PI5d-01). Diễn giải lý do bằng NHÃN cấu trúc từ constraints.
     cons = sol.get("constraints") or {}
+
+    if sol.get("already_maxed"):
+        # C2 (UPDATE-076): `already_maxed` KHÔNG còn là nhánh sớm. Kịch mốc điểm mà tỷ lệ dưới
+        # ngưỡng thì chính sách trả **0đ** — trấn an lúc đó là nói sai với tài xế đang mất tiền
+        # và VẪN CÒN CỨU ĐƯỢC. Xem hồ sơ `08-parity-sim-vs-ui.md` §1b.
+        if sol.get("feasible"):
+            return " Anh/chị đã đạt mốc thưởng cao nhất hôm nay."
+        if not cons.get("ok_acceptance", True):
+            return (" Anh/chị đã đủ điểm mốc cao nhất, nhưng tỷ lệ NHẬN đang dưới ngưỡng chính "
+                    "sách — giữ nguyên tới cuối ngày thì phần thưởng sẽ không được trả.")
+        if not cons.get("ok_completion", True):
+            return (" Anh/chị đã đủ điểm mốc cao nhất, nhưng tỷ lệ HOÀN THÀNH đang dưới ngưỡng "
+                    "chính sách — giữ nguyên tới cuối ngày thì phần thưởng sẽ không được trả.")
+        return (" Anh/chị đã đủ điểm mốc cao nhất, nhưng điều kiện tỷ lệ của chính sách chưa "
+                "đạt — phần thưởng có thể không được trả.")
+
+    if sol.get("feasible"):
+        return f" Anh/chị còn thiếu {n1} để chạm mốc thưởng {n2}."
     if not cons.get("enough_hours", True):
         why = " vì quỹ giờ còn lại không đủ"
     elif not cons.get("ok_acceptance", True):
