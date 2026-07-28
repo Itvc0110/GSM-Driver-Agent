@@ -1,5 +1,10 @@
 # UPDATE-061 — Track UI U2: web app + backend chạy DATA THẬT + advisor S1 thật
 
+> **ĐÍNH CHÍNH THUẬT NGỮ — 2026-07-27:** tiêu đề “DATA THẬT” là overclaim. Backend đọc **nội
+> dung MOCK** trong 13 bảng có shape/tên cột theo metadata GSM. Advisor S1 là solver thật, nhưng
+> input vẫn là snapshot mock. Giữ tiêu đề lịch sử để không sửa evidence lặng; current-state xem
+> `research/audit/2026-07-27-current-state/01-data-lineage-and-update-model.md`.
+
 Ngày: 2026-07-26 · Track: **UI** · Phase U2/U4 · Sau U1 (`b51d26f`).
 
 ## 1. Files bị ảnh hưởng

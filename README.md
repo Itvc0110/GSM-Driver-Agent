@@ -2,7 +2,14 @@
 
 Hệ thống AI hỗ trợ tài xế Xanh SM (GSM) cải thiện thu nhập: hỏi đáp chính sách/thưởng phạt theo hồ sơ, tư vấn **trước ca – trong ca – sau ca**. Sản phẩm tách rõ `gross revenue`, `driver payout` (mục tiêu mặc định) và `estimated net income` (chỉ khi đủ chi phí). Team 2 người: **Cường** & **Khánh**.
 
-Trạng thái: 2026-07-20 · scope v2 (top-down, flow-first) · chưa có code — đang ở giai đoạn xây khung + nghiên cứu thực tế.
+Trạng thái: **2026-07-27** · core/simulator/web UI đã có implementation và audit nhiều vòng;
+**chưa production-ready**. Dữ liệu publish hiện là **MOCK content** theo 13 bảng L1R có shape từ
+metadata GSM. Đọc snapshot trạng thái mới nhất tại
+[`research/audit/2026-07-27-current-state/`](research/audit/2026-07-27-current-state/README.md).
+
+**Quyết định kiến trúc hiện hành:** một canonical run/snapshot, hai projection — simulation demo là
+góc nhìn dispatcher để chạy/đo/visualize hiệu quả toàn hệ thống; driver app demo + Advisor là góc
+nhìn của một tài xế. Hai UI khác mục đích nhưng phải reconcile cùng event, payout ledger và `as_of`.
 
 ## Nguyên tắc cốt lõi
 
@@ -13,13 +20,14 @@ Trạng thái: 2026-07-20 · scope v2 (top-down, flow-first) · chưa có code �
 ## Đọc theo thứ tự
 
 1. `CLAUDE.md` — harness bắt buộc cho AI coding agent (quy trình đọc docs → plan mode → hỏi → làm → ghi UPDATE).
-2. `planning/SCOPE.md` — scope hiện hành (F0 policy Q&A, F1 trước ca, F2 trong ca, F3 sau ca) + câu hỏi mở.
-3. `planning/PERSONAS.md` — 5 hồ sơ tài xế mock (Bike).
-4. `research/` — kết quả nghiên cứu chia theo loại (`policy/`, `economics/`, `community/`, `market/`); đọc trước `research/00_SUMMARY.md`.
-5. `specs/` — đặc tả kỹ thuật để code (vd mock phân phối đơn).
-6. `planning/USER_STORIES.md` — user stories nháp.
-7. `tracking/TODO.md` · `tracking/ASSIGNMENTS.md` (bảng tự nhận việc) · `tracking/DEFERRED.md` · `tracking/updates/` — backlog, phân công, mục đã hoãn, nhật ký thay đổi.
-8. `flow image/` — drawio kiến trúc income advisor: `...v2.drawio` hiện hành (7 trang: L0–L2 + F0–F3), `...v1.drawio` đối chiếu. (File luồng giải trình vi phạm đã xóa — dự án khác, D-006.)
+2. `tracking/DIRECTIVES-2026-07-24.md` + `tracking/PENDING-REVIEW.md` — quyết định bền và việc Cường cần check.
+3. `research/audit/2026-07-27-current-state/` — data lineage, parity, Advisor UX, ĐA-01..06 và verification ledger hiện tại.
+4. `planning/SCOPE.md` — scope hiện hành (F0 FAQ có cấu trúc, F1 trước ca, F2 trong ca, F3 sau ca).
+5. `planning/PERSONAS.md` — persona mock; không đồng nhất với roster synthetic 150 profile.
+6. `research/` — kết quả nghiên cứu chia theo loại; đọc trước `research/00_SUMMARY.md` và banner current-state của từng file cũ.
+7. `specs/` + `schemas/` — đặc tả kỹ thuật và contract dữ liệu.
+8. `tracking/TODO.md` · `tracking/ASSIGNMENTS.md` · `tracking/DEFERRED.md` · `tracking/updates/` — backlog, claim, deferred và nhật ký.
+9. `flow image/` — drawio kiến trúc income advisor; dùng cùng current-state dossier khi đối chiếu vì một số flow lịch sử chưa phản ánh code hiện tại.
 
 ## Pack cũ (DEFERRED)
 

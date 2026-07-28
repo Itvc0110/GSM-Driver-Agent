@@ -1,5 +1,10 @@
 # Research Summary — Đợt 1 + Đợt 2 + Đợt 3 (simulation) + Refresh policy 2026-07-24
 
+> **CURRENT-STATE INDEX — 2026-07-27:** summary dưới đây là research/policy snapshot theo từng
+> đợt. Để biết code/data/UI/Advisor hiện đang chạy gì, “mock 90 ngày” là gì, và quyết định
+> architecture B, đọc [`audit/2026-07-27-current-state/README.md`](audit/2026-07-27-current-state/README.md).
+> Không suy từ benchmark/research rằng snapshot là data thật hoặc external provider đã được wired.
+
 Ngày cập nhật: 2026-07-21 (refresh policy 2026-07-24) · Files chi tiết: [income structure](economics/income-structure.md) · [bonus/policy](policy/bonus-programs.md) · **[⚠ POLICY REFRESH 2026-07-24](policy/policy-refresh-2026-07-24.md)** · [pain points](community/pain-points.md) · [community insights](community/community-insights.md) · [order distribution](market/order-distribution.md) · **simulation:** [tooling](simulation/tooling.md) · [evaluation methodology](simulation/evaluation-methodology.md) · [world parameters](simulation/world-parameters.md) (+ đợt 4 đang chạy: action space, pilot 1 quận, timestep).
 Phương pháp: web research song song + đối chiếu chéo; claim trung tâm ĐBTN đã xác minh trực tiếp trên official page. Mỗi file ghi nguồn/ngày/reliability; số community không được nâng thành policy/financial fact.
 
@@ -27,11 +32,29 @@ Phương pháp: web research song song + đối chiếu chéo; claim trung tâm 
 15. **Anti-herding có văn liệu**: capacity ledger (min-cost flow/Learn to Earn), tokens/quota, staggering, power-of-two-choices; herding (queue trạm, concentration) là guardrail metric — advice làm queue arm A > arm B nghĩa là advisor tự phá giá trị.
 16. **Phân lớp biến A/B/C** cho robust optimization (bền vững → bài toán ràng buộc; bán bền vững → feature flag; bất định → reasoning guardrail) + hybrid trigger (event + fixed anchors + threshold) + persistent-vs-session memory — spec đã APPROVED.
 
+## Đợt 5 (2026-07-27) — ĐO THẬT, không còn là giả thuyết
+
+17. **Advisor hiện tại làm tài xế NGHÈO ĐI — có ý nghĩa thống kê.** 30 seed CRN, advice cho toàn
+    đội (`coverage: all`): payout **−17.310đ/ngày, CI95 [−29.294, −5.820]**, chỉ **7/30** seed có
+    lợi. Cơ chế: **cùng số giờ online** nhưng **+25,9 phút rỗi, −1,6 cuốc** — advice không làm tài
+    xế chạy ít hơn, nó làm họ dùng cùng số giờ đó **tệ hơn**. Gốc rễ toán học: trong DP của S2,
+    `ONLINE` cộng tiền còn `REST`/`SWAP` cộng đúng `0.0` ⇒ nghiệm tất yếu là "chạy hết công suất".
+    Chi tiết: [`audit/2026-07-27-current-state/09-*`](audit/2026-07-27-current-state/09-baseline-30seed-coverage-all.md).
+18. **Herding kiểu "dồn sạc/nghỉ cùng lúc" KHÔNG xảy ra** ở config này — đính chính kỳ vọng của
+    #15: station HHI +0,0007 và supply-cell HHI +0,0001 (≈ 0). Tác hại đến từ chỗ khác: 90 tài xế
+    cùng nhận **một logic lập lịch** làm phân bố cung lệch khỏi thế cân bằng tự nhiên. Guardrail
+    chống herding vẫn cần, nhưng **không phải** cơ chế hại chính hiện nay.
+19. **Tác hại ở tầng HỆ THỐNG chưa đủ bằng chứng.** served_rate −0,0047 · đơn hết hạn +4,8/ngày ·
+    Gini −0,003 — **mọi CI đều chứa 0** ở n=30. Hướng nhất quán là xấu, nhưng **không được tuyên
+    bố là đã chứng minh**. (Đính chính cách đọc bản 10 seed của hồ sơ 07.)
+20. **⇒ Thứ tự sửa: objective CÁ NHÂN trước, multi-agent equilibrium sau.** Tối ưu cân bằng cho một
+    hàm mục tiêu vốn đã sai là làm ngược.
+
 ## Mapping research → feature
 
 | Feature | Research dùng trực tiếp |
 | --- | --- |
-| F0 policy Q&A | `policy/bonus-programs.md`, `economics/income-structure.md`; bắt buộc Policy KB có version/citation |
+| F0 structured policy FAQ | `policy/bonus-programs.md`, `economics/income-structure.md`; câu hỏi định sẵn + template, bắt buộc policy source có version/citation; free-text C6 là legacy |
 | F1 trước ca | policy track/cohort + persona + money definitions; không hard-code mốc cũ |
 | F2 trong ca | `market/order-distribution.md`, `community/pain-points.md`; chỉ tư vấn theo thời gian, không reposition |
 | F3 sau ca | hành vi sạc/nghỉ, tiến độ mốc versioned, so với chính tài xế |

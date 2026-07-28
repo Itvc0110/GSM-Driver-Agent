@@ -1,5 +1,12 @@
 # ROUND 2 — Statistical realism (mock l1r vs benchmark)
 
+> **PHẠM VI BẰNG CHỨNG — 2026-07-27:** report này tổng hợp một ensemble 30 seed/driver-day cho
+> statistical realism. Nó **không đọc và certify trực tiếp** bộ Parquet 90 ngày hiện nằm ở
+> `data/mock/realdata-v1/` (`D-SIM-08` còn mở), cũng không chứng minh data thật GSM. Dùng report để
+> đánh giá distribution của generator ở lần chạy đó; dùng manifest + artefact-specific verifier để
+> đánh giá snapshot local. Xem
+> [`../../audit/2026-07-27-current-state/01-data-lineage-and-update-model.md`](../../audit/2026-07-27-current-state/01-data-lineage-and-update-model.md).
+
 Seeds: 30 (base 200). driver-days: bike=3232, car=1059. Nguồn benchmark: `research/simulation/realism-benchmarks.md`.
 
 > **TÁCH POPULATION (fix BUG-PI2b-01):** benchmark là của **BIKE Hà Nội**. Gộp car/premium (fare cao 3-5×) sẽ thổi median payout → verdict sai. **Car = OBSERVE-ONLY** (chưa có benchmark VN cho car trong research).

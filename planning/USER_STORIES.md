@@ -1,19 +1,19 @@
 # USER STORIES — Nháp ban đầu (DRAFT)
 
-Cập nhật: 2026-07-20. Story là **giả thuyết** cho đến khi được xác nhận bằng nghiên cứu (`planning/RESEARCH.md`). Mở rộng scope = thêm story ở đây trước, xác nhận pain point, rồi mới làm.
+Cập nhật trạng thái: 2026-07-27. Story là **giả thuyết** cho đến khi được xác nhận bằng nghiên cứu (`planning/RESEARCH.md`). Mở rộng scope = thêm story ở đây trước, xác nhận pain point, rồi mới làm.
 
 Quy ước ID: `US-<khối>-<số>` (khối: F0 policy, F1 trước ca, F2 trong ca, F3 sau ca).
 
-## F0 — Hỏi đáp chính sách
+## F0 — FAQ chính sách có cấu trúc
 
-- **US-F0-01** · Là tài xế Bike mới, tôi muốn hỏi "tuần này chạy bao nhiêu chuyến thì được thưởng gì" và nhận câu trả lời đúng với hồ sơ của tôi, kèm nguồn chính sách, để không bỏ lỡ thưởng.
+- **US-F0-01** · Là tài xế Bike mới, tôi muốn chọn câu hỏi định sẵn "tuần này chạy bao nhiêu chuyến thì được thưởng gì" và nhận câu trả lời template đúng với hồ sơ, kèm nguồn chính sách, để không bỏ lỡ thưởng mà không phụ thuộc chat tự do.
 - **US-F0-02** · Là tài xế thuê xe công ty, tôi muốn biết policy bundle nào áp dụng riêng cho track thuê/RTO (phí thuê, platform share, khấu trừ), để phân biệt đúng driver payout và estimated net.
 - **US-F0-03** · Là tài xế, tôi muốn được cảnh báo khi chính sách/mức thưởng thay đổi so với lần tôi xem trước, để không hành động theo thông tin cũ.
 
 ## F1 — Trước ca
 
 - **US-F1-01** · Là tài xế mở app đầu ca, tôi muốn thấy ngay các chương trình thưởng/giới hạn mới áp dụng cho tôi hôm nay, để lên kế hoạch ca.
-- **US-F1-02** · Là tài xế, tôi muốn đặt chỉ tiêu **driver payout** (mặc định theo hồ sơ + policy versioned) và chỉ xem estimated net khi hệ thống biết đủ chi phí, để mục tiêu rõ ràng và không nhầm gross/payout/net.
+- **US-F1-02** · Là tài xế, tôi muốn tự đặt/chỉnh/bỏ mục tiêu **driver payout theo tuần** và chỉ xem estimated net khi hệ thống biết đủ chi phí, để mục tiêu rõ ràng và không nhầm với gross, khoán policy hoặc mission.
 - **US-F1-03** · Là tài xế part-time đặt chỉ tiêu quá cao so với quỹ thời gian, tôi muốn agent chỉ ra vì sao khó đạt và gợi ý mức hợp lý, để không thất vọng/quá sức.
 - **US-F1-04** · Là tài xế, tôi muốn được tư vấn cách tối ưu để đạt mức thưởng gần nhất (cần thêm bao nhiêu chuyến/giờ), để quyết định có theo hay không.
 

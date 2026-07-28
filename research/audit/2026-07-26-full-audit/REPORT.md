@@ -1,5 +1,10 @@
 # AUDIT TOÀN HỆ THỐNG — BÁO CÁO TỔNG (A1 · A2 · A3)
 
+> **STATUS UPDATE — 2026-07-27:** kết quả finding/fix trong report được giữ như evidence lịch sử.
+> Sau report, Cường đã duyệt design ĐA-01..03 và chọn architecture B; ĐA-04..06 vẫn chờ duyệt.
+> R5 chưa hoàn tất và HEAD có `BLOCKER-R5-MUT10`. Trạng thái reconcile mới nhất:
+> [`../2026-07-27-current-state/README.md`](../2026-07-27-current-state/README.md).
+
 Ngày: 2026-07-26 → 27 · Chỉ thị Cường: *"check lại toàn bộ data, hệ thống agent, math modelling
 (quan trọng nhất)"* · Quy mô: **152 agent** (A1 87 + verify-11 + A3 54), ~10.2M token subagent.
 Dữ liệu thô: `a1_math_findings.json` · `a1_verify11_verdicts.json` · `a3_agent_findings.json`.

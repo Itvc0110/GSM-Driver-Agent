@@ -1,6 +1,6 @@
 # SCOPE — Phạm vi hiện hành (v2)
 
-Cập nhật: 2026-07-20 · Trạng thái: ACTIVE · Thay thế cách tiếp cận cũ trong `docs/` (đã defer, xem `tracking/DEFERRED.md`).
+Cập nhật: 2026-07-27 · Trạng thái: ACTIVE · Thay thế cách tiếp cận cũ trong `docs/` (đã defer, xem `tracking/DEFERRED.md`).
 
 ## 1. Phần CỐ ĐỊNH
 
@@ -18,9 +18,12 @@ Kiến trúc chi tiết, stack, cách triển khai feature, UI — được đ�
 
 ## 3. Minimum scope — 4 khối tính năng
 
-### F0 — Hỏi đáp chính sách theo hồ sơ tài xế
+### F0 — FAQ chính sách có cấu trúc theo hồ sơ tài xế
 
-Trả lời về chính sách, ưu đãi, thưởng/phạt **hiện hành**, cá nhân hóa theo hồ sơ. Phân loại tài xế cần hỗ trợ (taxonomy):
+Danh sách câu hỏi định sẵn trả lời bằng template + citation từ corpus policy versioned; **không chat
+free-text/LLM tự do**. Router/KB C6 free-text hiện là legacy và phải được deprecate khi chạm tới.
+Nội dung vẫn cá nhân hóa theo hồ sơ và chỉ dùng chính sách/ưu đãi/thưởng-phạt **hiện hành**.
+Phân loại tài xế cần hỗ trợ (taxonomy):
 
 - Thâm niên: mới làm / làm lâu năm.
 - Thời gian: full-time / part-time.
@@ -34,9 +37,9 @@ Kế hoạch: **5 hồ sơ persona mock** (nháp v1 tại `planning/PERSONAS.md`
 
 - Chủ động cập nhật/nhắc: hình thức trao thưởng mới, giới hạn mới áp dụng cho tài xế.
 - Tư vấn cách tối ưu để đạt mức thưởng.
-- Tài xế đặt **chỉ tiêu thu nhập**: mặc định là **driver payout**; UI phải phân biệt với `gross revenue`. Có thể hiển thị **estimated net income** khi biết đủ chi phí tài xế chịu (sạc/thuê xe...), kèm definition/version và trạng thái completeness. Chỉ tiêu mặc định suy từ policy đã version hóa + hồ sơ tài xế; tài xế chỉnh được.
+- Tài xế đặt **mục tiêu thu nhập cá nhân theo tuần**: mặc định là **driver payout**; UI phải phân biệt với `gross revenue`. Có thể hiển thị **estimated net income** khi biết đủ chi phí tài xế chịu (sạc/thuê xe...), kèm definition/version và trạng thái completeness. Mục tiêu do tài xế kiểm soát/chỉnh/bỏ, không ảnh hưởng dispatch, pay, acceptance hay tier.
 - Agent nhận xét chỉ tiêu: quá cao/quá thấp so với hồ sơ (part-time khác full-time) và khuyên điều chỉnh thế nào.
-- UI: **defer** chi tiết, nhưng note — sau này phải tối ưu cho dễ dùng.
+- **Không trộn:** mục tiêu cá nhân ≠ khoán tuần trong policy ≠ mission/reward. UX/contract chi tiết hiện là proposal tại `research/audit/2026-07-27-current-state/03-advisor-ux-goals-recap.md`.
 
 ### F2 — Trong ca
 
@@ -60,7 +63,15 @@ Luồng xử lý **hồ sơ vi phạm** (AI hỗ trợ tài xế soạn giải t
 ## 5. UI/UX
 
 - Ưu tiên **mobile-first** (tài xế dùng qua app); tham khảo app Xanh SM ở góc nhìn tài xế.
-- Kế hoạch: dùng template <https://github.com/JCodesMore/ai-website-cloner-template> để clone <https://rag-xanh-sm-v1.vercel.app/> làm UI/UX tạm thời (trong TODO).
+- Track UI web đã import nền của Khánh và có driver app demo + khu Mô phỏng; Flutter được phát triển
+  song song contract-first. Chi tiết implementation xem UPDATE-059..063, trạng thái/audit mới nhất
+  tại `research/audit/2026-07-27-current-state/`.
+- Hình thái Advisor là **proactive cards**, không chatbot: brief trước ca, nudge ngắn chỉ ở safe
+  transition, recap sau ca; tài xế có quyền làm theo/bỏ qua.
+- **DECISION 2026-07-27 — architecture B:** simulation demo là góc nhìn dispatcher/researcher để
+  chạy scenario/A-B-C và visualize hiệu quả toàn hệ thống; driver app demo + Advisor là góc nhìn
+  một tài xế. Hai UI không cần giống nhau, nhưng phải là hai projection của cùng canonical
+  run/snapshot/ledger khi đối chiếu cùng actor/time.
 
 ## 5b. Mở rộng 2026-07-21 — Đánh giá bằng giả lập & robust optimization (Cường yêu cầu)
 

@@ -1,0 +1,77 @@
+{
+ "seeds": [
+  1000,
+  1001,
+  1002,
+  1003,
+  1004,
+  1005,
+  1006,
+  1007,
+  1008,
+  1009
+ ],
+ "note": "10 seed — chi ra HUONG, chua du CI (chuan >=30)",
+ "variants": {
+  "none_bug": {
+   "payout_delta": -19775.7,
+   "payout_ci": [
+    -38570.67,
+    -783.07
+   ],
+   "n_pos": 3,
+   "trips_delta": -1.6,
+   "idle_delta": 31.92,
+   "served_delta": -0.0072,
+   "expired_delta": 7.9
+  },
+  "bucket": {
+   "payout_delta": -11136.3,
+   "payout_ci": [
+    -31541.9,
+    9402.8
+   ],
+   "n_pos": 3,
+   "trips_delta": -2.5,
+   "idle_delta": 36.38,
+   "served_delta": -0.001,
+   "expired_delta": 3.8
+  },
+  "pacc_dist": {
+   "payout_delta": -19775.7,
+   "payout_ci": [
+    -38570.67,
+    -783.07
+   ],
+   "n_pos": 3,
+   "trips_delta": -1.6,
+   "idle_delta": 31.92,
+   "served_delta": -0.0072,
+   "expired_delta": 7.9
+  },
+  "rates": {
+   "payout_delta": -19775.7,
+   "payout_ci": [
+    -38570.67,
+    -783.07
+   ],
+   "n_pos": 3,
+   "trips_delta": -1.6,
+   "idle_delta": 31.92,
+   "served_delta": -0.0072,
+   "expired_delta": 7.9
+  },
+  "all": {
+   "payout_delta": -11136.3,
+   "payout_ci": [
+    -31541.9,
+    9402.8
+   ],
+   "n_pos": 3,
+   "trips_delta": -2.4,
+   "idle_delta": 36.13,
+   "served_delta": -0.0065,
+   "expired_delta": 9.8
+  }
+ }
+}

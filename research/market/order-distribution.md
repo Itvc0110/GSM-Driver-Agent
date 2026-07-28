@@ -1,5 +1,10 @@
 # Research — Phân phối đơn theo giờ/ngày & số liệu tham chiếu cho mock
 
+> **CURRENT-STATE NOTE — 2026-07-27:** đây là bộ nguồn/proxy lịch sử để định hình assumption,
+> **không phải raw dataset được nạp trực tiếp** vào snapshot 90 ngày và không phải bằng chứng về
+> phân phối vận hành GSM. Generator hiện dùng config + simulator/rule-based logic có version; lineage
+> đầy đủ tại [`../audit/2026-07-27-current-state/01-data-lineage-and-update-model.md`](../audit/2026-07-27-current-state/01-data-lineage-and-update-model.md).
+
 Ngày nghiên cứu: 2026-07-20 · Trạng thái: đợt 1 · Nguồn: T-001
 Quy ước: nguồn gắn **[PROXY]** (dữ liệu quốc tế) chỉ dùng cho **hình dạng phân phối/hệ số**, KHÔNG dùng mức tuyệt đối.
 

@@ -100,16 +100,17 @@ vào sau, bên cạnh UI app.
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
 | **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063) + **UX-CARDS** (UPDATE-067: proactive cards + đo adherence + CI draft) + **R1/R4** (UPDATE-068: mo-phong đồng ngôn ngữ app, playback ×1/×4/×16, feed sự kiện). **Chờ verdict V-10** |
-| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · 168 finding · 118 CONFIRMED · **16 fix hẹp có regression test**. Còn lại: **6 đề án ĐA-01..06 chờ Cường duyệt** + D-A3-01..06. Kế tiếp: **R5 double-check** rồi R2/R3 |
+| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · **179 finding** · 118 CONFIRMED · **21 hàng fix batch 1–3 + 1 fix R5-A**. **ĐÍNH CHÍNH:** số 168/16 trước đó là overcount/undercount đã được R5 tự bắt. R5-B vẫn chưa hoàn tất; HEAD còn `BLOCKER-R5-MUT10`. ĐA-01..03 đã được Cường duyệt design; ĐA-04..06 chờ duyệt. |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 
 ## 9. Những gì ĐÃ XONG trước các chỉ thị này (nền tảng)
 
 - 13 schema `l1r` khớp CHÍNH XÁC metadata GSM (gate test chống trôi).
-- Generator mock 90 ngày / 110 profile (bike/rto/car/employee/premium), 4 vòng verify.
+- Generator mock 90 ngày / **150 profile** theo manifest hiện tại (90 bike-platform + 20 bike-RTO + 15 car-platform + 15 car-employee + 10 car-premium). Schema/tên cột L1R theo metadata GSM; mọi nội dung là MOCK. Report R2 30 seed không thay cho artefact-specific verify (`D-SIM-08`).
 - **9 solver** phủ UC1–UC8; advisor pipeline C6 (router→composer→verifier) template-mode.
-- Suite **378 test** xanh. Research đợt 1–4 (policy refresh + app features).
+- Suite **378 test** là mốc lịch sử trước các track sau. Không dùng con số này như trạng thái HEAD;
+  current full-suite claim đang bị chặn bởi `BLOCKER-R5-MUT10`.
 
 ## 10. Chỉ thị bổ sung 2026-07-26 (Cường)
 
@@ -152,3 +153,26 @@ Phase U0–U4, kế hoạch chi tiết: plan đã duyệt (xem UPDATE-059). Sau 
    (một ngôn ngữ thiết kế); hướng người dùng — HIỂU + VISUALIZE quyết định advisor (decision-trace);
    show tối giản tools/bước agent dùng (học cách show của **CrewAI**); sim TUA/DỪNG được, sinh
    động (tốc độ, nhảy-tới-sự-kiện); **DOUBLE-CHECK lại mọi phần đã làm** — "làm thật kĩ" là chuẩn.
+
+## 13. Chỉ thị bổ sung 2026-07-27 — current-state/data/parity
+
+1. **Architecture B ĐÃ CHỐT:** một canonical run/snapshot sinh hai projection.
+   - **Simulation demo** phục vụ dispatcher/researcher: chạy scenario/A-B-C, đo và visualize hiệu
+     quả toàn hệ thống, system/fairness guardrail, actor drill-down.
+   - **Driver app demo + Advisor** phục vụ đúng một tài xế: state cá nhân, brief/nudge/recap,
+     personal goal và feedback; không phải dashboard dispatcher thu nhỏ.
+   - Hai UI không cần giống nhau; cùng `run_id + actor_id + as_of` phải reconcile event/state/money
+     từ cùng canonical ledger/provenance.
+2. **ĐA-01, ĐA-02, ĐA-03: APPROVED-DESIGN**, chưa có quyền gọi là implemented/tested.
+   ĐA-03 approval hiện chỉ gồm p_accept + avg_dist personalization; S2-1/band-flooring vẫn là bug
+   cycle riêng nếu muốn làm.
+3. **ĐA-04..06:** research direction đã được làm giàu tại
+   `research/audit/2026-07-27-current-state/04-decision-areas-da01-da06.md`; phải hỏi lại Cường
+   trước implementation.
+4. **Data:** snapshot “90 ngày” là scenario MOCK từ 2026-07-01 tới 2026-09-28, không phải 90 ngày
+   data thật/lịch sử gần nhất. UI snapshot và Advisor hiện read-only; cuốc demo/action không cập
+   nhật acceptance/completion/payout. External refresh scheduler chưa có.
+5. **R5 không được coi là xong:** phiên Fable dừng do quota. Commit `7739b3c` còn mutation `MUT10`
+   trong `_soc_cost`; chỉ R5 cycle được restore/verify để tránh đụng tiến trình đang dở.
+6. Hồ sơ source of truth cho các kết luận trên:
+   `research/audit/2026-07-27-current-state/README.md`.

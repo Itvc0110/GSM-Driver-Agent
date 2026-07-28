@@ -1,0 +1,261 @@
+{
+ "k_max": 12,
+ "seeds": [
+  1000,
+  1001,
+  1002
+ ],
+ "criteria": {
+  "served": [
+   0.78,
+   0.88
+  ],
+  "trips": [
+   15,
+   22
+  ],
+  "idle_p99_min": 60,
+  "gaps_over_180": 0
+ },
+ "grid": [
+  {
+   "n": 60,
+   "orders": 1400,
+   "served": 0.655,
+   "trips": 15.3,
+   "idle_p99": 37.9,
+   "idle_max": 115.6,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.67,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 60,
+   "orders": 1600,
+   "served": 0.612,
+   "trips": 16.0,
+   "idle_p99": 31.5,
+   "idle_max": 68.7,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.96,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 60,
+   "orders": 1800,
+   "served": 0.569,
+   "trips": 17.0,
+   "idle_p99": 19.9,
+   "idle_max": 84.3,
+   "n_gap_over_180": 0,
+   "offers_per_h": 3.36,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 60,
+   "orders": 2000,
+   "served": 0.542,
+   "trips": 17.8,
+   "idle_p99": 7.9,
+   "idle_max": 23.5,
+   "n_gap_over_180": 0,
+   "offers_per_h": 3.66,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 70,
+   "orders": 1400,
+   "served": 0.708,
+   "trips": 14.2,
+   "idle_p99": 48.4,
+   "idle_max": 140.7,
+   "n_gap_over_180": 0.3333333333333333,
+   "offers_per_h": 2.34,
+   "PASS": false,
+   "fail": [
+    "served",
+    "trips",
+    "gap>180"
+   ]
+  },
+  {
+   "n": 70,
+   "orders": 1600,
+   "served": 0.66,
+   "trips": 14.8,
+   "idle_p99": 44.7,
+   "idle_max": 103.1,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.56,
+   "PASS": false,
+   "fail": [
+    "served",
+    "trips"
+   ]
+  },
+  {
+   "n": 70,
+   "orders": 1800,
+   "served": 0.625,
+   "trips": 16.0,
+   "idle_p99": 37.1,
+   "idle_max": 90.3,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.91,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 70,
+   "orders": 2000,
+   "served": 0.596,
+   "trips": 16.8,
+   "idle_p99": 14.9,
+   "idle_max": 43.6,
+   "n_gap_over_180": 0,
+   "offers_per_h": 3.18,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 80,
+   "orders": 1400,
+   "served": 0.744,
+   "trips": 13.1,
+   "idle_p99": 66.6,
+   "idle_max": 179.1,
+   "n_gap_over_180": 0.3333333333333333,
+   "offers_per_h": 2.04,
+   "PASS": false,
+   "fail": [
+    "served",
+    "trips",
+    "idle_p99",
+    "gap>180"
+   ]
+  },
+  {
+   "n": 80,
+   "orders": 1600,
+   "served": 0.705,
+   "trips": 13.9,
+   "idle_p99": 75.4,
+   "idle_max": 180.0,
+   "n_gap_over_180": 0.3333333333333333,
+   "offers_per_h": 2.24,
+   "PASS": false,
+   "fail": [
+    "served",
+    "trips",
+    "idle_p99",
+    "gap>180"
+   ]
+  },
+  {
+   "n": 80,
+   "orders": 1800,
+   "served": 0.684,
+   "trips": 15.3,
+   "idle_p99": 42.0,
+   "idle_max": 111.4,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.54,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 80,
+   "orders": 2000,
+   "served": 0.658,
+   "trips": 16.2,
+   "idle_p99": 24.0,
+   "idle_max": 82.2,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.76,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  },
+  {
+   "n": 90,
+   "orders": 1400,
+   "served": 0.78,
+   "trips": 12.2,
+   "idle_p99": 90.1,
+   "idle_max": 255.1,
+   "n_gap_over_180": 2.6666666666666665,
+   "offers_per_h": 1.84,
+   "PASS": false,
+   "fail": [
+    "trips",
+    "idle_p99",
+    "gap>180"
+   ]
+  },
+  {
+   "n": 90,
+   "orders": 1600,
+   "served": 0.734,
+   "trips": 12.8,
+   "idle_p99": 83.3,
+   "idle_max": 210.7,
+   "n_gap_over_180": 3,
+   "offers_per_h": 2.01,
+   "PASS": false,
+   "fail": [
+    "served",
+    "trips",
+    "idle_p99",
+    "gap>180"
+   ]
+  },
+  {
+   "n": 90,
+   "orders": 1800,
+   "served": 0.715,
+   "trips": 14.2,
+   "idle_p99": 56.4,
+   "idle_max": 137.8,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.27,
+   "PASS": false,
+   "fail": [
+    "served",
+    "trips"
+   ]
+  },
+  {
+   "n": 90,
+   "orders": 2000,
+   "served": 0.694,
+   "trips": 15.2,
+   "idle_p99": 32.8,
+   "idle_max": 93.6,
+   "n_gap_over_180": 0,
+   "offers_per_h": 2.51,
+   "PASS": false,
+   "fail": [
+    "served"
+   ]
+  }
+ ]
+}

@@ -1,5 +1,11 @@
 # Research — Biến điều phối, API bên ngoài, taxonomy sự kiện (đợt 6b)
 
+> **HISTORICAL RESEARCH INPUT — 2026-07-27:** bảng chọn Open-Meteo/TomTom/Nager/Ticketbox dưới
+> đây là brainstorm đợt 6b, **không phải stack runtime hiện tại**. Chỉ thị/.env hiện chọn
+> WeatherAPI + OSRM + Stadia + Jina; ngoài OSRM routing/cache, external context chưa được nối vào
+> Advisor và chưa có refresh cadence. Xem
+> [`../audit/2026-07-27-current-state/01-data-lineage-and-update-model.md`](../audit/2026-07-27-current-state/01-data-lineage-and-update-model.md).
+
 Ngày: 2026-07-22 · Nguồn: research đợt 6b · Phục vụ: làm giàu sim + harness advisor (T-019/T-026), mở rộng `specs/environment-variables.md`
 Nhãn: **[NGUỒN]** URL kiểm chứng · **[PROXY]** cơ chế quốc tế · **[ƯỚC LƯỢNG]**.
 

@@ -1,5 +1,11 @@
 # BACKLOG — loạt câu hỏi/ý tưởng Cường 2026-07-27 (rạng sáng)
 
+> **STATUS NOTE — 2026-07-27:** đây là backlog lịch sử trước khi audit/reconcile hoàn tất. F0 và
+> proactive cards đã chốt trong DIRECTIVES §12; architecture B đã chốt trong §13. “UI sim giống
+> UI app” ở R1 nghĩa dùng chung design system, **không** có nghĩa cùng audience/data: simulation
+> demo là dispatcher/evaluation view, driver app demo + Advisor là single-driver view. Trạng thái
+> mới nhất: `research/audit/2026-07-27-current-state/README.md`.
+
 ## 🎯 YÊU CẦU BỔ SUNG đợt 2 (Cường ~02:00) — LÀM SAU KHI XONG AUDIT, mỗi mục PLAN KỸ trước
 
 > Nguyên tắc Cường nhấn mạnh: *"các phần tôi đã yêu cầu phải được làm thật kĩ"* — cái đã làm

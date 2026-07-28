@@ -4,7 +4,149 @@
 > của Cường (data luôn MOCK + local-only; external API keys; **SIM overhaul là mảng riêng ưu tiên
 > cao nhất**; mock UI xem advice; C7 + rà soát định kỳ mô hình tối ưu). File đó THẮNG khi xung đột.
 
-Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T-030). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
+Cập nhật trạng thái: **2026-07-27**. Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE` / `BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
+
+## Current-state checkpoint 2026-07-27
+
+- **T-040 — DONE (docs/research):** reconcile toàn codebase về data 90 ngày, schema/update path,
+  simulation↔driver-app parity, Advisor capabilities/ignore UX/goals/recap và ĐA-01..06. Dossier:
+  `research/audit/2026-07-27-current-state/`; **UPDATE-082** (đổi số từ 073 — remote đã chiếm 073).
+- **DECISION architecture B:** simulation demo = dispatcher/researcher evaluation view; driver app
+  demo + Advisor = single-driver view; hai projection dùng chung canonical run/snapshot/ledger.
+- **ĐA-01..03 APPROVED-DESIGN, NOT IMPLEMENTED.**
+- **ĐA-04..ĐA-09 + `specs/advisor-objective-model-v2.md` DUYỆT 2026-07-27** (Cường: *"oke duyệt
+  hết"*). Chi tiết verdict trong `PENDING-REVIEW.md` §Đã check xong.
+  **ĐA-06 đã CHỐT riêng 2026-07-27** — nghĩa vụ nhắc-duyệt hoàn tất, agent **không nhắc nữa**;
+  vẫn xếp POLISH, và mang nhãn **DỄ THAY ĐỔI** ⇒ thi công theo ràng buộc ở **T-044**.
+- **T-041 — MÔ HÌNH HOÁ LẠI ADVISOR (spec objective v2 §6), ưu tiên cao nhất hiện tại:**
+  1. `DONE 2026-07-27 (UPDATE-075)` đo trước sửa sau — Gini/HHI/khách + guardrail 4 tầng +
+     bỏ ép `coverage="single"` + baseline 30 seed `coverage: all`.
+  1b. `DONE 2026-07-27 (UPDATE-078)` **BUG-S2-PARAMS**: bridge không truyền `params` cho `shift_dp`
+     ⇒ DP tính bucket 30′ trong khi sim tiến 60′ (pin tưởng bền gấp đôi, nghỉ bắt buộc giảm 4×).
+     Hồ sơ `10-*`. **Tác động lên payout CHƯA đo được**: so ghép cặp 30 seed cho hiệu số −7.650đ
+     CI [−24.390, +9.522] — **CI trùm 0**, fix giúp ở 12/30 seed. Cần **n≈105** (SD ~40k/seed).
+     Ablation: `bucket_min` là tham số DUY NHẤT có tác dụng; `p_accept`/`avg_dist_km`/gate thưởng
+     **inert hoàn toàn** (chỉ scale `online_pay`, argmax không đổi ⇒ thêm bằng chứng cho model gap).
+  1b'. `TODO` chạy lại so ghép cặp ở **n≈105 seed** để kết luận dấu của fix (hoặc dùng thiết kế
+     giảm phương sai). Hằng `MIN_SEEDS_FOR_VARIANT_COMPARISON = 100` đã ghi vào `parallel.py`.
+  1c. ~~thêm "giá trị nghỉ"~~ **HUỶ HƯỚNG 2026-07-27 theo chỉ thị Cường**: *"rất khó mô hình hoá
+     giá trị nghỉ tường minh… trừ khi mô hình hoá được chính xác thì không nên tạo biến"*. Thay
+     bằng **T-045** (root cause thật, đo được). Sự thật code vẫn giữ để tham chiếu: `fatigue` chỉ
+     khiến tài xế tự nghỉ, không ảnh hưởng năng suất (hồ sơ `11-*` §1).
+  2. `TODO` C1 chi phí vận hành/km + C5 chi phí SOC phi tuyến → đo lại chỉ tiêu kép.
+  3. ~~C2 giá trị nghỉ~~ **HUỶ** (xem 1c). C3 rủi ro (CVaR/phạt phương sai) — `TODO`, nhưng theo
+     hồ sơ `11-*` §5 thì mọi số hạng ĐỘ LỚN đều inert khi biến vị trí chưa vào bài toán ⇒ **làm
+     T-045a TRƯỚC**, nếu không lại đo một thay đổi không có tác dụng.
+  4. `TODO` `MarketStateView` + C4 chi phí cơ hội vị trí (ĐA-09).
+  5. `TODO` capacity ledger + hồi sinh S4 → best-response equilibrium (ĐA-09).
+  - **Ràng buộc Cường**: `accept_lift` giữ TẮT; `shift_plan` giữ BẬT + cảnh báo đỏ trong khu Mô
+    phỏng, **đo lại trước bản cuối — không hiệu quả thì TẮT để advisor im lặng**.
+- **T-046 — MẪU LỖI LẶP LẠI "sửa một tầng, tầng khác không biết"** (hồ sơ `13-*` Phần 1): xuất
+  hiện **5 lần trong một phiên**. 4 quy tắc rút ra (test ở tầng consumer; test caller TRUYỀN tham
+  số mới; chỉnh tham số cấu trúc phải in metric coupled; hai-tên-một-sự-thật là nợ). **Ứng viên
+  nghi tiếp theo, chưa kiểm**: `bonus_at` vs `day_bonus` · `next_tier_gap`/`trip_points` chép đôi ·
+  `DEFAULT_PARAMS` của 8 solver còn lại · viết `test_l3_views_derivable_from_l1r`.
+- **T-045 — LỖ HỔNG ĐO ĐƯỢC (hồ sơ `12-*` + `13-*`), thay cho hướng "giá trị nghỉ":**
+  a. **`TODO` ⭐ ĐÒN BẨY LỚN NHẤT — advisor tối ưu SAI BIẾN.** 62% lượt, đơn chết vì **không ai
+     trong bán kính 2,1 km**; tài xế rỗi median 12 người/23 km²; đơn hết hạn **không xấu về kinh
+     tế** (gross 24.151đ vs 24.734đ). Biến có đòn bẩy là **VỊ TRÍ**, mà advisor không có kênh nào
+     khuyên vị trí và không có state cung. ⇒ nối **ĐA-09 `MarketStateView`** + **hồi sinh S4
+     `capacity_alloc`** (đang chết). Nguồn dữ liệu đã có: `public_driver_hex_tracking` (1,37M dòng).
+     **Đây mới là lý do các số hạng ĐỘ LỚN đều inert** (hồ sơ `11-*` §5).
+  b. **`TODO` chi phí pin/năng lượng = 0 trong MỌI công thức.** `grep swap_cost|charge_cost|
+     energy_cost` = rỗng; `payout_vnd` chỉ `+=`, không trừ gì. Hệ quả đo được: nhóm **SWAP kiếm
+     hơn 26%** (262.502đ vs 207.962đ) với **cùng số cuốc, cùng giờ online** — vì swap nhanh VÀ
+     miễn phí. Thêm `swap_fee_vnd`/`swap_free_per_day`/`charge_cost_vnd_per_trip` **mặc định 0**,
+     trừ vào ledger riêng. ⚠ Số 9.000đ/lần là **press/medium** (vinfastauto.com trả 403) ⇒ **phải
+     hỏi GSM (`D-POL-05`)** trước khi đặt mặc định khác 0. Lưu ý: nhiều chương trình **miễn phí**
+     đổi pin (RTO 5 lần/ngày tới 06/2028; "Tặng Xe" không giới hạn tới 31/3/2029) ⇒ chi phí pin là
+     biến **theo cohort/hợp đồng**, phải versioned như policy.
+  c0. `DONE 2026-07-28 (UPDATE-079)` **BUG-DISPATCH-SHORTLIST** — `candidate_ring_k_max` 6 → 12.
+     Shortlist H3 phủ **2,22 km** trong khi `eta_max = 11′` cho phép tới **5,50 km** (v đêm 30 km/h,
+     factor OSRM min **1,00**) ⇒ tài xế thoả ETA bị loại **âm thầm**. Đo 3 seed: served
+     **0,750 → 0,789**, đơn hết hạn **−18%**, runtime ×1,8; k=16/20 **y hệt** ⇒ 12 đã bão hoà.
+     5 test, trong đó **bất biến phủ sóng** đỏ lại nếu ai đổi `eta_max`/tốc độ/res mà quên k.
+     ⚠ **Từ chối** nâng `eta_max` (cho served 0,856) — vặn realism, đã khoá bằng test.
+     ⚠ **VÔ HIỆU HOÁ baseline 30 seed** của UPDATE-075/078 (đo ở k=6) ⇒ phải đo lại.
+  c. **`TODO` BUG dispatcher (còn lại)**: `dispatcher.py:77` bỏ đơn khi người **gần nhất theo haversine** fail
+     ETA, viện lý do *"ETA đơn điệu theo distance"* — **tiền đề SAI** vì `factor` theo cặp ô biến
+     thiên p10 1,24 → p90 1,94 (số của chính repo). Đo: **293/3.520 lượt bỏ OAN (8,3%)**, tiết kiệm
+     được median 3,1′. Sửa: xếp hạng theo **ETA thật**, thử tiếp ứng viên kế (có trần). 4 test bắt
+     buộc ở hồ sơ `13-*` §4.3. **Không** kỳ vọng giải quyết chờ-hàng-giờ (chỉ 8,3%).
+  d. **`TODO` ⛔ GỐC của chờ-hàng-giờ — ĐÃ ĐO XONG BIÊN GIỚI (hồ sơ `14-*`), CHỜ Q-05 xác nhận
+     thứ tự mới.** Ba sự thật đã chứng minh: **(i)** sai lệch thiết kế — `orders_per_day = 1200`
+     gắn với **50 actors** nhưng `actors.n` đã lên **90** ⇒ đơn/actor 24,0 → **13,3**, tài xế
+     **rỗi 32%**; **(ii)** BUG `candidate_ring_k_max = 6` phủ **1,81 km** trong khi `eta_max = 11′`
+     cho phép tới **4,44 km** ⇒ shortlist loại chính người thoả ETA; nới k=12 làm **cả hai metric
+     cùng lên** (served 0,750→0,789, hết hạn −18%) — ⚠ **cấm nâng `eta_max`** (realism);
+     **(iii)** quét lưới 16 tổ hợp × 3 seed: **0/16 PASS** cả bốn tiêu chí — `served` và
+     `trips/tx` **đối nghịch**, không có điểm giao. Trần năng lực **17,7 cuốc/tx khi bão hoà**
+     (biên dưới research 18–22) ⇒ **vật lý ĐÚNG**; mất mát nằm ở **`relocate` 14% + phân bố đơn
+     không đều** ⇒ đòn bẩy thật là **T-045a**, không phải mở rộng zone.
+     **Bắt buộc**: chọn một điểm trên biên giới **có chủ ý** và **ghi bảng biên giới vào config**
+     để người sau không tưởng đã tối ưu.
+  e. **`TODO` `soc_pct` — BA nguồn cho MỘT biến, và 13 bảng thật KHÔNG CÓ cột pin** (hồ sơ `13-*`
+     §3.2): sim = telemetry thật · l1r = `None` ⇒ `shift_dp` **im lặng giả định pin ĐẦY** (nguy
+     hiểm: khuyên tài xế 15% pin như 100%, không hạ confidence) · UI = **sha256 → 30..95**, và
+     **số bịa đó HIỂN THỊ cho tài xế** (`app.js:99` `⚡{soc}%`, tô đỏ <25%) mà **không có nhãn
+     trên UI** — vi phạm `CLAUDE.md §5` "mock phải gắn nhãn mock". **(c-UI) đang chạy hôm nay;
+     (l1r) là blocker tương lai vì S2 chưa nối vào UI.** Sửa UI trước (rẻ, đúng ranh giới).
+- **T-042 — C2 "một nguồn luật UI↔sim"** (ĐA-05 đã duyệt; hồ sơ `08-parity-sim-vs-ui.md` §5):
+  0. `DONE 2026-07-27 (UPDATE-076)` `already_maxed` che `feasible` — 3 consumer + solver constraints.
+  0b. `DONE 2026-07-27 (UPDATE-076)` **S5 `weekly_khoan`** cùng mẫu lỗi: `_khoan_sentence` không
+     đọc `feasible` ⇒ khoán không thể đạt vẫn nói *"còn thiếu Xđ… có thể bị truy thu Yđ"*. Đã sửa
+     + 2 test. Quét mẫu lỗi CẠN (UPDATE-076 §1d): chỉ S1/S5 có defect thật.
+  1. `DONE 2026-07-27 (UPDATE-075)` cước UI = `PolicyBundle.gross_fare` (bỏ hằng `24000`).
+  2. `DONE 2026-07-27 (UPDATE-076)` `seed` advice đọc từ manifest (hết `seed: 0` giả).
+  3a. `DONE 2026-07-27 (UPDATE-077)` **UI hết rò tương lai** — `gsm_core/rates.shrunk_rate` +
+     `_rate_asof`/`_pooled_prior` (7 ngày TRƯỚC, `p0 = 0,8971`, `m = 20`, **bỏ fallback 1.0**).
+     Tác động: **16/60 tài xế đổi phía ngưỡng 0,85**. Sim KHÔNG đổi ⇒ baseline 30 seed còn hiệu lực.
+  3b. `TODO` **nối `shrunk_rate` vào SIM** để hết hai-estimator (yêu cầu "một luật" của Cường mới
+     xong một nửa) + diệt gốc 0/0→1.0 thay vì vá bằng `acc_est`. ⚠ **SẼ lệch baseline ⇒ đo lại 30 seed.**
+  3c. `DONE 2026-07-27 (UPDATE-077)` quét độ nhạy `m`: kết luận **robust** với `m ∈ [5,50]` (đổi
+     1,1–4,1%), vì `m ≪ n` (20 vs 81). Chỉ sập ở `m=200` (đổi 20%). Ràng buộc giữ: `m ≪ n`.
+  4. `TODO` payout project từ **ledger 4 nguồn** (UI đang tự cộng `commission + mission`).
+  5. `TODO` hợp nhất `bonus_at` (không gate) vs `day_bonus` (có gate) — cùng khái niệm, khác luật.
+  6. `TODO` `cards.js:120-122` tự ghép chuỗi tiền **ngoài verifier** — lỗ thủng của guardrail R5-A.
+  7. `TODO` `SourceEnvelope` đầy đủ (`dataset_id, run_id, as_of, policy_version, data_mode`).
+  8. `TODO` dọn: bỏ trường `feasible` **thừa** ở `idle_reduction` (luôn 1:1 với `notable`) và
+     `mission_knapsack` (`= bool(chosen)`). Không phải bug hôm nay, nhưng **hai tên cho một sự
+     thật** chính là thứ đẻ ra defect §1b/§1c. Quét mẫu lỗi đã CẠN (UPDATE-076 §1d) — chỉ S1/S5
+     có defect thật, cả hai đã sửa; đừng audit lại từ đầu.
+- **T-043 — mốc thưởng cao nhất gần như KHÔNG với tới được trong thế giới mock** (câu hỏi
+  calibration, không phải bug generator):
+  - Số đo: 86/12.805 driver-day (**0,67%**) chạm mốc 200 điểm; **0** trong số đó có tỷ lệ dưới
+    ngưỡng. Ban đầu tôi nghi generator ràng buộc ngầm — **ĐIỀU TRA CHO THẤY KHÔNG PHẢI**.
+  - Cơ chế thật: `corr(n_trips, offers) = 0,967` — số cuốc gần như hoàn toàn do **số đơn được
+    chào** quyết định. Cần **~29 cuốc** để đạt 200 điểm, trong khi offers/ngày có median 15,
+    p95 27, **max 37**. Ai nhận dưới 85% thì cần ≥35 offers — nằm ở đúng đuôi cực hạn. Đó là
+    **trần số học**, không phải ràng buộc nhân tạo.
+  - Câu hỏi thật cần Cường/GSM trả lời: **mốc 200 điểm có hợp lý không** khi chỉ 0,67% ngày-công
+    chạm tới? Nếu số policy thật (D-POL-05) khác thì kết luận này đổi.
+  - **Điều kiện: làm rõ trước khi dùng mock nghiệm thu bất kỳ kênh advice nào liên quan mốc thưởng.**
+- **T-044 — ĐA-06 AdviceEnvelopeV2 (CHỐT 2026-07-27, xếp POLISH → làm sau T-041 b2 + T-042).**
+  Cường chốt kèm cảnh báo: *"có thể sửa nhiều trong tương lai vì còn đang phân vân"*.
+  ⇒ **"Còn phân vân" là RÀNG BUỘC THI CÔNG, không phải ghi chú suông.** Thi công phải giả định
+  hình dạng envelope **sẽ đổi**:
+  1. **Một chỗ duy nhất biết hình dạng card** — mọi consumer (web cards, Flutter, C6, sim viewer)
+     đọc qua **một adapter**; cấm rải `item["title"]`/`item["numbers"][0]` khắp nơi. Bài học đắt
+     nhất phiên này: cùng một sự thật nằm ở nhiều chỗ ⇒ sửa một tầng, ba consumer không biết
+     (UPDATE-076 §1b/§1c).
+  2. **Schema versioned + upcaster** ngay từ v2.0.0 — không dùng `schema_version.const` một giá
+     trị (đó chính là **B-02/ARCH-VERSION** đang mở; **phải gỡ B-02 TRƯỚC**, nếu không mỗi lần
+     Cường đổi ý là một lần migration đau).
+  3. **Adapter v1 giữ sống** để Flutter v0 của Khánh không gãy khi v2 đổi.
+  4. **Không** đưa quyết định sản phẩm còn phân vân (số card/ca, thứ tự, mức chi tiết trace) vào
+     code cứng — để config, đổi được không cần deploy.
+  5. Verify per-card **fail-closed** (đã có tiền lệ R5-A ở `adapters/advisor.advice()`).
+  - **Phụ thuộc**: B-02 (registry đa phiên bản) · ĐA-05 (một projection chung) nên xong trước.
+- ~~**BLOCKER-R5-MUT10**~~ **GỠ 2026-07-27 (UPDATE-074)** — restore + 2 regression test; fix mới
+  ở working tree/staged, **chưa commit** nên HEAD `7739b3c` vẫn còn mutation.
+- **BLOCKER-ARCH-VERSION:** registry hiện chỉ load một schema/entity, chưa thực thi backward
+  compatibility cho minor bump. Phải giải quyết trước canonical event-store migration.
+
+Các section cũ bên dưới là timeline/backlog tích lũy; khi mâu thuẫn, dùng checkpoint này +
+`DIRECTIVES` §13 + dossier current-state.
 
 ## Thứ tự thực thi (theo độ quan trọng + phụ thuộc tuyến tính)
 
@@ -20,26 +162,26 @@ Cập nhật: 2026-07-23 (**Track CORE ưu tiên** — Cường; sim pause sau T
 8. **Real-data integration** (Cường cấp schema thật gsm-data-prod 2026-07-24) — **blueprint DONE** (UPDATE-033): catalog `docs/data-catalog/` + 7 part-plan `specs/real-data/`. Chốt: re-ground về 13 bảng thật; chưa BQ access (tool=interface+PII); mở rộng UC5-UC8. **Roadmap 6 phase (mỗi phase cycle riêng có plan+test):**
    - **PI-1 Schema** ✅ DONE 2026-07-24 (UPDATE-034): 13 `l1r/*` + registry + 30 test; 5 bảng thiếu cột ENGINEER (nhãn TBC).
    - **PI-2 Mock regen** ✅ DONE 2026-07-24 (UPDATE-034): `mockgen/realdata.py` sim→aggregate → 13 bảng; R1/R3/R4 verify (9 test) + **R2 statistical 30 seeds/1500 driver-day** (`ROUND-2`, 6/6 in-range). Smoke 14 ngày×50 driver OK.
-   - **PI-2b Data review + enlargement (ĐANG LÀM — refine Cường 2026-07-24)**: 
+   - **PI-2b Data review + enlargement (HISTORICAL HEADING; đã DONE ở dòng kết luận bên dưới)**:
      - **Overall review**: audit từng bảng/cột/phân phối vs catalog+schema+UC coverage; soi caveat R2; kiểm cột ENGINEER; FK/consistency tập lớn.
      - **REALISM + RANDOMNESS (ưu tiên)**: sửa **acceptance median 1.00** (sim thiếu decline) → tỷ lệ nhận theo archetype target (0.74-0.97) + noise per-day, back-out decline; thêm variance/randomness mọi metric; cộng **lớp thưởng tuần** vào payout (nối S5); reposition/penalty/fraud/idle đa dạng hơn.
      - **PROFILE UNIVERSE phủ MỌI loại GSM** (car / bike / premium / platform / rto / employee, archetype PT/FT/top/newbie/veteran, tenure spread): roster LỚN đa dạng; **sim CHỈ sample một subset (bike)** — car/premium/khác sinh KPI **rule-based** grounded `economics/income-structure` (car: lương+commission; premium: fare cao). Quy mô ngày →90+.
      - **DEFER (Cường)**: enlargement zone/station/market (ngoài Đống Đa) — future update.
      - Sau enlarge: chạy lại 4 vòng verify (R1/R2/R3/R4) tập lớn; cập nhật ROUND report. **Gate cho PI-4.**
-     - ✅ **DONE 2026-07-24** (UPDATE-035 + **UPDATE-036 audit**): profile universe 110 (bike/rto/car/employee/premium), acceptance 1.00→0.88, CSV export. **Audit tìm & fix 5 flaw**: R2 trộn population (verdict sai), impossible-state 203 driver-day (cuốc khi online=0), tràn nửa đêm, field degenerate (core_order/stoppoints), **crash parquet phụ thuộc seed**. Suite 208. **Đính chính:** bike payout thật ~221k (không phải 273k đã báo — số đó lẫn car), vẫn biên dưới tới khi có **lớp thưởng tuần (S5)**.
-   - **PI-3 DataSource tool**: MockSource+BQ skeleton+PII read-only (P4). Sau PI-1. Live treo chờ credentials + Cường chốt BQ auth/env.
+     - ✅ **DONE 2026-07-24** (UPDATE-035 + **UPDATE-036 audit**): thời điểm đó profile universe 110; manifest hiện tại sau các vòng SIM-XANH/D-SIM-13 là **150** (xem current-state dossier). Acceptance 1.00→0.88, CSV export. **Audit tìm & fix 5 flaw**: R2 trộn population (verdict sai), impossible-state 203 driver-day (cuốc khi online=0), tràn nửa đêm, field degenerate (core_order/stoppoints), **crash parquet phụ thuộc seed**. Suite 208. **Đính chính:** bike payout mock ~221k ở vòng đó (không phải 273k đã báo — số đó lẫn car); không gọi là payout thật GSM.
+   - **PI-3 DataSource tool**: MockSource+BQ skeleton+PII read-only (P4). MockSource/local là scope publish; live BQ chủ ý DEFERRED tới khi ghép data GSM thật, không phải task cần unblock trong cycle hiện tại.
    - **PI-4a Adapter L1R→L3** ✅ DONE 2026-07-24 (UPDATE-037): `features/from_l1r.py` — S1/S2/S3 view đọc field ĐO ĐƯỢC (acceptance/fulfillment/online/payout) thay vì recompute; `points_now` vẫn tính từ policy; chain S1→SolverReport traceability=1.0; 12 test, suite 221. **Fix self-review**: không bịa acceptance=1.0 khi thiếu dòng đo → carry-forward + nhãn ESTIMATED. **S4 KHÔNG remap** (bảng thật thiếu station capacity). **(d) CHỐT: khoán = GROSS** (doanh số), nhãn ASSUMPTION + `money_basis` param.
    - **PI-4b** ✅ DONE 2026-07-24 (UPDATE-038): **S5 WeeklyKhoanFeasibility** (gap khoán + rủi ro truy thu, money_basis=gross; quota=None → KHÔNG bịa số) + **S6 MissionKnapsack** (0/1 knapsack DP, **chứng minh tối ưu vs brute-force 30 case**). Schema additive: `policy_bundle.weekly_quota`, `solver_report` enum +2, 2 view L3 mới. 53 test, suite 274. **Fix**: mock mission thiếu `target_count` → S6 vô nghĩa (regression test). **Đính chính**: thưởng tuần KHÔNG có field trong bảng thật → S5 tính từ policy; gap payout R2 một phần là khác ĐỊNH NGHĨA (commission vs tổng thu nhập).
    - **PI-5a** ✅ DONE 2026-07-24 (UPDATE-040): nối **S5/S6 vào pipeline C6** — router F1/F2/F3 + intent `mission_task`/`weekly_target`, context_pack render key mới, template sinh câu khoán tuần + mini-task. 15 test, suite 299. **2 bug ngữ nghĩa lộ khi ĐỌC output** (test vẫn xanh): số bị gán nhầm nhãn ("mốc thưởng 35585.2 vnd_per_hour") do lấy theo VỊ TRÍ registry; nói "còn thiếu 0đ/truy thu 0đ" khi đã đạt khoán (so CHUỖI thay vì SỐ) — đã fix + test.
    - **PI-5b** ✅ DONE 2026-07-24 (UPDATE-041): **S7 IdleReduction (UC5)** — solver đầu tiên dùng `public_driver_hex_tracking` (1.09M dòng); nối F2/F3 + intent `idle_wait`; **đủ 5 điều kiện D-004b** (không chọn điểm đứng hộ, khu vực chỉ nhắc nhiệm vụ chính thức, cảnh báo tỷ lệ nhận, nhãn PROXY, không khuyên đơn). 14 test, suite 313. **Fix trạng thái BẤT KHẢ** (lộ khi đọc output): dwell offline bị gán `idle` ⇒ chờ 1300 phút > online 4.8h; nay dwell >90ph = `offline` + `data_warning` + invariant Σidle ≤ online. Output khớp research (idle 45% ~ util FT 45-55%; khung 13h ~ dead hours).
    - **PI-5c** ✅ DONE 2026-07-24 (UPDATE-042): **S8 PenaltyExplain (UC6)** + **S9 AnomalyAlert (UC7)** → **UC1–UC8 PHỦ HẾT bằng 9 solver**. Guardrail là thiết kế chính: UC6 chỉ nêu quy tắc + cách TUÂN THỦ (test chặn từ khoá dạy lách); UC7 **KHÔNG kết tội** — chỉ 'ghi nhận dấu hiệu' + confidence + khuyến nghị liên hệ hỗ trợ, cờ đã cleared thì im lặng, không lộ evidence/ngưỡng. **Chỉ hiện ở F3, không bắn giữa ca.** 21 test, suite 334. **Fix BUG-PI5c-01**: đồng âm tiếng Việt — 'bất thường'→'bat thuong' chứa 'thuong' (=thưởng) làm route sai → router nay lấy **keyword DÀI NHẤT**. + tách `vn_format.py` (1 nguồn định dạng tiền).
    - **PI-5d** ✅ DONE 2026-07-24 (UPDATE-043): **recheck toàn dự án** — 3 subagent audit FAIL (hết hạn mức chi tiêu) → tự audit; **property test xuyên solver** (`test_solver_properties.py`, 37 test). **Research đợt 4** đảo 3 giả định: app **CÓ bản đồ nhiệt + "Nhiệm vụ tiếp theo"** (đính chính căn cứ D-004), **4 mức cảnh báo gian lận** chính thức, **hạn giải trình 48 GIỜ**. Đồng bộ S7/S8/S9 + pain-point P-5..P-7. **Fix BUG-PI5d-01**: số giờ không neo registry ⇒ verifier VETO advice. Suite 334→378.
-   - **Còn lại (CẦN CƯỜNG UNBLOCK)**: PI-3 DataSource (BQ access/auth), PI-6 External (API key), C7 EXP (LLM live).
+   - **Còn lại:** PI-3 live DataSource **DEFERRED chủ ý** vì publish dùng mock/local; PI-6 External có key/config nhưng provider/cadence chưa implement; C7 EXP (LLM live) chưa bắt đầu.
    - **Follow-up không cần unblock**: audit độc lập lại khi có quota; `SOLVER` const cho S1-S4; property test phủ shift_dp/capacity_alloc; xác nhận GSM (tiêu chí 4 mức, heatmap cho Bike, mốc tính 48h).
    - **PI-5 UC5-8 features**: idle-reduction, penalty-explain, anomaly-alert + router (P6). Sau PI-4.
-   - **PI-6 External** (treo): ExternalContext + Google Maps/Weather (P5). Chờ Cường chốt key/techstack.
-   - **Cần Cường/GSM chốt trước impl:** semantics 5 field + target KPI + cột thật 5 bảng; BQ auth/env; external key. **LOẠI TRỪ**: hiệu năng AI-Advisor/observability/CICD/optimize.
-9. **C7**: EXP-001..005 trên instrumentation C6 (episode store đã bandit-ready). **Gated:** eval set F0 phải phản ánh policy hiện hành (post-refresh) + data thật (post PI-2) → chạy sau khi nền policy+data ổn.
+   - **PI-6 External** (treo): ExternalContext theo stack hiện hành WeatherAPI + OSRM + Stadia + Jina. Google Maps không cần (Q-02 closed). Cần cycle provider/cache/freshness riêng, không còn blocked chỉ vì key.
+   - **Cần Cường/GSM chốt trước live integration:** semantics 5 field + target KPI + cột thật 5 bảng; BQ auth/env. External key/config đã có, nhưng provider/cache/freshness là cycle riêng. **LOẠI TRỪ**: hiệu năng AI-Advisor/observability/CICD/optimize.
+9. **C7**: EXP-001..005 trên instrumentation C6 (episode store đã bandit-ready). **Gated:** eval set F0 phải phản ánh policy hiện hành (post-refresh) + snapshot MOCK được regen/verify đúng schema và provenance; không gọi PI-2 là data thật.
 7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
 
 **Track A — SIM OVERHAUL (ưu tiên cao nhất, Cường 2026-07-24; spec `specs/simulation/00-sim-overhaul-master.md`):**

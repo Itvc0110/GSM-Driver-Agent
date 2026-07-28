@@ -18,6 +18,11 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
 
 - **Versioning:** `schema_version` semver per entity. Thêm field = optional + minor bump.
   Bỏ field = đánh `deprecated_since` trong description + giữ ≥1 chu kỳ, KHÔNG xóa thẳng.
+  **CURRENT LIMITATION (2026-07-27):** `SchemaRegistry` hiện chỉ load một file/entity, trong khi
+  schema khóa `schema_version.const` và `additionalProperties: false`. Vì vậy minor bump mới chỉ là
+  quy ước tác giả, **chưa chứng minh backward compatibility runtime** cho record phiên bản cũ.
+  Trước migration phải có registry đa phiên bản hoặc upcaster + compatibility test; xem
+  `research/audit/2026-07-27-current-state/01-data-lineage-and-update-model.md#8-blocker-schema-versioning`.
 - **`source` bắt buộc** mọi record: `MOCK | REAL | ESTIMATED | COARSE | INFERRED`
   (CLAUDE.md §5 — mock phải gắn nhãn; không trộn mock với data thật).
 - **`x-sensitivity`**: field PII (driver_id, lat/lon thô) — cơ chế thu hẹp/anonymize sau.
