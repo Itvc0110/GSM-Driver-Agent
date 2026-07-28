@@ -91,8 +91,10 @@ class MarketStateProducer:
             return hit
         self._cache.clear()               # chỉ giữ bucket hiện tại — không để số cũ sống sót
         hour = (idx * self.bucket_min // 60) % 24
+        acts = self.world.actors
+        acts = list(acts.values()) if hasattr(acts, "values") else list(acts)
         if self.supply_available:
-            now, inc = count_supply(self.world.actors, self.pending_targets)
+            now, inc = count_supply(acts, self.pending_targets)
         else:
             now, inc = None, None
         start = idx * self.bucket_min

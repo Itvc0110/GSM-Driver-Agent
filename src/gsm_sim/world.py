@@ -118,6 +118,17 @@ class World:
         # thứ tự set-iteration (đã prove PYTHONHASHSEED làm lệch metrics cross-process).
         self._belief_cache: dict[tuple[int, int], dict[str, float]] = {}
 
+        # T-045a b3 — kênh VỊ TRÍ (S4 batch tick). CHỈ dựng khi bật: cờ OFF phải cho trace
+        # y hệt config không có cờ, từng bit (test canh). `standby_plan` là bảng gán hiện
+        # hành {actor_id: cell}, do `_standby_planner` ghi mỗi bucket; vòng idle chỉ ĐỌC.
+        self.standby_plan: dict[int, str] = {}
+        self.market = None
+        if self.advice.enabled and self.advice.positioning_overrides != "off":
+            from .market_state import MarketStateProducer
+            self.market = MarketStateProducer(
+                self, bucket_min=self.advice.bucket_min,
+                supply_available=self.advice.market_supply_available)
+
     def _build_stations(self) -> list[Station]:
         slots = int(self.cfg.get("station.slots"))
         ready = float(self.cfg.get("station.ready_soc_pct"))
@@ -205,11 +216,85 @@ class World:
     def run(self):
         self.env.process(self._dispatcher_proc())
         self.env.process(self._order_expiry_proc())
+        if self.market is not None:
+            self.env.process(self._standby_planner())
         for a in self.actors.values():
             self.env.process(self._actor_proc(a))
         self.env.run(until=self.end_min)
         self._settle_end_of_run()
         return self.events
+
+    # --- T-045a b3: batch tick S4 — gán tài xế rỗi vào ô CÒN TRẦN, mỗi bucket một lần ---
+
+    def _standby_planner(self):
+        """Kiến trúc Cường chốt (2026-07-28): gán theo LÔ đúng bản chất S4 (Hungarian), không
+        greedy trừ dần — giữ tính gán tối ưu và so được với phân bổ tập trung (ĐA-09 §2.2).
+
+        Trần do `MarketStateView` tính (đã trừ cung tại chỗ + CUNG ĐANG TỚI + advice vừa phát);
+        S4 chỉ THI HÀNH — không có chỗ thứ hai tự tính trần (mẫu lỗi T-046).
+
+        Adherence rút MỘT LẦN tại thời điểm gán (`standby_follow_draw`) — không re-roll mỗi
+        vòng poll (lỗi D-SIM-14). Người không nghe: không vào plan, không ai nhắc lại trong
+        bucket đó.
+        """
+        from gsm_core.features.allocation import derive_allocation_input
+        from gsm_core.solvers import capacity_alloc
+        from .advice_bridge import _iso
+
+        b = float(self.advice.bucket_min)
+        while self.env.now < self.end_min:
+            now = self.env.now
+            view = self.market.view(now)
+            if not (view["positioning_allowed"] and view["ranked_cells"]):
+                yield self.env.timeout(b)
+                continue
+            ranked = view["ranked_cells"]
+            cap_left = {c: int(view["cells"][c]["capacity_left"] or 0) for c in ranked}
+
+            cands = []
+            for a in self.actors.values():
+                if a.state != ActorState.IDLE or not self.advice.covers(a):
+                    continue
+                if a.actor_id in self.standby_plan:
+                    continue                     # đã có phân công còn hiệu lực
+                if cap_left.get(a.cell, 0) > 0:
+                    continue                     # đang đứng ở ô CÒN TRẦN — kéo đi là churn
+                # preferred = ô còn trần GẦN NHẤT (đỡ km rỗng — veto b4); tie-break theo tên
+                # ô để deterministic. Hungarian tự stagger phần tranh chấp.
+                pref = min(ranked, key=lambda c: (cell_distance_km(self.grid, a.cell, c), c))
+                # priority_soc của S4: giá trị THẤP được xếp trước. Đảo SOC để ưu tiên người
+                # NHIỀU pin (đi xa được); người ít pin không nên bị kéo chạy rỗng.
+                cands.append({"driver_id": f"d-{a.actor_id}", "advice_kind": "standby_zone",
+                              "target": pref, "priority_soc": round(100.0 - a.soc_pct, 1)})
+            if not cands:
+                yield self.env.timeout(b)
+                continue
+
+            zones = [{"zone": c, "capacity": cap_left[c]} for c in ranked]
+            ai = derive_allocation_input(_iso(now), cands, [], zones,
+                                         bucket_min=int(b))
+            sol = capacity_alloc.solve(ai)["solution"]
+
+            n_follow = 0
+            per_cell: dict[str, int] = {}
+            flags_by_cell: dict[str, list] = {}
+            for al in sol["allocations"]:
+                cell = al["assigned_target"]
+                per_cell[cell] = per_cell.get(cell, 0) + 1
+                flags_by_cell.setdefault(cell, al.get("safety_flags") or [])
+                aid = int(al["driver_id"][2:])
+                if self.advice.standby_follow_draw(self.actors[aid]):
+                    self.standby_plan[aid] = cell
+                    self.market.pending_targets[aid] = cell   # trừ trần NGAY cho người hỏi sau
+                    n_follow += 1
+            for cell in sorted(per_cell):
+                self.log(-1, "standby_alloc", cell, n_assigned=per_cell[cell],
+                         capacity_left=cap_left[cell], safety_flags=flags_by_cell[cell])
+            self.log(-1, "standby_planner", "",
+                     n_candidates=len(cands), n_assigned=sol["n_assigned"],
+                     n_unassigned=len(sol["unassigned"]), n_follow=n_follow,
+                     herding_avoided=sol["herding_avoided"])
+            yield self.env.timeout(b)
 
     def _settle_end_of_run(self):
         """M0-6 + M0-4: chốt cuối ngày — flush time cho actor còn bận, censor đơn in-flight,
@@ -602,6 +687,27 @@ class World:
                         action = adv.mapped_action
                     target = None      # advice không chỉ định cell (product boundary D-004)
 
+            # --- T-045a b3: kênh VỊ TRÍ — vòng idle chỉ ĐỌC `standby_plan` do planner gán ---
+            # D-004 cấm reposition ở SẢN PHẨM; trong SIM được mở (2026-07-21) để nghiên cứu
+            # rủi ro hệ thống. Adherence đã rút MỘT LẦN lúc gán — ở đây không rút lại.
+            reloc_reason = "demand_seek"
+            sb_cell = self.standby_plan.get(actor.actor_id)
+            if sb_cell is not None:
+                mode = self.advice.positioning_overrides
+                if sb_cell == actor.cell:
+                    # đã ở đúng ô — phân công hoàn thành, đứng chờ tại chỗ là đúng ý nó
+                    self.standby_plan.pop(actor.actor_id, None)
+                    self.market.pending_targets.pop(actor.actor_id, None)
+                elif (action == IdleAction.WAIT if mode == "wait_only"
+                      else action in (IdleAction.WAIT, IdleAction.RELOCATE)):
+                    # BÀI HỌC REST (đo được −14k → −32k khi ghi đè quá tay): không bao giờ
+                    # cướp quyền của go_swap (pin) / rest (sức khoẻ) / end_shift (kết ca).
+                    self.standby_plan.pop(actor.actor_id, None)
+                    self.market.pending_targets.pop(actor.actor_id, None)
+                    self.log(actor.actor_id, "standby_followed", actor.cell,
+                             from_action=action.value, to_cell=sb_cell)
+                    action, target, reloc_reason = IdleAction.RELOCATE, sb_cell, "standby"
+
             # --- D-SIM-03 kênh `rest_window`: dồn nghỉ/đổi pin vào khung vắng khách (solver S7) ---
             # Chỉ HOÃN, không bao giờ ÉP nghỉ: nếu bản năng chưa muốn nghỉ thì không can thiệp.
             if action in (IdleAction.REST, IdleAction.GO_SWAP, IdleAction.GO_CHARGE):
@@ -654,9 +760,9 @@ class World:
                 actor.state = ActorState.IDLE
                 actor.enroute_cell = None     # tới nơi ⇒ hết là cung ĐANG TỚI
                 self._set_pos(actor, clat, clon)  # M0-10
-                self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="demand_seek")
+                self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason=reloc_reason)
                 actor.idle_streak_min = 0.0   # đã dịch chuyển ⇒ đếm lại từ đầu
-                self.log(actor.actor_id, "relocate", target, reason="demand_seek")
+                self.log(actor.actor_id, "relocate", target, reason=reloc_reason)
             else:  # WAIT
                 actor.idle_min += 2.0
                 actor.idle_streak_min += 2.0   # T-045d: chuỗi rỗi LIÊN TỤC (reset khi được chào)

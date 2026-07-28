@@ -172,6 +172,16 @@ class AdviceActionBridge:
         # prior hoàn thành của quần thể = 1 − tỷ lệ huỷ-sau-nhận của chính thế giới này
         self.completion_prior = round(
             1.0 - float(cfg.get("orders.cancel_after_accept_rate", 0.05) or 0.05), 4)
+        # T-045a b3 — kênh VỊ TRÍ (S4 capacity_alloc, batch tick). Ba mức, Cường chốt đo CẢ HAI
+        # mức bật ở b4:
+        #   "off"               → mặc định, KHÔNG chạy planner, trace y hệt không có cờ;
+        #   "wait_only"         → chỉ ghi đè khi bản năng là WAIT (bảo thủ — bài học REST:
+        #                          ghi đè hành động 'đắt' từng làm advisor tệ đi −14k → −32k);
+        #   "wait_and_relocate" → đổi cả ĐÍCH của relocate bản năng.
+        self.positioning_overrides = str(adv.get("positioning_overrides", "off") or "off")
+        # Cờ dựng kịch bản ABSENT (data thật không có cung theo ô): solver phải chạy được ở cả
+        # ba mức available/degraded/absent — thiếu cung ⇒ KHÔNG khuyên vị trí, không đoán.
+        self.market_supply_available = bool(adv.get("market_supply_available", True))
         # SIM-4: mỗi kênh bật/tắt RIÊNG ⇒ đo được kênh nào tạo ra giá trị (attribution).
         ch = adv.get("channels") or {}
         self.ch_shift_plan = bool(ch.get("shift_plan", True))
@@ -353,6 +363,19 @@ class AdviceActionBridge:
             reason=na.get("reason"),
         )
 
+
+    # ---------- T-045a b3: adherence cho kênh vị trí ----------
+
+    def standby_follow_draw(self, actor: Actor) -> bool:
+        """MỘT lần rút adherence cho MỘT lượt gán standby — rút tại thời điểm GÁN (planner),
+        không rút lại mỗi vòng poll.
+
+        Vì sao quan trọng: rút ở vòng poll nghĩa là re-roll mỗi 2 phút tới khi "follow" — đúng
+        lỗi D-SIM-14 mà ĐA-04 chốt phải sửa (*"một adherence draw cho (decision_id,
+        material_revision)"*). Dùng cùng dòng RNG `seed ^ 0xADD1CE` với mọi kênh advice ⇒ bật
+        kênh không dịch chuỗi ngẫu nhiên của actor (giữ CRN)."""
+        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
+        return bool(self.rng.random() < p)
 
     # ---------- SIM-4 kênh 2: cảnh báo tỷ lệ nhận dưới ngưỡng thưởng ----------
 
