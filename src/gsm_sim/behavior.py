@@ -55,7 +55,7 @@ class AcceptDecision:
 
 
 def decide_accept(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng,
-                  cost_per_km_vnd: float = 3000.0, logit_center_vnd: float = 6000.0,
+                  pickup_disutility_vnd_per_km: float = 3000.0, logit_center_vnd: float = 6000.0,
                   logit_scale_vnd: float = 8000.0) -> AcceptDecision:
     """Quyết định nhận đơn, kèm căn cứ. Đây là NƠI CHỨA mô hình thật.
 
@@ -83,7 +83,12 @@ def decide_accept(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: b
     """
     if forced:
         return AcceptDecision(True, 1.0, float(gross_vnd), 0.0, "forced")
-    net = gross_vnd - pickup_dist_km * cost_per_km_vnd
+    # T-045b (2026-07-28): đổi tên `cost_per_km_vnd` -> `pickup_disutility_vnd_per_km`.
+    # 3.000đ/km là DISUTILITY CẢM NHẬN (công sức + thời gian + rủi ro của quãng đón), KHÔNG
+    # phải chi phí tiền mặt — tiền mặt thật chỉ 30–250đ/km (research/economics/
+    # driver-cost-structure-2026.md §0), lệch 10–20 lần. Hai khái niệm hai tên; chi phí TIỀN
+    # nằm ở sổ `actor.cost_vnd` (world), không ở đây. Giá trị & hành vi giữ NGUYÊN từng bit.
+    net = gross_vnd - pickup_dist_km * pickup_disutility_vnd_per_km
     z = (net - logit_center_vnd) / max(1e-6, logit_scale_vnd)
     z = max(-2.0, min(2.0, z))
     # SIM-4: dùng `effective_accept_base` (= accept_base + lift từ advice, có trần).
@@ -97,7 +102,7 @@ def decide_accept(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: b
 
 
 def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bool, rng,
-                 cost_per_km_vnd: float = 3000.0, logit_center_vnd: float = 6000.0,
+                 pickup_disutility_vnd_per_km: float = 3000.0, logit_center_vnd: float = 6000.0,
                  logit_scale_vnd: float = 8000.0) -> bool:
     """Quyết định nhận đơn (chỉ bool). forced=True (auto-accept) → luôn nhận.
 
@@ -106,7 +111,7 @@ def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bo
     điều biến quanh nó — hiệu chỉnh SIM-1).
     """
     return decide_accept(actor, gross_vnd, pickup_dist_km, forced, rng,
-                         cost_per_km_vnd, logit_center_vnd, logit_scale_vnd).accepted
+                         pickup_disutility_vnd_per_km, logit_center_vnd, logit_scale_vnd).accepted
 
 
 def soc_range_km(actor: Actor, cfg_vehicle: dict) -> float:

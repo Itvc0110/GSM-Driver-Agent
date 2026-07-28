@@ -86,6 +86,16 @@ class World:
         # SIM-3: cầu nối advice→action. Mặc định TẮT ⇒ World A (tự làm) không đổi gì.
         from .advice_bridge import AdviceActionBridge
         self.advice = AdviceActionBridge(cfg, policy, seed)
+        # T-045b (Cycle P): tham số CHI PHÍ, mặc định 0 ⇒ sổ chi phí luôn 0, hành vi y hệt.
+        # Nguồn số cho sweep: research/economics/driver-cost-structure-2026.md (swap Platform
+        # = 0đ official tới 31/03/2029; sạc nhà 70–93đ/km; sau ưu đãi 150đ/km).
+        self.swap_fee_vnd = int(self.veh.get("swap_fee_vnd", 0) or 0)
+        self.cash_cost_km = float(self.veh.get("cash_cost_vnd_per_km", 0) or 0)
+        # Cycle P/①: policy có hạn hiệu lực (nếu meta khai) — cảnh báo FAIL-LOUD, không im lặng.
+        if self.advice.policy_valid_today is False:
+            self.log(-1, "policy_outside_validity", "",
+                     effective_from=self.advice.policy.effective_from,
+                     effective_to=self.advice.policy.effective_to)
 
         # đơn mở theo thời điểm — dùng con trỏ
         self.orders_sorted = sorted(orders, key=lambda o: (o.t_min, o.order_id))
@@ -299,6 +309,10 @@ class World:
     def _settle_end_of_run(self):
         """M0-6 + M0-4: chốt cuối ngày — flush time cho actor còn bận, censor đơn in-flight,
         rồi mới tính thưởng ngày. SimPy bỏ rơi timeout đang treo nên phải reconcile tường minh."""
+        # T-045b: chốt chi phí km MỘT lần cuối ngày (mặc định cash_cost = 0 ⇒ +0, bit-identical)
+        if self.cash_cost_km:
+            for a in self.actors.values():
+                a.cost_vnd += int(round(a.km_driven * self.cash_cost_km))
         # 1. M0-4: actor chưa offline → cộng nốt đoạn [last_accrual, end_min] vào online_min
         for a in self.actors.values():
             if a.state == ActorState.OFFLINE:
@@ -899,4 +913,5 @@ class World:
         self._seg(actor.actor_id, t_arrive, self.env.now, "charge",
                   (station.lat, station.lon), (station.lat, station.lon),
                   mode="swap", wait_min=round(wait, 1), station=station.node_id)
+        actor.cost_vnd += self.swap_fee_vnd   # T-045b: mặc định 0 — sổ riêng, KHÔNG đụng payout
         self.log(actor.actor_id, "swap_done", station.cell, station=station.node_id, wait_min=round(wait, 1))

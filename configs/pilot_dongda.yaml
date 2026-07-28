@@ -260,6 +260,13 @@ vehicle:                           # world-parameters.md §2
   charge_consume_pct_per_km: 0.85
   swap_soc_threshold_pct: 20       # đi đổi pin khi SOC dưới ngưỡng
   home_charge_min: 210             # sạc cắm 3-4h (đội sạc)
+  # T-045b (Cycle P, 2026-07-28): chi phí TIỀN MẶT — sổ riêng `actor.cost_vnd`, KHÔNG đụng
+  # payout (tách gross/payout/net §5). Mặc định 0 = ĐÚNG chính sách hiện hành cho tài xế
+  # Platform độc quyền (đổi pin miễn phí official tới 31/03/2029 — research/economics/
+  # driver-cost-structure-2026.md). Số cho sweep: swap_fee 9000đ/lượt sau ưu đãi; cash/km:
+  # sạc nhà 70–93đ, sau ưu đãi 150đ. Đây là biến THEO COHORT × THỜI ĐIỂM, không phải hằng số.
+  swap_fee_vnd: 0
+  cash_cost_vnd_per_km: 0
 
 # === BIẾN MÔI TRƯỜNG (specs/environment-variables.md) — mọi factor tắt được về 1 ===
 # scenario mặc định = dry_weekday (không mưa/sự kiện) → baseline. Đổi trên UI hoặc override.

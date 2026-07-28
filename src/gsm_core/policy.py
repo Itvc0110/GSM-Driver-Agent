@@ -26,6 +26,12 @@ class PolicyBundle:
     # Khoán tuần (Vận Doanh 23/02/2026) — None nếu policy chưa có số (TBC-với-GSM).
     # Solver KHÔNG được bịa số khi None (§5).
     weekly_quota: dict | None = None
+    # Cycle P/① (2026-07-28): HẠN HIỆU LỰC của bundle. Schema L0 đã BẮT BUỘC `effective_from`
+    # từ đầu nhưng code vứt đi — nên "pin miễn phí tới 31/03/2029" trông như hằng số vật lý
+    # thay vì chính sách có hạn. Đây là nền cho A1 router-theo-policy (OPEN-THREADS §A1):
+    # agent đọc trạng thái hiệu lực để định hình bài toán, KHÔNG tự bịa số.
+    effective_from: str | None = None    # ISO date; None = nguồn không ghi (validity UNKNOWN)
+    effective_to: str | None = None      # None = không có hạn trên ĐÃ BIẾT
 
     @classmethod
     def from_record(cls, rec: dict) -> "PolicyBundle":
@@ -45,7 +51,25 @@ class PolicyBundle:
             bonus_min_acceptance=float(th.get("bonus_min_acceptance", 0.85)),
             bonus_min_completion=float(th.get("bonus_min_completion", 0.85)),
             weekly_quota=rec.get("weekly_quota") or None,
+            effective_from=rec.get("effective_from") or None,
+            effective_to=rec.get("effective_to") or None,
         )
+
+    def is_valid_at(self, as_of: str) -> bool | None:
+        """Bundle có hiệu lực tại `as_of` (ISO date/datetime) không?
+
+        Trả **None khi KHÔNG BIẾT** (nguồn không ghi hạn) — caller phải phân biệt "không biết"
+        với "còn hiệu lực"; gộp hai cái là hidden fallback (bài học soc_pct=None ⇒ pin đầy).
+        So sánh chuỗi ISO — cùng bất biến mà `shift_dp` dựa vào (chuỗi ISO so được như thời gian).
+        """
+        if not self.effective_from:
+            return None
+        d = str(as_of)[:10]
+        if d < str(self.effective_from)[:10]:
+            return False
+        if self.effective_to and d > str(self.effective_to)[:10]:
+            return False
+        return True
 
     def has_weekly_quota(self) -> bool:
         """True khi policy có ĐỦ số khoán tuần để tính (không suy đoán)."""

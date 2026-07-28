@@ -58,6 +58,11 @@ class Actor:
     # `None` khi đứng yên hoặc khi đang chở khách (đích là điểm trả khách — xem miễn trừ ở
     # `tests/test_market_state_sim_producer.py`).
     enroute_cell: str | None = None
+    # T-045b (Cycle P): sổ CHI PHÍ riêng — TÁCH BẠCH khỏi payout (§5 gross/payout/net).
+    # `km_driven` accrue tại `consume_soc` (chốt chặn DUY NHẤT của mọi di chuyển tốn pin);
+    # `cost_vnd` = km × cash_cost + phí đổi pin, mặc định config = 0 ⇒ luôn 0 (bit-identical).
+    km_driven: float = 0.0
+    cost_vnd: int = 0
     orders_soc_skipped: int = 0    # SIM-1: bỏ qua vì pin không đủ — KHÔNG phải huỷ
     gross_vnd: int = 0
     payout_vnd: int = 0
@@ -112,6 +117,7 @@ class Actor:
 
     def consume_soc(self, dist_km: float, pct_per_km: float) -> None:
         self.soc_pct = max(0.0, self.soc_pct - dist_km * pct_per_km)
+        self.km_driven += float(dist_km)   # T-045b: một chốt chặn km cho sổ chi phí
 
     # D-SIM-10: danh sách TƯỜNG MINH những gì reset mỗi ngày. Để tường minh (thay vì "reset
     # mọi thứ trừ…") vì chỗ này dễ sai theo cả HAI chiều: quên reset ⇒ điểm/cuốc cộng dồn vô
@@ -121,9 +127,9 @@ class Actor:
                         "points", "stranded_count", "meals_taken",
                         # SIM-XANH P2 (rating/newbie-ngày/mission-ngày là trạng thái NGÀY)
                         "ratings_n", "ratings_sum", "ratings_5",
-                        "newbie_topup_vnd", "mission_reward_vnd")
+                        "newbie_topup_vnd", "mission_reward_vnd", "cost_vnd")
     _DAILY_RESET_FLOAT = ("online_min", "empty_min", "occupied_min", "idle_min", "rest_min",
-                          "charge_min", "accept_lift", "rest_deferred_min", "shift_extended_min")
+                          "charge_min", "accept_lift", "rest_deferred_min", "shift_extended_min", "km_driven")
 
     def reset_for_new_day(self, soc_pct: float, shift_start_min: float,
                           shift_end_min: float) -> None:
