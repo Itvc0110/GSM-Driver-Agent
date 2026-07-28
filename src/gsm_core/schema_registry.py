@@ -50,6 +50,8 @@ LAYER_OF: dict[str, str] = {
     # validate không thể chạm tới (lỗ do Explore agent tìm ra). Nay có cả hai.
     "market_state_view": "l3",
     "advice_request": "advisor", "solver_report": "advisor", "composed_advice": "advisor",
+    # Cycle W (ĐA-05, 2026-07-29): event log lifecycle append-only — envelope audit 04-* §6
+    "advice_lifecycle_event": "advisor",
     # l1r = L1-real: mirror 13 bảng thật gsm-data-prod (re-ground — UPDATE-033, PI-1)
     "driver_statistic_daily": "l1r", "driver_online_hours_sap_id": "l1r",
     "driver_orders_rush_hours": "l1r", "driver_bike_stoppoints": "l1r",

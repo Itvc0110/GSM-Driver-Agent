@@ -59,6 +59,9 @@ class AdvisorPipeline:
     def handle(self, req: dict, solver_reports: list[dict],
                kb_track: str | None = None) -> dict:
         self._t0 = time.perf_counter()
+        # ĐA-05: verdict là CỦA REQUEST NÀY — không reset thì đường không-verify (R5
+        # out-of-taxonomy) mang verdict của request TRƯỚC vào episode (stale, sai sự thật).
+        self.last_verify_result = {}
         feature = req["feature"]
         r = route(feature, req.get("free_text_query"))
 
@@ -183,11 +186,19 @@ class AdvisorPipeline:
         self.store.append_episode({
             "episode_id": advice["advice_id"], "driver_id": req["driver_id"],
             "feature": req["feature"], "state_digest": state_digest,
-            "solver_report_refs": [],
+            # MEMSTATE-4 (đóng ở Cycle W): refs THẬT = problem_digest của từng SolverReport
+            # — trước đây hardcode [] dù tham số solver_reports có sẵn.
+            "solver_report_refs": [r_.get("problem_digest")
+                                   for r_ in (solver_reports or [])
+                                   if isinstance(r_, dict) and r_.get("problem_digest")],
             "advice_spec": advice["advice_spec"], "message": advice["message"],
             "confidence": advice["confidence"], "route": r["intent"],
             "fallback_used": advice["fallback_used"],
             "residual_path": residual,
+            # FAILCLOSED-3 (đóng ở Cycle W): verdict verify vào audit trail. passed=None
+            # = đường không chạy verify (vd R5 từ chối lịch sự) — khác False (verify fail).
+            "verify": {"passed": self.last_verify_result.get("passed"),
+                       "errors": list(self.last_verify_result.get("errors") or [])},
         })
         if self.recorder is not None:
             latency_ms = (time.perf_counter() - getattr(self, "_t0", time.perf_counter())) * 1000

@@ -36,6 +36,8 @@ EXPECTED = {
     "market_state_view",   # Cycle V: vá lỗ view T-045a emit version mà không registry nào biết
     # advisor
     "advice_request", "solver_report", "composed_advice",
+    # Cycle W (ĐA-05): event log lifecycle append-only
+    "advice_lifecycle_event",
 }
 
 # L1-real (re-ground về bảng thật gsm-data-prod — UPDATE-033/034, PI-1)

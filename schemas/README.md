@@ -12,7 +12,7 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
 | `l2/` | State fields (supply/demand/station/driver-day) | derivation job có version |
 | `l2i/` | Inferred views | **tầng RIÊNG — nhãn INFERRED + rule version bắt buộc** |
 | `l3/` | Feature views cho solver | read-only |
-| `advisor/` | I/O pipeline (request / solver report / composed advice) | đóng băng contract |
+| `advisor/` | I/O pipeline (request / solver report / composed advice) + lifecycle event log (ĐA-05) | đóng băng contract |
 
 ## Quy ước (spec §1.6)
 

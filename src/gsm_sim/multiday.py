@@ -43,7 +43,7 @@ from .demand import generate_orders
 from .geo import build_grid, load_road_matrix
 from .journey import build_journey
 from .policy import PolicyBundle
-from .runner import RunResult, _data, build_environment
+from .runner import RunResult, _data, build_environment, derive_run_id
 from .world import World
 
 
@@ -240,8 +240,12 @@ def run_multiday(cfg: Config, seed: int, days: int = 7,
         orders = generate_orders(grid, cfg, policy, s_day, env=env,
                                  road=load_road_matrix(cfg, grid))
         congestion = CongestionField(orders, cfg, env=env)
+        # ĐA-05: multiday tạo World TRỰC TIẾP (không qua `run_once`) nên phải tự stamp
+        # run_id — quên là mọi event nhiều-ngày mất identity, không join/export được.
+        # `s_day` đã mang ngày (xem `day_seed`) ⇒ mỗi ngày một run_id riêng.
         world = World(grid, cfg, policy, orders, actors, s_day,
-                      environment=env, congestion=congestion)
+                      environment=env, congestion=congestion,
+                      run_id=derive_run_id(cfg, s_day))
         # D-SIM-13(B): trao lịch sử cuộn cho advisor TRƯỚC khi ngày chạy. An toàn vì memory
         # lúc này chỉ chứa các ngày ĐÃ XONG (cập nhật ở cuối vòng lặp) — không rò tương lai.
         world.advice.memory = memory

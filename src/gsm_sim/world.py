@@ -30,13 +30,18 @@ class Event:
     kind: str
     cell: str = ""
     detail: dict = field(default_factory=dict)
+    # ĐA-05 Cycle W (chốt Cường: "sim để RAM, chỉ thêm run_id"): identity deterministic
+    # của run (runner.derive_run_id) — vũ trụ song song A/B cùng seed phân biệt được,
+    # lifecycle event export/join được. "" = World tạo tay ngoài runner (test cũ).
+    run_id: str = ""
 
 
 class World:
     def __init__(self, grid: Grid, cfg: Config, policy: PolicyBundle, orders: list, actors: list[Actor],
-                 seed: int, environment=None, congestion=None):
+                 seed: int, environment=None, congestion=None, run_id: str = ""):
         self.grid = grid
         self.cfg = cfg
+        self.run_id = run_id  # ĐA-05: identity deterministic của run — stamp vào mọi Event
         self.policy = policy
         self.orders = orders
         self.actors = {a.actor_id: a for a in actors}
@@ -132,6 +137,9 @@ class World:
         # y hệt config không có cờ, từng bit (test canh). `standby_plan` là bảng gán hiện
         # hành {actor_id: cell}, do `_standby_planner` ghi mỗi bucket; vòng idle chỉ ĐỌC.
         self.standby_plan: dict[int, str] = {}
+        # ĐA-05: decision_id của phân công standby — sinh MỘT lần lúc GÁN (bucket của
+        # planner tick), dùng lại lúc follow để hai event join được dù khác bucket.
+        self.standby_decision: dict[int, str] = {}
         self.market = None
         if self.advice.enabled and self.advice.positioning_overrides != "off":
             from .market_state import MarketStateProducer
@@ -150,7 +158,23 @@ class World:
         return out
 
     def log(self, actor_id: int, kind: str, cell: str = "", **detail):
-        self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail))
+        self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail,
+                                 self.run_id))
+
+    def _decision_id(self, actor_id: int, channel: str, now: float,
+                     bucket_min: float | None = None) -> str:
+        """decision_id deterministic của sim (ĐA-05) — theo công thức spec
+        `adherence-measurement.md` §"advice_id": (driver, channel, bucket).
+
+        Cùng tick advice_given/followed/suppressed ⇒ cùng bucket ⇒ CÙNG decision (join
+        được); re-check mỗi tick trong cùng bucket gộp thành MỘT quyết định logic.
+
+        Bucket KHÔNG hardcode 30': planner chạy theo `advice.bucket_min`, nên hạ nó
+        xuống 15 làm hai phân công KHÁC NHAU rơi vào cùng bucket 30' ⇒ chung
+        decision_id ⇒ event bị nuốt (review đối kháng đo được 23 event mất ở
+        `bucket_min=15`). Kênh vị trí vì thế dùng đúng bucket của planner."""
+        b = float(bucket_min or 30.0)
+        return f"slth-{self.run_id}-{actor_id}-{channel}-{int(now // b)}"
 
     def _order_transition(self, oid: int, state: str) -> None:
         """M0-5: ghi chuyển trạng thái đơn (terminal chỉ ghi 1 lần — không ghi đè)."""
@@ -288,18 +312,31 @@ class World:
             n_follow = 0
             per_cell: dict[str, int] = {}
             flags_by_cell: dict[str, list] = {}
+            # ĐA-05: MẪU SỐ của kênh vị trí = người ĐƯỢC GÁN (kể cả người không theo).
+            # Không ghi lại đây thì lifecycle chỉ thấy `standby_followed` ⇒ adherence
+            # luôn 100% (đo được 36/36 trong khi sự thật 42/86). Ghi vào detail của
+            # event SẴN CÓ, không thêm kind mới ⇒ mọi consumer đếm theo kind giữ nguyên số.
+            assigned_by_cell: dict[str, list] = {}
+            dids_by_cell: dict[str, dict] = {}
             for al in sol["allocations"]:
                 cell = al["assigned_target"]
                 per_cell[cell] = per_cell.get(cell, 0) + 1
                 flags_by_cell.setdefault(cell, al.get("safety_flags") or [])
                 aid = int(al["driver_id"][2:])
+                did = self._decision_id(aid, "positioning", now, bucket_min=b)
+                assigned_by_cell.setdefault(cell, []).append(aid)
+                dids_by_cell.setdefault(cell, {})[str(aid)] = did
                 if self.advice.standby_follow_draw(self.actors[aid]):
                     self.standby_plan[aid] = cell
+                    # decision sinh tại lúc GÁN — follow (có thể ở bucket sau) dùng lại
+                    self.standby_decision[aid] = did
                     self.market.pending_targets[aid] = cell   # trừ trần NGAY cho người hỏi sau
                     n_follow += 1
             for cell in sorted(per_cell):
                 self.log(-1, "standby_alloc", cell, n_assigned=per_cell[cell],
-                         capacity_left=cap_left[cell], safety_flags=flags_by_cell[cell])
+                         capacity_left=cap_left[cell], safety_flags=flags_by_cell[cell],
+                         assigned_ids=sorted(assigned_by_cell.get(cell, [])),
+                         decision_ids=dids_by_cell.get(cell, {}))
             self.log(-1, "standby_planner", "",
                      n_candidates=len(cands), n_assigned=sol["n_assigned"],
                      n_unassigned=len(sol["unassigned"]), n_follow=n_follow,
@@ -660,21 +697,28 @@ class World:
                 self.log(actor.actor_id, "advice_bonus_gate", actor.cell,
                          acceptance=gate.acceptance_now, threshold=gate.threshold,
                          lift=gate.lift_applied, followed=gate.followed,
-                         accept_lift_total=round(actor.accept_lift, 4))
+                         accept_lift_total=round(actor.accept_lift, 4),
+                         decision_id=self._decision_id(actor.actor_id, "accept_lift", now),
+                         channel="accept_lift")
 
             # SIM-4 kênh `shift_extend`: hoãn kết ca khi SÁT mốc điểm (có trần)
             added = self.advice.check_shift_extend(actor, now)
             if added:
                 self.log(actor.actor_id, "advice_shift_extend", actor.cell,
                          added_min=round(added, 1), points=int(actor.points),
-                         new_shift_end=round(actor.shift_end_min, 1))
+                         new_shift_end=round(actor.shift_end_min, 1),
+                         decision_id=self._decision_id(actor.actor_id, "shift_extend", now),
+                         channel="shift_extend")
 
             adv = self.advice.consult(actor, now, self._actor_demand_hint, actor.shift_end_min)
             if adv is not None:
+                # ĐA-05: cùng tick ⇒ given/followed/suppressed chia sẻ MỘT decision_id
+                did = self._decision_id(actor.actor_id, "shift_plan", now)
                 self.log(actor.actor_id, "advice_given", actor.cell,
                          solver_action=adv.solver_action, adherence=adv.adherence,
                          followed=adv.followed, instinct_action=action.value,
-                         plan_next=adv.plan_next_action, reason=adv.reason)
+                         plan_next=adv.plan_next_action, reason=adv.reason,
+                         decision_id=did, channel="shift_plan")
                 if adv.followed and adv.mapped_action is not None:
                     # BUG-ADVICE-OVERRIDE (UPDATE-082): `REST` của S2 nghĩa là *"khung này
                     # ĐỪNG ở trạng thái ONLINE kiếm tiền"*. Nhưng `go_swap`/`go_charge`/
@@ -693,11 +737,13 @@ class World:
                         self.log(actor.actor_id, "advice_suppressed", actor.cell,
                                  solver_action=adv.solver_action,
                                  instinct_action=action.value,
-                                 reason="rest_would_override_productive_action")
+                                 reason="rest_would_override_productive_action",
+                                 decision_id=did, channel="shift_plan")
                     else:
                         if adv.mapped_action != action:
                             self.log(actor.actor_id, "advice_followed", actor.cell,
-                                     from_action=action.value, to_action=adv.mapped_action.value)
+                                     from_action=action.value, to_action=adv.mapped_action.value,
+                                     decision_id=did, channel="shift_plan")
                         action = adv.mapped_action
                     target = None      # advice không chỉ định cell (product boundary D-004)
 
@@ -711,6 +757,7 @@ class World:
                 if sb_cell == actor.cell:
                     # đã ở đúng ô — phân công hoàn thành, đứng chờ tại chỗ là đúng ý nó
                     self.standby_plan.pop(actor.actor_id, None)
+                    self.standby_decision.pop(actor.actor_id, None)
                     self.market.pending_targets.pop(actor.actor_id, None)
                 elif (action == IdleAction.WAIT if mode == "wait_only"
                       else action in (IdleAction.WAIT, IdleAction.RELOCATE)):
@@ -719,7 +766,9 @@ class World:
                     self.standby_plan.pop(actor.actor_id, None)
                     self.market.pending_targets.pop(actor.actor_id, None)
                     self.log(actor.actor_id, "standby_followed", actor.cell,
-                             from_action=action.value, to_cell=sb_cell)
+                             from_action=action.value, to_cell=sb_cell,
+                             decision_id=self.standby_decision.pop(actor.actor_id, ""),
+                             channel="positioning")
                     action, target, reloc_reason = IdleAction.RELOCATE, sb_cell, "standby"
 
             # --- D-SIM-03 kênh `rest_window`: dồn nghỉ/đổi pin vào khung vắng khách (solver S7) ---
@@ -732,7 +781,9 @@ class World:
                     actor.rest_deferred_min += 2.0
                     self.log(actor.actor_id, "advice_rest_window", actor.cell,
                              deferred_from=action.value, reason=why,
-                             deferred_total_min=round(actor.rest_deferred_min, 1))
+                             deferred_total_min=round(actor.rest_deferred_min, 1),
+                             decision_id=self._decision_id(actor.actor_id, "rest_window", now),
+                             channel="rest_window")
                     action, target = IdleAction.WAIT, None
 
             if action == IdleAction.END_SHIFT:

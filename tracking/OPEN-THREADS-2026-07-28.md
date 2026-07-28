@@ -18,7 +18,12 @@
 ## Việc kế tiếp theo thứ tự (đã có verdict, KHÔNG cần hỏi lại)
 
 1. ~~Đọc kết quả suite `bofqb0q04`~~ ✅ XONG (653/5, số đã ghi UPDATE-090, đã push).
-2. **Cycle kế — ĐA-05 event store append-only** (VỪA được B-02 mở khoá; Cường đã duyệt design
+2. ~~**Cycle kế — ĐA-05 event store append-only**~~ ✅ **XONG 2026-07-29 (Cycle W, UPDATE-091)** —
+   event log + projections một-luật + run_id/decision_id + EpisodeStore adapter; fingerprint
+   5 seeds × 2 arm IDENTICAL. Chờ verdict Cường. **Kế tiếp đề xuất: ĐA-04 cadence memory**
+   (tiêu thụ `adherence_view` + `decision_id` vừa tạo; Cường yêu cầu "khó nhất, phải visualize").
+   Chi tiết cũ giữ lại bên dưới để tra cứu:
+   ~~**ĐA-05 event store append-only**~~ (VỪA được B-02 mở khoá; Cường đã duyệt design
    từ 27/07, chi tiết `research/audit/2026-07-27-current-state/04-*` §6): SQLite local
    append-only + projections rebuild + JSONL export + EpisodeStore thành legacy adapter;
    sim để RAM chỉ thêm `run_id` (chốt của Cường). **Vào plan mode trước.**

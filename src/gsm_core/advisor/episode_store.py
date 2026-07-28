@@ -1,17 +1,30 @@
-"""Episode store — SQLite append-only (kiêm DecisionRecord audit trail) + exact-key cache.
+"""Episode store — LEGACY ADAPTER trên AdviceEventLog (ĐA-05, Cycle W) + exact-key cache.
 
-Research đợt 7: TUYỆT ĐỐI KHÔNG semantic cache (false-positive vs faithfulness).
-Key = hash(driver + state_digest + policy_v + solver_v + prompt_v + model). TTL 6h.
-Schema log bandit-compatible (context, action, propensity, reward nullable) cho v2.
+Trước Cycle W đây là bảng `episodes` một-dòng-một-episode với cột mutable
+(`shown/accepted/reward`) vĩnh viễn NULL — write-only (MEMSTATE-2), không schema_version,
+không join được với UI JSONL/sim events (D-A3-04). Nay:
+
+- `append_episode` PHÁT event `decided` vào event log append-only (một đường ghi duy nhất
+  cho pipeline C6 — pipeline vẫn gọi API cũ, không double-write);
+- `count_episodes` đếm distinct decision qua projection (rebuild từ events);
+- `cache_get/put` giữ nguyên bảng `advice_cache` CÙNG FILE (exact-key, TTL 6h — research
+  đợt 7: TUYỆT ĐỐI KHÔNG semantic cache). Cache theo `problem_digest` là ý tưởng A2 của
+  Cường — cycle riêng, KHÔNG nuôi thêm ở đây.
+
+12 call site cũ (pipeline + tests) giữ nguyên chữ ký. `close()` mới — LAYEROUT-16
+(connection giữ file ⇒ PermissionError khi cleanup TemporaryDirectory trên Windows).
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-import sqlite3
 import time
+from datetime import datetime, timezone
 from pathlib import Path
+
+from gsm_core.lifecycle.event_log import AdviceEventLog
+from gsm_core.lifecycle.projections import decision_state
 
 CACHE_TTL_S = 6 * 3600
 
@@ -25,36 +38,52 @@ def _key(driver_id, state_digest, policy_version, solver_version,
 
 class EpisodeStore:
     def __init__(self, db_path: str | Path):
-        self.db = sqlite3.connect(str(db_path))
-        self.db.executescript("""
-        CREATE TABLE IF NOT EXISTS episodes (
-            episode_id TEXT PRIMARY KEY, driver_id TEXT, ts REAL, feature TEXT,
-            state_digest TEXT, solver_report_refs TEXT, advice_spec TEXT,
-            message TEXT, confidence REAL, route TEXT, fallback_used INTEGER,
-            residual_path TEXT,
-            -- bandit-compatible (v2 đọc lại log): propensity=1.0, reward nullable
-            propensity REAL DEFAULT 1.0, shown INTEGER, accepted INTEGER, reward REAL
-        );
+        self.log = AdviceEventLog(db_path)
+        self.db = self.log.db  # cùng connection/file — "một database" (verdict ĐA-05)
+        self.db.execute("""
         CREATE TABLE IF NOT EXISTS advice_cache (
             key TEXT PRIMARY KEY, advice_json TEXT, created_at REAL
-        );
-        """)
-
-    def append_episode(self, ep: dict) -> None:
-        self.db.execute(
-            "INSERT INTO episodes (episode_id, driver_id, ts, feature, state_digest,"
-            " solver_report_refs, advice_spec, message, confidence, route,"
-            " fallback_used, residual_path) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-            (ep["episode_id"], ep["driver_id"], ep.get("ts", time.time()),
-             ep.get("feature"), ep.get("state_digest"),
-             json.dumps(ep.get("solver_report_refs", []), ensure_ascii=False),
-             json.dumps(ep.get("advice_spec"), ensure_ascii=False),
-             ep.get("message"), ep.get("confidence"), ep.get("route"),
-             1 if ep.get("fallback_used") else 0, ep.get("residual_path")))
+        )""")
         self.db.commit()
 
+    def close(self) -> None:
+        self.log.close()
+
+    def __enter__(self) -> "EpisodeStore":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
+    def append_episode(self, ep: dict) -> None:
+        """Map episode dict cũ → event `decided`. Idempotent theo episode_id (append
+        trùng bị event log bỏ qua — khác bản cũ: INSERT trùng PK nổ IntegrityError)."""
+        ts = ep.get("ts", time.time())
+        iso = datetime.fromtimestamp(float(ts), tz=timezone.utc).isoformat()
+        payload = {k: ep.get(k) for k in
+                   ("feature", "state_digest", "solver_report_refs", "advice_spec",
+                    "message", "confidence", "route", "fallback_used", "residual_path",
+                    "verify") if k in ep}
+        self.log.append({
+            "event_id": f"ep-{ep['episode_id']}",
+            "decision_id": ep["episode_id"],
+            "display_id": None,
+            "driver_id": ep["driver_id"],
+            "run_id": None,
+            "event_type": "decided",
+            "reason_code": None,
+            "occurred_at": iso,
+            "observed_at": iso,
+            "actor": "advisor",
+            "origin": "pipeline",
+            "source": "MOCK",
+            "context_revision": None,
+            "payload": payload,
+            "schema_version": "1.0.0",
+        })
+
     def count_episodes(self) -> int:
-        return self.db.execute("SELECT COUNT(*) FROM episodes").fetchone()[0]
+        return len(decision_state(self.log.events()))
 
     def cache_get(self, **key_parts):
         k = _key(**key_parts)

@@ -1,5 +1,15 @@
 # Schema changelog
 
+## 2026-07-29 — Cycle W (ĐA-05): advice lifecycle event log
+
+- **`advisor/advice_lifecycle_event` MỚI (1.0.0)**: envelope một event vòng đời advice —
+  append-only, idempotent theo `event_id`; IDs tách vai trò `decision_id`/`display_id`/
+  `event_id`; `occurred_at`+`observed_at` ISO; `actor`/`origin`/`source`; `reason_code`;
+  `context_revision` (chỗ cho ĐA-04 material_revision). Store: `gsm_core/lifecycle/event_log.py`
+  (validate qua registry TRƯỚC khi ghi); projections MỘT LUẬT (UI + sim):
+  `gsm_core/lifecycle/projections.py`. Ba namespace decision_id hợp pháp ghi trong
+  description: `adv-*` (pipeline) / `s1-*` (UI) / `slth-*` (sim, deterministic).
+
 ## 2026-07-28 — Cycle V: registry ĐA PHIÊN BẢN (gỡ B-02) + 2 thay đổi
 
 - **CƠ CHẾ**: validate route theo `record["schema_version"]`; lịch sử = `{entity}@{ver}.schema.json`;

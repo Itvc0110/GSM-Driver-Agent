@@ -5,6 +5,8 @@ Slice v0: 1 arm (B). Trả về (events, actors) để metrics/logging xử lý.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -40,6 +42,49 @@ def _data(cfg: Config, fname_key: str) -> Path:
     return data_dir / cfg.get(f"world.{fname_key}")
 
 
+# Tên rút gọn cho kênh advice trong run_id — thứ tự cố định (không phụ thuộc dict order)
+_CHANNEL_ABBREV = (("shift_plan", "sp"), ("accept_lift", "al"),
+                   ("shift_extend", "se"), ("rest_window", "rw"))
+
+
+def derive_run_id(cfg: Config, seed: int) -> str:
+    """Run identity DETERMINISTIC từ (cfg advice, seed) — ĐA-05 Cycle W.
+
+    Khác `logging_ev.write_run` (wall-clock, chỉ đặt tên folder): run_id này derive thuần
+    nên exact-repeat cùng cfg+seed cho cùng ID — điều kiện để lifecycle event của sim
+    replay/join được. Cặp A/B của `run_pair` CÙNG seed nhưng khác arm ⇒ khác run_id;
+    A được cache xuyên ladder giữ MỘT run_id (nó là một run vật lý — chốt plan Cycle W).
+    Multi-day: mỗi ngày một seed (`multiday.day_seed`) nên ngày đã nằm trong seed.
+
+    ## Vì sao có digest — phần đọc-được KHÔNG đủ làm identity
+
+    Bản đầu chỉ đọc block `advice`, nên hai run vật lý KHÁC HẲN nhau (đổi
+    `environment.scenario`/`dow`, `demand.orders_per_day`, `advice.bucket_min`,
+    `advice.share`…) nhận CÙNG run_id. Hai review đối kháng độc lập cùng chứng minh hậu
+    quả tại store canonical: `INSERT OR IGNORE` coi event của run thứ hai là trùng và
+    **nuốt im lặng** (đo được 128 event_id + 889 decision_id đụng nhau giữa hai run chỉ
+    khác `dow`). Vì thế ID mang thêm digest của TOÀN BỘ config, trừ `meta` (thuần mô tả:
+    nhãn mock/version, không đổi hành vi).
+
+    Dạng: `{seed}-{A|B}-{kênh|none}-{coverage[.actor]}[-pos.{mode}]-c{digest8}`
+    """
+    adv = cfg.get("advice", {}) or {}
+    arm = "B" if adv.get("enabled") else "A"
+    ch = adv.get("channels", {}) or {}
+    on = "+".join(abbr for name, abbr in _CHANNEL_ABBREV if ch.get(name)) or "none"
+    cov = str(adv.get("coverage", "single"))
+    if cov == "single" and adv.get("single_actor_id") is not None:
+        cov += f".{adv['single_actor_id']}"
+    rid = f"{seed}-{arm}-{on}-{cov}"
+    pos = adv.get("positioning_overrides", "off")
+    if pos and pos != "off":
+        rid += f"-pos.{pos}"
+    body = {k: v for k, v in (cfg.data or {}).items() if k != "meta"}
+    digest = hashlib.sha256(
+        json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:8]
+    return f"{rid}-c{digest}"
+
+
 def build_environment(grid: Grid, cfg: Config, seed: int) -> EnvironmentContext | None:
     """Tạo EnvironmentContext nếu config có block `environment`. Scenario mặc định
     dry_weekday (mọi factor=1) ⇒ tương đương env=None (baseline). Không tiêu RNG khi
@@ -64,7 +109,8 @@ def run_once(cfg: Config, seed: int) -> RunResult:
     orders = generate_orders(grid, cfg, policy, seed, env=env, road=road)
     congestion = CongestionField(orders, cfg, env=env)
     actors = sample_actors(grid, cfg, seed)
-    world = World(grid, cfg, policy, orders, actors, seed, environment=env, congestion=congestion)
+    world = World(grid, cfg, policy, orders, actors, seed, environment=env, congestion=congestion,
+                  run_id=derive_run_id(cfg, seed))
     events = world.run()
     return RunResult(seed=seed, events=events, actors=actors, orders=orders,
                      config=cfg, policy=policy, grid=grid, env=env,

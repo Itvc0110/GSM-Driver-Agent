@@ -3,6 +3,8 @@
 > **Canonical reading map for agents.** This file is an index and routing contract, not a replacement for evidence. Read `CLAUDE.md` first, then this graph, then only the route and correction chain required by the task.
 >
 > **Reconciled:** 2026-07-27 · **UPDATE coverage:** 66 canonical UPDATE files (`001–012`, `019–072`; `013–018` were never canonical after the remote numbering change). `UPDATE_TEMPLATE.md` is excluded.
+>
+> ⚠ **Nợ index (2026-07-29):** `UPDATE-073..091` (SIM overhaul cuối tháng 7, BUG-EVAL-ARGMAX, T-045a/b, equilibrium ĐA-09, Cycle V registry, Cycle W lifecycle store) **CHƯA được đưa vào §3 graph** — bảng §2 phía dưới đã cập nhật trạng thái nhưng route/edge chi tiết vẫn phải đọc thẳng UPDATE. Reconcile §3 là một cycle dọn riêng.
 
 ## 1. Bootstrap contract
 
@@ -47,6 +49,8 @@ The graph never silently resolves a conflict. It records the conflict and points
 | UX Cards and playback | `DONE-CODE / WAITING-VERDICT` | V-10; R5 follow-up | UPDATE-067/068/071 | R5-B, Q6, D-A3-04/05/06 |
 | Audit A1/A2/A3 | `DONE-CODE` for narrow fixes | Cường decisions required | UPDATE-064..071, audit REPORT | ĐA-01..06, D-A3-01..06, R5-B |
 | Policy corpus | `BLOCKED` | Q-03 / D-POL-04 belongs to Khánh | UPDATE-020/031, corpus usage/register | Missing 23/02/2026 policy record and conflict flag |
+| Schema registry đa phiên bản (Cycle V) | `DONE-CODE` | B-02 gỡ; suite 653/5 xác nhận | UPDATE-090, `schemas/README.md` §quy trình bump | bump l1r đầu tiên sẽ đòi sửa `build_l1r_schemas.py`; `ui/contracts/*` vẫn chưa version |
+| Advice lifecycle store ĐA-05 (Cycle W) | `DONE-CODE / WAITING-VERDICT` | Cường check code | UPDATE-091, `src/gsm_core/lifecycle/*` | positioning thiếu event `decided` phía sim (làm cùng ĐA-04); W6 = UI sim đọc projection (có visual gate) |
 
 Status meanings:
 

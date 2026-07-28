@@ -222,6 +222,16 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
   đầu tiên `shift_plan_input` 1.1.0 + vá lỗ `market_state_view` không được validate. Review
   đối kháng 28-agent: 7 finding confirmed-by-reproduce, đã sửa hết (guard file rác/const lệch
   tên/manifest hardcode/upcast treo). **ĐA-05 và T-044 hết bị chặn.**
+- **ĐA-05 lifecycle store — `DONE-CODE` 2026-07-29 (Cycle W, UPDATE-091), chờ verdict Cường.**
+  Event log append-only (`gsm_core/lifecycle/event_log.py`, idempotent theo `event_id`, validate
+  qua registry trước khi ghi, không WAL, có `close()`) + **projections MỘT LUẬT** dùng chung
+  UI/sim (`decision_state`/`adherence_view`, denominator = `decided`) + `Event.run_id`
+  deterministic + `decision_id` cho 7 điểm emit advice của sim + UI POST/GET action đi qua store
+  canonical + EpisodeStore thành legacy adapter. **Bằng chứng không đổi hành vi**: fingerprint
+  5 seeds × 2 arm IDENTICAL vs HEAD. Đóng kèm: D-A3-04, FAILCLOSED-3, MEMSTATE-2/3/4/6,
+  LAYEROUT-16. **Nợ mở tiếp** (làm cùng ĐA-04, cần cho phép đổi event stream):
+  positioning phía sim thiếu event `decided` per-actor ⇒ mẫu số kênh vị trí under-count;
+  cycle này cố ý không thêm event kind mới để giữ `/ab` + dashboard bit-identical.
 - **BUG-MOCKGEN-CLI — `TODO` (PRE-EXISTING, reviewer reproduce 2026-07-29):** entrypoint
   `python -m gsm_core.mockgen.generate` crash `AttributeError: 'str' object has no attribute
   'items'` tại `generate.py:50` TRƯỚC khi tới verify_round1 — đường CLI không được test nào

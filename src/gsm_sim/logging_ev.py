@@ -26,7 +26,13 @@ def write_run(result, cfg, out_root: Path) -> Path:
         for k, v in e.detail.items():
             row[f"d_{k}"] = v
         rows.append(row)
-    df = pl.DataFrame(rows) if rows else pl.DataFrame({"t_min": [], "actor_id": [], "kind": [], "cell": []})
+    # `infer_schema_length` mặc định = 100 ⇒ key xuất hiện SAU dòng 100 bị bỏ IM LẶNG.
+    # Review đối kháng đo được ở đúng cấu hình mặc định đã duyệt (chỉ positioning bật):
+    # event đầu tiên mang `decision_id` nằm ở index 158 ⇒ cột `d_decision_id`/`d_channel`
+    # — chính là khoá join của lifecycle — biến mất khỏi parquet, cùng với
+    # `d_safety_flags`/`d_to_cell`/`d_capacity_left` (mất từ trước diff này).
+    df = (pl.DataFrame(rows, infer_schema_length=None) if rows
+          else pl.DataFrame({"t_min": [], "actor_id": [], "kind": [], "cell": []}))
     df.write_parquet(run_dir / "events.parquet")
 
     # actor summary → parquet
@@ -43,6 +49,9 @@ def write_run(result, cfg, out_root: Path) -> Path:
 
     manifest = {
         "run_id": run_id,
+        # ĐA-05 Cycle W: identity DETERMINISTIC (derive từ cfg+seed — không wall-clock);
+        # `run_id` cũ giữ nguyên vai đặt tên folder để không phá `runs/` hiện có.
+        "run_id_deterministic": (result.events[0].run_id if result.events else ""),
         "seed": result.seed,
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "data_mode": cfg.get("meta.data_mode", "synthetic"),
