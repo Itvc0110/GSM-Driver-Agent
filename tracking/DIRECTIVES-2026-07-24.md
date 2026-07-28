@@ -176,3 +176,50 @@ Phase U0–U4, kế hoạch chi tiết: plan đã duyệt (xem UPDATE-059). Sau 
    trong `_soc_cost`; chỉ R5 cycle được restore/verify để tránh đụng tiến trình đang dở.
 6. Hồ sơ source of truth cho các kết luận trên:
    `research/audit/2026-07-27-current-state/README.md`.
+
+## 14. Chỉ thị 2026-07-28 — ĐỊNH HƯỚNG SIM-để-đánh-giá vs LUỒNG CHẠY THẬT (Cường, nguyên văn tóm lược)
+
+**Mục tiêu cuối**: *"1 sim hoàn thiện để từ đó có thể hoàn tất luồng đánh giá advisor ở từng lớp,
+từ đó mới có thể tính đến việc triển khai luồng chạy thật."* Mọi cycle phải biết mình đang phục vụ
+tầng nào trong hai tầng dưới đây.
+
+### 14.1 LUỒNG CHẠY THẬT (đích, chưa build) — ràng buộc phải giữ trong đầu khi thiết kế
+
+- **Data thật, state cập nhật liên tục vào database**; gồm structured data + policy plain text +
+  state chưa rõ dtype từ hệ sinh thái Vingroup/GSM (vd state pin) + output API ngoài — **ta phải
+  normalize về đúng dạng ta muốn**.
+- Chạy **trên nền các hệ thống đã tối ưu sẵn** (vd dispatching) và **không được ảnh hưởng** tới
+  các phần đã làm.
+- Hành vi tài xế **random và bất ổn hơn sim** (thời gian hoàn thành phụ thuộc nhiều yếu tố);
+  **phần lớn part-time**, không như sim.
+- **Rủi ro thật cho doanh nghiệp** nếu làm ẩu: ai cũng ra điểm đông khách / đi sạc cùng lúc thì
+  khách khó bắt xe (⇒ anti-herding/capacity là yêu cầu sống còn, không phải tối ưu phụ).
+- Advisor robust ⇒ **hàm tối ưu phải đủ chi tiết, đủ biến, giá trị biến cập nhật theo thay đổi
+  chính sách — hoặc để AGENT chọn hàm và giá trị biến theo policy** (xem OPEN-THREADS §A1).
+
+### 14.2 SIM (đang build) — thế giới đánh giá, KHÔNG phải bản thu nhỏ của production
+
+- Hồ sơ/loại tài xế/khu vực **hạn chế có chủ ý**; tài xế **full-time, tối đa hoá thu nhập** —
+  khác thật (part-time) và điều đó là **thiết kế**, không phải flaw cần "sửa".
+- Thời gian **rời rạc, sát thực tế nhất có thể**.
+- **KHÔNG dùng agent trong luồng sim**: output các bài toán tối ưu = action của thế giới có
+  advisor; thế giới đối chứng dùng behavior random — **phải engineer kỹ**.
+- Data: structured y hệt thế giới thực; state timestep hiện ở **RAM, chưa ghi thẳng DB/hồ sơ —
+  chấp nhận được**. Data khác đang **giả sử có sẵn + đã normalized** để feed thẳng vào thuật toán;
+  **chưa kiểm chứng output nếu lấy thật từ API** — đây là GAP có tên giữa phần mềm cuối và sim
+  (bên cạnh gap agent).
+- Sim phải làm đúng vai: **visualize hiệu quả hạ tầng, observation từng feature, UI đẹp/dễ nhìn/
+  dễ hiểu/dễ tương tác**.
+
+### 14.3 Đánh giá hiện trạng của Cường (nguyên văn ý): TẤT CẢ các phần đều đang có vấn đề
+
+data còn vague/chưa lưu trữ đúng cách · sim còn gap/flaw chưa phản ánh đúng thế giới thật, chưa đủ
+độ tin cậy để kiểm chứng hiệu quả sản phẩm · UI/UX cần cải thiện · thuật toán tối ưu/luồng tối ưu/
+cách dùng agent trong luồng thật/architecture cần cải thiện · lượng features và độ hữu ích thực tế
+còn giới hạn · thuật toán chưa robust, chưa cắt nhỏ được, engineer chưa đủ kỹ, bị data-dependent.
+
+### 14.4 Kỷ luật làm việc (nhắc lại, có hiệu lực)
+
+Đọc lại workflow + việc gần nhất + toàn bộ harness/documents trước khi làm · làm việc **có hệ
+thống** · **document mọi giả thuyết, thử nghiệm, nghiên cứu, web fetch, kết quả** · **root cause
+trước khi fix** · **plan mode trước mọi nâng cấp/thử nghiệm** · pull & merge về main khi được yêu cầu.

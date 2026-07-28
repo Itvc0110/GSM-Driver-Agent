@@ -6,6 +6,11 @@
 
 Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained for traceability). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE-CODE` / `WAITING-VERDICT` / `BLOCKED` / `QUOTA-BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
 
+> **⚠ PHIÊN 2026-07-28 — đọc [`OPEN-THREADS-2026-07-28.md`](OPEN-THREADS-2026-07-28.md)**: việc
+> dang dở + **ý tưởng kiến trúc của Cường chưa có spec** (agent làm ROUTER trên không gian solver
+> có điều kiện theo chính sách · cache theo `problem_digest` · thiết kế lại objective theo policy
+> sống/chết). Trong đó có cả trả lời "structured data hay text" và thứ tự phụ thuộc đề nghị.
+
 ## Current-state checkpoint 2026-07-27
 
 - **T-040 — DONE (docs/research):** reconcile toàn codebase về data 90 ngày, schema/update path,
@@ -65,14 +70,30 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
        + "Nhiệm Vụ Tiếp Theo", official 15/04/2026); ta cấp hai thứ hãng **không** cấp — **cung
        ĐANG TỚI** (chống dồn cục do chính lời khuyên tạo ra) và **trần theo ô**. Thiếu dữ liệu ⇒
        nhãn `absent` ⇒ **bỏ hẳn** lời khuyên vị trí, không im lặng giả định.
-     - **b2 `TODO`** producer trong sim: đếm `supply_now` (actor IDLE theo ô) + `supply_incoming`
-       (actor đang `relocate` tới ô **+ advice vừa phát chưa thực hiện**) từ `World`.
+     - **b2 `DONE 2026-07-28`** producer trong sim — `Actor.enroute_cell` + `gsm_sim/market_state.py`,
+       **11 test**. `ActorState.ENROUTE` dùng chung cho 3 việc và không ai ghi ĐÍCH ĐẾN ⇒ phải thêm
+       trường riêng. Đường **đón khách** cố ý miễn trừ (`ENROUTE_EXEMPT`, có nhãn + test quét source
+       để ai thêm đường di chuyển mới mà quên sẽ bị ĐỎ). Mutation-proof cả chiều gán (W1) lẫn chiều
+       **xoá khi tới nơi** (W2 — quên xoá còn tệ hơn quên gán: actor bị đếm "đang tới" vĩnh viễn).
+     - **b0 `DONE 2026-07-28`** (phát sinh từ câu hỏi *"có time mismatch ở đâu không"*): nhãn bucket
+       mất NGÀY (`% 24`) ⇒ `sorted()` của `shift_dp` đảo thứ tự — **tiềm ẩn**, che bởi `demand_field`
+       không có giờ 0; **bucket MA** sau 24:00 thổi phồng `B` ⇒ `_required_rest` — **thật, 48
+       lần/seed**; `shift_extend` kéo ca quá lúc thế giới dừng — **thật, 9 lần/seed**. 6 test.
+       **Đính chính**: nghi ngờ UPDATE-047 bị nhiễm là SAI (đo 0/1197).
+     - **b0-D `TODO`** `_sample_drop` cân theo cầu — Cường chốt 2026-07-28 *"sửa trước khi đo b4"*.
+       Đo được: điểm trả khách **anti-tương quan** cầu (**−0,226**); 10 ô cầu cao nhất chiếm 30,3%
+       lượt ĐẶT nhưng chỉ **2,2%** lượt TRẢ; **82,3%** trả ngoài lõi ⇒ buộc deadhead. Vùng được
+       phép trả 316 ô / lõi 85 (26,9%), distance-decay còn đẩy ra vành ngoài.
      - **b3 `TODO`** hồi sinh S4 `capacity_alloc` + kênh `standby_zone` vào bridge. **Phải cùng
        lúc với b2**, không được để sau: heatmap không có capacity ledger là **cỗ máy tạo dồn cục**
        (hồ sơ `19-*` §5). Đây cũng là câu trả lời cho câu hỏi fairness của Cường — hiện **đo thì
        có, cưỡng chế thì chưa**.
-     - **b4 `TODO`** đo 30 seed `coverage: all`: **7 tiêu chí phải xanh CÙNG LÚC**, trong đó
-       **HHI cung theo ô là VETO** — nếu payout lên mà HHI hỏng thì **KHÔNG được bật**.
+     - **b4 `TODO`** đo 30 seed `coverage: all`: **9 tiêu chí phải xanh CÙNG LÚC** (nâng từ 7 sau
+       phát hiện 2026-07-28), trong đó **HHI cung theo ô là VETO** — payout lên mà HHI hỏng thì
+       **KHÔNG được bật**. Hai tiêu chí mới, đều là VETO, bắt đúng vòng lặp *đi → cạn pin → đổi*
+       mà Cường cảnh báo: **tỷ lệ km chạy rỗng không tăng** (nay **40,2%**) và **số lần đổi pin
+       không tăng** (nay 118). Ba nhánh: `off` / `wait_only` / `wait_and_relocate`.
+       ⚠ So B1 vs B2 là so biến thể ⇒ cần **≥100 seed**; ở 30 seed chỉ được nói từng nhánh vs A.
   b. **`TODO` chi phí pin/năng lượng = 0 trong MỌI công thức.** `grep swap_cost|charge_cost|
      energy_cost` = rỗng; `payout_vnd` chỉ `+=`, không trừ gì. Hệ quả đo được: nhóm **SWAP kiếm
      hơn 26%** (262.502đ vs 207.962đ) với **cùng số cuốc, cùng giờ online** — vì swap nhanh VÀ
