@@ -1,0 +1,196 @@
+"""Mã hoá THỜI GIAN của lời khuyên — bucket phải đúng ngày và không vượt đời thế giới (b0-A).
+
+## Vì sao có file này
+
+Cường hỏi *"kiểm tra xem có lỗi time mismatch ở bất cứ đâu không"* (2026-07-28). Truy nguyên tìm
+ra **một chuỗi bốn mắt**:
+
+1. `advice_bridge.build_shift_plan_input` hard-code ngày `2026-07-01` và wrap giờ `(s // 60) % 24`;
+2. `check_shift_extend` cộng `shift_end_min` tới **+60′**, trong khi `archetypes.py` đã cap
+   `shift_end = min(1440, …)` ⇒ ca tối-đêm chạm trần rồi bị đẩy lên tối đa **1500**;
+3. `build_shift_plan_input` nhận `horizon_min = shift_end_min` ⇒ sinh `s = 1440` ⇒ nhãn bucket
+   `2026-07-01T00:00` — **sớm hơn `t_now`, cùng ngày**;
+4. `shift_dp._forecast_arrays` làm `sorted(grouped)` — **sort chuỗi ISO theo từ điển**.
+
+## Hai kết luận KHÁC NHAU, phải phân biệt (đo, không đoán)
+
+- **Đảo thứ tự bucket**: tái lập được bằng forecast tổng hợp có cầu ở giờ 0 (`_forecast_arrays`
+  trả `00:00` ở **vị trí 0**), nhưng **KHÔNG với tới trong chạy thật** — `demand_field` chỉ phủ
+  05:00–24:00 nên giờ 0 trả `{}` ⇒ không sinh dòng nào cho bucket đó.
+  ⇒ **Đính chính**: nghi ngờ ban đầu của tôi rằng số của UPDATE-047 (nhánh `all`, có
+  `shift_extend`) đã nhiễm là **SAI**. Đo 1 seed × 1197 lần hỏi solver: **0 lần đảo**.
+- **Bucket MA thì CÓ thật**: `buckets_remaining` đếm cả bucket sau 24:00 trong khi thế giới dừng
+  ở `time.end_min`. Đo seed 1000: **48 lần** `horizon > 1440`, và ở mỗi lần `B` lớn hơn số bucket
+  có dữ liệu đúng 1. `_required_rest` tính theo `B` ⇒ bucket ma có thể thổi phồng nghỉ bắt buộc.
+
+Giữ cả hai lan can: cái thứ nhất chặn một lỗi **tiềm ẩn** (chỉ cần ai đó cho cầu ban đêm vào
+config là nó sống dậy), cái thứ hai chặn lỗi **đang xảy ra**.
+"""
+
+from __future__ import annotations
+
+import copy
+
+import pytest
+
+from gsm_sim.advice_bridge import AdviceActionBridge
+from gsm_sim.config import Config
+from gsm_sim.entities import Actor, FleetType
+from gsm_sim.policy import PolicyBundle
+
+WORLD_END_MIN = 1440.0        # `time.end_min` của pilot config — 24:00
+
+
+@pytest.fixture(scope="module")
+def cfg():
+    return Config.load("configs/pilot_dongda.yaml")
+
+
+def _bridge(cfg, end_min: float | None = None):
+    c = Config(copy.deepcopy(cfg.data), cfg.root_dir)
+    # `advice.enabled` mặc định FALSE trong pilot config ⇒ `covers()` trả False ⇒ mọi kênh trả
+    # 0/None ngay dòng đầu. Không bật thì test "xanh" mà chưa gọi tới logic nào.
+    c.data.setdefault("advice", {}).update({"enabled": True, "coverage": "all"})
+    if end_min is not None:
+        c.data.setdefault("time", {})["end_min"] = end_min
+    return AdviceActionBridge(c, PolicyBundle.from_config(c), seed=1000)
+
+
+@pytest.fixture
+def bridge(cfg):
+    """Thế giới pilot: dừng đúng 24:00."""
+    return _bridge(cfg)
+
+
+@pytest.fixture
+def bridge_qua_nua_dem(cfg):
+    """Thế giới kéo tới 26:00 — nửa đêm là HỢP LỆ, nên bucket `00:00` thật sự được sinh ra.
+
+    Cần fixture riêng vì bản sửa clamp `horizon` khiến pilot config **không bao giờ** sinh bucket
+    nửa đêm nữa; test chạy trên pilot sẽ xanh vì không có gì để sai, chứ không phải vì mã hoá
+    đúng (đã kiểm bằng mutation: hai test thứ tự KHÔNG đỏ dưới M1 khi còn dùng pilot).
+    """
+    return _bridge(cfg, end_min=1560.0)
+
+
+def _actor(shift_end: float) -> Actor:
+    a = Actor(actor_id=1, archetype="P7", fleet=FleetType.SWAP, home_cell="x",
+              shift_start_min=900.0, shift_end_min=shift_end, demand_prior_sigma=0.2,
+              accept_base=0.8, fatigue_threshold_min=480.0, meal_hour=12)
+    a.cell = "x"
+    return a
+
+
+def _hint_all_hours(_actor, hour):
+    """Cầu ở MỌI giờ, kể cả ban đêm.
+
+    `demand_field` hiện tại không có giờ 0 nên lỗi đảo thứ tự bị che. Test phải kiểm **mã hoá**,
+    không phụ thuộc việc config hôm nay tình cờ không có cầu ban đêm — nếu không thì lỗi sẽ sống
+    dậy im lặng ngày ai đó thêm ca đêm.
+    """
+    return {"cellA": 10.0 if hour in (21, 22, 23) else 1.0}
+
+
+def _buckets(spi) -> list[str]:
+    return list(dict.fromkeys(r["bucket"] for r in spi["demand_forecast"]))
+
+
+# ---------- 1. Nhãn bucket phải mang NGÀY THẬT ----------
+
+def test_iso_label_rolls_to_next_day_past_midnight():
+    """Hàm mã hoá phải mang NGÀY THẬT. `% 24` giữ GIỜ nhưng vứt mất NGÀY, nên một thời điểm ở
+    tương lai lại mang nhãn sớm hơn hiện tại."""
+    from gsm_sim.advice_bridge import _iso
+    assert _iso(1380) == "2026-07-01T23:00:00+07:00"
+    assert _iso(1440) == "2026-07-02T00:00:00+07:00", "qua nửa đêm mà không sang ngày mới"
+    assert _iso(1500) == "2026-07-02T01:00:00+07:00"
+    assert _iso(1380) < _iso(1440) < _iso(1500), (
+        "so CHUỖI phải cùng chiều với thời gian — `shift_dp._forecast_arrays` sort chuỗi ISO, "
+        "nên đây chính là bất biến nó dựa vào")
+
+
+def test_producer_bucket_labels_roll_over_in_a_world_that_spans_midnight(bridge_qua_nua_dem):
+    """Thế giới kéo qua nửa đêm (`time.end_min > 1440`) ⇒ bucket phải sang ngày 02/07."""
+    spi = bridge_qua_nua_dem.build_shift_plan_input(
+        _actor(1560.0), 1320.0, _hint_all_hours, 1560.0)
+    bs = _buckets(spi)
+    midnight = [b for b in bs if b[11:16] == "00:00"]
+    assert midnight, f"không có bucket nửa đêm để kiểm: {bs}"
+    assert midnight[0].startswith("2026-07-02"), (
+        f"bucket nửa đêm mang nhãn {midnight[0]} — vẫn ngày 01/07 ⇒ sớm hơn t_now "
+        f"({spi['t_now']}), sẽ bị `sorted()` của shift_dp đẩy lên đầu")
+    assert bs == sorted(bs), f"nhãn bucket không tăng dần: {bs}"
+
+
+def test_bucket_labels_are_chronological(bridge_qua_nua_dem):
+    """Danh sách bucket phải TĂNG dần — và phải giữ đúng thứ tự sau khi `sorted()`.
+
+    `shift_dp._forecast_arrays` gộp theo timestamp rồi `sorted(grouped)`. Nếu nhãn sai thì thứ tự
+    DP dùng khác thứ tự thời gian thật, và `schedule[0]` (hành động TỨC THỜI mà bridge thi hành)
+    được tính cho một bucket khác.
+    """
+    spi = bridge_qua_nua_dem.build_shift_plan_input(
+        _actor(1560.0), 1320.0, _hint_all_hours, 1560.0)
+    bs = _buckets(spi)
+    assert bs == sorted(bs), f"nhãn bucket không tăng dần: {bs}"
+
+
+def test_dp_uses_same_order_as_producer(bridge_qua_nua_dem):
+    """Bất biến NỐI TẦNG: thứ tự producer sinh ra == thứ tự solver dùng.
+
+    Kiểm ở ĐÚNG chỗ hai tầng gặp nhau, thay vì tin rằng chúng khớp (mẫu lỗi T-046). Đây là test
+    duy nhất bắt được kịch bản đầy đủ: nhãn sai ⇒ `sorted()` đẩy bucket cuối lên vị trí 0 ⇒ DP
+    lập kế hoạch cho sai khung giờ.
+    """
+    from gsm_core.solvers.shift_dp import _forecast_arrays
+    br = bridge_qua_nua_dem
+    spi = br.build_shift_plan_input(_actor(1560.0), 1320.0, _hint_all_hours, 1560.0)
+    _, _, _, dp_buckets = _forecast_arrays(spi, {"bucket_min": br.bucket_min}, 1.0)
+    real = [b for b in dp_buckets if b]
+    produced = _buckets(spi)
+    assert real, "không có bucket nào để kiểm — fixture hỏng"
+    assert real == produced[:len(real)], (
+        f"solver dùng thứ tự {real} ≠ thứ tự producer {produced}")
+
+
+# ---------- 2. Không lập kế hoạch cho thời gian thế giới KHÔNG tồn tại ----------
+
+def test_shift_extend_cannot_push_past_world_end(bridge, cfg):
+    """`check_shift_extend` không được kéo ca vượt `time.end_min`.
+
+    Thế giới dừng ở 24:00 (`world.py`: `while self.env.now < self.end_min`). Kéo ca tới 25:00 là
+    lời khuyên **không thể thực hiện được**: nó không sinh thêm cuốc nào, nhưng vẫn tiêu ngân sách
+    `shift_extended_min` và vẫn ghi event `advice_shift_extend` ⇒ đo A/B thấy "có can thiệp" trong
+    khi thực tế không có gì xảy ra.
+    """
+    bridge.ch_shift_extend = True
+    # Ca kết thúc 23:50 — CÒN chỗ để hoãn, nhưng mức hoãn tự nhiên (~18′) sẽ vượt 24:00.
+    # Nếu đặt shift_end = 1440 sẵn thì hàm trả 0 ngay và test không kiểm được gì.
+    a = _actor(1430.0)
+    # `points` phải SÁT mốc thì mới vào nhánh hoãn. Mốc (60, 100, 160, 200) ⇒ 95 điểm cho gap 5
+    # ⇒ need_min ≈ 16′ < trần 60′.
+    # (Bản đầu của test này dùng points=60 ⇒ gap 40 ⇒ need_min 200′ > trần ⇒ hàm trả 0 ngay,
+    #  test XANH mà chưa hề chạm code path — đúng mẫu "test có mà không bắt" ở T-046.)
+    a.points, a.online_min = 95, 300.0
+    for _ in range(20):                        # nhiều lần rút RNG để chắc chắn có lần "follow"
+        bridge.check_shift_extend(a, 1200.0)
+    assert a.shift_extended_min > 0.0, (
+        "test KHÔNG chạm được nhánh hoãn ca ⇒ nó không kiểm gì cả; sửa fixture, đừng để xanh giả")
+    assert a.shift_end_min <= WORLD_END_MIN, (
+        f"ca bị kéo tới {a.shift_end_min:.0f}′ > {WORLD_END_MIN:.0f}′ — thế giới đã dừng, "
+        f"phần kéo thêm không bao giờ chạy")
+
+
+def test_no_phantom_bucket_beyond_world_end(bridge):
+    """`buckets_remaining` không được đếm bucket nằm ngoài đời sống của thế giới.
+
+    Đo được trên seed 1000: **48 lần** `B` lớn hơn số bucket có dữ liệu đúng 1 đơn vị. `B` đi
+    thẳng vào `_required_rest(B, params)` nên bucket ma có thể **thổi phồng số bucket nghỉ bắt
+    buộc** — advisor ép nghỉ vì một khung giờ không tồn tại.
+    """
+    spi = bridge.build_shift_plan_input(_actor(1500.0), 1320.0, _hint_all_hours, 1500.0)
+    b = bridge.bucket_min
+    n_within = len([s for s in range(1320, int(WORLD_END_MIN), b)])
+    assert spi["buckets_remaining"] == n_within, (
+        f"B = {spi['buckets_remaining']} nhưng chỉ có {n_within} bucket nằm trong "
+        f"[{1320}, {WORLD_END_MIN:.0f}) — phần dư là bucket MA")

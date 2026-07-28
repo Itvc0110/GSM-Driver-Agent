@@ -30,8 +30,36 @@ thực với advisor thật.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, timedelta
 
 import numpy as np
+
+# Ngày gốc của sim. Mọi nhãn thời gian sinh ra ở đây phải mang **ngày thật**, không chỉ giờ.
+_BASE_DATE = date(2026, 7, 1)
+_MIN_PER_DAY = 1440
+
+
+def _iso(minute: float) -> str:
+    """Nhãn ISO từ *phút kể từ 00:00 ngày gốc*, mang NGÀY THẬT.
+
+    BUG THỜI GIAN (b0-A, 2026-07-28 — Cường hỏi *"có lỗi time mismatch ở đâu không"*):
+    bản cũ ghi `f"2026-07-01T{(s // 60) % 24:02d}:…"`. `% 24` giữ GIỜ nhưng **vứt mất NGÀY**, nên
+    một bucket ở tương lai (sau 24:00) lại mang nhãn `01/07 00:00` — **sớm hơn `t_now`**.
+    `shift_dp._forecast_arrays` gộp theo timestamp rồi `sorted(grouped)`, tức **sort chuỗi ISO
+    theo từ điển** ⇒ bucket cuối-thực-tế nhảy về vị trí 0 và `hrs` gán sai giờ cho cả lịch.
+    Hậu quả nặng nhất: `schedule[0]` — thứ bridge thi hành làm hành động TỨC THỜI — được tính
+    cho một bucket khác.
+
+    **Đo được**: tái lập bằng forecast có cầu ở giờ 0 (`00:00` ra vị trí 0). Nhưng chạy thật
+    **0/1197 lần** vì `demand_field` chỉ phủ 05:00–24:00 ⇒ giờ 0 trả `{}` ⇒ không sinh dòng nào.
+    ⇒ lỗi TIỀM ẨN, không phải lỗi đang xảy ra; số của UPDATE-047 **không** bị nhiễm (tôi từng
+    nghi là có — sai, đã đính chính). Vẫn sửa vì chỉ cần ai thêm cầu ban đêm vào config là nó
+    sống dậy im lặng.
+    """
+    m = int(minute)
+    d = _BASE_DATE + timedelta(days=m // _MIN_PER_DAY)
+    rem = m % _MIN_PER_DAY
+    return f"{d.isoformat()}T{rem // 60:02d}:{rem % 60:02d}:00+07:00"
 
 from gsm_core.solvers import bonus_feasibility, idle_reduction, shift_dp
 
@@ -121,6 +149,9 @@ class AdviceActionBridge:
         self.sim_policy = policy
         self.policy = CorePolicy.from_record(policy.to_core_record())
         self.bucket_min = int(adv.get("bucket_min", 60))
+        # Biên thời gian của CHÍNH thế giới này. Advisor không được lập kế hoạch — cũng không
+        # được hoãn ca — vượt quá lúc thế giới dừng (b0-A).
+        self.world_end_min = float(cfg.get("time.end_min", 1440) or 1440)
         # UPDATE-082 — GIẢ THUYẾT ĐÃ BỊ SỐ LIỆU BÁC BỎ, giữ cờ để tra cứu.
         #
         # Giả thuyết: `REST` của S2 nghĩa "đừng ONLINE kiếm tiền", mà `go_swap`/`relocate` vốn
@@ -204,21 +235,27 @@ class AdviceActionBridge:
         actor (`World._actor_demand_hint`). Không nhận `world.orders`.
         """
         b = self.bucket_min
-        starts = [s for s in range(int(now_min) - int(now_min) % b, int(horizon_min), b)
+        # BUCKET MA (b0-A): thế giới dừng ở `time.end_min` (`world.py`: `while env.now < end_min`),
+        # nhưng `check_shift_extend` có thể đẩy `shift_end_min` vượt qua đó. Lập lịch cho khoảng
+        # thời gian thế giới KHÔNG tồn tại làm `buckets_remaining` phồng lên, mà `B` đi thẳng vào
+        # `_required_rest(B, params)` ⇒ advisor ép nghỉ vì một khung giờ không có thật.
+        # Đo seed 1000: **48 lần** `horizon > 1440`, mỗi lần thừa đúng 1 bucket.
+        horizon = min(float(horizon_min), self.world_end_min)
+        starts = [s for s in range(int(now_min) - int(now_min) % b, int(horizon), b)
                   if s + b > now_min]
         forecast = []
         for s in starts:
-            hour = (s // 60) % 24
+            hour = (s // 60) % 24          # belief cá nhân tra theo GIỜ trong ngày — đúng ngữ nghĩa
             hint = demand_hint_fn(actor, hour) or {}
             for cell, exp in sorted(hint.items(), key=lambda kv: (-kv[1], kv[0]))[:3]:
                 forecast.append({
-                    "bucket": f"2026-07-01T{(s // 60) % 24:02d}:{s % 60:02d}:00+07:00",
+                    "bucket": _iso(s),      # nhãn mang NGÀY THẬT, không wrap `% 24`
                     "cell_cluster": cell,
                     "expected_orders": round(float(exp), 3),
                 })
         return {
             "schema_version": "1.0.0", "driver_id": f"d-{actor.actor_id}",
-            "t_now": f"2026-07-01T{int(now_min) // 60 % 24:02d}:{int(now_min) % 60:02d}:00+07:00",
+            "t_now": _iso(now_min),
             "buckets_remaining": len(starts),
             "soc_pct": round(actor.soc_pct, 1),   # sim CÓ telemetry pin (data thật thì không)
             "points_now": int(actor.points),
@@ -381,8 +418,8 @@ class AdviceActionBridge:
 
         return {
             "schema_version": "1.0.0", "driver_id": f"d-{actor.actor_id}",
-            "t_now": f"2026-07-01T{int(now_min) // 60 % 24:02d}:{int(now_min) % 60:02d}:00+07:00",
-            "session_date": "2026-07-01",
+            "t_now": _iso(now_min),
+            "session_date": _iso(now_min)[:10],
             "idle_segments": segs,
             "total_idle_min": round(total, 2),
             "longest_idle_min": round(longest, 2),
@@ -494,7 +531,7 @@ class AdviceActionBridge:
             hist = {("peak" if self.policy.is_peak(hour) else "offpeak"): round(rate, 3)}
         return {
             "schema_version": "1.0.0", "driver_id": f"d-{actor.actor_id}",
-            "t_now": f"2026-07-01T{int(now_min) // 60 % 24:02d}:{int(now_min) % 60:02d}:00+07:00",
+            "t_now": _iso(now_min),
             "points_now": int(actor.points),
             "next_tiers": tiers,
             "historical_points_per_hour": hist,
@@ -577,6 +614,14 @@ class AdviceActionBridge:
         if not (self.rng.random() < p):
             return 0.0
         add = min(need_min * 1.15, self.extend_max_min - actor.shift_extended_min)
+        # b0-A: KHÔNG hoãn quá lúc thế giới dừng. Kéo ca tới 25:00 khi `time.end_min = 24:00` là
+        # lời khuyên **không thể thực hiện được**: không sinh thêm cuốc nào, nhưng vẫn tiêu ngân
+        # sách `shift_extended_min` và vẫn ghi event `advice_shift_extend` ⇒ A/B đọc thành "có
+        # can thiệp" trong khi thực tế không có gì xảy ra. Đo seed 1000: 9/49 lần hoãn rơi vào ca
+        # này. Cắt ở đây, không cắt ở chỗ tiêu thụ — nếu không thì mỗi consumer phải tự nhớ.
+        add = min(add, max(0.0, self.world_end_min - actor.shift_end_min))
+        if add <= 0.0:
+            return 0.0
         actor.shift_extended_min += add
         actor.shift_end_min += add
         return add

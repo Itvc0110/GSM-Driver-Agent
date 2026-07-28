@@ -315,7 +315,14 @@ advice:
   max_realized_accept: 0.93        # tỷ lệ nhận cao nhất ĐẠT ĐƯỢC khi lift kịch trần (ĐO, không bịa)
   min_online_min_for_rate: 30      # dưới mức này chưa đủ lịch sử trong ca → dùng ước lượng lý thuyết
   trips_per_hour_est: 1.5          # ước lượng cuốc/giờ khi chưa có lịch sử (đo được ~1.4-1.5)
-  bucket_min: 60                   # bucket của shift_dp (khớp derive_shift_plan_input_l1r)
+  # bucket của shift_dp khi advisor chạy TRONG SIM.
+  # ⚠ ĐÍNH CHÍNH 2026-07-28 (b0-B): comment cũ ghi "khớp derive_shift_plan_input_l1r" — SAI.
+  # `gsm_core/features/shift_plan.py` có `BUCKET_MIN = 30`, tức hai producer dùng bucket KHÁC
+  # nhau cho cùng một solver. Hôm nay vô hại vì đường l1r chỉ được gọi trong test, chưa nối
+  # consumer nào (`shift_dp.solve` có đúng MỘT call site production: `advice_bridge.py`).
+  # Nhưng đây là bẫy: ai nối đường l1r vào sẽ thừa hưởng lệch 30 vs 60 y như BUG-S2-PARAMS.
+  # Ghi nợ ở T-046 ("hai tên một sự thật").
+  bucket_min: 60
   # Mức TUÂN THỦ theo archetype — ASSUMPTION có lập luận, CHƯA có số thật:
   # tân binh nghe nhiều nhất, top/lão làng đã có hệ thống riêng nên nghe ít nhất.
   # Cần hiệu chỉnh khi có dữ liệu adherence thật (khảo sát tài xế hoặc A/B thật).
