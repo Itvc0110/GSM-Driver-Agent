@@ -78,10 +78,24 @@ class MarketStateProducer:
         self.supply_available = bool(supply_available)
         adv = (world.cfg.get("advice", {}) or {}) if hasattr(world, "cfg") else {}
         self.trips_per_hour_est = float(adv.get("trips_per_hour_est", 1.5) or 1.5)
+        # Cycle Q / ĐA-09 §2.2 — belief cầu RIÊNG của advisor cho fictitious play:
+        # `{hour: {cell: λ}}`, khoá giờ chịu cả int lẫn str (YAML). CHỈ producer này đọc —
+        # `_actor_demand_hint` (bản năng tài xế) tuyệt đối không; nếu bản năng cũng ăn theo
+        # belief lặp thì vòng lặp đang đổi THẾ GIỚI chứ không phải advisor (test canh bằng
+        # cách tắt planner: override có/không phải cho trace y hệt). Dữ liệu là aggregate
+        # của RUN KHÁC (cross-run learning) — không phải future-leak trong run.
+        ov = adv.get("market_demand_override") or None
+        self.demand_override: dict[int, dict[str, float]] | None = (
+            {int(h): {str(c): float(v) for c, v in cells.items()}
+             for h, cells in ov.items()} if ov else None)
         self._cache: dict[int, dict] = {}
         self.pending_targets: dict[int, str] = {}
 
     def _demand(self, hour: int) -> dict[str, float]:
+        if self.demand_override is not None:
+            # THAY THẾ (không merge): fictitious play cần kiểm soát trọn belief; merge nửa
+            # vời sẽ trộn hai thế hệ belief và không hội tụ được về bất kỳ đâu.
+            return dict(self.demand_override.get(hour, {}) or {})
         return dict(self.world.demand_field.get(hour, {}) or {})
 
     def view(self, now_min: float) -> dict:
