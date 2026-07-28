@@ -46,6 +46,12 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
   5. `TODO` capacity ledger + hồi sinh S4 → best-response equilibrium (ĐA-09).
   - **Ràng buộc Cường**: `accept_lift` giữ TẮT; `shift_plan` giữ BẬT + cảnh báo đỏ trong khu Mô
     phỏng, **đo lại trước bản cuối — không hiệu quả thì TẮT để advisor im lặng**.
+- **BUG-EVAL-ARGMAX — `TODO` ⭐⭐ SỬA EVALUATOR trước mọi lượt đo tiếp theo (UPDATE-085 §4,
+  chờ Q-11).** `pick_target` argmax-A bias âm có hệ thống (sign-flip đã chứng minh: −19,7k vs
+  +27,4k vs +3,6k không-chọn-lọc). Việc: (1) `parallel` thêm estimator mean-per-archetype trên
+  mọi tài xế được phủ; (2) tiêu chí 1 ĐA-08 đọc estimator mới; (3) argmax giữ làm view chẩn đoán
+  CÓ NHÃN; (4) đo lại 30 seed toàn bộ cấu hình (artifact 24-*); (5) đính chính bảng số các
+  UPDATE-075/078/081/084 bằng banner CORRECTED. H4 (swaps +4,7 sau reorder) đo lại cùng lượt.
 - **T-046 — MẪU LỖI LẶP LẠI "sửa một tầng, tầng khác không biết"** (hồ sơ `13-*` Phần 1): xuất
   hiện **5 lần trong một phiên**. 4 quy tắc rút ra (test ở tầng consumer; test caller TRUYỀN tham
   số mới; chỉnh tham số cấu trúc phải in metric coupled; hai-tên-một-sự-thật là nợ). **Ứng viên
@@ -99,7 +105,17 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
        mới) và **veto km rỗng hỏng** (+0,7đp SIG — chính là cơ chế reposition, được trả công ở
        tầng đội). **Phán quyết: giữ `off`** theo tiêu chí đã chốt; câu hỏi veto → **Q-10** chờ
        Cường chọn (a)/(b)/(c). ⚠ B1 vs B2 chưa xếp hạng được (cần ≥100 seed).
-  b. **`TODO` chi phí pin/năng lượng = 0 trong MỌI công thức.** `grep swap_cost|charge_cost|
+  b'. **`DONE-CODE 2026-07-28 (Cycle R, UPDATE-085)` — GỐC REST của shift_plan (Q-10c).**
+     Reproduce cả 3 giả thuyết: DP mù nghỉ-đã-nghỉ ⇒ tái áp mỗi consult (tổng nghỉ +16–27%,
+     11–14 lần/seed tái-khuyên ngay sau nghỉ); REST thắng SWAP khi hoà (fixture SOC 22% cho
+     `ONLINE,REST,REST,SWAP`; 7–12 `go_swap→rest`/seed). Fix: `spi.rest_taken_min` +
+     `_required_rest` **tín dụng ĐƠN ĐIỆU AN TOÀN** (R_mới ≤ R_cũ luôn — bản backfill đầu tiên
+     BỊ SỐ BÁC BỎ: advisory nổ 55–66→145–178, ghi lại trong docstring) + SWAP xét trước REST.
+     Sau fix: advisory 13–21, tái-khuyên 2–4, `go_swap→rest` **= 0**. 7 test, MR1-3 mutation-proof.
+  b. **`DONE-CODE một nửa 2026-07-28 (Cycle P)` chi phí pin/năng lượng.** Sổ riêng
+     `actor.cost_vnd` (km qua chốt chặn `consume_soc` + phí đổi pin), **mặc định 0 = đúng chính
+     sách hiện hành** (miễn phí official tới 31/03/2029); reconcile test + test cost-không-rò-
+     vào-payout. Còn lại của mục cũ: giá trị THẬT theo cohort khi hết ưu đãi → `grep swap_cost|charge_cost|
      energy_cost` = rỗng; `payout_vnd` chỉ `+=`, không trừ gì. Hệ quả đo được: nhóm **SWAP kiếm
      hơn 26%** (262.502đ vs 207.962đ) với **cùng số cuốc, cùng giờ online** — vì swap nhanh VÀ
      miễn phí. Thêm `swap_fee_vnd`/`swap_free_per_day`/`charge_cost_vnd_per_trip` **mặc định 0**,
