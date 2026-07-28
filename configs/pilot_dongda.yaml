@@ -72,6 +72,19 @@ demand:
   detour_factor: 1.3              # A4: khoảng cách thực / chim bay (đô thị ~1.3-1.4)
   drop_km_per_cell: 0.35          # A3: đường kính cell res9 (~0.35km)
   drop_softness_km: 0.5           # A3: bán kính mềm chọn cell trả
+  # b0-D (2026-07-28): điểm TRẢ khách bám CẦU — m(c) = 1 + α·(w(c)/w̄ − 1), kẹp ≥ 0.
+  # Vì sao: bản thuần-khoảng-cách cho corr(cầu, nơi trả) = −0,22 (anti-tương quan!) và 81% cuốc
+  # trả NGOÀI lõi ⇒ thế giới chủ động ném tài xế ra chỗ vắng, deadhead 12% thời gian. Người thật
+  # đi TỚI chỗ đông (nhà/văn phòng/TTTM) — chính nơi phát sinh cầu.
+  # Quét 5 mức × 3 seed (hồ sơ 20-sweep-drop-alpha.json; mục tiêu Cường duyệt corr ≈ +0,3..0,5):
+  #   α   | corr   | ngoài lõi | med km | served | km rỗng | deadhead
+  #   0.0 | −0.222 |   80.9%   |  3.22  | 0.791  |  40.5%  |  636 km
+  #   0.2 | +0.071 |   73.7%   |  3.19  | 0.786  |  39.8%  |  590
+  #   0.4 | +0.418 |   65.3%   |  3.14  | 0.790  |  38.9%  |  539   ← CHỌN (giữa dải mục tiêu,
+  #   0.6 | +0.638 |   54.5%   |  3.09  | 0.799  |  38.1%  |  458      med km chỉ −2,5%)
+  #   0.8 | +0.777 |   37.9%   |  2.94  | 0.809  |  36.9%  |  353   ← méo quãng đường −8,7%
+  # α = 0 ⇒ trace cũ Y HỆT từng bit (test canh). ⚠ α ≠ 0 làm LỆCH MỌI BASELINE cũ ⇒ b4 đo lại.
+  drop_demand_alpha: 0.4
   # (AUDIT A1 DEMAND-1: cờ `hour_interp` đã GỠ — nó là cờ chết, code chưa từng nội suy.
   #  Muốn nội suy thật → D-SIM-19, kèm regate 30 seed vì đổi phân phối cầu.)
 

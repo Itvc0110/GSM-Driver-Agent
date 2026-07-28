@@ -111,6 +111,8 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
     buffer_k = int(cfg.get("world.buffer_ring_k"))
     km_per_cell = float(cfg.get("demand.drop_km_per_cell", 0.35))
     softness = float(cfg.get("demand.drop_softness_km", 0.5))
+    # b0-D: mức bám cầu của điểm TRẢ khách. 0 = thuần khoảng cách (hành vi cũ, trace y hệt).
+    drop_alpha = float(cfg.get("demand.drop_demand_alpha", 0.0) or 0.0)
     mu = math.log(med)  # lognormal median = exp(mu)
 
     pat_med = float(cfg.get("dispatcher.patience_median_min", 3.0))
@@ -138,7 +140,8 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
             # t rải ĐỀU trong giờ (không nội suy cường độ giữa mốc giờ — xem D-SIM-19)
             pickup = _sample_pickup(cells, base_probs, grid, env, t_min, rng)
             target_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
-            drop = _sample_drop(grid, pickup, target_km, buffer_k, km_per_cell, softness, rng)
+            drop = _sample_drop(grid, pickup, target_km, buffer_k, km_per_cell, softness, rng,
+                                demand_w=cell_w, alpha=drop_alpha)
             patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
             p_lat, p_lon = sample_point_in_cell(grid, pickup, rng_pt)
             d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
@@ -158,7 +161,8 @@ def generate_orders(grid: Grid, cfg: Config, policy: PolicyBundle, seed: int, en
     if env is not None and env.events:
         oid = _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
                                 buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt,
-                                road=road, detour_f=detour_f)
+                                road=road, detour_f=detour_f,
+                                demand_w=cell_w, drop_alpha=drop_alpha)
 
     orders.sort(key=lambda o: (o.t_min, o.order_id))
     # đánh lại order_id theo thứ tự thời gian để deterministic + ổn định
@@ -181,7 +185,7 @@ def _sample_pickup(cells, base_probs, grid, env, t_min, rng) -> str:
 
 def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
                       buffer_k, km_per_cell, softness, pat_mu, pat_sigma, pat_max, rng, rng_pt,
-                      road=None, detour_f=1.3) -> int:
+                      road=None, detour_f=1.3, demand_w=None, drop_alpha=0.0) -> int:
     """Sinh cuốc sự kiện (cộng thêm) — sample thời điểm trong cửa sổ event, cell quanh venue."""
     for ev in env.events:
         # tổng cuốc kỳ vọng của event (xấp xỉ) = N·capture (rải theo time profile)
@@ -197,7 +201,8 @@ def _add_event_orders(orders, oid, grid, cells, env, policy, mu, sigma, km_max,
                     break
             cell = _event_pickup_cell(grid, cells, ev, rng)
             target_km = float(min(km_max, math.exp(rng.normal(mu, sigma))))
-            drop = _sample_drop(grid, cell, target_km, buffer_k, km_per_cell, softness, rng)
+            drop = _sample_drop(grid, cell, target_km, buffer_k, km_per_cell, softness, rng,
+                                demand_w=demand_w, alpha=drop_alpha)
             patience = float(min(pat_max, math.exp(rng.normal(pat_mu, pat_sigma))))
             p_lat, p_lon = sample_point_in_cell(grid, cell, rng_pt)
             d_lat, d_lon = sample_point_in_cell(grid, drop, rng_pt)
@@ -235,14 +240,34 @@ def _allowed_drop_cells(grid: Grid, buffer_k: int) -> frozenset[str]:
 
 
 def _sample_drop(grid: Grid, pickup: str, dist_km: float, buffer_k: int,
-                 km_per_cell: float, softness: float, rng) -> str:
+                 km_per_cell: float, softness: float, rng,
+                 demand_w: dict[str, float] | None = None,
+                 alpha: float = 0.0) -> str:
     """Chọn cell trả: disk quanh pickup MỞ THEO target distance (M0-9 — không cap
     tại buffer_k+3 như baseline: cap cũ chặn mọi cuốc >~2.5km rồi vẫn tính tiền
     theo lognormal → distance contract gãy). Đích ràng buộc trong lõi ∪ buffer
     quanh LÕI (OD boundary); distance-decay ưu tiên cell gần target nhất.
     Hệ quả trung thực: pilot Đống Đa nhỏ (~3-4km ngang) nên phân phối quãng đường
     THỰC bị cắt bởi địa lý — median thấp hơn target 3.5km là giới hạn vật lý của
-    pilot, ghi nhãn CALIBRATION GAP cho T-021, không che bằng số ảo."""
+    pilot, ghi nhãn CALIBRATION GAP cho T-021, không che bằng số ảo.
+
+    ## b0-D (2026-07-28, Cường chốt "sửa trước khi đo b4"): điểm trả BÁM CẦU
+
+    Bản chỉ-theo-khoảng-cách tạo ra thế giới mà **nơi trả khách ANTI-tương quan với cầu**
+    (đo seed 1000: corr = **−0,226**; 10 ô cầu cao nhất nhận 30,3% lượt đặt nhưng chỉ 2,2%
+    lượt trả; **82,3%** cuốc trả ngoài lõi ⇒ deadhead 11,8% tổng thời gian). Cơ chế: vùng
+    được phép trả 316 ô nhưng lõi chỉ 85, distance-decay còn đẩy ra vành — trong khi người
+    thật đi TỚI chỗ đông (nhà/văn phòng/TTTM), chính nơi phát sinh cầu.
+
+    Fix: nhân hệ số cầu **pha tuyến tính** `m(c) = 1 + alpha·(w(c)/w̄ − 1)`, kẹp ≥ 0,
+    chuẩn hoá theo trung bình TRÊN DISK (scale-free từng quyết định):
+
+    - `alpha = 0` ⇒ m ≡ 1.0 **chính xác IEEE** ⇒ trace cũ y hệt từng bit (nhánh dưới bị
+      bỏ qua hoàn toàn — điều kiện để baseline cũ còn so sánh được);
+    - **cố ý KHÔNG dùng luỹ thừa** `(w/w̄)^alpha` (bản preview lúc duyệt): ô buffer có
+      w = 0, luỹ thừa giết SẠCH chúng ở mọi alpha > 0 ⇒ 100% cuốc trả trong lõi — sửa lố
+      theo chiều ngược lại. Pha tuyến tính giữ ô buffer sống với trọng số 1−alpha.
+    """
     k = max(1, int(round(dist_km / km_per_cell)) + 2)
     allowed = _allowed_drop_cells(grid, buffer_k)
     disk = [c for c in grid_disk(pickup, k) if c in allowed]
@@ -250,5 +275,12 @@ def _sample_drop(grid: Grid, pickup: str, dist_km: float, buffer_k: int,
         return pickup
     dists = np.array([abs(cell_distance_km(grid, pickup, c) - dist_km) for c in disk])
     weights = np.exp(-dists / softness)
+    if alpha > 0.0 and demand_w:
+        dw = np.array([float(demand_w.get(c, 0.0)) for c in disk])
+        mean = dw.mean()
+        if mean > 0.0:
+            mult = np.maximum(0.0, 1.0 + alpha * (dw / mean - 1.0))
+            if mult.sum() > 0.0:            # tất cả 0 (không thể khi mean>0, nhưng phòng thủ)
+                weights = weights * mult
     weights = weights / weights.sum()
     return disk[rng.choice(len(disk), p=weights)]
