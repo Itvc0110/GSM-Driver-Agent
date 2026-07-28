@@ -80,20 +80,25 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
        không có giờ 0; **bucket MA** sau 24:00 thổi phồng `B` ⇒ `_required_rest` — **thật, 48
        lần/seed**; `shift_extend` kéo ca quá lúc thế giới dừng — **thật, 9 lần/seed**. 6 test.
        **Đính chính**: nghi ngờ UPDATE-047 bị nhiễm là SAI (đo 0/1197).
-     - **b0-D `TODO`** `_sample_drop` cân theo cầu — Cường chốt 2026-07-28 *"sửa trước khi đo b4"*.
-       Đo được: điểm trả khách **anti-tương quan** cầu (**−0,226**); 10 ô cầu cao nhất chiếm 30,3%
-       lượt ĐẶT nhưng chỉ **2,2%** lượt TRẢ; **82,3%** trả ngoài lõi ⇒ buộc deadhead. Vùng được
-       phép trả 316 ô / lõi 85 (26,9%), distance-decay còn đẩy ra vành ngoài.
+     - **b0-D `DONE 2026-07-28 (UPDATE-083)`** `_sample_drop` cân theo cầu — pha tuyến tính
+       `m = 1 + α·(w/w̄ − 1)`, **α = 0.4** (quét 5 mức × 3 seed, hồ sơ `20-*`): corr −0,222 →
+       **+0,418**, trả ngoài lõi 80,9% → 65,3%, deadhead 636 → 539 km, med dist chỉ −2,5%.
+       α=0 tái lập trace cũ **từng bit** (test canh). ⚠ đổi nền lần 4 ⇒ mọi baseline cũ lệch.
+     - **b3 `DONE 2026-07-28 (UPDATE-083)`** `_standby_planner` batch tick (Hungarian, đúng chốt
+       của Cường) + cờ `positioning_overrides` (off/wait_only/wait_and_relocate) + adherence rút
+       MỘT lần lúc gán (chống D-SIM-14). 8 test, mutation S1 (bỏ trần) → 2 đỏ, S3 (ghi đè quá
+       tay) → 1 đỏ. Suite **617 passed / 5 skipped**.
      - **b3 `TODO`** hồi sinh S4 `capacity_alloc` + kênh `standby_zone` vào bridge. **Phải cùng
        lúc với b2**, không được để sau: heatmap không có capacity ledger là **cỗ máy tạo dồn cục**
        (hồ sơ `19-*` §5). Đây cũng là câu trả lời cho câu hỏi fairness của Cường — hiện **đo thì
        có, cưỡng chế thì chưa**.
-     - **b4 `TODO`** đo 30 seed `coverage: all`: **9 tiêu chí phải xanh CÙNG LÚC** (nâng từ 7 sau
-       phát hiện 2026-07-28), trong đó **HHI cung theo ô là VETO** — payout lên mà HHI hỏng thì
-       **KHÔNG được bật**. Hai tiêu chí mới, đều là VETO, bắt đúng vòng lặp *đi → cạn pin → đổi*
-       mà Cường cảnh báo: **tỷ lệ km chạy rỗng không tăng** (nay **40,2%**) và **số lần đổi pin
-       không tăng** (nay 118). Ba nhánh: `off` / `wait_only` / `wait_and_relocate`.
-       ⚠ So B1 vs B2 là so biến thể ⇒ cần **≥100 seed**; ở 30 seed chỉ được nói từng nhánh vs A.
+     - **b4 `DONE 2026-07-28 (UPDATE-084)`** — 30 seed × 4 thế giới (A/B0/B1/B2), artifact `21-*`.
+       **Kênh vị trí là kênh ĐẦU TIÊN cứu HỆ THỐNG SIG**: served +1,03đp · đơn chết −13,4/ngày ·
+       tổng payout đội **+212k/ngày** · **HHI GIẢM** (capacity ledger chống dồn cục thành công).
+       NHƯNG tài xế đích −40k (B0 riêng −33k ⇒ thủ phạm chính vẫn là REST/shift_plan trên nền
+       mới) và **veto km rỗng hỏng** (+0,7đp SIG — chính là cơ chế reposition, được trả công ở
+       tầng đội). **Phán quyết: giữ `off`** theo tiêu chí đã chốt; câu hỏi veto → **Q-10** chờ
+       Cường chọn (a)/(b)/(c). ⚠ B1 vs B2 chưa xếp hạng được (cần ≥100 seed).
   b. **`TODO` chi phí pin/năng lượng = 0 trong MỌI công thức.** `grep swap_cost|charge_cost|
      energy_cost` = rỗng; `payout_vnd` chỉ `+=`, không trừ gì. Hệ quả đo được: nhóm **SWAP kiếm
      hơn 26%** (262.502đ vs 207.962đ) với **cùng số cuốc, cùng giờ online** — vì swap nhanh VÀ
