@@ -1,5 +1,22 @@
 # Schema changelog
 
+## 2026-07-28 — Cycle V: registry ĐA PHIÊN BẢN (gỡ B-02) + 2 thay đổi
+
+- **CƠ CHẾ**: validate route theo `record["schema_version"]`; lịch sử = `{entity}@{ver}.schema.json`;
+  version lạ fail-loud; upcaster `src/gsm_core/upcasters.py`; backward-compat test bằng record
+  persist thật. Quy trình bump mới trong README.
+- **`shift_plan_input` 1.0.0 → 1.1.0** (minor, additive): +`rest_taken_min`, +`shift_elapsed_min`
+  (optional/nullable — Cycle R, UPDATE-085). Snapshot `shift_plan_input@1.0.0.schema.json`;
+  upcaster 1.0.0→1.1.0 = stamp (không bịa giá trị nghỉ). Producer bridge emit 1.1.0; producer
+  l1r/features giữ 1.0.0 — hai version sống song song hợp lệ.
+  ⚠ Đính chính quy trình: đợt Cycle R (2026-07-28 sáng) đã thêm 2 trường này mà KHÔNG bump —
+  đúng anti-pattern B-02; entry này trả nợ. 5 đợt additive trước đó (xem các entry dưới) cũng
+  không bump — chấp nhận làm lịch sử, không truy bump hồi tố (record cũ vẫn validate vì các đợt
+  đó đều additive-optional với chính schema hiện hành 1.0.0 của chúng).
+- **`market_state_view` MỚI** (l3, 1.0.0): view T-045a từng emit `schema_version` mà không có
+  schema/entity nào trong registry — validate không thể chạm tới. Nay đăng ký + test payload thật.
+
+
 ## 2026-07-24 (PI-5c, UPDATE-042) — additive
 
 - `l3/penalty_explain_input` (mới): input S8 UC6. Số tiền trừ từ `driver_penalization_ATA`;

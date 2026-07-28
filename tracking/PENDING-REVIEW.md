@@ -51,7 +51,7 @@ Khi Cường cho verdict → chuyển sang phần "Đã xong", ghi ngày + kết
 | Mã | Blocker | Cần làm |
 |---|---|---|
 | ~~B-01 / R5-MUT10~~ | ✅ **GỠ THẬT — đã commit `6ccd8fc` (2026-07-28)**, kiểm lại theo yêu cầu Cường. Bằng chứng: (1) code hiện tại `return max(1, round(soc_cost_per_bucket * bucket_min / 30.0))`; (2) **re-apply mutation → `test_soc_cost_scales_with_bucket_min` ĐỎ** (`assert 1 == 2`) → restore → **xanh**; (3) doc `UPDATE-074` đã trong lịch sử git. **Đính chính lần trước:** mutation **chưa bao giờ lên remote** — `7739b3c` là commit local chưa push, `origin/main` luôn sạch; nói "HEAD còn mutation" chỉ đúng với HEAD **local**. ⚠ **Một nửa lan can yếu**: trong 2 test thì `test_soc_budget_binds_at_60min_buckets` **vẫn XANH khi có mutation** (dùng `>=` nên không giết được mutant) — chỉ test unit thật sự canh. Đã ghi vào T-046. | — |
-| **B-02 / ARCH-VERSION** | Registry chỉ load một schema/entity; `schema_version.const` khiến minor bump chưa backward compatible runtime | Thiết kế registry đa phiên bản/upcaster + compatibility test trước ĐA-05/06 migration. |
+| ~~B-02 / ARCH-VERSION~~ | ✅ **GỠ 2026-07-29 (Cycle V, UPDATE-090)** — registry đa phiên bản + upcaster + compat-test bằng record persist thật; 7 finding review đối kháng đã sửa. ĐA-05/T-044 hết bị chặn. | — |
 
 ## ✅ ĐÃ CHECK XONG
 

@@ -20,6 +20,14 @@ from gsm_core.mockgen.adapter_sim import generate_day, generate_days_continuous
 from gsm_core.mockgen.profiles import build_profile_universe, kind_distribution
 from gsm_core.schema_registry import L1R_ENTITIES
 
+
+def _reg():
+    """Registry cho manifest — version từ nguồn sự thật, không hardcode (Cycle V)."""
+    from pathlib import Path
+
+    from gsm_core.schema_registry import SchemaRegistry
+    return SchemaRegistry(Path(__file__).resolve().parents[3] / "schemas")
+
 ROOT = Path(__file__).resolve().parents[3]
 RUSH_HOURS = {6, 7, 8, 16, 17, 18}
 # Dwell dài hơn ngưỡng này = tài xế nghỉ/không vận doanh (KHÔNG phải "chờ khách").
@@ -542,7 +550,7 @@ def generate_realdata(days: int, seed_base: int, out_dir: Path, config_path: Pat
                                 "(driver BIKE đọc counter sim, không suy ngược từ target)"),
                 "days": days, "seed_base": seed_base, "start_date": start_date, "record_counts": counts,
                 "profile_universe": kind_distribution(universe),
-                "schema_versions": {e: "1.0.0" for e in tables}}
+                "schema_versions": {e: _reg().schema_version(e) for e in tables}}
     (out_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
                                            encoding="utf-8")
     return {"tables": tables, "manifest": manifest, "universe": universe}

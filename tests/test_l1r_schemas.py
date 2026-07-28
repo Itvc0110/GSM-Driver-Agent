@@ -92,6 +92,8 @@ def test_all_13_registered():
 @pytest.mark.parametrize("entity", sorted(EXAMPLES))
 def test_example_validates(reg, entity):
     assert reg.validate(entity, EXAMPLES[entity]) == []
+    # Cycle V: 13 bảng l1r hiện đều latest 1.0.0 — pin TƯỜNG MINH; bump là quyết định
+    # có quy trình (schemas/README), không phải hằng số vũ trụ.
     assert reg.schema_version(entity) == "1.0.0"
 
 

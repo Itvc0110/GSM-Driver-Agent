@@ -18,11 +18,13 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
 
 - **Versioning:** `schema_version` semver per entity. Thêm field = optional + minor bump.
   Bỏ field = đánh `deprecated_since` trong description + giữ ≥1 chu kỳ, KHÔNG xóa thẳng.
-  **CURRENT LIMITATION (2026-07-27):** `SchemaRegistry` hiện chỉ load một file/entity, trong khi
-  schema khóa `schema_version.const` và `additionalProperties: false`. Vì vậy minor bump mới chỉ là
-  quy ước tác giả, **chưa chứng minh backward compatibility runtime** cho record phiên bản cũ.
-  Trước migration phải có registry đa phiên bản hoặc upcaster + compatibility test; xem
-  `research/audit/2026-07-27-current-state/01-data-lineage-and-update-model.md#8-blocker-schema-versioning`.
+  **ĐA PHIÊN BẢN từ 2026-07-28 (Cycle V — gỡ B-02/ARCH-VERSION):** registry route validate theo
+  `record["schema_version"]`; file **latest** giữ tên `{entity}.schema.json`, phiên bản **lịch
+  sử** là `{entity}@{version}.schema.json` cùng thư mục; version lạ ⇒ **fail-loud** kèm danh
+  sách đã biết (không silent-fallback). Upcaster từng-bậc, pure-function ở
+  `src/gsm_core/upcasters.py`. Backward compatibility là ĐIỀU ĐƯỢC TEST bằng record đã persist
+  (`tests/test_schema_versioning.py::test_persisted_old_records_still_validate`), không còn là
+  quy ước tác giả. Bump đầu tiên: `shift_plan_input` 1.0.0 → 1.1.0 (2 trường rest, Cycle R).
 - **`source` bắt buộc** mọi record: `MOCK | REAL | ESTIMATED | COARSE | INFERRED`
   (CLAUDE.md §5 — mock phải gắn nhãn; không trộn mock với data thật).
 - **`x-sensitivity`**: field PII (driver_id, lat/lon thô) — cơ chế thu hẹp/anonymize sau.
@@ -34,9 +36,18 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
   — pipeline ingest ngoài scope (spec §0).
 - Sim và data thật GSM dùng CÙNG schema — chỉ đổi `source`.
 
-## Sửa schema thế nào
+## Sửa schema thế nào (quy trình bump từ Cycle V)
 
-1. Sửa file `.schema.json` + bump `schema_version` theo semver.
-2. Ghi `CHANGELOG.md` (version, ngày, lý do, tương thích).
-3. Chạy `uv run --extra dev pytest tests/test_schemas.py tests/test_mockgen.py`.
-4. Biến mới phải điền được bảng traceability spec §1.7 (feature + pain hoặc lý-do-hạ-tầng) — điều kiện T-039.
+1. **Snapshot hình dạng cũ** thành `{entity}@{version_cũ}.schema.json` — hình dạng cũ lấy từ
+   **git HEAD trước thay đổi** (`git show HEAD:schemas/...`), KHÔNG copy file hiện tại: nếu
+   hình dạng đã bị sửa tại chỗ trước đó (như Cycle R từng làm) thì file hiện tại KHÔNG còn là
+   hình dạng cũ. Thêm hậu tố `@{version}` vào `$id`. ⚠ Registry TỪ CHỐI file snapshot có const
+   không khớp version trên tên file — đặt sai là fail ngay lúc load, không âm thầm.
+2. Sửa file latest `.schema.json` + **bump `schema_version.const`** theo semver.
+3. Viết **upcaster** `({entity}, {version_cũ})` trong `src/gsm_core/upcasters.py` — additive
+   optional ⇒ chỉ stamp version; đổi ngữ nghĩa ⇒ dịch dữ liệu thật (và cân nhắc MAJOR).
+4. Cập nhật `LATEST_VERSIONS` trong `tests/test_schemas.py` (pin tường minh) + `CHANGELOG.md`
+   (version, ngày, lý do, tương thích).
+5. Chạy `uv run pytest tests/test_schema_versioning.py tests/test_schemas.py tests/test_mockgen.py`
+   — record persist cũ PHẢI còn validate pass (định nghĩa vận hành của backward-compat).
+6. Biến mới phải điền được bảng traceability spec §1.7 (feature + pain hoặc lý-do-hạ-tầng) — điều kiện T-039.

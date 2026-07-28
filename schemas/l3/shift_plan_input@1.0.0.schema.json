@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l3/shift_plan_input",
+  "$id": "https://gsm-driver-agent/schemas/l3/shift_plan_input@1.0.0",
   "title": "shift_plan_input",
-  "description": "Input S2 ShiftDP. US-F1-04, F2-01/02. Pain #2.",
+  "description": "SNAPSHOT lịch sử 1.0.0 (Cycle V, 2026-07-28): hình dạng TRƯỚC khi Cycle R thêm rest_taken_min/shift_elapsed_min. Record cũ validate theo file này; upcaster ở gsm_core/upcasters.py.",
   "type": "object",
   "properties": {
     "driver_id": {
@@ -70,23 +70,7 @@
       "description": "Nhãn nguồn bắt buộc (CLAUDE.md §5 — mock phải gắn nhãn)"
     },
     "schema_version": {
-      "const": "1.1.0"
-    },
-    "rest_taken_min": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "description": "Cycle R/H1 (2026-07-28, additive-optional): phút nghỉ ĐÃ nghỉ trong ca (gồm cả nghỉ bản năng). None/thiếu = nguồn không có (l1r) => solver dùng công thức mù-state cũ, nhãn degraded."
-    },
-    "shift_elapsed_min": {
-      "type": [
-        "number",
-        "null"
-      ],
-      "minimum": 0,
-      "description": "Phút đã vào ca tính tới t_now — cần để quy nhu cầu nghỉ CẢ CA. Cùng lô additive với rest_taken_min."
+      "const": "1.0.0"
     }
   },
   "required": [

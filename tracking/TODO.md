@@ -216,8 +216,18 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
   local chưa push, `origin/main` luôn sạch. ⚠ `test_soc_budget_binds_at_60min_buckets` dùng `>=`
   nên **KHÔNG giết được mutant** (vẫn xanh khi có mutation) — lan can thật chỉ là test unit; ghi
   vào **T-046** như một ca "test có mà không bắt".
-- **BLOCKER-ARCH-VERSION:** registry hiện chỉ load một schema/entity, chưa thực thi backward
-  compatibility cho minor bump. Phải giải quyết trước canonical event-store migration.
+- ~~**BLOCKER-ARCH-VERSION**~~ **GỠ 2026-07-29 (Cycle V, UPDATE-090).** Registry đa phiên bản
+  (`{entity}@{ver}.schema.json`, validate route theo record, fail-loud version lạ/null) +
+  upcaster từng-bậc có chặn-treo + backward-compat TEST bằng record persist thật + bump thật
+  đầu tiên `shift_plan_input` 1.1.0 + vá lỗ `market_state_view` không được validate. Review
+  đối kháng 28-agent: 7 finding confirmed-by-reproduce, đã sửa hết (guard file rác/const lệch
+  tên/manifest hardcode/upcast treo). **ĐA-05 và T-044 hết bị chặn.**
+- **BUG-MOCKGEN-CLI — `TODO` (PRE-EXISTING, reviewer reproduce 2026-07-29):** entrypoint
+  `python -m gsm_core.mockgen.generate` crash `AttributeError: 'str' object has no attribute
+  'items'` tại `generate.py:50` TRƯỚC khi tới verify_round1 — đường CLI không được test nào
+  phủ (test gọi thẳng hàm). Không do Cycle V (diff không đụng file này trước điểm crash).
+  Cần: reproduce → root cause (nghi `adapter_sim._tables_from_run` trả str ở một nhánh) →
+  test CLI smoke → fix.
 
 Các section cũ bên dưới là timeline/backlog tích lũy; khi mâu thuẫn, dùng checkpoint này +
 `DIRECTIVES` §13 + dossier current-state.

@@ -56,7 +56,11 @@ def generate_dataset(days: int, seed_base: int, out_dir: Path,
         "generated_at": datetime.now(TZ).isoformat(),
         "days": days, "seed_base": seed_base, "seeds": seeds,
         "start_date": start_date, "config": str(cfg_path.name),
-        "schema_versions": {e: "1.0.0" for e in sorted(all_records)},
+        # Cycle V: version đọc từ REGISTRY, không hardcode — từ khi validate route theo
+        # record["schema_version"] (đa phiên bản), manifest nói dối version là bug thật chứ
+        # không còn là chi tiết trang trí (review đối kháng confirmed).
+        "schema_versions": {e: SchemaRegistry(_SCHEMAS_DIR).schema_version(e)
+                            for e in sorted(all_records)},
         "record_counts": counts,
     }
     (out_dir / "manifest.json").write_text(

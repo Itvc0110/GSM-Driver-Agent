@@ -33,6 +33,7 @@ EXPECTED = {
     "shift_plan_input", "bonus_gap_input", "session_summary_input", "allocation_input",
     "weekly_khoan_input", "mission_select_input", "idle_reduction_input",
     "penalty_explain_input", "anomaly_alert_input",
+    "market_state_view",   # Cycle V: vá lỗ view T-045a emit version mà không registry nào biết
     # advisor
     "advice_request", "solver_report", "composed_advice",
 }
@@ -50,11 +51,18 @@ def test_all_entities_registered():
     assert set(ALL_ENTITIES) == EXPECTED | EXPECTED_L1R
 
 
+# Cycle V (2026-07-28, gỡ B-02): PIN VERSION TƯỜNG MINH thay cho "mọi thứ == 1.0.0".
+# Bump có chủ ý ⇒ sửa map này + CHANGELOG + snapshot @old + upcaster (quy trình schemas/README).
+# `shift_plan_input` 1.1.0 là bump THẬT đầu tiên (Cycle R thêm 2 trường rest mà const chưa đổi
+# — đúng anti-pattern B-02; nay trả nợ).
+LATEST_VERSIONS = {"shift_plan_input": "1.1.0"}   # entity vắng mặt = "1.0.0"
+
+
 def test_all_schemas_load_and_have_version(reg):
     for e in ALL_ENTITIES:
         s = reg.schema(e)
         assert s["$id"], e
-        assert reg.schema_version(e) == "1.0.0", e
+        assert reg.schema_version(e) == LATEST_VERSIONS.get(e, "1.0.0"), e
 
 
 VALID = {

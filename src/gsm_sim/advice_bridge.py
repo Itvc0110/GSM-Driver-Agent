@@ -272,7 +272,10 @@ class AdviceActionBridge:
                     "expected_orders": round(float(exp), 3),
                 })
         return {
-            "schema_version": "1.0.0", "driver_id": f"d-{actor.actor_id}",
+            # 1.1.0 (Cycle V): producer NÀY emit rest_taken_min/shift_elapsed_min ⇒ khai đúng
+            # phiên bản hình dạng mình sinh ra. Producer l1r KHÔNG emit hai trường ⇒ giữ 1.0.0
+            # — hai version sống song song, registry route theo record (gỡ B-02).
+            "schema_version": "1.1.0", "driver_id": f"d-{actor.actor_id}",
             "t_now": _iso(now_min),
             "buckets_remaining": len(starts),
             "soc_pct": round(actor.soc_pct, 1),   # sim CÓ telemetry pin (data thật thì không)
