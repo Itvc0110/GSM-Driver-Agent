@@ -90,7 +90,39 @@ congestion:
   normalize: global_peak           # global_peak (so đỉnh toàn ngày) | hour_peak (so đỉnh trong giờ)
 
 dispatcher:
+  # TẦNG 2 (UPDATE-080, hồ sơ `15-*`): "batch" = bipartite Hungarian trên cost = ETA_pickup,
+  # đúng đặc tả `world-parameters.md` §3 (dẫn công bố DiDi) — tầng này trước đây bị hoãn
+  # ("Hungarian để vòng sau") và không bao giờ được xây.
+  # "greedy" giữ lại làm BASELINE SO SÁNH theo yêu cầu của chính đặc tả, và là đường lui khi
+  # ma trận gán quá lớn.
+  #
+  # Đo 12 seed (so với greedy-haversine gốc, cùng k=6):
+  #   served 0.761 → 0.764 · hết hạn 233 → 228 · pickup TB 1.04 → 0.98 km · runtime 2.9s → 2.7s
+  #   lệch accept_base P7 −0.042 → −0.047 (vẫn trong dung sai 5pp)
+  # Pickup NGẮN LẠI là cơ chế then chốt: gán tối ưu TỔNG thay vì greedy theo `order_id`.
+  matching: batch
   candidate_ring_k: 4              # grid_disk k ở res 9 (~ bán kính 1.4km); nới nếu rỗng
+  # ⛔ BUG-DISPATCH-SHORTLIST (UPDATE-079, hồ sơ `14-*` §2) — ĐÃ TÌM RA, **CHƯA SỬA ĐƯỢC**.
+  #
+  # Lỗi: `k_max` chỉ là SHORTLIST; ràng buộc thật là `eta_max_min`. k=6 phủ **2,22 km** trong
+  # khi ETA 11′ còn cho phép tới **3,14 km** (điều kiện trung bình) ⇒ tài xế thoả ETA ở
+  # 2,2–3,1 km bị loại **ÂM THẦM**, không log. Hệ quả: đơn chết dù có người trong tầm với.
+  #
+  # Vì sao CHƯA nới: nới làm ghép đơn tốt lên nhưng **phá realism** — đơn mới được phục vụ
+  # chính là đơn PICKUP XA, tài xế từ chối nhiều hơn ⇒ tỷ lệ nhận thực tế trôi khỏi
+  # `accept_base` quá dung sai 5pp của `tests/test_sim_realism.py`:
+  #
+  #   k | served | hết hạn | lệch lớn nhất vs accept_base | 18h hết hạn
+  #   6 | 0.761  |   233   | P7 −0.042  ✅ (đã sát ngưỡng) |   38.8%
+  #   7 | 0.778  |   211   | P7 −0.053  ❌                 |     —
+  #   8 | 0.788  |   196   | P7 −0.057  ❌                 |   34.5%
+  #  12 | 0.789  |   195   | P7 −0.067  ❌                 |   38.5%
+  #
+  # (12 seed cho cột lệch; 3 seed cho 18h. Đã LOẠI giả thuyết "center logit cũ": đo lại net
+  #  trung vị thị trường = 20.760đ vs config 21.200đ ⇒ chỉ ~+0,3pp acceptance, không đủ bù.)
+  #
+  # ⚠ KHÔNG được nới dung sai test để đi tiếp — đó là che khuyết tật. Cần Cường quyết
+  # (Q-07): ưu tiên **ghép đơn đúng** hay **trung thành archetype**? Xem hồ sơ `14-*` §2.
   candidate_ring_k_max: 6
   # SIM-XANH: 10 → 11. KHÔNG phải nới chuẩn: ETA giờ tính trên hệ số đường THẬT (median
   # 1.46) thay vì detour 1.3 ⇒ cùng bán kính VẬT LÝ, số phút tính ra cao hơn ~12%.
@@ -131,6 +163,29 @@ behavior:                          # math-audit A5: accept logit params ra confi
   # 0.05 = ASSUMPTION hiệu chỉnh để completion rơi vào dải thực tế [0.92, 0.97]
   # (bảng chẩn đoán spec `00-sim-overhaul-master.md` §2: thực tế ~95%). Đo lại: 0.943.
   cancel_after_accept_rate: 0.05
+  # --- T-045d (UPDATE-081): tài xế BIẾT SỐT RUỘT ---
+  # Đo được: khoảng chờ tới **269 phút** trong khi 20-30% đơn giờ cao điểm hết hạn. Truy nguyên:
+  # `_actor_demand_hint` là PRIOR cache theo (actor, giờ), KHÔNG cập nhật từ trải nghiệm; nếu ô
+  # hiện tại là cực đại địa phương thì `best_cell == actor.cell` suốt cả giờ ⇒ ngồi im.
+  # Người thật rỗi 40 phút không đơn nào sẽ kết luận mình sai chỗ và đi — kể cả tới chỗ mình
+  # NGHĨ là kém hơn. Vì vậy không thể chỉ hạ ngưỡng; phải BỎ HẲN phép so sánh khi sốt ruột kịch.
+  #
+  # Escalation theo `idle_streak_min` (phút rỗi liên tục kể từ lần được CHÀO gần nhất):
+  #   n = idle_streak // step, cắt trần `max_steps`
+  #   ring 1→1+n · ngưỡng 1.25→1.25−0.10n · p(đi) 0.5→0.5+0.20n · n≥max_steps ⇒ thôi tin niềm tin
+  #
+  #   step/max | served |  max  |  p99  | >90′ | cuốc/tx
+  #      TẮT   | 0.764  | 269′  | 152′  | 45.3 |  10.1
+  #    20 / 2  | 0.787  |  59′  |  41′  |  0.0 |  10.4   ← chốt
+  #    30 / 2  | 0.777  |  76′  |  60′  |  0.3 |  10.3
+  #    15 / 3  | 0.786  |  79′  |  46′  |  0.0 |  10.4
+  #
+  # ⚠ RANH GIỚI Q-08: đây là BẢN NĂNG, không phải lời khuyên — chỉ nới bán kính/bỏ kén, KHÔNG
+  # cấp thêm thông tin nào về cầu. served chỉ +0.023 so với tắt (ngưỡng tự đặt: ≤ +0.05) để
+  # không ăn mất dư địa của advisor. `test_idle_impatience.py` canh cả hai phía.
+  idle_impatience_enabled: true
+  idle_impatience_step_min: 20
+  idle_impatience_max_steps: 2
 
 actors:
   # SIM-1: 50 → 60. Căn cứ research `realism-benchmarks.md`: "nếu unserved vẫn >20% mới

@@ -53,7 +53,7 @@ class PairResult:
 
 
 def _cfg_with(cfg: Config, *, enabled: bool, actor_id: int | None,
-              channels: dict | None) -> Config:
+              channels: dict | None, coverage: str = "single") -> Config:
     """Bản SAO SÂU của config với cờ advice đã đặt.
 
     Phải deep-copy: nếu sửa tại chỗ thì nhánh A và B dùng chung một dict ⇒ chạy A xong đã bị
@@ -62,8 +62,11 @@ def _cfg_with(cfg: Config, *, enabled: bool, actor_id: int | None,
     c = Config(copy.deepcopy(cfg.data), cfg.root_dir)
     adv = c.data.setdefault("advice", {})
     adv["enabled"] = enabled
-    adv["coverage"] = "single"
-    adv["single_actor_id"] = actor_id
+    # ĐA-08 (UPDATE-075): coverage KHÔNG còn bị ép "single". Guardrail hệ thống đo ở chế độ
+    # single là vô nghĩa — tác động của MỘT tài xế lên thị trường gần bằng 0 theo thiết kế
+    # (hồ sơ 07 §5.2). `coverage="all"` là chế độ phải dùng khi đánh giá tác hại hệ thống.
+    adv["coverage"] = coverage
+    adv["single_actor_id"] = actor_id if coverage == "single" else None
     if channels is not None:
         adv["channels"] = dict(channels)
     return c
@@ -89,26 +92,52 @@ def _driver_metrics(result, actor_id: int) -> dict:
 
 
 def _system_metrics(result, exclude_actor: int) -> dict:
-    """Guardrail: advice KHÔNG được cải thiện 1 người bằng cách làm xấu hệ thống."""
+    """Guardrail: advice KHÔNG được cải thiện 1 người bằng cách làm xấu hệ thống.
+
+    ĐA-08 (UPDATE-075): mở rộng từ 5 trường lên đủ **4 tầng** của chỉ tiêu kép —
+    hệ thống · khách hàng · công bằng · tập trung. Bản 5 trường cũ không có Gini, không có
+    TỔNG payout (⇒ không phân biệt được positive-sum với tái phân phối), không có đơn hết hạn
+    và không có chỉ số dồn cục — tức không thể phát biểu chỉ tiêu kép.
+
+    Số nền đo bằng chính bộ này: `research/audit/2026-07-27-current-state/09-*` (30 seed,
+    `coverage: all`). Lưu ý khi đọc: ở n=30 **mọi tầng hệ thống đều có CI chứa 0**; chỗ có ý
+    nghĩa thống kê là tầng CÁ NHÂN (payout −17.310đ). Đừng trích số 10-seed của hồ sơ 07.
+    """
+    from .sim_metrics import system_guardrail
     s = summarize(result)
     others = [a for a in result.actors if a.actor_id != exclude_actor]
     swap_waits = [e.detail.get("wait_min", 0.0) for e in result.events
                   if e.kind == "swap_done" and "wait_min" in e.detail]
+    g = system_guardrail(result)
     return {
         "served_rate": s["served_rate"],
         "orders_completed": s["orders_completed"],
         "others_payout_vnd": sum(a.payout_vnd for a in others),
         "others_trips": sum(a.trips_done for a in others),
         "swap_wait_mean": round(st.mean(swap_waits), 3) if swap_waits else 0.0,
+        # --- 4 tầng ĐA-08 ---
+        "total_payout_vnd": g["total_payout_vnd"],      # positive-sum hay tái phân phối?
+        "expired_n": g["expired_n"],                     # khách bị bỏ
+        "wait_median_min": g["wait_median_min"],         # khách chờ
+        "gini_payout": g["gini_payout"],                 # công bằng
+        "station_hhi": g["station_hhi"],                 # dồn trạm
+        "supply_cell_hhi": g["supply_cell_hhi"],         # dồn khu
+        "starved_hours_n": g["starved_hours_n"],         # giờ đói cung
     }
 
 
 def run_pair(cfg: Config, seed: int, channels: dict | None = None,
-             actor_id: int | None = None, archetype: str = "P4") -> PairResult:
-    """Chạy World A (tự làm) và World B (theo chỉ dẫn) trên **cùng seed**."""
+             actor_id: int | None = None, archetype: str = "P4",
+             coverage: str = "single") -> PairResult:
+    """Chạy World A (tự làm) và World B (theo chỉ dẫn) trên **cùng seed**.
+
+    `coverage="all"` = advice cho TOÀN ĐỘI — chế độ BẮT BUỘC khi đánh giá tác động hệ thống
+    (ĐA-08). `"single"` giữ nguyên cho nghiên cứu attribution trên một tài xế.
+    """
     ra = run_once(_cfg_with(cfg, enabled=False, actor_id=None, channels=None), seed)
     aid = actor_id if actor_id is not None else pick_target(ra, archetype)
-    rb = run_once(_cfg_with(cfg, enabled=True, actor_id=aid, channels=channels), seed)
+    rb = run_once(_cfg_with(cfg, enabled=True, actor_id=aid, channels=channels,
+                            coverage=coverage), seed)
     return PairResult(seed=seed, actor_id=aid,
                       a=_driver_metrics(ra, aid), b=_driver_metrics(rb, aid),
                       system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid))
@@ -146,6 +175,16 @@ def bootstrap_ci(diffs: list[float], n_boot: int = 5000, alpha: float = 0.05,
 # thành "significant"; n=2 → đồng xu 50%). Chuẩn CLAUDE §4b: kết luận distribution cần ≥30 seed.
 MIN_SEEDS_FOR_SIGNIFICANCE = 30
 
+# UPDATE-078: ngưỡng 30 ở trên hiệu chỉnh cho **A/B advice** (có advice vs không). So **hai BIẾN
+# THỂ advice** với nhau là bài toán KHÁC và cần nhiều seed hơn hẳn: đo thật cho fix
+# BUG-S2-PARAMS ra hiệu số −7.650đ với SD ~40.000đ theo seed (spread −90k..+96k) ⇒
+# n ≈ (1,96·40.000/7.650)² ≈ 105.
+#
+# Ghi ra để không ai lặp lại lỗi tôi vừa mắc: chạy 30 seed hai lần với hai bản code rồi kết luận
+# "bản mới tệ hơn". Muốn so biến thể thì phải GHÉP CẶP (cùng World A theo seed, hai nhánh B) và
+# bootstrap **hiệu của hiệu** — xem `research/audit/2026-07-27-current-state/11-*` §4.
+MIN_SEEDS_FOR_VARIANT_COMPARISON = 100
+
 
 def _sig(lo: float, hi: float, n: int) -> bool:
     return bool(n >= MIN_SEEDS_FOR_SIGNIFICANCE and (lo > 0 or hi < 0))
@@ -182,10 +221,14 @@ def compare(pairs: list[PairResult]) -> dict:
 
 
 def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
-               steps: tuple[str, ...] = ("s2_only", "accept_lift", "all")) -> dict:
+               steps: tuple[str, ...] = ("s2_only", "accept_lift", "all"),
+               coverage: str = "single") -> dict:
     """Đo THANG BẬC: từng bậc kênh → biết giá trị đến từ đâu (attribution).
 
     Cùng tài xế đích cho mọi bậc để so sánh công bằng.
+
+    `coverage="all"` trả lời gap mà hồ sơ `07` §6 tự ghi là chưa làm: *"chưa tách đóng góp của
+    từng kênh ở chế độ diện rộng"* (ablation cũ chỉ chạy ở mức 1 tài xế).
 
     Hiệu năng: World A **chạy MỘT LẦN cho mỗi seed** rồi dùng lại cho mọi bậc — A không phụ
     thuộc cấu hình kênh. Ngây thơ chạy lại A ở từng bậc sẽ tốn gấp đôi mà kết quả y hệt.
@@ -202,7 +245,7 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
             ra = cache_a.get(s) or run_once(cfg_a, s)
             cache_a[s] = ra
             rb = run_once(_cfg_with(cfg, enabled=True, actor_id=aid,
-                                    channels=CHANNEL_LADDER[name]), s)
+                                    channels=CHANNEL_LADDER[name], coverage=coverage), s)
             pairs.append(PairResult(
                 seed=s, actor_id=aid,
                 a=_driver_metrics(ra, aid), b=_driver_metrics(rb, aid),

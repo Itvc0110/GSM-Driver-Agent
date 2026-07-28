@@ -121,6 +121,26 @@ class AdviceActionBridge:
         self.sim_policy = policy
         self.policy = CorePolicy.from_record(policy.to_core_record())
         self.bucket_min = int(adv.get("bucket_min", 60))
+        # UPDATE-082 — GIẢ THUYẾT ĐÃ BỊ SỐ LIỆU BÁC BỎ, giữ cờ để tra cứu.
+        #
+        # Giả thuyết: `REST` của S2 nghĩa "đừng ONLINE kiếm tiền", mà `go_swap`/`relocate` vốn
+        # đã không phải ONLINE ⇒ ghi đè chúng là thừa và phá hoại (đo: 92/166 = 55% số can
+        # thiệp là loại này). Nghe rất thuyết phục.
+        #
+        # ĐO 15 seed: bật chốt chặn làm advisor **TỆ ĐI**, không tốt lên:
+        #     tắt  (hiện tại): −14.125đ  CI [−35.019, +7.617]  lợi 4/15
+        #     bật            : −32.383đ  CI [−50.001, −15.644] lợi 3/15
+        #
+        # Vì sao: `go_swap` tốn chuyến đi trạm + chờ (11% thất bại), `relocate` là chạy rỗng
+        # (14% thời gian). Chính các lần ghi đè đó đang **CỨU** tài xế khỏi hành động đắt.
+        # ⇒ Mặc định FALSE (giữ hành vi hiện tại). Giữ cờ để so A/B, không để mặc.
+        self.rest_only_overrides_wait = bool(adv.get("rest_only_overrides_wait", False))
+        # BUG-S2-PARAMS (UPDATE-078): quãng đường TB của CHÍNH thế giới này, không phải hằng
+        # `avg_dist_km=3.0` trong `DEFAULT_PARAMS`. Cùng nguồn với world sinh cuốc.
+        self.avg_dist_km = float(cfg.get("orders.trip_km_median", 3.5) or 3.5)
+        # prior hoàn thành của quần thể = 1 − tỷ lệ huỷ-sau-nhận của chính thế giới này
+        self.completion_prior = round(
+            1.0 - float(cfg.get("orders.cancel_after_accept_rate", 0.05) or 0.05), 4)
         # SIM-4: mỗi kênh bật/tắt RIÊNG ⇒ đo được kênh nào tạo ra giá trị (attribution).
         ch = adv.get("channels") or {}
         self.ch_shift_plan = bool(ch.get("shift_plan", True))
@@ -207,6 +227,62 @@ class AdviceActionBridge:
             "view_version": "sim-3", "source": "MOCK",
         }
 
+    # ---------- BUG-S2-PARAMS: tham số THẬT cho solver ----------
+
+    def _acc_estimate(self, actor: Actor) -> float:
+        """Ước lượng tỷ lệ nhận **as-of** — quá khứ, không rò tương lai.
+
+        Chưa đủ mẫu trong ngày thì dùng lịch sử cuộn nhiều ngày (D-SIM-13, số ĐO thật của chính
+        tài xế), thiếu nữa thì `accept_base` (đại diện cho tỷ lệ lịch sử mà hệ thật đọc từ
+        `driver_statistic_daily`). KHÔNG dùng property `actor.acceptance_rate` khi chưa có offer:
+        nó trả 1.0 cho 0/0 (BUG-DSIM13-02) — "chưa biết" bị hiểu thành "hoàn hảo".
+        """
+        if actor.orders_offered < self.min_offers_before_lift:
+            mem = (self.memory or {}).get(actor.actor_id)
+            return float(mem.acceptance_avg if mem is not None and mem.acceptance_avg is not None
+                         else actor.accept_base)
+        return float(actor.acceptance_rate)
+
+    def _comp_estimate(self, actor: Actor) -> float:
+        """Như trên, cho tỷ lệ hoàn thành.
+
+        Chưa nhận cuốc nào ⇒ property trả **1.0** (cùng bệnh 0/0 với acceptance). Thay bằng:
+        lịch sử nhiều ngày của chính tài xế, thiếu thì **prior quần thể** = `1 − cancel_after_
+        accept_rate` của chính thế giới này (0,05 ⇒ 0,95) — cùng loại thay thế mà code sẵn có
+        đang dùng `accept_base` cho acceptance (*"thực tế đọc từ `driver_statistic_daily`"*).
+
+        **Không** dùng `bonus_min_completion` làm fallback: nó bằng ĐÚNG ngưỡng, mà `_bonus_
+        eligible` so `>=` ⇒ hoá ra **qua** gate — nghe như bảo thủ nhưng thực chất là dễ dãi.
+        """
+        if actor.orders_accepted <= 0:
+            mem = (self.memory or {}).get(actor.actor_id)
+            if mem is not None and mem.completion_avg is not None:
+                return float(mem.completion_avg)
+            return self.completion_prior
+        return float(actor.completion_rate)
+
+    def solver_params(self, actor: Actor) -> dict:
+        """Tham số THẬT truyền cho `shift_dp`.
+
+        BUG-S2-PARAMS (hồ sơ `10-bug-bucket-min-khong-truyen.md`): trước đây `consult` gọi
+        `shift_dp.solve(spi, policy)` **không params**, nên solver dùng `DEFAULT_PARAMS`:
+
+        - `bucket_min = 30` trong khi bridge dựng bucket **60′** ⇒ DP tin pin bền **gấp đôi**
+          và nghỉ bắt buộc chỉ còn **một nửa** ⇒ nghiệm lệch hẳn về ONLINE (đo: 18/25 tài xế
+          đổi lịch, `OOO` → `OOR`);
+        - `p_accept = 0.9`, `avg_dist_km = 3.0` — chính docstring của `DEFAULT_PARAMS` ghi
+          *"CALLER NÊN TRUYỀN số thật"* (AUDIT S2-4/S2-5);
+        - thiếu `acceptance_rate`/`completion_rate` ⇒ `_bonus_eligible` trả "không có số để
+          xét" ⇒ S2 **hứa thưởng cho cả người chính sách sẽ không trả**.
+        """
+        return {
+            "bucket_min": self.bucket_min,
+            "p_accept": self._acc_estimate(actor),
+            "avg_dist_km": self.avg_dist_km,
+            "acceptance_rate": self._acc_estimate(actor),
+            "completion_rate": self._comp_estimate(actor),
+        }
+
     # ---------- hỏi ý kiến ----------
 
     def consult(self, actor: Actor, now_min: float, demand_hint_fn,
@@ -219,7 +295,7 @@ class AdviceActionBridge:
         spi = self.build_shift_plan_input(actor, now_min, demand_hint_fn, horizon_min)
         if spi["buckets_remaining"] <= 0:
             return None
-        report = shift_dp.solve(spi, self.policy)
+        report = shift_dp.solve(spi, self.policy, self.solver_params(actor))
         sol = report.get("solution") or {}
         schedule = sol.get("schedule") or []
         if not schedule:
@@ -263,12 +339,7 @@ class AdviceActionBridge:
         # Khi chưa đủ mẫu trong ngày, ước lượng bằng LỊCH SỬ: ưu tiên lịch sử cuộn nhiều ngày
         # (D-SIM-13 — số ĐO thật của chính tài xế), thiếu thì `accept_base` (tham số archetype;
         # thực tế đọc từ `driver_statistic_daily`). Cả hai đều là quá khứ, không rò tương lai.
-        if actor.orders_offered < self.min_offers_before_lift:
-            mem = (self.memory or {}).get(actor.actor_id)
-            acc = (mem.acceptance_avg if mem is not None and mem.acceptance_avg is not None
-                   else actor.accept_base)
-        else:
-            acc = actor.acceptance_rate
+        acc = self._acc_estimate(actor)   # UPDATE-078: một nguồn với `solver_params`
 
         # --- D-SIM-05: CHỈ khuyên khi lời khuyên THỰC SỰ có ích ---
         # SIM-4 chứng minh hiệu ứng VÁCH ĐÁ: nâng tỷ lệ mà KHÔNG chạm ngưỡng làm tài xế
@@ -450,8 +521,11 @@ class AdviceActionBridge:
         """
         rep = bonus_feasibility.solve(self.build_bonus_gap_input(actor, now_min), self.policy)
         sol = rep.get("solution") or {}
-        if sol.get("already_maxed"):
-            return False, "already_maxed"        # kịch mốc rồi, khuyên thêm là thừa
+        # C2 (UPDATE-076): chỉ im lặng khi kịch mốc **VÀ** thưởng thật sự an toàn. Kịch mốc mà
+        # tỷ lệ dưới ngưỡng ⇒ chính sách trả 0đ; im lặng lúc đó là bỏ rơi tài xế đúng lúc còn
+        # gỡ được. Rơi xuống dưới để `_acceptance_recoverable` quyết định có kịp không.
+        if sol.get("already_maxed") and sol.get("feasible"):
+            return False, "already_maxed"        # kịch mốc VÀ an toàn ⇒ khuyên thêm là thừa
 
         reason = (rep.get("infeasible_reason") or "")
         if not sol.get("feasible"):

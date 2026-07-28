@@ -336,6 +336,7 @@ class World:
                     continue
                 self.offer_history[pair] = self.env.now
                 actor.orders_offered += 1
+                actor.idle_streak_min = 0.0   # T-045d: được CHÀO = bằng chứng ở đây có cầu
                 # SOC đủ hoàn thành? (pickup + trip, quãng đường thực theo hệ số TỪNG chặng)
                 total_km = (asg.pickup_dist_km * self._dfac(actor.cell, order.pickup_cell)
                             + order.dist_km * self._dfac(order.pickup_cell, order.drop_cell))
@@ -538,7 +539,8 @@ class World:
                 continue
             hour = int(now // 60) % 24
             hint = self._actor_demand_hint(actor, hour)
-            action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, hint, self.rng)
+            action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, hint,
+                                                self.rng, self.cfg.get("behavior", {}) or {})
 
             # --- SIM-3: hỏi advisor (nếu tài xế này được phủ + tới hạn) ---
             # ĐẶT SAU `choose_idle_action` CÓ CHỦ Ý: hành vi bản năng vẫn được tính (và tiêu
@@ -567,10 +569,29 @@ class World:
                          followed=adv.followed, instinct_action=action.value,
                          plan_next=adv.plan_next_action, reason=adv.reason)
                 if adv.followed and adv.mapped_action is not None:
-                    if adv.mapped_action != action:
-                        self.log(actor.actor_id, "advice_followed", actor.cell,
-                                 from_action=action.value, to_action=adv.mapped_action.value)
-                    action = adv.mapped_action
+                    # BUG-ADVICE-OVERRIDE (UPDATE-082): `REST` của S2 nghĩa là *"khung này
+                    # ĐỪNG ở trạng thái ONLINE kiếm tiền"*. Nhưng `go_swap`/`go_charge`/
+                    # `relocate` **vốn đã KHÔNG PHẢI** ONLINE kiếm tiền — chúng là hành động
+                    # chuyển tiếp mà DP **không hề mô hình hoá** (action space của solver chỉ
+                    # có ONLINE/REST/SWAP/END, thô hơn của actor).
+                    #
+                    # Ghi đè chúng bằng REST vì thế vừa THỪA (ý định của DP đã được thoả) vừa
+                    # PHÁ HOẠI: đo được 6 seed — 47 lần ép tài xế đang đi ĐỔI PIN quay ra nghỉ,
+                    # 45 lần ép tài xế đang DỊCH tới khu đông khách quay ra nghỉ. Đó là
+                    # **92/166 = 55%** tổng số can thiệp của advisor.
+                    if (self.advice.rest_only_overrides_wait
+                            and adv.mapped_action == IdleAction.REST
+                            and action in (IdleAction.GO_SWAP, IdleAction.GO_CHARGE,
+                                           IdleAction.RELOCATE)):
+                        self.log(actor.actor_id, "advice_suppressed", actor.cell,
+                                 solver_action=adv.solver_action,
+                                 instinct_action=action.value,
+                                 reason="rest_would_override_productive_action")
+                    else:
+                        if adv.mapped_action != action:
+                            self.log(actor.actor_id, "advice_followed", actor.cell,
+                                     from_action=action.value, to_action=adv.mapped_action.value)
+                        action = adv.mapped_action
                     target = None      # advice không chỉ định cell (product boundary D-004)
 
             # --- D-SIM-03 kênh `rest_window`: dồn nghỉ/đổi pin vào khung vắng khách (solver S7) ---
@@ -624,9 +645,11 @@ class World:
                 actor.state = ActorState.IDLE
                 self._set_pos(actor, clat, clon)  # M0-10
                 self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="demand_seek")
+                actor.idle_streak_min = 0.0   # đã dịch chuyển ⇒ đếm lại từ đầu
                 self.log(actor.actor_id, "relocate", target, reason="demand_seek")
             else:  # WAIT
                 actor.idle_min += 2.0
+                actor.idle_streak_min += 2.0   # T-045d: chuỗi rỗi LIÊN TỤC (reset khi được chào)
                 # D-SIM-03: ghi idle THEO GIỜ để solver S7 chỉ được khung nên dồn nghỉ
                 actor.idle_by_hour[hour] = actor.idle_by_hour.get(hour, 0.0) + 2.0
                 yield self.env.timeout(2.0)  # chờ đơn, kiểm lại sau 2 phút

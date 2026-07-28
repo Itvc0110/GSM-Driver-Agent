@@ -123,6 +123,7 @@ def choose_idle_action(
     hour: int,
     demand_hint: dict[str, float] | None,
     rng,
+    cfg_behavior: dict | None = None,
 ) -> tuple[IdleAction, str | None]:
     """Chọn hành động khi idle. Trả (action, target_cell nếu relocate).
 
@@ -139,6 +140,7 @@ def choose_idle_action(
         return (IdleAction.END_SHIFT, None)
 
     # 3. Giờ ăn quen + đã chạy đủ lâu → nghỉ (M0-7: đúng MỘT lần/ngày — cờ meals_taken)
+    cfg_behavior = cfg_behavior or {}
     fatigue = actor.online_min / max(1.0, actor.fatigue_threshold_min)
     if (hour == actor.meal_hour and actor.meals_taken == 0
             and fatigue > 0.35 and rng.random() < 0.5):
@@ -150,25 +152,53 @@ def choose_idle_action(
         return (IdleAction.REST, None)
 
     # 5. Cân nhắc relocate sang cell lân cận có kỳ vọng đơn cao hơn rõ rệt
+    #
+    # T-045d — SỐT RUỘT: `demand_hint` là PRIOR cache theo (actor, giờ), không bao giờ cập nhật
+    # từ trải nghiệm. Nếu ô hiện tại là cực đại địa phương thì `best_cell == actor.cell` suốt cả
+    # giờ ⇒ tài xế ngồi im hàng giờ dù không đơn nào (đo được 244 phút). Người thật không vậy:
+    # rỗi lâu = bằng chứng mình sai chỗ ⇒ đi XA HƠN và bớt kén.
+    #
+    # Đây là BẢN NĂNG, không phải lời khuyên: chỉ nới bán kính/hạ ngưỡng, KHÔNG cấp thêm thông
+    # tin nào về cầu. Giá trị của advisor vẫn là positioning CÓ THÔNG TIN (Q-08).
+    ring, bar, p_move, give_up = 1, 1.25, 0.5, False
+    if bool(cfg_behavior.get("idle_impatience_enabled", True)):
+        step = float(cfg_behavior.get("idle_impatience_step_min", 30.0))
+        n = int(actor.idle_streak_min // step) if step > 0 else 0
+        n = min(n, int(cfg_behavior.get("idle_impatience_max_steps", 2)))
+        ring += n                                   # 1 → 2 → 3 ring (~0,35 → ~1,0 km)
+        bar -= 0.10 * n                             # 1,25 → 1,05 (bớt kén)
+        p_move = min(0.95, p_move + 0.20 * n)       # 0,5 → 0,9
+        give_up = n >= int(cfg_behavior.get("idle_impatience_max_steps", 2))
+
     if demand_hint is not None:
         here = demand_hint.get(actor.cell, 0.0)
         best_cell, best_val = actor.cell, here
-        for nb in _neighbors(actor.cell, grid):
+        for nb in _neighbors(actor.cell, grid, ring):
             v = demand_hint.get(nb, 0.0)
             # trừ chi phí di chuyển
             v_adj = v - 0.15 * cell_distance_km(grid, actor.cell, nb)
-            if v_adj > best_val * 1.25:  # chỉ đi nếu hơn hẳn
+            if v_adj > best_val * bar:   # chỉ đi nếu hơn hẳn (ngưỡng hạ dần khi sốt ruột)
                 best_cell, best_val = nb, v_adj
-        if best_cell != actor.cell and rng.random() < 0.5:
+        # Mảnh cuối: khi đã sốt ruột KỊCH (rỗi ≥ step × max_steps mà vẫn không ai chào), tài xế
+        # **thôi tin vào niềm tin của mình**. Thực tế đã bác bỏ nó: ngồi đây cả tiếng không đơn
+        # nào. Người thật lúc này đi thử chỗ khác, kể cả chỗ mình *nghĩ* là kém hơn.
+        # Không có ngưỡng nào làm được điều này, vì ô hiện tại vẫn là cực đại địa phương THEO
+        # NIỀM TIN — phải bỏ hẳn phép so sánh, không phải hạ ngưỡng.
+        if best_cell == actor.cell and give_up:
+            nbs = _neighbors(actor.cell, grid, ring)
+            if nbs:
+                best_cell = max(nbs, key=lambda c: (demand_hint.get(c, 0.0), c))
+        if best_cell != actor.cell and rng.random() < p_move:
             return (IdleAction.RELOCATE, best_cell)
 
     return (IdleAction.WAIT, None)
 
 
-def _neighbors(cell: str, grid: Grid) -> list[str]:
+def _neighbors(cell: str, grid: Grid, ring: int = 1) -> list[str]:
+    """Ô lân cận trong `ring` vòng H3, CHỈ trong lõi. Sort để deterministic."""
     from .geo import grid_disk
 
-    return [c for c in grid_disk(cell, 1) if c != cell and grid.is_core(c)]
+    return sorted(c for c in grid_disk(cell, ring) if c != cell and grid.is_core(c))
 
 
 def choose_station(actor: Actor, grid: Grid, stations: list[Station], now_min: float, rng) -> Station | None:

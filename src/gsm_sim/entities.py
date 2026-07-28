@@ -48,6 +48,9 @@ class Actor:
     orders_accepted: int = 0
     orders_completed: int = 0
     orders_cancelled: int = 0      # SIM-1: CHỈ huỷ SAU khi nhận (khớp `cancelled_count`)
+    # T-045d: phút RỖI LIÊN TỤC kể từ lần được CHÀO đơn gần nhất. Được chào = bằng chứng "ở đây
+    # có cầu" ⇒ reset. Không có bằng chứng nào suốt N phút ⇒ tài xế sốt ruột đi xa hơn.
+    idle_streak_min: float = 0.0
     orders_soc_skipped: int = 0    # SIM-1: bỏ qua vì pin không đủ — KHÔNG phải huỷ
     gross_vnd: int = 0
     payout_vnd: int = 0
