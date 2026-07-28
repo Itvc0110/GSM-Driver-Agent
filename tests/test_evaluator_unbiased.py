@@ -68,8 +68,11 @@ def test_placebo_intervention_measures_exactly_zero(base):
     không được dịch một draw nào)."""
     ra = run_once(_cfg_with(base, enabled=False, actor_id=None, channels=None,
                             coverage="all"), SEED)
+    # positioning nay là MẶC ĐỊNH BẬT (Cường duyệt 2026-07-28) ⇒ placebo phải tắt tường minh
+    # qua pseudo-channel của CHANNEL_LADDER — "mọi kênh tắt" gồm cả kênh vị trí.
     ch_off = {"shift_plan": False, "accept_lift": False,
-              "shift_extend": False, "rest_window": False}
+              "shift_extend": False, "rest_window": False,
+              "positioning_overrides": "off"}
     rb = run_once(_cfg_with(base, enabled=True, actor_id=None, channels=ch_off,
                             coverage="all"), SEED)
     ma = _system_metrics(ra, exclude_actor=-1)

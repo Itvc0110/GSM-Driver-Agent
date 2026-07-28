@@ -115,11 +115,27 @@ chạy được ở CẢ BA mức, và `confidence` của advice phải giảm t
 
 ## 5. Chỉ tiêu chấp nhận KÉP (ĐA-08) — thay tiêu chí hiện tại
 
+> **AMENDMENT 2026-07-28** (Q-11 duyệt · Q-12 chốt (b) · định nghĩa per-archetype Cường uỷ
+> quyền agent — *"tự quyết theo phương án tốt nhất cho 1 dự án tầm cỡ"*):
+>
+> **Tầng cá nhân đo bằng estimator KHÔNG BIAS** (`payout_mean_*` — BUG-EVAL-ARGMAX,
+> UPDATE-085 §4; argmax chỉ là view chẩn đoán có nhãn), gồm HAI vế đồng thời:
+> - **(1a) hiệu quả**: `payout_mean_all` (mọi tài xế được phủ) > 0, CI 95% loại 0, n≥30;
+> - **(1b) no-harm guard công bằng**: KHÔNG archetype nào có Δ `payout_mean_{arch}` ÂM có ý
+>   nghĩa (CI 95% hoàn toàn < 0) — báo cáo đủ P1..P7.
+>
+> Lý do chọn dạng này thay hai cực đoan: đòi TỪNG archetype dương-SIG thì subgroup không bao
+> giờ đủ power (chặn mọi thứ một cách giả tạo); chỉ nhìn mean_all thì bỏ equity. Chuẩn
+> efficiency-with-non-inferiority-per-subgroup là thông lệ thử nghiệm nghiêm túc. Kiểm chứng
+> trên artifact 25 (n=100): B3w đạt cả 1a (+6.016 SIG) lẫn 1b (0/7 archetype bị hại; 5/7
+> dương SIG). Veto 8/9 dùng bản (b): cơ chế được phép tốn km-rỗng/đổi-pin **nếu** chờ-đổi-pin
+> không tăng SIG và tổng payout đội tăng SIG cùng lúc.
+
 Một kênh advice chỉ được coi là "có giá trị" khi **đồng thời**:
 
 | Tầng | Điều kiện | Đo thế nào |
 |---|---|---|
-| **Cá nhân** | Δpayout > 0, CI 95% không chứa 0 | 30 paired seed CRN |
+| **Cá nhân** | (1a) `payout_mean_all` > 0 CI loại 0 **và** (1b) không archetype nào bị hại SIG — xem AMENDMENT | 30+ paired seed CRN, estimator cohort |
 | **Hệ thống** | `served_rate` không giảm | `coverage: all`, 30 seed |
 | **Khách hàng** | đơn hết hạn không tăng; thời gian chờ khách không tăng | `sim_metrics.customer_wait()` (**đã viết, chưa ai gọi**) |
 | **Công bằng** | Gini payout không tăng | metric MỚI cần viết |

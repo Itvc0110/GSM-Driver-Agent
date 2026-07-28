@@ -24,7 +24,12 @@ from gsm_sim.runner import run_once
 
 def _cfg_advice_on(actor_id: int) -> Config:
     c = Config.load("configs/pilot_dongda.yaml")
-    c.data["advice"].update(enabled=True, coverage="single", single_actor_id=actor_id)
+    # File này test cầu nối S2 → action ⇒ tự bật shift_plan (mặc định sản phẩm đã OFF theo
+    # ĐA-07, 2026-07-28); positioning off để giữ ngữ nghĩa một-kênh của các assert.
+    c.data["advice"].update(enabled=True, coverage="single", single_actor_id=actor_id,
+                            channels={"shift_plan": True, "accept_lift": False,
+                                      "shift_extend": False, "rest_window": False},
+                            positioning_overrides="off")
     return c
 
 

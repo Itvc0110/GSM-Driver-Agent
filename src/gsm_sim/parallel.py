@@ -31,14 +31,24 @@ from .metrics import summarize
 from .runner import run_once
 
 # Bộ kênh dựng sẵn cho đo THANG BẬC — biết giá trị đến từ kênh nào (attribution).
+#
+# 2026-07-28 (Cường duyệt UPDATE-087): mặc định sản phẩm đổi thành positioning wait_only +
+# shift_plan OFF. Ladder vì thế phải SỞ HỮU cả khoá `positioning_overrides` (pseudo-channel,
+# `_cfg_with` tách ra) — nếu không, "none" sẽ âm thầm thừa kế positioning từ config mặc định
+# và bậc thang mất nghĩa: "none" phải là THẬT SỰ không can thiệp, bất biến với product default.
 CHANNEL_LADDER = {
-    "s2_only": {"shift_plan": True, "accept_lift": False, "shift_extend": False},
+    "s2_only": {"shift_plan": True, "accept_lift": False, "shift_extend": False,
+                "positioning_overrides": "off"},
     "rest_window": {"shift_plan": True, "accept_lift": False, "shift_extend": False,
-                    "rest_window": True},
-    "accept_lift": {"shift_plan": True, "accept_lift": True, "shift_extend": False},
-    "all": {"shift_plan": True, "accept_lift": True, "shift_extend": True, "rest_window": True},
+                    "rest_window": True, "positioning_overrides": "off"},
+    "accept_lift": {"shift_plan": True, "accept_lift": True, "shift_extend": False,
+                    "positioning_overrides": "off"},
+    "positioning": {"shift_plan": False, "accept_lift": False, "shift_extend": False,
+                    "rest_window": False, "positioning_overrides": "wait_only"},   # = B3w
+    "all": {"shift_plan": True, "accept_lift": True, "shift_extend": True, "rest_window": True,
+            "positioning_overrides": "wait_only"},
     "none": {"shift_plan": False, "accept_lift": False, "shift_extend": False,
-             "rest_window": False},
+             "rest_window": False, "positioning_overrides": "off"},
 }
 
 
@@ -68,7 +78,12 @@ def _cfg_with(cfg: Config, *, enabled: bool, actor_id: int | None,
     adv["coverage"] = coverage
     adv["single_actor_id"] = actor_id if coverage == "single" else None
     if channels is not None:
-        adv["channels"] = dict(channels)
+        ch = dict(channels)
+        # pseudo-channel (xem comment CHANNEL_LADDER): tách ra khỏi dict kênh thật
+        pos = ch.pop("positioning_overrides", None)
+        adv["channels"] = ch
+        if pos is not None:
+            adv["positioning_overrides"] = pos
     return c
 
 

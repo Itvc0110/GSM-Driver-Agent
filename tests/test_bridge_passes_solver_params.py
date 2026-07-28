@@ -33,7 +33,13 @@ SEED = 1000
 def env():
     cfg = Config.load("configs/pilot_dongda.yaml")
     c = Config(copy.deepcopy(cfg.data), cfg.root_dir)
-    c.data["advice"].update(enabled=True, coverage="all")
+    # File này TEST kênh S2 ⇒ tự bật kênh mình test, độc lập với mặc định sản phẩm
+    # (2026-07-28 shift_plan mặc định OFF theo ĐA-07 — thiếu dòng dưới, cả file SKIP im lặng
+    # = mất lưới gác BUG-S2-PARAMS mà không ai hay).
+    c.data["advice"].update(enabled=True, coverage="all",
+                            channels={"shift_plan": True, "accept_lift": False,
+                                      "shift_extend": False, "rest_window": False},
+                            positioning_overrides="off")
     return run_once(c, SEED), c, SimPolicy.from_config(cfg)
 
 

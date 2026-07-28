@@ -54,20 +54,22 @@ def run_on(base):
 
 # ---------- 1. Cờ thật sự điều khiển: off == không có cờ, từng bit ----------
 
-def test_off_is_bit_identical_to_flag_absent(base):
-    """`positioning_overrides: off` phải cho trace Y HỆT config không có khoá này.
+def test_default_is_wait_only_and_off_still_kills_the_channel(base):
+    """Sau khi Cường DUYỆT bật (2026-07-28, UPDATE-087): mặc định config = `wait_only`.
 
-    Nếu chỉ riêng việc CÓ cờ (dù tắt) đã làm lệch trace — planner tiêu RNG, dịch lịch SimPy —
-    thì mọi so sánh A/B từ đây về sau đều đo lẫn nhiễu của chính cái cờ. Đây là tiêu chí 7
-    của kế hoạch đo, và là điều kiện để baseline cũ còn dùng được."""
+    (Bản đầu của test này khẳng định *"vắng khoá == off, từng bit"* — đúng ở thời điểm b3 khi
+    kênh chưa được duyệt. Mặc định đã ĐỔI THEO QUYẾT ĐỊNH SẢN PHẨM nên bất biến đổi theo:
+    (i) vắng khoá ⇒ kênh CHẠY (wait_only); (ii) `off` tường minh ⇒ kênh chết hẳn — không event,
+    và deterministic. "Tắt được về baseline" vẫn sống nguyên — chỉ là baseline giờ cần cờ.)"""
     r_absent = run_once(_cfg(base, None), SEED)
+    assert [e for e in r_absent.events if e.kind == "standby_alloc"], \
+        "mặc định đã duyệt là wait_only mà không có standby event — default không ăn"
     r_off = run_once(_cfg(base, "off"), SEED)
-    pay_a = {a.actor_id: a.payout_vnd for a in r_absent.actors}
-    pay_o = {a.actor_id: a.payout_vnd for a in r_off.actors}
-    assert pay_a == pay_o, "cờ OFF vẫn làm lệch payout — planner đang chạy/tiêu RNG khi tắt"
-    assert len(r_absent.events) == len(r_off.events), "cờ OFF làm lệch số event"
     assert not [e for e in r_off.events if e.kind.startswith("standby")], \
         "cờ OFF mà vẫn có event standby"
+    r_off2 = run_once(_cfg(base, "off"), SEED)
+    assert {a.actor_id: a.payout_vnd for a in r_off.actors} == \
+           {a.actor_id: a.payout_vnd for a in r_off2.actors}, "OFF không deterministic"
 
 
 # ---------- 2. Trần là TRẦN ----------
