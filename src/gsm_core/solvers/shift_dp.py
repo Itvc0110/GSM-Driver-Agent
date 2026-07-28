@@ -46,9 +46,16 @@ def _required_rest(B: int, params: dict) -> int:
 
 
 def _soc_cost(params: dict) -> int:
-    """SOC band/bucket online — chuẩn theo 30', scale theo bucket_min (S2-6)."""
+    """SOC band/bucket online — chuẩn theo 30', scale theo bucket_min (S2-6).
+
+    BLOCKER-R5-MUT10 (UPDATE-074): dòng return từng bị thay bằng mutation thử-nghiệm
+    (`return int(params["soc_cost_per_bucket"])` — bỏ scale) khi một reviewer agent chạy
+    mutation-test rồi bị quota giết trước lúc khôi phục; commit `7739b3c` cuốn luôn vào
+    repo vì `git add -A`. Mutation ĐÃ SỐNG SÓT qua test — nghĩa là không test nào phủ
+    bucket_min ≠ 30 ⇒ nay có `test_soc_cost_scales_with_bucket_min`.
+    """
     bucket_min = int(params.get("bucket_min", 30))
-    return int(params["soc_cost_per_bucket"])   # MUT10: bo scale bucket_min
+    return max(1, round(int(params["soc_cost_per_bucket"]) * bucket_min / 30.0))
 
 
 def _bonus_eligible(params: dict, policy: PolicyBundle) -> tuple[bool, bool]:

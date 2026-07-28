@@ -264,3 +264,31 @@ def test_expected_trips_capped_by_service_time(policy):
     assert per_bucket_pay <= _payout_per_order(policy, DEFAULT_PARAMS["avg_dist_km"]) \
         * ppo_max_trips * 1.5 + policy.bonus_at(10**6), \
         "E[payout] phồng theo demand cả cell — thiếu cap sức chứa"
+
+
+# ---------- BLOCKER-R5-MUT10 (UPDATE-074): SOC cost phải scale theo bucket_min ----------
+
+
+def test_soc_cost_scales_with_bucket_min():
+    """Mutation `return int(params["soc_cost_per_bucket"])` (bỏ scale) SỐNG SÓT qua toàn
+    bộ suite cũ — không test nào phủ bucket_min ≠ 30. Nay có: bucket 60' phải tiêu SOC
+    gấp đôi bucket 30', và không bao giờ = 0 (tài xế chạy cả bucket mà pin không giảm)."""
+    from gsm_core.solvers.shift_dp import _soc_cost, DEFAULT_PARAMS
+    base = dict(DEFAULT_PARAMS)
+    assert _soc_cost({**base, "bucket_min": 30}) == 1
+    assert _soc_cost({**base, "bucket_min": 60}) == 2, "bucket 60' phải tốn gấp đôi 30'"
+    assert _soc_cost({**base, "bucket_min": 15}) == 1, "làm tròn xuống 0 = pin không bao giờ cạn"
+    assert _soc_cost({**base, "bucket_min": 120}) == 4
+    assert _soc_cost({**base, "bucket_min": 60, "soc_cost_per_bucket": 2}) == 4
+
+
+def test_soc_budget_binds_at_60min_buckets(policy):
+    """Hệ quả hành vi: cùng một ca vật lý, bucket 60' phải cần SWAP sớm hơn/ngang bucket
+    30' — nếu SOC không scale thì DP tưởng pin dùng được GẤP ĐÔI thực tế."""
+    from gsm_core.solvers.shift_dp import solve
+    spi = {**_spi_multi_cell(policy), "soc_pct": 30.0}
+    r30 = solve(spi, policy, params={"bucket_min": 30})
+    r60 = solve(spi, policy, params={"bucket_min": 60})
+    swaps30 = sum(1 for s in r30["solution"]["schedule"] if s["action"] == "SWAP")
+    swaps60 = sum(1 for s in r60["solution"]["schedule"] if s["action"] == "SWAP")
+    assert swaps60 >= swaps30, "bucket dài hơn mà không cần đổi pin nhiều hơn ⇒ SOC chưa scale"
