@@ -1,3 +1,48 @@
+# ⚡ RESUME SAU COMPACTION — đọc khối này TRƯỚC, cập nhật 2026-07-29 01:37
+
+> **Prompt tự-mồi cho agent sau compaction** (Cường yêu cầu chuẩn bị): đọc `CLAUDE.md` →
+> `tracking/PROJECT-GRAPH.md` → khối này → `PENDING-REVIEW.md` → `git log --oneline -12` +
+> `git status`. Compaction KHÔNG miễn trừ §3 (memory `gsm-reread-docs-after-compaction`).
+
+## Trạng thái tại thời điểm ghi
+
+- **Git**: `main` == `origin/main` == `e5d235e`, tree SẠCH. 12 commit hôm nay đã push
+  (chuỗi: time-fixes → MarketState → drop-bám-cầu → S4 → BUG-EVAL-ARGMAX → Cycle R/P/E →
+  bật positioning mặc định → equilibrium ĐA-09 → **Cycle V gỡ B-02**).
+- **Đang chạy nền DUY NHẤT**: full suite xác nhận cuối (task `bofqb0q04`, launch ~01:25,
+  ETA ~01:40 nếu máy rảnh / tới ~2h nếu nghẽn). **Kỳ vọng ~653 passed / 5 skipped**
+  (647 trước hardening + 6 guard test mới). Nếu ĐỎ: chỉ được phép liên quan
+  `schema_registry`/`upcasters`/manifest mockgen — sửa theo UPDATE-090, KHÔNG revert cả cycle.
+- **UPDATE mới nhất**: 083→090. Số UPDATE kế tiếp: **091** (kiểm remote trước khi đặt).
+- **Quota**: session limit đã chạm lúc ~01:20 (4 verify-agent chết) — hạn chế mở agent ồ ạt,
+  ưu tiên làm tay + 1 suite/lượt.
+
+## Việc kế tiếp theo thứ tự (đã có verdict, KHÔNG cần hỏi lại)
+
+1. **Đọc kết quả suite `bofqb0q04`** → nếu xanh: ghi số vào UPDATE-090 §Kiểm chứng (một dòng),
+   commit nhỏ "docs: confirm suite" + push.
+2. **Cycle kế — ĐA-05 event store append-only** (VỪA được B-02 mở khoá; Cường đã duyệt design
+   từ 27/07, chi tiết `research/audit/2026-07-27-current-state/04-*` §6): SQLite local
+   append-only + projections rebuild + JSONL export + EpisodeStore thành legacy adapter;
+   sim để RAM chỉ thêm `run_id` (chốt của Cường). **Vào plan mode trước.**
+   Thay thế: T-044 envelope v2 (cũng đã mở khoá) hoặc BUG-MOCKGEN-CLI (nhỏ, độc lập).
+3. Sau đó cân nhắc: nợ UI card `standby_zone` (CHẶN bởi Q-04 chưa duyệt — đừng làm trước).
+
+## Chờ Cường (KHÔNG tự quyết)
+
+V-01..V-17 visual ("hỏi lại sau") · Q-03 corpus Khánh · Q-04 UX proposal · Q-07 dispatch H3
+(đang theo (c)) · BUG-MOCKGEN-CLI mới ghi (pre-existing, reviewer reproduce).
+
+## Bốn bài học phiên này PHẢI giữ (đã trả giá)
+
+1. Con số lặp lại qua các can thiệp KHÁC NHAU = red flag của THƯỚC ĐO (BUG-EVAL-ARGMAX).
+2. Test viết cho bug phải chứng minh ĐỎ khi bug quay lại; skip-khi-đối-tượng-tắt = lan can
+   chết không giấy báo tử (T-046 quy tắc 5+6).
+3. Không chạy suite nền song song với mutation-testing trên cùng file.
+4. TDD phủ logic; review đối kháng phủ input thù địch — hai lớp bắt hai họ lỗi khác nhau.
+
+---
+
 # Việc dang dở + ý tưởng kiến trúc của Cường — phiên 2026-07-28
 
 Ghi theo yêu cầu Cường: *"Document lại những phần dang dở và ý tưởng của tôi để không quên trong
