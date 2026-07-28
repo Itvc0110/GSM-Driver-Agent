@@ -50,13 +50,17 @@
         <b id="inc-km" style="color:var(--accent);font-size:12px">–</b>
       </div>
       <div id="inc-stops"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border-hairline)">
+      <div class="grid-2" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border-hairline)">
         <div>
-          <div style="font-size:10px;color:var(--text-muted)">Cước phí (demo — không phải thu nhập)</div>
+          <div style="font-size:10px;color:var(--text-muted)">Cước gross (demo)</div>
           <div id="inc-fare" style="font-size:19px;font-weight:700">–</div>
         </div>
-        <span class="tag">Tiền mặt</span>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--text-muted)">Payout cuốc (demo)</div>
+          <div id="inc-trip-payout" style="font-size:19px;font-weight:700">–</div>
+        </div>
       </div>
+      <div class="note" id="inc-fare-policy" style="margin-top:6px">–</div>
       <div class="grid-2" style="margin-top:10px">
         <button class="btn ghost" style="margin:0" id="btn-decline">Từ chối</button>
         <button class="btn" style="margin:0" id="btn-accept">Chấp nhận</button>
@@ -68,9 +72,11 @@
       <div style="font-size:12px;margin-top:8px">Khách: <b id="nav-cust">–</b></div>
       <div style="font-size:12px;margin-top:4px;color:var(--text-secondary)" id="nav-route">–</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <b id="nav-fare" style="font-size:17px">–</b>
+        <div><span class="note">Gross</span><br><b id="nav-fare" style="font-size:17px">–</b></div>
+        <div style="text-align:right"><span class="note">Payout cuốc</span><br><b id="nav-trip-payout" style="font-size:17px">–</b></div>
         <span style="font-size:10.5px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-weight:700" id="nav-km">–</span>
       </div>
+      <div class="note" id="nav-fare-policy" style="margin-top:5px">–</div>
       <button class="btn" id="btn-nav-next">ĐÃ ĐẾN NƠI ĐÓN KHÁCH</button>
     </div>
 

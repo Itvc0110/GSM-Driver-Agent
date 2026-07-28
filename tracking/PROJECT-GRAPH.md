@@ -1,0 +1,265 @@
+# PROJECT GRAPH — GSM Driver Income Agent
+
+> **Canonical reading map for agents.** This file is an index and routing contract, not a replacement for evidence. Read `CLAUDE.md` first, then this graph, then only the route and correction chain required by the task.
+>
+> **Reconciled:** 2026-07-27 · **UPDATE coverage:** 66 canonical UPDATE files (`001–012`, `019–072`; `013–018` were never canonical after the remote numbering change). `UPDATE_TEMPLATE.md` is excluded.
+
+## 1. Bootstrap contract
+
+### 1.1 Non-negotiable boundaries
+
+- Rule/analytics components own financial, probability, and policy numbers. The agent explains and compares; it does not invent numbers.
+- Do not advise accepting, rejecting, cancelling, matching, dispatch, pricing, or routing for a specific order.
+- Keep `gross revenue`, `driver payout`, and `estimated net income` separate. `estimated_net` is unknown/partial when known costs are missing.
+- Mock/proxy/external data require labels, provenance, confidence, and deterministic evidence. Do not claim production uplift from synthetic runs.
+- Human driver remains the decision-maker. Reasoning must be logged, confidence-labelled, and switchable to rule/template fallback.
+
+### 1.2 Source-of-truth precedence
+
+Use the following precedence when sources disagree:
+
+1. Direct user decision or current approved directive.
+2. `CLAUDE.md` product boundary and mandatory process.
+3. Current `planning/SCOPE.md`, approved specs, and contracts.
+4. Operational state in `tracking/ASSIGNMENTS.md`, `tracking/TODO.md`, `tracking/DEFERRED.md`, and `tracking/PENDING-REVIEW.md`.
+5. Current code/tests and generated artifacts.
+6. Historical UPDATE files, interpreted through any later `CORRECTS` edge in this graph.
+
+The graph never silently resolves a conflict. It records the conflict and points the agent to the source that must be read.
+
+### 1.3 Session bootstrap
+
+1. Read `CLAUDE.md`.
+2. Read this graph's **Current state**, **Conflict ledger**, and the route matching the task.
+3. Check the active claim in `tracking/ASSIGNMENTS.md` before editing.
+4. Open the route's required source files and UPDATE correction chain.
+5. Open full `DIRECTIVES`, `SCOPE`, `DEFERRED`, `TODO`, or `PENDING-REVIEW` only when the route says so or the task changes status, scope, policy, UI/sim output, or architecture.
+6. If a route, link, claim, or status is missing/contradictory, stop as `BLOCKED` with reason `CONTEXT` and record the missing evidence; do not guess.
+
+## 2. Current state board
+
+| Track | Current status | Owner/gate | Read first | Open work |
+|---|---|---|---|---|
+| Core data, 9 solvers, C6 advisor | `DONE-CODE` / live and policy gaps open | Cường claim context; C6 live LLM is D-C6-03 | UPDATE-024..043, `tracking/TODO.md` PI/C6 lines | D-POL-01..05, PI-3/PI-6, D-C6-03, D-SIM-11/14/18/19 |
+| Simulator M0 and SIM-1..5 | `DONE-CODE` / visual verdicts pending | V-01..V-06, V-08/V-09 | UPDATE-023, UPDATE-044..053 | D-SIM-11, D-SIM-14, D-SIM-16, D-SIM-18, D-SIM-19; D-SIM-02 code exists but values await D-POL-05 |
+| SIM-XANH P1–P5 | `DONE-CODE` | V-09 pending | UPDATE-054..058 | V-09, D-SIM-01, D-SIM-16; D-SIM-02 is `DONE-CODE / BLOCKED D-POL-05` |
+| Track UI U0–U4 | `DONE-CODE / WAITING-VERDICT` | V-10 pending; legacy UI claim released | UPDATE-059..063 | V-10, F-U2-B, F-U3-A, D-UI-01/02; F-U2-A closed as data fact |
+| UX Cards and playback | `DONE-CODE / WAITING-VERDICT` | V-10; R5 follow-up | UPDATE-067/068/071 | R5-B, Q6, D-A3-04/05/06 |
+| Audit A1/A2/A3 | `DONE-CODE` for narrow fixes | Cường decisions required | UPDATE-064..071, audit REPORT | ĐA-01..06, D-A3-01..06, R5-B |
+| Policy corpus | `BLOCKED` | Q-03 / D-POL-04 belongs to Khánh | UPDATE-020/031, corpus usage/register | Missing 23/02/2026 policy record and conflict flag |
+
+Status meanings:
+
+- `HISTORY-COMPLETE`: historical cycle completed; not an open task.
+- `DONE-CODE`: code/docs/tests for the cycle are complete, but a human, visual, calibration, or policy gate may remain.
+- `WAITING-VERDICT`: a pending review/decision explicitly remains; never report as fully reviewed.
+- `READY`, `DOING`, `BLOCKED`, `QUOTA-BLOCKED`, `DEFERRED`: operational states from the tracking sources.
+- `CORRECTED`: the historical claim remains for audit, but a later UPDATE is authoritative for interpretation.
+
+## 3. Canonical UPDATE graph
+
+Columns: **ID · primary topic · state · task/route · dependency or correction edge**. Open the linked file for evidence, commands, files, and caveats.
+
+### 3.1 Scope, research, governance, and handoff
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-001](updates/UPDATE-001-scope-v2-pivot-and-harness.md) | Scope v2 pivot and initial harness/tracking | `HISTORY-COMPLETE` | scope / harness | root decision |
+| [UPDATE-002](updates/UPDATE-002-research-dot-1.md) | Research round 1: income, policy, pain points, demand | `HISTORY-COMPLETE` | policy / research | produces T-012 |
+| [UPDATE-003](updates/UPDATE-003-selfclaim-personas-mockspec.md) | Self-claim, personas, mock distribution, violation-flow defer | `HISTORY-COMPLETE` | governance / data | produces D-007 |
+| [UPDATE-004](updates/UPDATE-004-research-restructure-and-dot2.md) | Research tree restructure and round 2 | `HISTORY-COMPLETE` | research / policy | supersedes old planning/research tree |
+| [UPDATE-005](updates/UPDATE-005-flow-v2-and-reasoning-scope.md) | Flow v2, reasoning boundary, community-risk spec | `HISTORY-COMPLETE` | scope / architecture | produces D-008/T-015 |
+| [UPDATE-006](updates/UPDATE-006-checkpoint-consistency-and-flow-review.md) | Checkpoint consistency and approved flow | `HISTORY-COMPLETE` | governance / flow | closes T-014 |
+| [UPDATE-007](updates/UPDATE-007-simulation-eval-and-robust-optimization.md) | Twin-world evaluation, adherence, robust optimization, timing/memory | `HISTORY-COMPLETE` | simulator / evaluation | expands SCOPE §5b |
+| [UPDATE-008](updates/UPDATE-008-pilot-world-action-space-timestep.md) | Pilot world, action space, timestep, placebo arm | `HISTORY-COMPLETE` | simulator / research | approves pilot specs |
+| [UPDATE-009](updates/UPDATE-009-verify-audit-hardening-drawio.md) | A13/heatmap verification, red-team hardening, SIM diagram | `HISTORY-COMPLETE` | simulator / scope | informs D-004 and later SIM work |
+| [UPDATE-019](updates/UPDATE-019-t004-research-footprint-compaction.md) | T-004 official-source compact handoff | `HISTORY-COMPLETE` | policy / corpus | predecessor to UPDATE-020 |
+| [UPDATE-020](updates/UPDATE-020-t004-text-only-corpus.md) | T-004 text-only corpus restoration | `HISTORY-COMPLETE` | policy / corpus | Q-03/D-POL-04 remains open |
+| [UPDATE-021](updates/UPDATE-021-simulation-reliability-program.md) | Reliability-first M0–M4 governance and harness gates | `HISTORY-COMPLETE` | simulator / harness | supersedes old reliability numbering |
+| [UPDATE-022](updates/UPDATE-022-remote-integration-t004.md) | Remote T-004 integration; historical corpus encoding caveat | `CORRECTED` | policy / integration | current corpus is readable; Q-03 policy coverage remains open |
+| [UPDATE-072](updates/UPDATE-072-project-graph-harness-and-status-reconciliation.md) | Canonical project graph, graph-first harness, status reconciliation | `DONE-CODE` | harness / governance | current graph/harness cycle |
+
+### 3.2 Simulator foundation and integrity
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-010](updates/UPDATE-010-sim-core-slice.md) | Simulator core vertical slice, arm B, one day | `HISTORY-COMPLETE` | simulator | predecessor to UPDATE-021/023 |
+| [UPDATE-011](updates/UPDATE-011-realism-pass-research-dot5.md) | Realism calibration, advisor research, dashboard v0 | `HISTORY-COMPLETE` | simulator / research | baseline for M0 and SIM |
+| [UPDATE-012](updates/UPDATE-012-env-variables-and-full-ui.md) | EnvironmentContext, configurable factors, full UI | `HISTORY-COMPLETE` | simulator / UI | follow-ups absorbed by M1–M2 and D-SIM-19 |
+| [UPDATE-023](updates/UPDATE-023-t030-m0-integrity.md) | M0 integrity: 12 flaws + C-2, regression suite | `DONE-CODE / WAITING-VERDICT` | simulator / visual | V-01/V-02 lineage |
+
+### 3.3 Core data, solvers, advisor, and policy refresh
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-024](updates/UPDATE-024-t038-data-schema-mockgen.md) | L0–L3 schema registry and mock generator | `DONE-CODE` | data / realdata | T-038 |
+| [UPDATE-025](updates/UPDATE-025-observability-metrics.md) | Per-layer observability metric table | `HISTORY-COMPLETE` | advisor / observability | T-026 phase 1 |
+| [UPDATE-026](updates/UPDATE-026-solver-s1-bonus-feasibility.md) | S1 BonusFeasibility and PolicyBundle loader | `DONE-CODE` | solver / audit | exposes estimator fallback follow-up |
+| [UPDATE-027](updates/UPDATE-027-solver-s2-shift-dp.md) | S2 ShiftDP timing optimizer | `DONE-CODE` | solver / audit | later corrected/hardened by UPDATE-069 |
+| [UPDATE-028](updates/UPDATE-028-solver-s3-f3-patterns.md) | S3 F3Patterns and L2i inference | `DONE-CODE` | solver / F3 | relocating/net-income caveats remain |
+| [UPDATE-029](updates/UPDATE-029-solver-s4-capacity-alloc.md) | S4 CapacityAlloc; 4/4 initial solvers complete | `DONE-CODE` | solver / simulator | enables C6 |
+| [UPDATE-030](updates/UPDATE-030-c6-agent-pipeline.md) | C6 Router→Composer→Verifier, corpus F0, fallback | `DONE-CODE` | advisor / policy | D-C6-03 live smoke open; template-mode only |
+| [UPDATE-031](updates/UPDATE-031-policy-refresh-2026.md) | Policy refresh: weekly quota/clawback and ≤70% conflict | `HISTORY-COMPLETE` | policy / research | creates D-POL-01..05 |
+| [UPDATE-032](updates/UPDATE-032-weekly-khoan-design-spec.md) | Weekly-khoán design spec, S5 blueprint | `HISTORY-COMPLETE / IMPLEMENTED-LATER` | policy / solver | implemented by UPDATE-038/040; real values wait D-POL-05 |
+| [UPDATE-033](updates/UPDATE-033-real-data-integration-blueprint.md) | Real GSM catalog and PI-1..PI-6 blueprint | `HISTORY-COMPLETE` | realdata | PI-3/PI-6 credentials/keys open |
+| [UPDATE-034](updates/UPDATE-034-pi1-pi2-l1r-schema-and-mockgen.md) | PI-1 schemas and PI-2 mockgen | `DONE-CODE` | data / realdata | engineered fields remain TBC |
+| [UPDATE-035](updates/UPDATE-035-pi2b-profile-universe-realism.md) | PI-2b profile universe and acceptance realism | `CORRECTED` | data / realdata | payout claim corrected by UPDATE-036 |
+| [UPDATE-036](updates/UPDATE-036-pi2b-audit-5-flaws-fixed.md) | PI-2b audit: five flaws fixed | `DONE-CODE` | data / audit | `CORRECTS UPDATE-035` |
+| [UPDATE-037](updates/UPDATE-037-pi4a-l1r-to-l3-adapter.md) | L1R→L3 adapter using measured fields | `DONE-CODE` | data / solver | S4 remap remains unsupported |
+| [UPDATE-038](updates/UPDATE-038-pi4b-s5-khoan-s6-mission.md) | S5 WeeklyKhoan and S6 MissionKnapsack | `DONE-CODE` | solver / policy | quota numbers still not real GSM |
+| [UPDATE-039](updates/UPDATE-039-schema-exact-gsm-names-and-extend.md) | Exact GSM table names and 90-day data | `DONE-CODE` | data / schema | 90-day statistical refresh caveat |
+| [UPDATE-040](updates/UPDATE-040-pi5a-wire-s5-s6-into-pipeline.md) | Wire S5/S6 into C6 pipeline | `DONE-CODE` | advisor / policy | live LLM still unverified |
+| [UPDATE-041](updates/UPDATE-041-pi5b-s7-idle-reduction.md) | S7 IdleReduction and D-004b guardrails | `DONE-CODE` | solver / simulator | real-data thresholds open |
+| [UPDATE-042](updates/UPDATE-042-pi5c-uc6-penalty-uc7-anomaly.md) | S8 PenaltyExplain and S9 AnomalyAlert | `DONE-CODE` | policy / F3 | live LLM and engineered columns open |
+| [UPDATE-043](updates/UPDATE-043-recheck-research4-app-alignment.md) | Cross-project recheck, property tests, app alignment | `DONE-CODE` | audit / solver | later independent audits are UPDATE-064..070 |
+
+### 3.4 SIM overhaul and SIM-XANH
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-044](updates/UPDATE-044-sim1-realism-gate.md) | SIM-1 realism gate | `DONE-CODE / WAITING-VERDICT` | simulator / V-01/V-02 | trips-per-driver remains D-SIM-01 |
+| [UPDATE-045](updates/UPDATE-045-sim2-driver-journey.md) | SIM-2 single-driver journey | `DONE-CODE / WAITING-VERDICT` | simulator / V-03 | newbie reward issue D-SIM-02 |
+| [UPDATE-046](updates/UPDATE-046-sim3-advice-action-bridge.md) | SIM-3 advice→action bridge | `DONE-CODE / WAITING-VERDICT` | simulator / V-04 | only 1/9 solver action channel |
+| [UPDATE-047](updates/UPDATE-047-sim4-parallel-worlds.md) | SIM-4 paired A/B worlds | `CORRECTED` | simulator / V-05 | `CORRECTS` by UPDATE-048 and UPDATE-053 |
+| [UPDATE-048](updates/UPDATE-048-dsim05-feasibility-gate-and-correction.md) | D-SIM-05 feasibility gate and cliff correction | `DONE-CODE / WAITING-VERDICT` | simulator / audit | `CORRECTS UPDATE-047` |
+| [UPDATE-049](updates/UPDATE-049-sim5-metrics-and-data-regen.md) | SIM-5 metrics and 90-day regeneration | `DONE-CODE / WAITING-VERDICT` | simulator / V-06 | acceptance=1.00 interpretation caveat |
+| [UPDATE-050](updates/UPDATE-050-dsim03-s7-channel-and-diagnosis.md) | D-SIM-03 S7 channel and action-space diagnosis | `DONE-CODE` | simulator | motivates multiday sim; V-07 superseded by UPDATE-052 |
+| [UPDATE-051](updates/UPDATE-051-dsim09-wire-s1-bonus-feasibility.md) | D-SIM-09 S1 feasibility gate | `CORRECTED` | simulator / audit | interpretation corrected by UPDATE-053 |
+| [UPDATE-052](updates/UPDATE-052-dsim10-multiday-sim.md) | D-SIM-10 multiday sim and DriverMemory | `DONE-CODE / WAITING-VERDICT` | simulator / V-08 | persistence D-SIM-16 open; closes V-07 decision |
+| [UPDATE-053](updates/UPDATE-053-dsim13-multiday-completion-and-review.md) | D-SIM-13 multiday completion and adversarial review | `DONE-CODE / WAITING-VERDICT` | simulator / audit | `CORRECTS UPDATE-051` |
+| [UPDATE-054](updates/UPDATE-054-simxanh-p1-osrm-real-roads.md) | SIM-XANH P1 OSRM real roads | `DONE-CODE / WAITING-VERDICT` | simulator / V-09 | offline cache/provenance |
+| [UPDATE-055](updates/UPDATE-055-simxanh-p2-xanhsm-detail.md) | SIM-XANH P2 rating, newbie, mission | `DONE-CODE / WAITING-VERDICT` | simulator / V-09 | D-SIM-02 is code-complete but D-POL-05-limited |
+| [UPDATE-056](updates/UPDATE-056-simxanh-p3-sensitivity.md) | SIM-XANH P3 D-SIM-06 sensitivity | `DONE-CODE / WAITING-VERDICT` | simulator / math audit | closes D-SIM-06; real data absent |
+| [UPDATE-057](updates/UPDATE-057-simxanh-p4-dashboard.md) | SIM-XANH P4 dashboard and dataviz | `DONE-CODE / WAITING-VERDICT` | simulator / V-09 | visual gate required |
+| [UPDATE-058](updates/UPDATE-058-simxanh-p5-close.md) | SIM-XANH P5 regen and close | `DONE-CODE / WAITING-VERDICT` | simulator / V-09 | Track A close is code-level |
+
+### 3.5 UI, cards, playback, and R5
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-059](updates/UPDATE-059-track-ui-import-khanh.md) | Track UI U0 import and governance | `DONE-CODE / WAITING-VERDICT` | ui / V-10 | imports T-009 foundation |
+| [UPDATE-060](updates/UPDATE-060-trackui-u1-tokens-contracts.md) | UI tokens, contracts, screen parity | `DONE-CODE / WAITING-VERDICT` | ui / V-10 | Flutter T-009b dependency |
+| [UPDATE-061](updates/UPDATE-061-trackui-u2-webapp-realdata.md) | Web app, backend, real S1 adapter | `DONE-CODE / WAITING-VERDICT` | ui / V-10 | UI must read canonical output |
+| [UPDATE-062](updates/UPDATE-062-trackui-u3-mophong.md) | Web simulation area | `DONE-CODE / WAITING-VERDICT` | ui / V-10 | engine JSON, no UI recomputation |
+| [UPDATE-063](updates/UPDATE-063-trackui-u4-close.md) | Track UI U4 close | `DONE-CODE / WAITING-VERDICT` | ui / V-10 | V-10 scenarios are authoritative |
+| [UPDATE-067](updates/UPDATE-067-uxcards-adherence-ci.md) | Proactive cards, adherence contract, CI draft | `DONE-CODE / WAITING-VERDICT` | ui / V-10 / cards | F0 chat replaced by FAQ/cards directive |
+| [UPDATE-068](updates/UPDATE-068-r1r4-mophong-playback.md) | R1/R4 app-language simulation playback | `DONE-CODE / WAITING-VERDICT` | ui / V-10 / playback | top-6 feed cap is explicit limitation |
+| [UPDATE-071](updates/UPDATE-071-r5a-ui-guardrail.md) | R5-A cards guardrail and solo double-check | `DONE-CODE / QUOTA-BLOCKED` | ui / audit / R5 | `CORRECTS` audit summary 168/16 → 179/21; R5-B did not run |
+| [UPDATE-073](updates/UPDATE-073-simulator-web-fare-unification.md) | Simulator/Web Driver canonical MOCK fare quote | `DONE-CODE / WAITING-VERDICT` | ui / V-11 | UI-FARE-01; `PolicyBundle` owns arithmetic; active GSM fare deferred |
+
+### 3.6 Audit A1/A2/A3
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-064](updates/UPDATE-064-audit-a1-math-findings.md) | A1 math findings persisted before fixes | `HISTORY-COMPLETE` | audit / math | raw findings in audit artifact |
+| [UPDATE-065](updates/UPDATE-065-audit-fixbatch1.md) | A1 narrow fix batch 1 | `DONE-CODE` | audit / math | 11 findings remain handled later |
+| [UPDATE-066](updates/UPDATE-066-audit-a2-integrity-gate.md) | A2 integrity gate for 13 mock tables | `DONE-CODE` | audit / data | A2 closed; D-SIM-08 remains deferred |
+| [UPDATE-069](updates/UPDATE-069-audit-fixbatch2-s2-stats.md) | A1 fix batch 2: S2/STATS and 11/11 verification | `DONE-CODE` | audit / math | opens ĐA-01/02/03 |
+| [UPDATE-070](updates/UPDATE-070-audit-a3-fixbatch3.md) | A3 agent-system audit and fix batch 3 | `DONE-CODE` | audit / advisor | opens ĐA-04/05/06 and D-A3-01..06 |
+
+## 4. Task and file routing
+
+| Route | Read first | Then open | Safe edit scope | Gate |
+|---|---|---|---|---|
+| `harness/docs` | `CLAUDE.md`, this graph, UPDATE-001/021 | TODO, DEFERRED, ASSIGNMENTS, PENDING-REVIEW, UPDATE_TEMPLATE | harness/tracking docs only | graph coverage + docs consistency |
+| `policy/f0-faq` | DIRECTIVES §12, SCOPE F0, UPDATE-030/031 | T-004 corpus/register, D-POL-04/Q-03, policy specs | policy-owned files only; respect Khánh claim | citation/effective-date check |
+| `data/realdata` | UPDATE-024, 033–039, current claim | schemas, mockgen, catalog, data tests | claimed data/schema paths | schema/FK/statistical gate |
+| `solver/math` | UPDATE-026–029, 038, 040–043, 064–070 | audit README/REPORT, exact solver/tests | solver paths under active claim | failing regression + 30 seeds where required |
+| `simulator` | UPDATE-023, 044–058 | simulation specs, seed/scenario, V-01..V-09 | `src/gsm_sim`, configs, sim tests | multi-seed + visual gate |
+| `ui/cards` | UPDATE-059–063, 067–068, 071 | contracts, UI tests, V-10, R5 findings | UI claim paths only | backend/JS tests + V-10 |
+
+### 4.1 Open and legacy TODO task routes
+
+These rows prevent an agent from re-reading the full TODO merely to classify an ID. `Legacy` means the ID predates later successor work; confirm the residual/closure condition before claiming it instead of rebuilding completed successors.
+
+| Task IDs | Current classification | Route / read first | What remains or why not closed |
+|---|---|---|---|
+| T-003 | `READY` (legacy spec) | `data/realdata`; `specs/mock-order-distribution.md`, UPDATE-003/004/024/044 | Confirm whether any generator residual remains after current mockgen/sim before claiming |
+| T-005 | `TODO` | `harness/docs`; DIRECTIVES §12, `research/simulation/agent-pipeline-patterns.md`, UPDATE-030/068 | CrewAI comparison only; do not replace working C6 without a new plan |
+| T-006 | `TODO` (legacy F1 frame) | `policy/f0-faq` + `ui/cards`; SCOPE F1, USER_STORIES, UPDATE-026/030/040/067 | Reconcile residual against existing solvers/cards before implementation |
+| T-007 | `TODO` (legacy F2 frame) | `simulator` + `ui/cards`; SCOPE F2, UPDATE-027/041/044..058/067 | Reconcile residual; do not duplicate sim/advice bridge |
+| T-008 | `TODO` (legacy F3 frame) | `solver/math` + `ui/cards`; SCOPE F3, UPDATE-028/041/042/067 | Reconcile residual; existing analyzer/penalty/anomaly paths are successor evidence |
+| T-009b | `READY` / Khánh-owned reserved scope | `ui/cards`; ASSIGNMENTS, contracts, tokens, SCREEN-PARITY | Flutter parity; not `DOING`; shared contract changes require coordination |
+| T-011 | `TODO` (legacy contract task) | `data/realdata` + `ui/cards`; schemas, `ui/contracts/`, UPDATE-024/033/060/067/071 | Define only contract gaps not already covered by versioned schemas |
+| T-013 | `BLOCKED` (human login) | `policy/f0-faq`; `research/community/community-insights.md` | Requires a person to join/login to Facebook groups |
+| T-015 | `DEFERRED` / roadmap | `policy/f0-faq`; community-risk spec, D-008 | Open only after F0–F3 stability and risk-control approval |
+| T-018/T-030 | `WAITING-VERDICT` (legacy substrate/M0) | `simulator`; UPDATE-010/012/023/044..058, V-01/V-02 | Successor code/integrity evidence exists; human visual verdict prevents unqualified closure |
+| T-019/T-020 | `TODO` (legacy M4 IDs) | `simulator`; simulation twin-world/advisor specs, UPDATE-030/046..053 | Successor code exists; exact old M4 DoD has not been formally reconciled |
+| T-021 | `WAITING-VERDICT` | `simulator`; UPDATE-044..058, V-01..V-09 | Calibration/code evidence exists; human visual verdicts remain |
+| T-027 | `TODO` | `simulator` + `solver/math`; robustness spec, UPDATE-047/056/069 | Broader regime sweep remains beyond completed sensitivity work |
+| T-031 | `READY` (legacy M1) | `simulator`; reliability spec, UPDATE-023/044/052/053 | Successor 24h/multiday evidence exists; exact M1 DoD needs reconciliation |
+| T-032/T-033/T-034 | `BLOCKED` (legacy M2) | `simulator`; reliability spec, UPDATE-054..058 | OSRM/environment successors exist; exact endpoint/H3/exogenous DoD not formally closed |
+| T-035/T-036/T-037 | `BLOCKED` (legacy M3) | `simulator` + `ui/cards`; UPDATE-057/059..063/068 | Replay/journey/diagnostics successors exist; V-09/V-10 and exact old DoD remain |
+
+## 5. Open-work ledger
+
+| ID | State | Why it remains open | Read/evidence |
+|---|---|---|---|
+| V-01..V-06, V-08/V-09 | `WAITING-VERDICT` | Cường visual/dashboard checks not recorded in ✅ section; V-07 decision was superseded by UPDATE-052 | `tracking/PENDING-REVIEW.md` |
+| V-10 | `WAITING-VERDICT` | Web app/cards/simulation scenario has not received verdict | UPDATE-063/067/068 + PENDING-REVIEW |
+| Q-03 / D-POL-04 | `BLOCKED` | Corpus missing 23/02/2026 policy and conflict flag; owner is Khánh | Khánh-owned corpus/register |
+| ĐA-01..ĐA-06 | `BLOCKED` | Architecture/model changes require Cường approval | PENDING-REVIEW + audit REPORT |
+| D-A3-01..06 | `DEFERRED` | Audit design/model gaps; no silent implementation | DEFERRED + UPDATE-070 |
+| D-SIM-02 | `DONE-CODE / BLOCKED D-POL-05` | Newbie mechanism exists, but active GSM reward values remain unavailable | UPDATE-045/055, DEFERRED |
+| D-SIM-11 | `TODO` | Solver reason must be structured, not Vietnamese string-parsed | DEFERRED |
+| D-SIM-14 | `TODO` | Memory toggle can reorder adherence RNG stream | DEFERRED |
+| D-SIM-16 | `DEFERRED` | Behaviour persistence across days is absent | UPDATE-053, DEFERRED |
+| D-SIM-18 | `TODO / MATH-AUDIT` | Acceptance estimator changes between small/large samples | UPDATE-064/069, DEFERRED |
+| D-SIM-19 | `DEFERRED` | Demand interpolation flag was dead; real interpolation needs re-gate | UPDATE-065, DEFERRED |
+| D-C6-03 | `TODO` | Live LLM smoke requires live endpoint/dependency | UPDATE-030, DEFERRED |
+| PI-3 / PI-6 | `BLOCKED` | BQ credentials/auth and external key decision | UPDATE-033, TODO, DEFERRED |
+| R5-B | `QUOTA-BLOCKED` | 10 finder sessions died at session limit | UPDATE-071 §4/§6 |
+
+## 6. Parallel loop and quota policy
+
+- Default maximum: **2 concurrent sessions** — one primary and one reviewer.
+- A request for 5 sessions is queued as **`2 → 2 → 1`**. Do not start the next batch before the prior batch persists findings, decisions, and failures.
+- One worker writes one active claim/path. A reviewer reads or writes a separate artifact; overlapping claims are blocked.
+- On `quota`, `session limit`, or connection failure: persist partial output, retry once only, then mark `QUOTA-BLOCKED` and reduce the cap to 1.
+- Large audits run as discovery → refute/verify → local aggregation → fix/plan. A failed aggregation step does not erase persisted findings.
+- Parallelism never bypasses human approval, `PENDING-REVIEW`, visual review, or the self-claim table.
+
+## 7. Graph maintenance rules
+
+For every meaningful coherent cycle:
+
+1. Create the required `tracking/updates/UPDATE-###-slug.md`.
+2. Update the corresponding TODO/DEFERRED/PENDING-REVIEW state when it truly changed.
+3. Add/update the graph node, edge, route, and open-work row in the same cycle.
+4. Run the graph integrity checks: all-current-UPDATE coverage, existing links, no duplicate IDs, correction edges point forward, and no `DONE` status hides a pending gate.
+
+Do not create a second UPDATE solely because the graph changed as part of the same coherent cycle.
+
+## 8. Known conflicts and stale-source markers
+
+- `tracking/TODO.md` now marks post-audit/R5 as current; the long CORE/SIM sequence below is retained as historical dependency evidence, not current priority.
+- `DIRECTIVES-2026-07-24.md` audit summary is now reconciled to UPDATE-071: `179 findings / 21 fix rows`; the old `168/16` claim remains historical only.
+- `BACKLOG-QUESTIONS-2026-07-27.md` calls UX-CARDS “next” even though UPDATE-067/068/071 contain code; treat it as planning history and use V-10/R5 status.
+- `ASSIGNMENTS.md` moved completed legacy T-018/Track UI claims to history; T-009b remains Khánh-owned/reserved `READY` scope and shared contracts still require coordination.
+- `PENDING-REVIEW.md` has no entries in `✅ ĐÃ CHECK XONG`; all listed V/Q/ĐA items remain open until Cường records a verdict.
+
+## 9. Validation commands
+
+Run from the repository root after graph/harness updates:
+
+```powershell
+$updates = @(Get-ChildItem tracking/updates -Filter 'UPDATE-*.md' | Where-Object Name -ne 'UPDATE_TEMPLATE.md')
+$graph = Get-Content tracking/PROJECT-GRAPH.md -Raw -Encoding utf8
+foreach ($f in $updates) {
+  $link = "updates/$($f.Name)"
+  if ($graph -notmatch [regex]::Escape($link)) { throw "Missing graph link: $link" }
+}
+foreach ($p in @('CLAUDE.md','tracking/TODO.md','tracking/DEFERRED.md','tracking/ASSIGNMENTS.md','tracking/PENDING-REVIEW.md')) {
+  if (-not (Test-Path $p)) { throw "Missing required source: $p" }
+}
+if ($graph -notmatch '2 → 2 → 1') { throw 'Missing quota queue policy' }
+if ($graph -notmatch 'UPDATE-036.*UPDATE-035' -or $graph -notmatch 'UPDATE-048.*UPDATE-047' -or $graph -notmatch 'UPDATE-053.*UPDATE-051') { throw 'Missing update correction edges' }
+if ($graph -notmatch 'UPDATE-071.*168/16.*179/21') { throw 'Missing audit-count correction edge' }
+$routeSection = ($graph -split '### 4\.1 Open and legacy TODO task routes', 2)[1] -split '## 5\. Open-work ledger', 2 | Select-Object -First 1
+foreach ($id in @('T-003','T-005','T-006','T-007','T-008','T-009b','T-011','T-013','T-015','T-018','T-019','T-020','T-021','T-027','T-030','T-031','T-032','T-033','T-034','T-035','T-036','T-037')) {
+  if ($routeSection -notmatch [regex]::Escape($id)) { throw "Missing task route: $id" }
+}
+Write-Output 'PROJECT_GRAPH_VALIDATION_OK'
+```
+
+Docs-only changes do not claim runtime or visual verification. UI/simulation work routed through this graph must still obey the existing tests and visual gate.

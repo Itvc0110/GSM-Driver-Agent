@@ -3,7 +3,7 @@
 // interaction — cước demo KHÔNG được cộng vào payout (payout đến từ data mock).
 // UX-CARDS (DIRECTIVES §12): advisor là PROACTIVE CARDS, không phải chatbot.
 
-import { api, fmtVnd } from "./api.js";
+import { api, demoQuote, fmtVnd } from "./api.js";
 import { Cards } from "./cards.js";
 
 const S = {
@@ -225,7 +225,8 @@ async function startIncomingTrip() {
     { lat: t.dropoff_lat, lng: t.dropoff_lng, name: `Trả: ${t.dropoff_address}` },
   ];
   const route = await api.route(wps);
-  S.activeRoute = { ...route, wps, trip: t };
+  const quote = demoQuote(route);
+  S.activeRoute = { ...route, quote, wps, trip: t };
   clearRoute();
   // polyline 2 lớp theo brand Khánh
   routeLayers.push(L.polyline(route.coords, { color: "#0f172a", weight: 10, opacity: 0.9 }).addTo(map));
@@ -241,7 +242,10 @@ async function startIncomingTrip() {
   map.fitBounds(routeLayers[1].getBounds(), { padding: [60, 60] });
 
   $("inc-km").textContent = `${route.total_dist_km} km · ${route.total_duration_min} phút`;
-  $("inc-fare").textContent = fmtVnd(route.fare_vnd);
+  $("inc-fare").textContent = quote.grossText;
+  $("inc-trip-payout").textContent = quote.payoutText;
+  $("inc-fare-policy").textContent =
+    `${quote.provenanceText} · share ${quote.shareText} · không cộng vào thu nhập ngày`;
   $("inc-stops").innerHTML = wps.map((w, i) => `
     <div class="trip-row"><div class="wp" style="background:${WP_COLORS[i % 4]}">${String.fromCharCode(65 + i)}</div>
       <div>${w.name}</div></div>`).join("");
@@ -267,7 +271,9 @@ function acceptTrip() {
   $("nav-state").textContent = "ĐANG ĐẾN ĐIỂM ĐÓN (OSRM)";
   $("nav-cust").textContent = r.trip.customer_name;
   $("nav-route").textContent = r.wps.map((w) => w.name.split(":")[1]).join(" ➔ ");
-  $("nav-fare").textContent = fmtVnd(r.fare_vnd);
+  $("nav-fare").textContent = r.quote.grossText;
+  $("nav-trip-payout").textContent = r.quote.payoutText;
+  $("nav-fare-policy").textContent = `${r.quote.provenanceText} · share ${r.quote.shareText}`;
   $("nav-km").textContent = `${r.total_dist_km} km`;
   $("btn-nav-next").textContent = "ĐÃ ĐẾN NƠI ĐÓN KHÁCH";
   animateAlong(r.coords, 3200);
@@ -284,12 +290,15 @@ function navNext() {
     const r = S.activeRoute;
     S.demoTrips.unshift({
       name: r.trip.customer_name, km: r.total_dist_km,
-      fare: r.fare_vnd, src: r.source,
+      gross: r.fare_vnd, payout: r.driver_payout_vnd,
+      src: r.source, policy: r.fare_policy_version,
     });
     $("trip-history").innerHTML = S.demoTrips.map((t) => `
       <div class="row-item"><div><b>${t.name}</b><br>
-        <span style="font-size:10.5px;color:var(--text-muted)">${t.km} km · nguồn ${t.src} · DEMO — không cộng vào payout</span></div>
-        <div class="amt">${fmtVnd(t.fare)}</div></div>`).join("");
+        <span style="font-size:10.5px;color:var(--text-muted)">${t.km} km · route ${t.src}<br>
+          ${t.policy} · MOCK — không cộng vào thu nhập ngày</span></div>
+        <div style="text-align:right"><div class="amt">gross ${fmtVnd(t.gross)}</div>
+          <div style="font-size:10.5px;color:var(--text-muted)">payout cuốc ${fmtVnd(t.payout)}</div></div></div>`).join("");
     $("trip-active").classList.add("hidden");
     $("cta-area").classList.remove("hidden");
     $("cta-text").textContent = "Tìm cuốc demo tiếp";

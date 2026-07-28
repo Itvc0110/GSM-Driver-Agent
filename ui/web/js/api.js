@@ -40,3 +40,15 @@ export const api = {
 
 export const fmtVnd = (v) =>
   v == null ? "—" : Math.round(v).toLocaleString("vi-VN") + "đ";
+
+export function demoQuote(route) {
+  if (route?.is_mock !== true || route?.data_mode !== "synthetic") {
+    throw new Error("Cuốc demo chỉ được render từ quote MOCK synthetic");
+  }
+  return {
+    grossText: fmtVnd(route.fare_vnd),
+    payoutText: fmtVnd(route.driver_payout_vnd),
+    shareText: `${Math.round(route.driver_share * 100)}%`,
+    provenanceText: `${route.fare_policy_version} · MOCK`,
+  };
+}

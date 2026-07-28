@@ -100,7 +100,7 @@ vào sau, bên cạnh UI app.
 | **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
 | **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
 | **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063) + **UX-CARDS** (UPDATE-067: proactive cards + đo adherence + CI draft) + **R1/R4** (UPDATE-068: mo-phong đồng ngôn ngữ app, playback ×1/×4/×16, feed sự kiện). **Chờ verdict V-10** |
-| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · **179 finding** · 118 CONFIRMED · **21 hàng fix batch 1–3 + 1 fix R5-A**. **ĐÍNH CHÍNH:** số 168/16 trước đó là overcount/undercount đã được R5 tự bắt. R5-B vẫn chưa hoàn tất; HEAD còn `BLOCKER-R5-MUT10`. ĐA-01..03 đã được Cường duyệt design; ĐA-04..06 chờ duyệt. |
+| **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · **179 finding** · 118 CONFIRMED · **21 hàng fix batch 1–3 + 1 fix R5-A** (đính chính UPDATE-071 — số 168/16 trước đó là overcount/undercount, R5 tự bắt). **ĐA-01..ĐA-09 đã DUYỆT** (2026-07-27, xem `PENDING-REVIEW.md` §Đã check xong); **ĐA-10 CHƯA DUYỆT — và chưa có định nghĩa trong repo** (xem `PENDING-REVIEW.md` §Q-09); còn D-A3-01..06. **R5-A xong; R5-B QUOTA-BLOCKED** → sau đó R2/R3. `BLOCKER-R5-MUT10` **đã gỡ 2026-07-28** (UPDATE-074, commit `6ccd8fc`) — đã chứng minh bằng re-apply mutation → đỏ → restore → xanh. |
 | **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 

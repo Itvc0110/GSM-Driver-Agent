@@ -345,10 +345,16 @@ def test_fleet_labels_match_generator_prefixes():
 def test_ui_fare_equals_sim_policy():
     """Cước UI phải bằng ĐÚNG `PolicyBundle.gross_fare` của sim. Trước C2, routing dùng
     `km × 24000` hard-code — lệch ~4,6× (5km: 120.000đ vs 25.900đ) và số 24000 không tồn
-    tại ở bất kỳ config/spec nào. Đây là số tài xế nhìn trực tiếp."""
+    tại ở bất kỳ config/spec nào. Đây là số tài xế nhìn trực tiếp.
+
+    Test này soi `sim_pricing.quote_distance` — bản `origin/main`. (Nhánh này từng có
+    `routing._gross_fare` làm cùng việc; merge 2026-07-28 giữ bản kia vì nó **đọc**
+    `PolicyBundle` thay vì chép lại công thức, nên bất biến dưới đây mới có ý nghĩa: nếu ai
+    hard-code lại thì hai vế lệch nhau.)
+    """
     from pathlib import Path
 
-    from app.routers.routing import _gross_fare
+    from app.adapters.sim_pricing import quote_distance
     from gsm_sim.config import Config
     from gsm_sim.policy import PolicyBundle
     # đường dẫn TUYỆT ĐỐI theo vị trí file test — bản đầu dùng relative path nên chỉ xanh khi
@@ -356,9 +362,9 @@ def test_ui_fare_equals_sim_policy():
     repo = Path(__file__).resolve().parents[3]
     sim_policy = PolicyBundle.from_config(Config.load(repo / "configs" / "pilot_dongda.yaml"))
     for km in (0.5, 2.0, 5.0, 8.7, 15.0):
-        assert _gross_fare(km) == round(sim_policy.gross_fare(km)), f"cước lệch tại {km}km"
+        assert quote_distance(km)["fare_vnd"] == sim_policy.gross_fare(km), f"cước lệch tại {km}km"
     # và KHÔNG được là công thức tuyến tính 24000/km nữa
-    assert _gross_fare(5.0) != 5.0 * 24000
+    assert quote_distance(5.0)["fare_vnd"] != 5.0 * 24000
 
 
 def test_no_hardcoded_fare_constant_in_routing():

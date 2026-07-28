@@ -3,21 +3,20 @@ import math
 import urllib.request
 from typing import List
 from fastapi import APIRouter, HTTPException
+from app.adapters.sim_pricing import quote_distance
 from app.models import RouteCalculateRequest, RouteCalculateResponse, WaypointItem
 
 router = APIRouter()
 
-# C2 / parity §1 (UPDATE-075): cước từng là `km × 24000` hard-code — số này KHÔNG tồn tại ở bất
-# kỳ config/spec nào và lệch ~4,6× so với policy thật (cuốc 5km: 120.000đ vs 25.900đ). Đây là
-# nguồn-sự-thật thứ ba cho cùng một luật, và là số tài xế nhìn thấy trực tiếp.
-# Nay: routing CHỈ trả route/distance/ETA; cước lấy từ CÙNG `PolicyBundle` với sim.
-
-
-def _gross_fare(km: float) -> int:
-    """Cước gộp theo policy hiện hành — một nguồn với engine (`gsm_sim.policy.gross_fare`)."""
-    from app.adapters.advisor import policy as _core_policy
-    p = _core_policy()
-    return int(round(p.base_fare_vnd + max(0.0, km - p.base_km) * p.per_km_vnd))
+# C2 / parity §1: cước từng là `km × 24000` hard-code — số này KHÔNG tồn tại ở bất kỳ config/spec
+# nào và lệch ~4,6× so với policy thật (cuốc 5km: 120.000đ vs 25.900đ). Đây là nguồn-sự-thật thứ
+# ba cho cùng một luật, và là số tài xế nhìn thấy trực tiếp.
+# Nay: routing CHỈ trả route/distance/ETA; cước do `adapters/sim_pricing.quote_distance` cấp, đọc
+# CÙNG `PolicyBundle` với sim.
+#
+# ⚠ Lỗi này được sửa ĐỘC LẬP HAI LẦN (UPDATE-075 nhánh này và UPDATE-073 trên `origin/main`).
+# Bản giữ lại là của `origin/main` vì nó trả kèm payout + `fare_policy_version` + nhãn mock, thay
+# vì chép lại công thức — đúng tinh thần "một luật, một nguồn" mà cả hai bản cùng nhắm tới.
 
 # Haversine distance in Km
 def haversine(lat1, lon1, lat2, lon2):
@@ -70,7 +69,7 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
                         coords = [[c[1], c[0]] for c in route["geometry"]["coordinates"]]
                         total_dist_km = round(route["distance"] / 1000.0, 1)
                         total_duration_min = max(1, round(route["duration"] / 60.0))
-                        fare_vnd = _gross_fare(total_dist_km)
+                        quote = quote_distance(total_dist_km)
 
                         turn_instruction = "Chạy theo vạch chỉ đường OSRM thực tế"
                         if route.get("legs") and len(route["legs"]) > 0:
@@ -82,7 +81,7 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
                             coords=coords,
                             total_dist_km=total_dist_km,
                             total_duration_min=total_duration_min,
-                            fare_vnd=fare_vnd,
+                            **quote,
                             turn_instruction=turn_instruction,
                             source="openstreetmap_de_osrm_real"
                         )
@@ -105,13 +104,13 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
 
     total_dist_km = round(total_dist, 1)
     total_duration_min = max(1, round(total_dist_km * 2.5))
-    fare_vnd = _gross_fare(total_dist_km)
+    quote = quote_distance(total_dist_km)
 
     return RouteCalculateResponse(
         coords=all_coords,
         total_dist_km=total_dist_km,
         total_duration_min=total_duration_min,
-        fare_vnd=fare_vnd,
+        **quote,
         turn_instruction="Chạy theo vạch chỉ đường phố Hà Nội",
         source="hanoi_street_graph_engine"
     )
