@@ -43,7 +43,12 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
      hồ sơ `11-*` §5 thì mọi số hạng ĐỘ LỚN đều inert khi biến vị trí chưa vào bài toán ⇒ **làm
      T-045a TRƯỚC**, nếu không lại đo một thay đổi không có tác dụng.
   4. `TODO` `MarketStateView` + C4 chi phí cơ hội vị trí (ĐA-09).
-  5. `TODO` capacity ledger + hồi sinh S4 → best-response equilibrium (ĐA-09).
+  5. `DONE-CODE/RESEARCH 2026-07-28 (UPDATE-083..088)` capacity ledger + S4 + **ĐA-09 §2.2 đủ
+     ba câu trả lời bằng số** (hồ sơ `research/simulation/multi-agent-equilibrium.md`): cân bằng
+     tồn tại & ≈ λ_config (γ=1 hội tụ 1 vòng) · heatmap-residual (γ=0) KHÔNG hội tụ, tệ vĩnh
+     viễn — cảnh báo production · PoA: adherence thật lấy 51–73% mức tập trung · phủ tăng đơn
+     điệu không tự-triệt-tiêu, có bẫy free-rider 25–50%. **Đề xuất cấu hình bật (UPDATE-087)
+     chờ Cường.**
   - **Ràng buộc Cường**: `accept_lift` giữ TẮT; `shift_plan` giữ BẬT + cảnh báo đỏ trong khu Mô
     phỏng, **đo lại trước bản cuối — không hiệu quả thì TẮT để advisor im lặng**.
 - **BUG-EVAL-ARGMAX — `DONE-CODE 2026-07-28 (UPDATE-086, Q-11 duyệt)`.** Estimator cohort

@@ -1,0 +1,421 @@
+{
+ "central": [
+  {
+   "seed": 3000,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 256578.19,
+    "served_rate": 0.779,
+    "expired_n": 214,
+    "supply_cell_hhi": 0.0103,
+    "gini_payout": 0.2159,
+    "total_payout_vnd": 23092037
+   }
+  },
+  {
+   "seed": 3001,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 258096.62,
+    "served_rate": 0.819,
+    "expired_n": 159,
+    "supply_cell_hhi": 0.0142,
+    "gini_payout": 0.23,
+    "total_payout_vnd": 23228696
+   }
+  },
+  {
+   "seed": 3002,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 250873.09,
+    "served_rate": 0.81,
+    "expired_n": 161,
+    "supply_cell_hhi": 0.009,
+    "gini_payout": 0.222,
+    "total_payout_vnd": 22578578
+   }
+  },
+  {
+   "seed": 3003,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 256658.98,
+    "served_rate": 0.818,
+    "expired_n": 149,
+    "supply_cell_hhi": 0.0104,
+    "gini_payout": 0.2234,
+    "total_payout_vnd": 23099308
+   }
+  },
+  {
+   "seed": 3004,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 261893.76,
+    "served_rate": 0.828,
+    "expired_n": 151,
+    "supply_cell_hhi": 0.01,
+    "gini_payout": 0.2275,
+    "total_payout_vnd": 23570438
+   }
+  },
+  {
+   "seed": 3005,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 245756.16,
+    "served_rate": 0.778,
+    "expired_n": 213,
+    "supply_cell_hhi": 0.0114,
+    "gini_payout": 0.2311,
+    "total_payout_vnd": 22118054
+   }
+  },
+  {
+   "seed": 3006,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 251861.62,
+    "served_rate": 0.805,
+    "expired_n": 178,
+    "supply_cell_hhi": 0.0112,
+    "gini_payout": 0.201,
+    "total_payout_vnd": 22667546
+   }
+  },
+  {
+   "seed": 3007,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 258639.04,
+    "served_rate": 0.805,
+    "expired_n": 176,
+    "supply_cell_hhi": 0.011,
+    "gini_payout": 0.2157,
+    "total_payout_vnd": 23277514
+   }
+  },
+  {
+   "seed": 3008,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 261434.2,
+    "served_rate": 0.843,
+    "expired_n": 143,
+    "supply_cell_hhi": 0.0129,
+    "gini_payout": 0.22,
+    "total_payout_vnd": 23529078
+   }
+  },
+  {
+   "seed": 3009,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 256905.09,
+    "served_rate": 0.811,
+    "expired_n": 174,
+    "supply_cell_hhi": 0.0116,
+    "gini_payout": 0.2076,
+    "total_payout_vnd": 23121458
+   }
+  },
+  {
+   "seed": 3010,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 260144.37,
+    "served_rate": 0.812,
+    "expired_n": 169,
+    "supply_cell_hhi": 0.0109,
+    "gini_payout": 0.2054,
+    "total_payout_vnd": 23412993
+   }
+  },
+  {
+   "seed": 3011,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 257325.94,
+    "served_rate": 0.794,
+    "expired_n": 196,
+    "supply_cell_hhi": 0.0113,
+    "gini_payout": 0.2175,
+    "total_payout_vnd": 23159335
+   }
+  },
+  {
+   "seed": 3012,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 268124.4,
+    "served_rate": 0.822,
+    "expired_n": 155,
+    "supply_cell_hhi": 0.0102,
+    "gini_payout": 0.229,
+    "total_payout_vnd": 24131196
+   }
+  },
+  {
+   "seed": 3013,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 256296.02,
+    "served_rate": 0.833,
+    "expired_n": 132,
+    "supply_cell_hhi": 0.0126,
+    "gini_payout": 0.2237,
+    "total_payout_vnd": 23066642
+   }
+  },
+  {
+   "seed": 3014,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 257902.1,
+    "served_rate": 0.822,
+    "expired_n": 148,
+    "supply_cell_hhi": 0.0103,
+    "gini_payout": 0.2073,
+    "total_payout_vnd": 23211189
+   }
+  },
+  {
+   "seed": 3015,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 250064.8,
+    "served_rate": 0.821,
+    "expired_n": 152,
+    "supply_cell_hhi": 0.0124,
+    "gini_payout": 0.2035,
+    "total_payout_vnd": 22505832
+   }
+  },
+  {
+   "seed": 3016,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 255070.28,
+    "served_rate": 0.8,
+    "expired_n": 180,
+    "supply_cell_hhi": 0.011,
+    "gini_payout": 0.2188,
+    "total_payout_vnd": 22956325
+   }
+  },
+  {
+   "seed": 3017,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 262246.13,
+    "served_rate": 0.797,
+    "expired_n": 198,
+    "supply_cell_hhi": 0.0129,
+    "gini_payout": 0.2058,
+    "total_payout_vnd": 23602152
+   }
+  },
+  {
+   "seed": 3018,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 264755.16,
+    "served_rate": 0.796,
+    "expired_n": 183,
+    "supply_cell_hhi": 0.0109,
+    "gini_payout": 0.2228,
+    "total_payout_vnd": 23827964
+   }
+  },
+  {
+   "seed": 3019,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 255100.41,
+    "served_rate": 0.827,
+    "expired_n": 157,
+    "supply_cell_hhi": 0.0106,
+    "gini_payout": 0.2121,
+    "total_payout_vnd": 22959037
+   }
+  },
+  {
+   "seed": 3020,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 257582.39,
+    "served_rate": 0.825,
+    "expired_n": 148,
+    "supply_cell_hhi": 0.0099,
+    "gini_payout": 0.2121,
+    "total_payout_vnd": 23182415
+   }
+  },
+  {
+   "seed": 3021,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 256059.88,
+    "served_rate": 0.795,
+    "expired_n": 190,
+    "supply_cell_hhi": 0.0132,
+    "gini_payout": 0.2051,
+    "total_payout_vnd": 23045389
+   }
+  },
+  {
+   "seed": 3022,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 262779.18,
+    "served_rate": 0.84,
+    "expired_n": 125,
+    "supply_cell_hhi": 0.0096,
+    "gini_payout": 0.2317,
+    "total_payout_vnd": 23650126
+   }
+  },
+  {
+   "seed": 3023,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 250933.88,
+    "served_rate": 0.85,
+    "expired_n": 109,
+    "supply_cell_hhi": 0.0107,
+    "gini_payout": 0.2201,
+    "total_payout_vnd": 22584049
+   }
+  },
+  {
+   "seed": 3024,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 251415.72,
+    "served_rate": 0.774,
+    "expired_n": 233,
+    "supply_cell_hhi": 0.0118,
+    "gini_payout": 0.1951,
+    "total_payout_vnd": 22627415
+   }
+  },
+  {
+   "seed": 3025,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 257976.26,
+    "served_rate": 0.832,
+    "expired_n": 142,
+    "supply_cell_hhi": 0.0097,
+    "gini_payout": 0.2231,
+    "total_payout_vnd": 23217863
+   }
+  },
+  {
+   "seed": 3026,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 258172.16,
+    "served_rate": 0.85,
+    "expired_n": 106,
+    "supply_cell_hhi": 0.0124,
+    "gini_payout": 0.2117,
+    "total_payout_vnd": 23235494
+   }
+  },
+  {
+   "seed": 3027,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 242789.43,
+    "served_rate": 0.811,
+    "expired_n": 171,
+    "supply_cell_hhi": 0.011,
+    "gini_payout": 0.2138,
+    "total_payout_vnd": 21851049
+   }
+  },
+  {
+   "seed": 3028,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 264821.04,
+    "served_rate": 0.823,
+    "expired_n": 161,
+    "supply_cell_hhi": 0.0105,
+    "gini_payout": 0.2343,
+    "total_payout_vnd": 23833894
+   }
+  },
+  {
+   "seed": 3029,
+   "kind": "central",
+   "share": 1.0,
+   "metrics": {
+    "payout_mean_all": 256816.92,
+    "served_rate": 0.818,
+    "expired_n": 164,
+    "supply_cell_hhi": 0.0127,
+    "gini_payout": 0.2159,
+    "total_payout_vnd": 23113523
+   }
+  }
+ ],
+ "poa_table": {
+  "served_rate": [
+   0.7902,
+   0.8073333333333333,
+   0.8146
+  ],
+  "expired_n": [
+   197.73333333333332,
+   173.43333333333334,
+   164.56666666666666
+  ],
+  "payout_mean_all": [
+   247925.14433333333,
+   252511.07466666665,
+   256835.774
+  ],
+  "total_payout_vnd": [
+   22313262.966666665,
+   22725996.7,
+   23115219.633333333
+  ],
+  "supply_cell_hhi": [
+   0.012986666666666667,
+   0.012013333333333332,
+   0.011219999999999999
+  ]
+ }
+}
