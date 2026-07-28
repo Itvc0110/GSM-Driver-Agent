@@ -38,11 +38,43 @@ DEFAULT_PARAMS = {
 }
 
 
-def _required_rest(B: int, params: dict) -> int:
+def _required_rest(B: int, params: dict, rest_taken_min: float | None = None,
+                   shift_elapsed_min: float | None = None) -> int:
     """Số bucket nghỉ tối thiểu cho ca còn B bucket — theo PHÚT THẬT của bucket
-    (AUDIT S2-6: bản cũ hardcode 30' → producer 60' bị tính nghỉ thiếu một nửa)."""
+    (AUDIT S2-6: bản cũ hardcode 30' → producer 60' bị tính nghỉ thiếu một nửa).
+
+    ## Cycle R / H1 (2026-07-28) — TÍN DỤNG cho nghỉ ĐÃ NGHỈ
+
+    Bản mù-state bị TÁI ÁP mỗi lần hỏi: mỗi consult tính lại `R` cho phần ca còn lại và ép nghỉ
+    đủ R **bất kể tài xế vừa nghỉ xong**. Reproduce 3 seed: advisor làm tổng nghỉ +16–27%,
+    11–14 lần/seed tái-khuyên REST trong 60′ sau một lần nghỉ hoàn tất.
+
+    ## ⚠ Công thức ĐẦU TIÊN đã bị số liệu BÁC BỎ — ghi lại để không ai đi lại đường này
+
+    Bản đầu dùng `R = nhu_cầu_CẢ_CA − đã_nghỉ` (backfill). Đo 3 seed: advisory REST nổ
+    **55–66 → 145–178/seed**, tổng nghỉ **+16–27% → +39–54%** — vì tài xế CHƯA nghỉ (do đang
+    bận kiếm tiền, điều tốt) bị đòi bù cả phần quá khứ: giữa ca 10h chưa nghỉ thì cả-ca đòi
+    2 bucket trong khi công thức cũ chỉ đòi 1 cho phần còn lại.
+
+    Công thức hiện tại — **TÍN DỤNG ĐƠN ĐIỆU AN TOÀN** (`R_mới ≤ R_cũ` luôn):
+
+        surplus = max(0, đã_nghỉ_quy_bucket − nhu_cầu_phần_ca_ĐÃ_QUA)
+        R       = clamp( nhu_cầu_phần_còn_lại (công thức cũ) − surplus , 0 , B )
+
+    Nghỉ VƯỢT mức cần của phần ca đã qua mới được trừ vào phần còn lại; thiếu hụt quá khứ
+    KHÔNG bị bắt bù (thế giới này không phạt việc chưa nghỉ — ép bù là lỗ thuần, hồ sơ 18 §2.2).
+    KHÔNG truyền state (producer l1r, caller cũ) ⇒ đúng công thức cũ từng bit.
+
+    Đây là fix VISIBILITY (cấp state có thật), không phải "giá trị nghỉ" (Cường cấm bịa số).
+    """
     bucket_min = int(params.get("bucket_min", 30))
-    return min(B, (B * bucket_min // 240) * params["rest_min_per_4h"])
+    forward = min(B, (B * bucket_min // 240) * params["rest_min_per_4h"])
+    if rest_taken_min is None or shift_elapsed_min is None:
+        return forward
+    elapsed_need = (int(max(0.0, float(shift_elapsed_min))) // 240) * params["rest_min_per_4h"]
+    taken = int(round(max(0.0, float(rest_taken_min)) / bucket_min))
+    surplus = max(0, taken - elapsed_need)
+    return max(0, forward - surplus)
 
 
 def _soc_cost(params: dict) -> int:
@@ -114,7 +146,7 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
     if B <= 0:
         return [], 0.0, int(spi["points_now"])
     NB, PBS, NS = params["points_bands"], params["points_band_size"], params["soc_bands"]
-    R = _required_rest(B, params)
+    R = _required_rest(B, params, spi.get("rest_taken_min"), spi.get("shift_elapsed_min"))
     ppo = _payout_per_order(policy, params["avg_dist_km"])
     p_acc = params["p_accept"]
     soc_cost = _soc_cost(params)
@@ -158,16 +190,25 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
                         v = online_pay + V[b + 1, nsoc_online, np_on, rl]
                         if v > best_v:
                             best_v, best_a = v, 0  # ONLINE
-                    # REST (giảm rests_left nếu còn cần)
-                    nrl = rl - 1 if rl > 0 else 0
-                    v = 0.0 + V[b + 1, soc, pb, nrl]
-                    if v > best_v:
-                        best_v, best_a = v, 1  # REST
+                    # Cycle R / H3 (2026-07-28): SWAP xét TRƯỚC REST — thứ tự CÓ CHỦ Ý.
+                    # Cả hai cùng 0 thu nhập tức thời nên rất hay HOÀ, và `v > best_v`
+                    # (so sánh chặt) trao mọi thế hoà cho nhánh xét trước. Bản cũ xét REST
+                    # trước ⇒ fixture SOC=22% + demand phẳng cho lịch `ONLINE,REST,REST,
+                    # SWAP,…` — nghỉ hai bucket TRƯỚC khi đổi pin dưới ngưỡng, khớp 7–12
+                    # lần `go_swap → rest`/seed đo ngoài sim. Thế giới thật không hoà:
+                    # hoãn swap ⇒ pin tụt + hàng đợi trạm + 11% thất bại — DP không mô hình
+                    # hoá các chi phí đó nên tối thiểu thứ tự ưu tiên phải nghiêng về swap.
+                    # (Không thêm số bịa nào — chỉ đổi tie-break.)
                     # SWAP (nạp đầy; tính như 1 bucket không kiếm tiền)
                     if rl < buckets_left:
                         v = 0.0 + V[b + 1, NS - 1, pb, rl]
                         if v > best_v:
                             best_v, best_a = v, 2  # SWAP
+                    # REST (giảm rests_left nếu còn cần)
+                    nrl = rl - 1 if rl > 0 else 0
+                    v = 0.0 + V[b + 1, soc, pb, nrl]
+                    if v > best_v:
+                        best_v, best_a = v, 1  # REST
                     # END chỉ hợp lệ khi đã nghỉ đủ (rl==0)
                     if rl == 0:
                         v = bonus_at(pb * PBS)  # kết ca: chốt bonus hiện có (đã gate S2-3)

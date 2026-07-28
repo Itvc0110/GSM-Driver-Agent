@@ -88,7 +88,13 @@ def test_input_has_no_future_fields(base_cfg, run_a):
     ai đó 'tiện tay' nhét thêm dữ liệu tương lai vào cho solver."""
     allowed = {"schema_version", "driver_id", "t_now", "buckets_remaining", "soc_pct",
                "points_now", "demand_forecast", "policy_bundle_version", "view_version",
-               "source"}
+               "source",
+               # Cycle R/H1 (2026-07-28): hai trường STATE QUÁ KHỨ THUẦN — nghỉ đã nghỉ và
+               # thời gian đã vào ca. Không phải future leak: cả hai chỉ nhìn LÙI từ t_now.
+               # Thiếu chúng, `_required_rest` bị tái áp mỗi consult (đo: tổng nghỉ +16–27%,
+               # 11–14 lần/seed tái-khuyên REST ngay sau một lần nghỉ). Schema L3 đã thêm
+               # optional tương ứng.
+               "rest_taken_min", "shift_elapsed_min"}
     bridge = AdviceActionBridge(_cfg_advice_on(0), PolicyBundle.from_config(base_cfg), seed=1)
     spi = bridge.build_shift_plan_input(run_a.actors[0], 600.0, lambda a, h: {"c": 1.0}, 900.0)
     assert set(spi) <= allowed, f"khoá lạ trong input solver: {set(spi) - allowed}"

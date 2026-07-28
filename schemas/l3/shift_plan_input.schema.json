@@ -71,6 +71,22 @@
     },
     "schema_version": {
       "const": "1.0.0"
+    },
+    "rest_taken_min": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Cycle R/H1 (2026-07-28, additive-optional): phút nghỉ ĐÃ nghỉ trong ca (gồm cả nghỉ bản năng). None/thiếu = nguồn không có (l1r) => solver dùng công thức mù-state cũ, nhãn degraded."
+    },
+    "shift_elapsed_min": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Phút đã vào ca tính tới t_now — cần để quy nhu cầu nghỉ CẢ CA. Cùng lô additive với rest_taken_min."
     }
   },
   "required": [

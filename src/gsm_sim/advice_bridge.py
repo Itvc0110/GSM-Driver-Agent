@@ -147,7 +147,15 @@ class AdviceActionBridge:
         # `to_core_record()` — nguồn duy nhất, dùng chung với mockgen (chống lệch policy).
         from gsm_core.policy import PolicyBundle as CorePolicy
         self.sim_policy = policy
-        self.policy = CorePolicy.from_record(policy.to_core_record())
+        rec = policy.to_core_record()
+        # Cycle P/①: hạn hiệu lực đọc từ config meta nếu có (pilot chưa có ⇒ None = UNKNOWN,
+        # không phải "còn hiệu lực"). World log `policy_outside_validity` khi False.
+        for k in ("policy_effective_from", "policy_effective_to"):
+            v = cfg.get(f"meta.{k}", None)
+            if v:
+                rec[k.replace("policy_", "")] = str(v)
+        self.policy = CorePolicy.from_record(rec)
+        self.policy_valid_today = self.policy.is_valid_at(_BASE_DATE.isoformat())
         self.bucket_min = int(adv.get("bucket_min", 60))
         # Biên thời gian của CHÍNH thế giới này. Advisor không được lập kế hoạch — cũng không
         # được hoãn ca — vượt quá lúc thế giới dừng (b0-A).
@@ -270,6 +278,12 @@ class AdviceActionBridge:
             "soc_pct": round(actor.soc_pct, 1),   # sim CÓ telemetry pin (data thật thì không)
             "points_now": int(actor.points),
             "demand_forecast": forecast,
+            # Cycle R / H1: DP phải THẤY nghỉ đã nghỉ — không truyền thì nhu cầu nghỉ bị TÁI ÁP
+            # mỗi consult (đo được: tổng nghỉ +16–27%, 11–14 lần/seed tái-khuyên ngay sau nghỉ).
+            # `rest_min` của actor gộp CẢ nghỉ bản năng lẫn nghỉ theo lời khuyên ⇒ H2 (hai mô
+            # hình sinh lý) được giải cùng lúc: DP trừ đúng phần bản năng đã nghỉ.
+            "rest_taken_min": round(float(actor.rest_min), 1),
+            "shift_elapsed_min": round(max(0.0, now_min - actor.shift_start_min), 1),
             "policy_bundle_version": self.policy.version,
             "view_version": "sim-3", "source": "MOCK",
         }
