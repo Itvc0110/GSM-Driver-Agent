@@ -9,18 +9,15 @@
 - **Git**: `main` == `origin/main` == `e5d235e`, tree SẠCH. 12 commit hôm nay đã push
   (chuỗi: time-fixes → MarketState → drop-bám-cầu → S4 → BUG-EVAL-ARGMAX → Cycle R/P/E →
   bật positioning mặc định → equilibrium ĐA-09 → **Cycle V gỡ B-02**).
-- **Đang chạy nền DUY NHẤT**: full suite xác nhận cuối (task `bofqb0q04`, launch ~01:25,
-  ETA ~01:40 nếu máy rảnh / tới ~2h nếu nghẽn). **Kỳ vọng ~653 passed / 5 skipped**
-  (647 trước hardening + 6 guard test mới). Nếu ĐỎ: chỉ được phép liên quan
-  `schema_registry`/`upcasters`/manifest mockgen — sửa theo UPDATE-090, KHÔNG revert cả cycle.
+- **Suite xác nhận cuối ĐÃ XANH**: **653 passed / 5 skipped** (14:24, exit 0, 01:42 ngày 29)
+  — khớp dự đoán 647+6 guard. KHÔNG còn gì chạy nền. Số đã điền vào UPDATE-090 §Kiểm chứng.
 - **UPDATE mới nhất**: 083→090. Số UPDATE kế tiếp: **091** (kiểm remote trước khi đặt).
 - **Quota**: session limit đã chạm lúc ~01:20 (4 verify-agent chết) — hạn chế mở agent ồ ạt,
   ưu tiên làm tay + 1 suite/lượt.
 
 ## Việc kế tiếp theo thứ tự (đã có verdict, KHÔNG cần hỏi lại)
 
-1. **Đọc kết quả suite `bofqb0q04`** → nếu xanh: ghi số vào UPDATE-090 §Kiểm chứng (một dòng),
-   commit nhỏ "docs: confirm suite" + push.
+1. ~~Đọc kết quả suite `bofqb0q04`~~ ✅ XONG (653/5, số đã ghi UPDATE-090, đã push).
 2. **Cycle kế — ĐA-05 event store append-only** (VỪA được B-02 mở khoá; Cường đã duyệt design
    từ 27/07, chi tiết `research/audit/2026-07-27-current-state/04-*` §6): SQLite local
    append-only + projections rebuild + JSONL export + EpisodeStore thành legacy adapter;

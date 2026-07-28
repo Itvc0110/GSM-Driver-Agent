@@ -72,7 +72,7 @@ version-unaware — hôm nay vô hại vì l1r toàn 1.0.0, ghi chú vào script
 | Full suite (trước hardening) | **647 passed / 5 skipped** |
 | Targeted sau hardening | 84 passed (versioning + schemas + l1r + mockgen + realdata gates) |
 | Record persist cũ | 13 bảng × 3 dòng validate pass (parquet + giải mã cột JSON-string) |
-| Full suite cuối | chạy sau commit này — số điền ở commit kế nếu lệch |
+| Full suite cuối | **653 passed / 5 skipped** (14:24, sau toàn bộ hardening — khớp dự đoán 647+6 guard) |
 
 ## Visual verification
 
