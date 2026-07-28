@@ -4,39 +4,92 @@
   "description": "v1.1 (2026-07-26, additive — mọi field mới OPTIONAL để Flutter v0 của Khánh vẫn parse được). Money tách lớp theo CLAUDE §5: gross / payout (mặc định) / est_net chỉ khi đủ known costs.",
   "type": "object",
   "properties": {
-    "driver_id": { "type": "string" },
-    "driver_name": { "type": "string" },
-    "shift_status": { "type": "string", "enum": ["ON_SHIFT", "OFF_SHIFT", "BREAK"] },
-    "soc_percent": { "type": "integer" },
-    "vehicle_range_km": { "type": "number" },
+    "driver_id": {
+      "type": "string"
+    },
+    "driver_name": {
+      "type": "string"
+    },
+    "shift_status": {
+      "type": "string",
+      "enum": [
+        "ON_SHIFT",
+        "OFF_SHIFT",
+        "BREAK"
+      ]
+    },
+    "soc_percent": {
+      "type": "integer"
+    },
+    "vehicle_range_km": {
+      "type": "number"
+    },
     "money": {
       "type": "object",
       "description": "MỚI v1.1 — tách lớp tiền; UI hiển thị payout mặc định, gross phải ghi rõ nhãn",
       "properties": {
-        "gross_vnd": { "type": "integer" },
-        "payout_vnd": { "type": "integer" },
+        "gross_vnd": {
+          "type": "integer"
+        },
+        "payout_vnd": {
+          "type": "integer"
+        },
         "payout_breakdown": {
           "type": "object",
           "properties": {
-            "trip_payout_vnd": { "type": "integer" },
-            "day_bonus_vnd": { "type": "integer" },
-            "mission_reward_vnd": { "type": "integer" },
-            "newbie_vnd": { "type": "integer" }
+            "trip_payout_vnd": {
+              "type": "integer"
+            },
+            "day_bonus_vnd": {
+              "type": "integer"
+            },
+            "mission_reward_vnd": {
+              "type": "integer"
+            },
+            "newbie_vnd": {
+              "type": "integer"
+            }
           }
         },
-        "est_net_vnd": { "type": ["integer", "null"], "description": "null khi chưa đủ known costs + definition version" },
-        "definition_version": { "type": "string" }
+        "est_net_vnd": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "null khi chưa đủ known costs + definition version"
+        },
+        "definition_version": {
+          "type": "string"
+        }
       },
-      "required": ["gross_vnd", "payout_vnd"]
+      "required": [
+        "gross_vnd",
+        "payout_vnd"
+      ]
     },
-    "tenure_days": { "type": "integer", "description": "MỚI v1.1" },
+    "tenure_days": {
+      "type": "integer",
+      "description": "MỚI v1.1"
+    },
     "rating": {
       "type": "object",
       "description": "MỚI v1.1 — từ counter sim (event trip_rated), không phải gauss",
       "properties": {
-        "n": { "type": "integer" },
-        "avg": { "type": ["number", "null"] },
-        "five_rate": { "type": ["number", "null"] }
+        "n": {
+          "type": "integer"
+        },
+        "avg": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "five_rate": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
       }
     },
     "missions": {
@@ -45,29 +98,96 @@
       "items": {
         "type": "object",
         "properties": {
-          "mission_id": { "type": "string" },
-          "title": { "type": "string" },
-          "progress": { "type": "integer" },
-          "target": { "type": "integer" },
-          "reward_vnd": { "type": "integer" },
-          "done": { "type": "boolean" }
+          "mission_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "integer"
+          },
+          "target": {
+            "type": "integer"
+          },
+          "reward_vnd": {
+            "type": "integer"
+          },
+          "done": {
+            "type": "boolean"
+          }
         },
-        "required": ["mission_id", "progress", "target"]
+        "required": [
+          "mission_id",
+          "progress",
+          "target"
+        ]
       }
     },
     "payout_summary": {
       "type": "object",
       "properties": {
-        "value": { "type": "number" },
-        "currency": { "type": "string" },
-        "trips_count": { "type": "integer" },
-        "scenario_id": { "type": "string" },
-        "seed": { "type": "integer" },
-        "data_mode": { "type": "string", "enum": ["synthetic", "mock-realdata"] },
-        "is_mock": { "type": "boolean" }
+        "value": {
+          "type": "number"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "trips_count": {
+          "type": "integer"
+        },
+        "scenario_id": {
+          "type": "string"
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "data_mode": {
+          "type": "string",
+          "enum": [
+            "synthetic",
+            "mock-realdata"
+          ]
+        },
+        "is_mock": {
+          "type": "boolean"
+        }
       },
-      "required": ["value", "currency", "trips_count", "scenario_id", "seed", "data_mode", "is_mock"]
+      "required": [
+        "value",
+        "currency",
+        "trips_count",
+        "scenario_id",
+        "seed",
+        "data_mode",
+        "is_mock"
+      ]
+    },
+    "soc_source": {
+      "type": "string",
+      "enum": [
+        "MOCK",
+        "THẬT"
+      ],
+      "description": "Nguồn của soc_percent. 13 bảng GSM không có telemetry pin ⇒ hiện luôn MOCK; UI BẮT BUỘC hiển thị nhãn này cạnh chỉ báo pin (Q-06)."
+    },
+    "vehicle_range_km_source": {
+      "type": "string",
+      "enum": [
+        "MOCK",
+        "THẬT"
+      ],
+      "description": "Nguồn của vehicle_range_km — suy từ soc_percent nên cùng nhãn."
     }
   },
-  "required": ["driver_id", "driver_name", "shift_status", "soc_percent", "vehicle_range_km", "payout_summary"]
+  "required": [
+    "driver_id",
+    "driver_name",
+    "shift_status",
+    "soc_percent",
+    "vehicle_range_km",
+    "payout_summary",
+    "soc_source",
+    "vehicle_range_km_source"
+  ]
 }

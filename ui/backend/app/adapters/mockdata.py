@@ -138,6 +138,12 @@ def driver_state(driver_id: str, date: str) -> dict:
         "driver_name": f"Tài xế mô phỏng {driver_id}",
         "shift_status": "ON_SHIFT" if int(stat["completed_count"]) > 0 else "OFF_SHIFT",
         "soc_percent": soc,                        # PROXY deterministic — xem docstring
+        # Q-06 (Cường chốt 2026-07-28, phương án b): nhãn nguồn đi CÙNG dữ liệu, không để UI
+        # tự nhớ. 13 bảng GSM KHÔNG có telemetry pin ⇒ số này là mô phỏng, phải nói rõ với
+        # tài xế. Nếu chỉ sửa `app.js` thì màn hình khác / Flutter của Khánh lại quên —
+        # đúng mẫu lỗi "sửa một tầng, tầng khác không biết".
+        "soc_source": "MOCK",
+        "vehicle_range_km_source": "MOCK",          # suy TỪ soc bịa ⇒ cũng là mock
         "vehicle_range_km": round(soc * 1.1, 1),   # PROXY: ~110km/100% (bike điện, ASSUMPTION)
         "money": {
             "gross_vnd": gross,

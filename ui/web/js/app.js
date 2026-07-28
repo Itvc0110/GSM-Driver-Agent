@@ -96,8 +96,13 @@ function renderHeader() {
   $("pill-trips").textContent = `${S.state.payout_summary.trips_count} cuốc`;
   const soc = S.state.soc_percent;
   const socEl = $("pill-soc");
-  socEl.textContent = `⚡ ${soc}%`;
+  // Q-06: nhãn nguồn đọc TỪ PAYLOAD (`soc_source`), không hard-code — backend là nơi biết
+  // số này thật hay mô phỏng. 13 bảng GSM chưa có telemetry pin ⇒ hiện luôn là MOCK.
+  const socTag = $("pill-soc-tag");
+  socEl.firstChild.nodeValue = `⚡ ${soc}% `;
+  socTag.hidden = S.state.soc_source !== "MOCK";
   socEl.classList.toggle("low", soc < 25);
+  socEl.classList.toggle("is-mock", S.state.soc_source === "MOCK");
 }
 
 /* ================= THU NHẬP ================= */

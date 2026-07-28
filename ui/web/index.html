@@ -24,7 +24,7 @@
       </div>
       <div style="display:flex;gap:6px;align-items:center">
         <div class="pill" id="pill-trips" style="padding:10px 12px;font-size:12px">–</div>
-        <div class="pill-soc" id="pill-soc">⚡ –%</div>
+        <div class="pill-soc" id="pill-soc">⚡ –%<span class="pill-soc-tag" id="pill-soc-tag" hidden>MÔ PHỎNG</span></div>
       </div>
     </div>
 
@@ -129,10 +129,14 @@
         <div class="note" id="ev-plate">Hồ sơ mô phỏng</div>
       </div>
       <div class="grid-2" style="margin-top:10px">
-        <div class="card"><h3>Pin (SOC)</h3><div class="big" id="ev-soc">–</div>
-          <div class="note">ước lượng mô phỏng (proxy)</div></div>
-        <div class="card"><h3>Tầm đi còn lại</h3><div class="big" id="ev-range">–</div>
-          <div class="note">giả định ~110 km/100%</div></div>
+        <div class="card"><h3>Pin (SOC) <span class="tag-mock">MÔ PHỎNG</span></h3>
+          <div class="big" id="ev-soc">–</div>
+          <div class="note">Đây <b>không phải</b> mức pin thật của xe. Dữ liệu GSM hiện chưa có
+            telemetry pin, nên con số này do mô phỏng sinh ra để minh hoạ giao diện.</div></div>
+        <div class="card"><h3>Tầm đi còn lại <span class="tag-mock">MÔ PHỎNG</span></h3>
+          <div class="big" id="ev-range">–</div>
+          <div class="note">Suy ra từ mức pin mô phỏng ở trên (giả định ~110 km/100%) — cũng
+            không phải số thật.</div></div>
       </div>
       <div class="section-label">Tủ đổi pin gần đây (OSM — vị trí thật)</div>
       <div id="station-rows"></div>

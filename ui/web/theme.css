@@ -97,6 +97,19 @@ html, body {
 }
 .pill-soc.low { background: var(--status-critical); }
 
+/* Q-06: nhãn MÔ PHỎNG cạnh chỉ báo pin — 13 bảng GSM chưa có telemetry pin, số SOC do
+   `_soc_proxy` sinh ra. Nhãn phải ĐỌC ĐƯỢC, không phải chú thích mờ nhạt. */
+.pill-soc-tag {
+  margin-left: 6px; padding: 1px 5px; border-radius: 6px;
+  font-size: 9px; font-weight: 700; letter-spacing: .04em;
+  background: rgba(0,0,0,.28); color: #fff; vertical-align: middle;
+}
+.tag-mock {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  background: var(--status-warning, #b8860b); color: #fff;
+}
+
 /* ---- Badge mock — BẮT BUỘC mọi màn có số ---- */
 .mock-badge {
   display: inline-flex; align-items: center; gap: 5px;

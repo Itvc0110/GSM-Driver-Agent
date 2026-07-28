@@ -183,6 +183,120 @@ def test_advice_items_pass_verifier(dv):
                 "card vi phạm blocklist (hứa thu nhập / khuyên đơn cụ thể)"
 
 
+def test_rates_do_not_leak_same_day_data(dv):
+    """ĐA-01: `build_gi` KHÔNG được đọc tỷ lệ của **chính ngày đó**.
+
+    Bản cũ lấy `driver_statistic_daily` của `date` — aggregate CẢ NGÀY — nên ở 9h sáng S1 đã
+    biết tỷ lệ cuối ngày. Test này tái tính độc lập từ ≤7 ngày TRƯỚC và bắt buộc khớp; đồng thời
+    ràng buộc kết quả **không** bằng tỷ lệ cùng ngày (nếu bằng thì leak vẫn còn).
+    """
+    import polars as pl
+    from app.adapters import advisor as A
+    from app.adapters.mockdata import _table, _stat_row
+    from gsm_core.rates import shrunk_rate
+
+    stat = _table("driver_statistic_daily")
+    drv, date = dv["driver_id"], dv["date"]
+
+    # (1) tái tính độc lập
+    prev = (stat.filter((pl.col("driver_id") == drv) & (pl.col("local_date") < date))
+            .sort("local_date").tail(A.RATE_WINDOW_DAYS))
+    k = float(prev["accepted_count"].sum() or 0)
+    n = float(prev["total_request_calculate_accept"].sum() or 0)
+    pool = stat.filter(pl.col("local_date") < date)
+    p0 = float(pool["accepted_count"].sum()) / float(pool["total_request_calculate_accept"].sum())
+    expect = round(shrunk_rate(k, n, p0, A.SHRINK_PSEUDO_COUNTS), 4)
+    got = A.build_gi(drv, date, 9 * 60)["acceptance_rate"]
+    assert got == pytest.approx(expect, abs=1e-9)
+
+    # (2) không được là con số CỦA NGÀY HÔM ĐÓ
+    same_day = float((_stat_row(drv, date) or {}).get("acceptance_rate", -1))
+    assert got != pytest.approx(same_day, abs=1e-6), "vẫn đang đọc tỷ lệ của chính ngày đó"
+
+    # (3) không phụ thuộc giờ trong ngày — as-of đầu ngày, không rò về sau
+    assert A.build_gi(drv, date, 21 * 60)["acceptance_rate"] == got
+
+
+def test_no_perfect_rate_fallback_on_first_day():
+    """Không có lịch sử ⇒ trả **prior**, KHÔNG trả 1.0.
+
+    Fallback `or 1.0` cũ nghĩa là "hoàn hảo" ⇒ gate thưởng (≥0,85) đi qua nhầm cho đúng nhóm
+    chưa có dữ liệu nào để tin. ĐA-01 cấm tường minh."""
+    from app.adapters import advisor as A
+    from app.adapters.mockdata import _table
+    first = _table("driver_statistic_daily")["local_date"].min()
+    drv = _table("driver_statistic_daily")["driver_id"][0]
+    gi = A.build_gi(drv, first, 9 * 60)
+    assert gi["acceptance_rate"] != 1.0 and gi["completion_rate"] != 1.0
+    assert 0.0 < gi["acceptance_rate"] < 1.0
+
+
+def test_advice_seed_matches_dataset_seed(dv):
+    """C2 §5.2: `/advice` khai `seed: 0` trong khi data thật sinh bằng `seed_base` của manifest
+    (7000). Hai endpoint của CÙNG một dataset trả hai định danh khác nhau ⇒ không ai truy được
+    advice này đọc từ đâu. `seed` phải cùng một nguồn với `/driver/state`."""
+    from app.adapters.mockdata import manifest
+    adv = client.get(f"/api/v1/advice?driver_id={dv['driver_id']}&date={dv['date']}").json()
+    st = client.get(f"/api/v1/driver/state?driver_id={dv['driver_id']}&date={dv['date']}").json()
+    assert adv["seed"] == st["payout_summary"]["seed"], \
+        "advice và driver/state khai seed khác nhau cho cùng dataset"
+    assert adv["seed"] == int(manifest()["seed_base"])
+    # kể cả đường im lặng (đội car/premium) cũng không được khai seed giả
+    silent = client.get(f"/api/v1/advice?driver_id=cp-0&date={dv['date']}").json()
+    assert silent["seed"] == int(manifest()["seed_base"])
+
+
+def test_maxed_but_rates_at_risk_is_not_silenced(dv, monkeypatch):
+    """C2 §1b: kịch mốc điểm NHƯNG tỷ lệ dưới ngưỡng ⇒ chính sách trả **0đ**.
+
+    Adapter cũ chỉ nhìn `already_maxed` rồi trả silent *"không có gì cần chỉnh. Giữ nhịp hiện
+    tại."* — trấn an một người đang mất sạch thưởng và VẪN CÒN CỨU ĐƯỢC. Card cảnh báo phải
+    ra, và phải qua verifier như mọi card khác.
+    """
+    from gsm_core.advisor import verifier as V
+    from gsm_core.vn_format import render_number_vn
+    from app.adapters import advisor as adv
+
+    at_risk_report = {
+        "solution": {"already_maxed": True, "feasible": False, "gap_points": 0,
+                     "constraints": {"ok_acceptance": False, "ok_completion": True,
+                                     "enough_hours": True}},
+        "confidence": 0.85,
+        "caveats": ["thưởng chỉ được trả khi tỷ lệ nhận/hoàn thành giữ trên ngưỡng đến cuối ngày"],
+        "infeasible_reason": "tỷ lệ nhận dưới ngưỡng",
+        "numbers": [{"value": 170000, "unit": "vnd", "source": "policy_v:x"}],
+    }
+    monkeypatch.setattr(adv.bonus_feasibility, "solve", lambda *a, **kw: at_risk_report)
+
+    body = client.get(f"/api/v1/advice?driver_id={dv['driver_id']}&date={dv['date']}").json()
+    validate(body, _schema("advice"))
+    assert body["silent"]["is_silent"] is False, "im lặng trong lúc tài xế sắp mất toàn bộ thưởng"
+    assert body["items"], "phải có card cảnh báo"
+    it = body["items"][0]
+    assert it["reason_code"] in ("acceptance_below_threshold", "completion_below_threshold")
+    assert "tỷ lệ" in it["message"], "phải nói rõ nghẽn ở tỷ lệ — đó là thứ còn cứu được"
+    rendered = [render_number_vn(n["value"], _UNIT_KEY.get(n["unit"], "count"))
+                for n in it.get("numbers", [])]
+    text = f"{it['title']} {it['message']}"
+    assert V.check_bare_numbers(text, rendered) == []
+    assert V.check_blocklist(text, None) == []
+
+
+def test_maxed_and_safe_stays_silent(dv, monkeypatch):
+    """Đối chứng: kịch mốc VÀ tỷ lệ đủ ⇒ im lặng vẫn là hành vi ĐÚNG (không cảnh báo thừa)."""
+    from app.adapters import advisor as adv
+    safe = {"solution": {"already_maxed": True, "feasible": True, "gap_points": 0,
+                         "constraints": {"ok_acceptance": True, "ok_completion": True,
+                                         "enough_hours": True}},
+            "confidence": 0.95, "caveats": [], "infeasible_reason": None,
+            "numbers": [{"value": 170000, "unit": "vnd", "source": "policy_v:x"}]}
+    monkeypatch.setattr(adv.bonus_feasibility, "solve", lambda *a, **kw: safe)
+    body = client.get(f"/api/v1/advice?driver_id={dv['driver_id']}&date={dv['date']}").json()
+    validate(body, _schema("advice"))
+    assert body["silent"]["is_silent"] is True
+    assert body["silent"]["reason_code"] == "already_on_track"
+
+
 def test_poisoned_advice_never_reaches_response(dv, monkeypatch):
     """Inject item độc (số trần + hứa thu nhập) → response phải IM LẶNG với
     reason_code verify_failed, KHÔNG lọt ra ngoài (fail-closed như FAILCLOSED-1)."""
@@ -223,3 +337,60 @@ def test_fleet_labels_match_generator_prefixes():
     assert all(x.startswith("cp-") for x in by_fleet["car-platform"])
     assert all(x.startswith("px-") for x in by_fleet["car-premium"])
     assert "premium" not in by_fleet, "nhãn 'premium' trơn là dấu hiệu map cũ còn sót"
+
+
+# ---------- C2 parity (UPDATE-075): UI KHÔNG được tự tính giá ----------
+
+
+def test_ui_fare_equals_sim_policy():
+    """Cước UI phải bằng ĐÚNG `PolicyBundle.gross_fare` của sim. Trước C2, routing dùng
+    `km × 24000` hard-code — lệch ~4,6× (5km: 120.000đ vs 25.900đ) và số 24000 không tồn
+    tại ở bất kỳ config/spec nào. Đây là số tài xế nhìn trực tiếp."""
+    from pathlib import Path
+
+    from app.routers.routing import _gross_fare
+    from gsm_sim.config import Config
+    from gsm_sim.policy import PolicyBundle
+    # đường dẫn TUYỆT ĐỐI theo vị trí file test — bản đầu dùng relative path nên chỉ xanh khi
+    # chạy từ repo root, đỏ khi chạy từ `ui/backend` (lỗi của test, không phải của code)
+    repo = Path(__file__).resolve().parents[3]
+    sim_policy = PolicyBundle.from_config(Config.load(repo / "configs" / "pilot_dongda.yaml"))
+    for km in (0.5, 2.0, 5.0, 8.7, 15.0):
+        assert _gross_fare(km) == round(sim_policy.gross_fare(km)), f"cước lệch tại {km}km"
+    # và KHÔNG được là công thức tuyến tính 24000/km nữa
+    assert _gross_fare(5.0) != 5.0 * 24000
+
+
+def test_no_hardcoded_fare_constant_in_routing():
+    """Chặn hồi quy: hằng số cước không được xuất hiện lại trong routing."""
+    from pathlib import Path
+    src = (Path(__file__).resolve().parents[1] / "app" / "routers" / "routing.py").read_text(encoding="utf-8")
+    code = "\n".join(l for l in src.splitlines() if not l.strip().startswith("#"))
+    assert "24000" not in code, "hằng số cước hard-code quay lại trong routing.py"
+
+
+def test_soc_is_labelled_mock_in_payload(dv):
+    """Q-06 (Cường chốt phương án **b**): SOC **không tồn tại** trong 13 bảng GSM —
+    `_soc_proxy` sinh nó bằng `sha256(driver|date)`. Số đó đang hiện `⚡{soc}%` trên app và
+    tô đỏ khi <25%, **không nhãn**, nên tài xế đọc như telemetry thật.
+
+    Nhãn phải đi **CÙNG DỮ LIỆU**, không hard-code trong JS: nếu chỉ sửa `app.js` thì màn hình
+    kế tiếp (hoặc Flutter của Khánh) lại quên. Đây đúng bài học "sửa một tầng, tầng khác không
+    biết" (hồ sơ `13-*` Phần 1)."""
+    st = client.get(f"/api/v1/driver/state?driver_id={dv['driver_id']}&date={dv['date']}").json()
+    validate(st, _schema("driver_state"))
+    assert st.get("soc_source") == "MOCK", \
+        "soc_percent phải mang nhãn nguồn để UI không thể hiển thị nó như số thật"
+    assert st.get("vehicle_range_km_source") == "MOCK", \
+        "tầm đi còn lại suy TỪ soc bịa ⇒ cũng phải mang nhãn"
+
+
+def test_soc_label_reaches_the_screen():
+    """Nhãn phải thực sự được RENDER, không chỉ nằm trong payload."""
+    from pathlib import Path
+    web = Path(__file__).resolve().parents[2] / "web"
+    js = (web / "js" / "app.js").read_text(encoding="utf-8")
+    html = (web / "index.html").read_text(encoding="utf-8")
+    assert "soc_source" in js, "app.js không đọc nhãn nguồn của SOC"
+    assert "pill-soc-tag" in html and "pill-soc-tag" in js, \
+        "thiếu phần tử hiển thị nhãn MOCK cạnh chỉ báo pin"

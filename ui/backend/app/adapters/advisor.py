@@ -15,6 +15,7 @@ import polars as pl
 
 from gsm_core.advisor import verifier as V
 from gsm_core.policy import PolicyBundle as CorePolicy
+from gsm_core.rates import shrunk_rate
 from gsm_core.solvers import bonus_feasibility
 from gsm_core.vn_format import render_number_vn
 
@@ -78,11 +79,64 @@ def _hist_rate(trips: pl.DataFrame, driver_id: str, date: str, pol: CorePolicy) 
     return out
 
 
+# ---------- ĐA-01: tỷ lệ nhận/hoàn thành KHÔNG được rò tương lai ----------
+
+# Số quan sát giả của shrinkage. 20 ≈ **hơn một ngày** được chào đơn (median 15 offers/ngày trong
+# snapshot) — đủ để một ngày xui không lật kết luận, nhỏ so với ~105 offers của cửa sổ 7 ngày nên
+# tài xế có lịch sử vẫn được đánh giá theo chính họ. ASSUMPTION có lập luận; chưa hiệu chỉnh
+# bằng dữ liệu thật (ĐA-01 yêu cầu recalibrate 30 seed — chưa làm).
+SHRINK_PSEUDO_COUNTS = 20.0
+
+# Cửa sổ lịch sử: 7 ngày TRƯỚC `date` — **đồng bộ với `_hist_rate`** cùng file, không tạo quy
+# ước thứ hai (chính "nhiều quy ước cho một khái niệm" đẻ ra lỗi ở UPDATE-075/076).
+RATE_WINDOW_DAYS = 7
+
+_RATE_COLS = {
+    "acceptance": ("accepted_count", "total_request_calculate_accept"),
+    "completion": ("completed_count", "total_request_calculate_complete"),
+}
+
+
+@lru_cache(maxsize=64)
+def _pooled_prior(kind: str, date: str) -> float:
+    """Prior pooled TOÀN ĐỘI, tính trên các ngày **trước** `date`.
+
+    Phải cắt `< date`: lấy cả ngày hiện tại thì vừa gỡ leak cá nhân xong lại rước leak tập thể.
+    """
+    k_col, n_col = _RATE_COLS[kind]
+    df = _table("driver_statistic_daily").filter(pl.col("local_date") < date)
+    n = float(df[n_col].sum() or 0)
+    if n <= 0:
+        # Ngày đầu tiên của snapshot: KHÔNG có gì để pool. Trả None-an-toàn là không được (caller
+        # cần một số), nên dùng chính ngưỡng policy — bảo thủ, và KHÔNG phải 1.0.
+        return float(policy().bonus_min_acceptance if kind == "acceptance"
+                     else policy().bonus_min_completion)
+    return float(df[k_col].sum() or 0) / n
+
+
+def _rate_asof(driver_id: str, date: str, kind: str) -> float:
+    """Tỷ lệ ước lượng **as-of đầu ngày `date`** — chỉ dùng dữ liệu ngày TRƯỚC.
+
+    Thay cho bản cũ `stat.get("acceptance_rate", 1.0) or 1.0`, vốn:
+      1. lấy aggregate CẢ NGÀY `date` ⇒ **rò tương lai** (9h sáng đã biết tỷ lệ cuối ngày);
+      2. thiếu dữ liệu thì trả **1.0** ⇒ "hoàn hảo" ⇒ gate thưởng đi qua nhầm.
+    """
+    k_col, n_col = _RATE_COLS[kind]
+    df = (_table("driver_statistic_daily")
+          .filter((pl.col("driver_id") == driver_id) & (pl.col("local_date") < date))
+          .sort("local_date").tail(RATE_WINDOW_DAYS))
+    k, n = float(df[k_col].sum() or 0), float(df[n_col].sum() or 0)
+    if k > n:  # dữ liệu hỏng → để estimator nổ, không tự chữa
+        raise ValueError(f"{kind}: k={k} > n={n} cho {driver_id} trước {date}")
+    return round(shrunk_rate(k, n, _pooled_prior(kind, date), SHRINK_PSEUDO_COUNTS), 4)
+
+
 def build_gi(driver_id: str, date: str, now_min: int,
              shift_end_min: int = DEFAULT_SHIFT_END_MIN) -> dict:
     pol = policy()
     trips = _trips_of(driver_id)
-    stat = _stat_row(driver_id, date) or {}
+    # (bỏ `_stat_row(driver_id, date)`: sau ĐA-01 không còn trường nào của build_gi đọc thống kê
+    #  CỦA CHÍNH NGÀY ĐÓ — giữ lại chỉ mời gọi rò tương lai quay về)
     points_now = _points_until(trips, date, now_min, pol)
     return {
         "schema_version": "1.0.0", "driver_id": driver_id,
@@ -91,11 +145,24 @@ def build_gi(driver_id: str, date: str, now_min: int,
         "next_tiers": [[pt, vnd] for pt, vnd in pol.day_bonus_tiers if pt > points_now],
         "historical_points_per_hour": _hist_rate(trips, driver_id, date, pol),
         "hours_budget_remaining": round(max(0.0, (shift_end_min - now_min) / 60.0), 3),
-        # tỷ lệ NGÀY từ bảng statistic (granularity ngày — caveat ghi trong advice)
-        "acceptance_rate": round(float(stat.get("acceptance_rate", 1.0) or 1.0), 4),
-        "completion_rate": round(float(stat.get("fulfillment_rate", 1.0) or 1.0), 4),
+        # ĐA-01 (UPDATE-077): ước lượng **as-of**, chỉ từ ngày TRƯỚC + shrinkage về prior pooled.
+        # Bản cũ lấy aggregate CẢ NGÀY `date` (rò tương lai) và fallback 1.0 (gate thưởng đi qua
+        # nhầm). `stat` của chính ngày đó nay CHỈ còn dùng cho các trường không phải tỷ lệ.
+        "acceptance_rate": _rate_asof(driver_id, date, "acceptance"),
+        "completion_rate": _rate_asof(driver_id, date, "completion"),
         "policy_bundle_version": pol.version, "view_version": "1.0.0", "source": "MOCK",
     }
+
+
+def _dataset_seed() -> int:
+    """Seed CỦA DATASET đang đọc — một nguồn với `mockdata`, không hằng số.
+
+    C2 §5.2 (UPDATE-076): advice trước đây khai cứng `seed: 0` trong khi data sinh bằng
+    `seed_base = 7000`. Cùng một response nói hai điều mâu thuẫn về nguồn gốc của chính nó ⇒
+    không truy vết được. Provenance phải đọc từ manifest như mọi envelope khác.
+    """
+    from app.adapters.mockdata import manifest
+    return int(manifest().get("seed_base", 0))
 
 
 def _num_source(raw: str) -> str:
@@ -113,7 +180,7 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
     """Dựng advice THÔ từ solver. KHÔNG gọi trực tiếp — dùng `advice()` (có guardrail)."""
     if not driver_id.startswith(("d-", "r-")):
         # policy S1 hiện là policy BIKE — không áp bừa cho đội car/premium (không bịa policy)
-        return {"scenario_id": f"mock-realdata:{date}", "seed": 0,
+        return {"scenario_id": f"mock-realdata:{date}", "seed": _dataset_seed(),
                 "data_mode": "mock-realdata", "is_mock": True, "generated_at_min": now_min,
                 "silent": {"is_silent": True, "reason_code": "no_active_channel",
                            "message": "Trợ lý mới phủ đội bike (chính sách điểm/thưởng bike). "
@@ -124,16 +191,43 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
     sol = report["solution"]
 
     base = {
-        "scenario_id": f"mock-realdata:{date}", "seed": 0,
+        "scenario_id": f"mock-realdata:{date}", "seed": _dataset_seed(),
         "data_mode": "mock-realdata", "is_mock": True,
         "generated_at_min": now_min,
     }
 
     if sol.get("already_maxed"):
-        return {**base,
-                "silent": {"is_silent": True, "reason_code": "already_on_track",
-                           "message": "Bạn đã đạt mốc thưởng ngày cao nhất — không có gì cần chỉnh. Giữ nhịp hiện tại."},
-                "items": []}
+        # C2 §1b (UPDATE-076): `already_maxed` KHÔNG còn là nhánh sớm vô điều kiện.
+        # Đủ điểm mốc cao nhất nhưng tỷ lệ dưới ngưỡng ⇒ chính sách trả **0đ**. Trả silent
+        # "không có gì cần chỉnh" lúc đó là trấn an người đang mất tiền mà VẪN CÒN CỨU ĐƯỢC —
+        # nguy hiểm hơn hiện số sai vì nó GIẤU cảnh báo. Solver đã kết luận đúng từ AUDIT A1,
+        # chỉ là ba consumer không ai đọc `feasible`.
+        if sol.get("feasible"):
+            return {**base,
+                    "silent": {"is_silent": True, "reason_code": "already_on_track",
+                               "message": "Bạn đã đạt mốc thưởng ngày cao nhất — không có gì cần chỉnh. Giữ nhịp hiện tại."},
+                    "items": []}
+        cons = sol.get("constraints") or {}
+        if not cons.get("ok_acceptance", True):
+            reason_code = "acceptance_below_threshold"
+            what = "tỷ lệ nhận của bạn đang dưới ngưỡng chính sách"
+        else:
+            reason_code = "completion_below_threshold"
+            what = "tỷ lệ hoàn thành của bạn đang dưới ngưỡng chính sách"
+        # KHÔNG kèm số tiền thưởng: mức thưởng đó chính là thứ đang có nguy cơ KHÔNG được trả.
+        # Hiển thị nó ở đây sẽ thành lời hứa. `numbers` để rỗng ⇒ verifier V1 không có gì để
+        # neo, nên câu chữ cũng phải không chứa số.
+        item = {
+            "advice_id": f"s1-{driver_id}-{date}-{now_min}",
+            "solver": "S1", "kind": "info",
+            "title": "Đủ điểm mốc cao nhất, nhưng thưởng đang có nguy cơ không được trả",
+            "message": (f"Bạn đã đủ điểm mốc thưởng cao nhất hôm nay, nhưng {what}. "
+                        "Nếu giữ nguyên đến cuối ngày thì phần thưởng ngày sẽ không được trả."),
+            "confidence": report["confidence"],
+            "reason_code": reason_code,
+            "numbers": [], "caveat": " · ".join(report.get("caveats", [])),
+        }
+        return {**base, "silent": {"is_silent": False}, "items": [item]}
 
     numbers = [{"name": n, "value": v, "unit": u, "source": s} for n, v, u, s in [
         ("diem_con_thieu", sol["gap_points"], "điểm", "MOCK"),

@@ -7,6 +7,18 @@ from app.models import RouteCalculateRequest, RouteCalculateResponse, WaypointIt
 
 router = APIRouter()
 
+# C2 / parity §1 (UPDATE-075): cước từng là `km × 24000` hard-code — số này KHÔNG tồn tại ở bất
+# kỳ config/spec nào và lệch ~4,6× so với policy thật (cuốc 5km: 120.000đ vs 25.900đ). Đây là
+# nguồn-sự-thật thứ ba cho cùng một luật, và là số tài xế nhìn thấy trực tiếp.
+# Nay: routing CHỈ trả route/distance/ETA; cước lấy từ CÙNG `PolicyBundle` với sim.
+
+
+def _gross_fare(km: float) -> int:
+    """Cước gộp theo policy hiện hành — một nguồn với engine (`gsm_sim.policy.gross_fare`)."""
+    from app.adapters.advisor import policy as _core_policy
+    p = _core_policy()
+    return int(round(p.base_fare_vnd + max(0.0, km - p.base_km) * p.per_km_vnd))
+
 # Haversine distance in Km
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371.0
@@ -58,7 +70,7 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
                         coords = [[c[1], c[0]] for c in route["geometry"]["coordinates"]]
                         total_dist_km = round(route["distance"] / 1000.0, 1)
                         total_duration_min = max(1, round(route["duration"] / 60.0))
-                        fare_vnd = int(round(total_dist_km * 24000))
+                        fare_vnd = _gross_fare(total_dist_km)
 
                         turn_instruction = "Chạy theo vạch chỉ đường OSRM thực tế"
                         if route.get("legs") and len(route["legs"]) > 0:
@@ -93,7 +105,7 @@ def calculate_multi_stop_route(req: RouteCalculateRequest):
 
     total_dist_km = round(total_dist, 1)
     total_duration_min = max(1, round(total_dist_km * 2.5))
-    fare_vnd = int(round(total_dist_km * 24000))
+    fare_vnd = _gross_fare(total_dist_km)
 
     return RouteCalculateResponse(
         coords=all_coords,
