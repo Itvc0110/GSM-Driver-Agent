@@ -46,8 +46,11 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
   5. `TODO` capacity ledger + hồi sinh S4 → best-response equilibrium (ĐA-09).
   - **Ràng buộc Cường**: `accept_lift` giữ TẮT; `shift_plan` giữ BẬT + cảnh báo đỏ trong khu Mô
     phỏng, **đo lại trước bản cuối — không hiệu quả thì TẮT để advisor im lặng**.
-- **BUG-EVAL-ARGMAX — `TODO` ⭐⭐ SỬA EVALUATOR trước mọi lượt đo tiếp theo (UPDATE-085 §4,
-  chờ Q-11).** `pick_target` argmax-A bias âm có hệ thống (sign-flip đã chứng minh: −19,7k vs
+- **BUG-EVAL-ARGMAX — `DONE-CODE 2026-07-28 (UPDATE-086, Q-11 duyệt)`.** Estimator cohort
+  không bias trong `parallel._cohort_metrics` + placebo test + nhãn BIASED cho argmax + banner
+  CORRECTED trên UPDATE-075/078/081/084 + artifact `24-*`. **Kết quả đảo chiều**: B0 hoà (−466đ
+  ns) — chuỗi "advisor làm nghèo" là artifact; kênh vị trí **+3,5–5,0k/người SIG** nhưng kẹt
+  **veto 9 đổi-pin** (Q-12 chờ Cường). Việc gốc (giữ làm sử): `pick_target` argmax-A bias âm có hệ thống (sign-flip đã chứng minh: −19,7k vs
   +27,4k vs +3,6k không-chọn-lọc). Việc: (1) `parallel` thêm estimator mean-per-archetype trên
   mọi tài xế được phủ; (2) tiêu chí 1 ĐA-08 đọc estimator mới; (3) argmax giữ làm view chẩn đoán
   CÓ NHÃN; (4) đo lại 30 seed toàn bộ cấu hình (artifact 24-*); (5) đính chính bảng số các

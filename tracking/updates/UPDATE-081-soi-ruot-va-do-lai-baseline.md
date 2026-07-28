@@ -1,5 +1,13 @@
 # UPDATE-081 — Tài xế biết SỐT RUỘT (cắt đuôi chờ) + đo lại baseline sau dispatcher tầng 2
 
+> ⚠ **CORRECTED 2026-07-28 — BUG-EVAL-ARGMAX (UPDATE-085 §4, Q-11).** Mọi số payout "tài xế
+> đích" trong file này đo bằng `pick_target` argmax-A — phép chọn CỰC TRỊ có bias âm hệ thống
+> (regression to the mean; sign-flip đã chứng minh: argmax-A −19,7k vs argmax-B +27,4k vs
+> không-chọn-lọc +3,6k trên CÙNG can thiệp). **Các số tầng HỆ THỐNG (served/expired/HHI/Gini/
+> tổng payout đội) KHÔNG bị ảnh hưởng.** Số thay thế: artifact `24-unbiased-30seed.json` +
+> UPDATE-086. Giữ nguyên phần còn lại của file làm lịch sử.
+
+
 - **Ngày:** 2026-07-28
 - **Người thực hiện:** AI agent, dưới claim của **Cường**
 - **Loại:** feature (behavior model) + measurement (đo lại baseline)

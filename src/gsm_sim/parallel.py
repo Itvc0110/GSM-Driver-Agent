@@ -73,13 +73,42 @@ def _cfg_with(cfg: Config, *, enabled: bool, actor_id: int | None,
 
 
 def pick_target(result, archetype: str = "P4") -> int:
-    """Tài xế đích mặc định = người thuộc `archetype` được chào đơn nhiều nhất.
+    """Tài xế đích = người thuộc `archetype` được chào đơn nhiều nhất Ở THẾ GIỚI A.
 
-    P4 (tân binh) là baseline Cường yêu cầu. LƯU Ý: đây chưa phải hồ sơ tân binh THẬT —
-    `D-SIM-02` (thưởng riêng tài xế mới) vẫn đang chờ Cường chốt số policy.
+    ## ⛔ BIASED-DIAGNOSTIC — BUG-EVAL-ARGMAX (UPDATE-085 §4, Q-11 chốt 2026-07-28)
+
+    Đây là phép CHỌN CỰC TRỊ: max-offers của A là người "may nhất" thế giới A, nên mọi nhiễu
+    loạn (bật bất kỳ kênh advice nào) kéo họ về trung bình ⇒ Δ(B−A) trên người này **âm bất kể
+    nội dung can thiệp**. Chứng minh sign-flip 5 seed, cùng can thiệp: argmax-A −19.654đ ·
+    argmax-B +27.416đ · mean-P4 không chọn lọc +3.610đ. Chuỗi kết luận "advisor làm tài xế
+    nghèo đi −17k…−40k" (UPDATE-075/078/081/084) nhiễm bias này.
+
+    ⇒ CHỈ dùng để soi hành trình MỘT cá thể (Gantt, drill-down). **CẤM dùng làm tiêu chí 1 của
+    ĐA-08** — tiêu chí đó đọc `payout_mean_P4`/`payout_mean_all` từ `_cohort_metrics` (không
+    chọn lọc). Test `test_argmax_view_carries_bias_warning` canh nhãn này.
+
+    P4 (tân binh) là baseline Cường yêu cầu; chưa phải hồ sơ tân binh THẬT (`D-SIM-02` treo).
     """
     cands = [a for a in result.actors if a.archetype == archetype] or list(result.actors)
     return max(cands, key=lambda a: a.orders_offered).actor_id
+
+
+def _cohort_metrics(result) -> dict:
+    """Tiêu chí CÁ NHÂN không bias (Q-11): mean trên MỌI tài xế, tách theo archetype.
+
+    Không chọn lọc theo bất kỳ thống kê nào của A hay B ⇒ không có regression-to-the-mean.
+    Sống trong dict `system` để `PairResult`/`compare()` giữ nguyên hình dạng."""
+    by_arch: dict[str, list[float]] = {}
+    pays, trips = [], []
+    for a in result.actors:
+        by_arch.setdefault(a.archetype, []).append(float(a.payout_vnd))
+        pays.append(float(a.payout_vnd))
+        trips.append(float(a.trips_done))
+    out = {"payout_mean_all": round(st.mean(pays), 2) if pays else 0.0,
+           "trips_mean_all": round(st.mean(trips), 3) if trips else 0.0}
+    for arch in sorted(by_arch):
+        out[f"payout_mean_{arch}"] = round(st.mean(by_arch[arch]), 2)
+    return out
 
 
 def _driver_metrics(result, actor_id: int) -> dict:
@@ -110,6 +139,8 @@ def _system_metrics(result, exclude_actor: int) -> dict:
                   if e.kind == "swap_done" and "wait_min" in e.detail]
     g = system_guardrail(result)
     return {
+        # Q-11: cohort estimator KHÔNG BIAS — nguồn của tiêu chí 1 ĐA-08 (thay argmax)
+        **_cohort_metrics(result),
         "served_rate": s["served_rate"],
         "orders_completed": s["orders_completed"],
         "others_payout_vnd": sum(a.payout_vnd for a in others),

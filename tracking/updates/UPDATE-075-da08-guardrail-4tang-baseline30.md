@@ -1,5 +1,13 @@
 # UPDATE-075 — ĐA-08 bước 1: guardrail 4 tầng + baseline 30 seed `coverage: all` (đo trước, sửa sau)
 
+> ⚠ **CORRECTED 2026-07-28 — BUG-EVAL-ARGMAX (UPDATE-085 §4, Q-11).** Mọi số payout "tài xế
+> đích" trong file này đo bằng `pick_target` argmax-A — phép chọn CỰC TRỊ có bias âm hệ thống
+> (regression to the mean; sign-flip đã chứng minh: argmax-A −19,7k vs argmax-B +27,4k vs
+> không-chọn-lọc +3,6k trên CÙNG can thiệp). **Các số tầng HỆ THỐNG (served/expired/HHI/Gini/
+> tổng payout đội) KHÔNG bị ảnh hưởng.** Số thay thế: artifact `24-unbiased-30seed.json` +
+> UPDATE-086. Giữ nguyên phần còn lại của file làm lịch sử.
+
+
 - **Ngày:** 2026-07-27
 - **Người thực hiện:** AI agent, dưới claim của **Cường**
 - **Loại:** feature (metric/đo lường) + research + fix
