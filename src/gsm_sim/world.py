@@ -372,6 +372,12 @@ class World:
                          net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
                          gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4),
                          reason=dec.reason)
+                # ENROUTE_EXEMPT (T-045a b2): đi ĐÓN KHÁCH thì KHÔNG đặt `enroute_cell`.
+                # Đích thật của chuyến này là điểm TRẢ khách, cách đây một quãng bất định và có
+                # thể vài chục phút. Coi tài xế đang chở khách là "cung sắp tới ô Y" sẽ thổi
+                # phồng cung ở khắp nơi và làm advisor thôi khuyên tới những ô thực ra đang
+                # thiếu người. Giới hạn này có nhãn, không phải bỏ sót — xem
+                # `tests/test_market_state_sim_producer.py::test_every_enroute_transition_sets_a_target`.
                 actor.state = ActorState.ENROUTE
                 self.env.process(self._serve_trip(actor, order, asg))
 
@@ -500,11 +506,13 @@ class World:
         frm = (actor.lat, actor.lon)
         t = self._travel_min(d, hour, actor.cell, fac=fac)
         actor.state = ActorState.ENROUTE
+        actor.enroute_cell = target        # T-045a: cung ĐANG TỚI ô lõi này
         yield self.env.timeout(t)
         actor.consume_soc(d * fac, pct_per_km)
         actor.empty_min += t
         clat, clon = self._cell_point(target)
         actor.state = ActorState.IDLE
+        actor.enroute_cell = None          # tới nơi ⇒ thành cung TẠI CHỖ, hết là cung đang tới
         self._set_pos(actor, clat, clon)  # M0-10: cell sync trong _set_pos
         self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="deadhead_to_core")
         self.log(actor.actor_id, "relocate", target, reason="deadhead_to_core")
@@ -636,6 +644,7 @@ class World:
                 frm = (actor.lat, actor.lon)
                 t = self._travel_min(d, hour, actor.cell, fac=fac_rel)
                 actor.state = ActorState.ENROUTE
+                actor.enroute_cell = target    # T-045a: cung ĐANG TỚI ô này
                 yield self.env.timeout(t)
                 # relocate tự nguyện cũng tốn pin theo đường thật (trước đây block này
                 # KHÔNG trừ SOC — di chuyển miễn phí năng lượng là phi vật lý)
@@ -643,6 +652,7 @@ class World:
                 actor.empty_min += t
                 clat, clon = self._cell_point(target)
                 actor.state = ActorState.IDLE
+                actor.enroute_cell = None     # tới nơi ⇒ hết là cung ĐANG TỚI
                 self._set_pos(actor, clat, clon)  # M0-10
                 self._seg(actor.actor_id, t0, self.env.now, "relocate", frm, (clat, clon), reason="demand_seek")
                 actor.idle_streak_min = 0.0   # đã dịch chuyển ⇒ đếm lại từ đầu

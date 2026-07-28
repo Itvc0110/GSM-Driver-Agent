@@ -51,6 +51,13 @@ class Actor:
     # T-045d: phút RỖI LIÊN TỤC kể từ lần được CHÀO đơn gần nhất. Được chào = bằng chứng "ở đây
     # có cầu" ⇒ reset. Không có bằng chứng nào suốt N phút ⇒ tài xế sốt ruột đi xa hơn.
     idle_streak_min: float = 0.0
+    # T-045a b2: ô ĐÍCH của chuyến di chuyển tự nguyện đang diễn ra (relocate / deadhead về lõi).
+    # `ActorState.ENROUTE` một mình KHÔNG đủ: nó dùng chung cho cả đi đón khách, và `cell` chỉ
+    # đổi khi tới nơi ⇒ không suy được "ai đang tới ô nào". Không có trường này thì `MarketState`
+    # không trừ được CUNG ĐANG TỚI, và advisor sẽ khuyên cả đoàn dồn vào một ô.
+    # `None` khi đứng yên hoặc khi đang chở khách (đích là điểm trả khách — xem miễn trừ ở
+    # `tests/test_market_state_sim_producer.py`).
+    enroute_cell: str | None = None
     orders_soc_skipped: int = 0    # SIM-1: bỏ qua vì pin không đủ — KHÔNG phải huỷ
     gross_vnd: int = 0
     payout_vnd: int = 0
@@ -133,6 +140,7 @@ class Actor:
         self.idle_by_hour = {}
         self.mission_progress = {}
         self.demand_prior = {}
+        self.enroute_cell = None               # T-045a: đích di chuyển là trạng thái NGÀY
         # tenure TĂNG 1 mỗi sáng — thời gian trôi là danh tính động duy nhất
         self.tenure_days += 1
         self.state = ActorState.OFFLINE
