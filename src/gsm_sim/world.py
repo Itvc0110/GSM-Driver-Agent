@@ -65,7 +65,9 @@ class World:
         from .geo import load_road_matrix
         self.road = load_road_matrix(cfg, grid)
         bcfg = cfg.get("behavior", {})
-        self.accept_cost_km = float(bcfg.get("accept_cost_per_pickup_km_vnd", 3000.0))
+        # B4: tên cũ accept_cost_* gây hiểu nhầm là TIỀN — đây là disutility cảm nhận
+        # (behavior.py đã đổi tên hàm từ Cycle P; nay config/reader đồng bộ).
+        self.pickup_disutility_km = float(bcfg.get("pickup_disutility_vnd_per_km", 3000.0))
         self.accept_center = float(bcfg.get("accept_logit_center_vnd", 6000.0))
         self.accept_scale = float(bcfg.get("accept_logit_scale_vnd", 8000.0))
         # SIM-1 fix C: huỷ SAU KHI nhận (khách bom/khách huỷ/sự cố). Sim cũ hoàn thành
@@ -490,7 +492,7 @@ class World:
                              need_km=round(total_km, 2))
                     continue
                 dec = decide_accept(actor, order.gross_vnd, asg.pickup_dist_km, forced, self.rng,
-                                    self.accept_cost_km, self.accept_center, self.accept_scale)
+                                    self.pickup_disutility_km, self.accept_center, self.accept_scale)
                 if not dec.accepted:
                     # SIM-2: ghi ĐỦ căn cứ — trả lời được "vì sao từ chối cuốc NÀY?"
                     self.log(actor.actor_id, "order_declined", actor.cell,

@@ -140,10 +140,10 @@ with st.sidebar.expander("🤝 Hành vi nhận đơn (behavior)"):
         "Ngưỡng net hấp dẫn (đ)", int(lo), int(hi),
         int(_DEF["behavior.accept_logit_center_vnd"]), step=500,
         help="A5: net cao hơn ngưỡng → xác suất nhận > 50%. Đã re-baseline theo đường THẬT (21.2k).")
-    lo, hi = _RNG["behavior.accept_cost_per_pickup_km_vnd"]
-    overrides["behavior"]["accept_cost_per_pickup_km_vnd"] = st.slider(
+    lo, hi = _RNG["behavior.pickup_disutility_vnd_per_km"]
+    overrides["behavior"]["pickup_disutility_vnd_per_km"] = st.slider(
         "Chi phí cảm nhận /km đón (đ)", int(lo), int(hi),
-        int(_DEF["behavior.accept_cost_per_pickup_km_vnd"]), step=500)
+        int(_DEF["behavior.pickup_disutility_vnd_per_km"]), step=500)
 
 # ---------- Sidebar: kịch bản MÔI TRƯỜNG ----------
 

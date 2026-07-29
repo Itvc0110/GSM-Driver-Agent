@@ -20,7 +20,7 @@ SLIDER_KEYS: dict[str, tuple[float, float]] = {
     "dispatcher.candidate_ring_k": (2, 8),
     "dispatcher.patience_median_min": (1.0, 8.0),
     "behavior.accept_logit_center_vnd": (5000, 40000),
-    "behavior.accept_cost_per_pickup_km_vnd": (1000, 6000),
+    "behavior.pickup_disutility_vnd_per_km": (1000, 6000),
 }
 
 

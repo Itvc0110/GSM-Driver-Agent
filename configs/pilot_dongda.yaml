@@ -160,7 +160,10 @@ station:
   wait_cap_min: 60                 # trần chờ (đuôi hiếm giờ đỉnh); giảm để mô phỏng đi trạm khác
 
 behavior:                          # math-audit A5: accept logit params ra config (VND)
-  accept_cost_per_pickup_km_vnd: 3000
+  # B4 (2026-07-29, đổi tên từ accept_cost_per_pickup_km_vnd — GIÁ TRỊ KHÔNG ĐỔI):
+  # đây là DISUTILITY CẢM NHẬN trong quyết định nhận đơn, KHÔNG phải tiền mặt
+  # (tiền thật 30–250đ/km — hồ sơ driver-cost-structure-2026 §6; đọc nhầm là lệch 10–20×).
+  pickup_disutility_vnd_per_km: 3000
   # SIM-1: center = NET TRUNG VỊ của thị trường (đo thật: median net ≈ 15.4k).
   # Trước đây để 6000 (mốc "hoà vốn") ⇒ z = (15417−6000)/8000 = +1.18 với MỌI cuốc
   # ⇒ số hạng kinh tế luôn dương, đẩy accept của mọi archetype lên 94-99%
@@ -240,7 +243,9 @@ policy:                            # sim-policy-bundle-v0.md
   base_fare_vnd: 13000
   base_km: 2.0
   per_km_vnd: 4300
-  driver_share: 0.75
+  driver_share: 0.75             # ⚠ CẬN DƯỚI của dải mâu thuẫn nguồn [0,75–0,91]
+                                   # (driver-cost-structure-2026 §5: 91% official image-locked
+                                   # / 90→85% / 84,5% / 75%) — chọn bảo thủ, chờ D-POL-05
   point_peak: 10
   point_normal: 5
   point_window_hours: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
