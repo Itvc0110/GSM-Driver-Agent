@@ -11,6 +11,31 @@ Cập nhật: 2026-07-29 (**Cycle P/R/V/W**; xem `tracking/PLAN-cycle-wx-2026-07
 > có điều kiện theo chính sách · cache theo `problem_digest` · thiết kế lại objective theo policy
 > sống/chết). Trong đó có cả trả lời "structured data hay text" và thứ tự phụ thuộc đề nghị.
 
+## REVIEW-092 — sổ tra hạn chế (2026-07-29, docs-only)
+
+> **Đọc [`updates/UPDATE-092-review-doc-lai-han-che-va-cai-thien.md`](updates/UPDATE-092-review-doc-lai-han-che-va-cai-thien.md)**
+> — mỗi mục dưới đây có commit/file/dòng/logic để kiểm chứng lại. Không mục nào đã được duyệt
+> hướng sửa; sửa phải qua plan mode.
+
+| Mã | Việc | Trạng thái | Mã tra trong UPDATE-092 |
+|---|---|---|---|
+| **B6-PARITY** | **UI mới chạy 1/9 solver (`ui/backend/app/adapters/advisor.py:190` chỉ gọi `bonus_feasibility`) ⇒ A/B đang đo sản phẩm KHÁC sản phẩm ship** | `TODO` **HIGH** | H-06 |
+| `REVIEW-092-1` | Đo nhân quả TỪNG LƯỢT advice — join `decision_id` → tiền. ⚠ **Cấm** so thẳng follow-vs-ignore (adherence lệch theo archetype ⇒ BUG-EVAL-ARGMAX thứ ba) | `TODO` **HIGH** | H-01 |
+| `REVIEW-092-2` | Counterfactual branch ngắn tại thời điểm advice (`world.py` chưa có branch/snapshot) | `TODO` **HIGH** | H-02 |
+| `REVIEW-092-3` | Chốt định nghĩa adherence: DECISION (76,9%) hay EVENT (53,6%) | `WAITING-VERDICT` | H-05 |
+| `REVIEW-092-4` | Cầu co giãn theo thời gian chờ (`demand.py` ngoại sinh hoàn toàn) | → `DEFERRED` | H-03 |
+| ~~—~~ | ~~Nợ Cycle W: W-6 · F-6 · W-7 · W-4-regex · 5 test `.pending` · fingerprint~~ | ✅ **ĐÓNG bởi `5364395`** (verify lại từng cái trên code mới) | H-04-bis |
+| **`REVIEW-092-5`** | **`src/gsm_core/schema_registry.py:143` dựng `Draft202012Validator` KHÔNG truyền `format_checker` ⇒ từ khoá `"format"` vô hiệu lực trên MỌI schema.** `5364395` sửa triệu chứng (siết regex schema lifecycle) chứ không sửa nguyên nhân — **15 schema khai `date-time` mà không có `pattern` dự phòng** hiện không validate ngày giờ gì cả (`advisor/advice_request` · `composed_advice` · `solver_report` · `l0/policy_bundle` · `l1/app_event` · `gps_ping` · `payout_ledger` · `policy_change_event` · `swap_transaction` · `trip_record` · `l2i/inferred_activity` · `l3/allocation_input` · `bonus_gap_input` · `shift_plan_input` · `shift_plan_input@1.0.0`). **Reproduce:** `bonus_gap_input.t_now = "KHONG-PHAI-NGAY-THANG"` → `validate()` trả `[]` | `TODO` **MED** | H-04-bis |
+| — | Nhắc lại nợ cũ có bằng chứng mới: T-045c (đơn bỏ oan chưa đo lại) · T-045e (`soc_pct=None` ⇒ DP giả định pin đầy) · D-SIM-16 (autocorr ngày≈0) · A1 router-theo-policy · A2 cache theo `problem_digest` · nhánh `costs` trong `policy_bundle` schema | `TODO` | H-08..H-12 |
+| — | **⚠ ĐÍNH CHÍNH `OPEN-THREADS` §B3 (2 mục đã LÀM RỒI, đừng làm lại):** `effective_from/to` + `is_valid_at` tri-state **ĐÃ CÓ** (`gsm_core/policy.py:29-34,54-55,58-72`) — chỉ còn thiếu `as_of` per-request + fail-closed + `meta.policy_effective_from` trong config pilot. T-045b **ĐÃ CÓ** (`behavior.py:58,86-91` đổi tên `pickup_disutility_vnd_per_km`; sổ `actor.cost_vnd` ở `world.py:97-98,349-352`; config `pilot_dongda.yaml:268-269`) — chỉ còn thiếu **quét độ nhạy với số ≠ 0** | `CORRECTED` | H-08, H-12a |
+
+**Đã sửa ngay trong cycle này:** lệnh validation §9 của `PROJECT-GRAPH.md` đang **FAIL** — 18 UPDATE
+(074–091) không có link trong graph. Đã thêm §3.7.
+
+**Đã CẢI THIỆN THẬT (đừng mở lại):** chống dồn cung 3 tầng (`features/market_state.py:80-103` ·
+`sim/market_state.py:37-62` · `capacity_alloc.py`) và equilibrium đã đo bằng số (UPDATE-088) —
+nhận xét cũ *"solver coi môi trường là ngoại sinh"* **đã bị code vượt qua ở tầng sim**.
+
 ## Current-state checkpoint 2026-07-27
 
 - **T-040 — DONE (docs/research):** reconcile toàn codebase về data 90 ngày, schema/update path,

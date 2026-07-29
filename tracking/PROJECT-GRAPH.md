@@ -4,7 +4,7 @@
 >
 > **Reconciled:** 2026-07-27 · **UPDATE coverage:** 66 canonical UPDATE files (`001–012`, `019–072`; `013–018` were never canonical after the remote numbering change). `UPDATE_TEMPLATE.md` is excluded.
 >
-> ⚠ **Nợ index (2026-07-29):** `UPDATE-073..091` (SIM overhaul cuối tháng 7, BUG-EVAL-ARGMAX, T-045a/b, equilibrium ĐA-09, Cycle V registry, Cycle W lifecycle store) **CHƯA được đưa vào §3 graph** — bảng §2 phía dưới đã cập nhật trạng thái nhưng route/edge chi tiết vẫn phải đọc thẳng UPDATE. Reconcile §3 là một cycle dọn riêng.
+> ✅ **Nợ index ĐÃ TRẢ (2026-07-29, UPDATE-092):** `UPDATE-073..092` nay có trong **§3.7**. Trước đó lệnh validation §9 của chính file này **đang FAIL** (18 link thiếu) — nay `PROJECT_GRAPH_VALIDATION_OK`. Chạy lại §9 sau mỗi lần thêm UPDATE.
 
 ## 1. Bootstrap contract
 
@@ -51,6 +51,7 @@ The graph never silently resolves a conflict. It records the conflict and points
 | Policy corpus | `BLOCKED` | Q-03 / D-POL-04 belongs to Khánh | UPDATE-020/031, corpus usage/register | Missing 23/02/2026 policy record and conflict flag |
 | Schema registry đa phiên bản (Cycle V) | `DONE-CODE` | B-02 gỡ; suite 653/5 xác nhận | UPDATE-090, `schemas/README.md` §quy trình bump | bump l1r đầu tiên sẽ đòi sửa `build_l1r_schemas.py`; `ui/contracts/*` vẫn chưa version |
 | Advice lifecycle store ĐA-05 (Cycle W) | `DONE-CODE / WAITING-VERDICT` | Cường check code | UPDATE-091, `research/audit/2026-07-29-cycle-w-review/findings.md`, `src/gsm_core/lifecycle/*` | 36 finding từ 4 lượt review đối kháng đã sửa hết (kể cả nợ positioning-decided — F-1); còn W6 = khu Mô phỏng web đọc projection (visual gate, cycle riêng); kế tiếp đã duyệt: PLAN-cycle-wx Phần B (net_mean_all → C1 → policy costs) |
+| Review đọc-lại (REVIEW-092) | `DONE-CODE` | Cường xếp ưu tiên B6-PARITY; chốt H-05 | UPDATE-092 | **B6-PARITY** (UI chạy 1/9 solver) · REVIEW-092-1/2 (nhân quả từng lượt, counterfactual branch). ⚠ §H-04 của UPDATE-092 rà ở `66268cc` và **đã bị `5364395` vượt qua** — đọc kèm §H-04-bis |
 
 Status meanings:
 
@@ -160,6 +161,33 @@ Columns: **ID · primary topic · state · task/route · dependency or correctio
 | [UPDATE-066](updates/UPDATE-066-audit-a2-integrity-gate.md) | A2 integrity gate for 13 mock tables | `DONE-CODE` | audit / data | A2 closed; D-SIM-08 remains deferred |
 | [UPDATE-069](updates/UPDATE-069-audit-fixbatch2-s2-stats.md) | A1 fix batch 2: S2/STATS and 11/11 verification | `DONE-CODE` | audit / math | opens ĐA-01/02/03 |
 | [UPDATE-070](updates/UPDATE-070-audit-a3-fixbatch3.md) | A3 agent-system audit and fix batch 3 | `DONE-CODE` | audit / advisor | opens ĐA-04/05/06 and D-A3-01..06 |
+
+### 3.7 Objective-model v2 cycle (074–092)
+
+Added 2026-07-29 by UPDATE-092. Before this section the §9 validation command **failed**: 18 UPDATE
+files (074–091) had no graph link. Do not delete rows here without re-running §9.
+
+| ID | Primary topic | State | Task/route | Edge |
+|---|---|---|---|---|
+| [UPDATE-074](updates/UPDATE-074-mut10-blocker-and-advice-loss.md) | R5-MUT10 blocker; advice loss diagnosis | `DONE-CODE` | solver/math | B-01 lineage; closed in UPDATE-089 note |
+| [UPDATE-075](updates/UPDATE-075-da08-guardrail-4tang-baseline30.md) | ĐA-08 four-layer guardrail + 30-seed baseline | `CORRECTED` | simulator / evaluation | numbers superseded by UPDATE-085/086 (BUG-EVAL-ARGMAX) |
+| [UPDATE-076](updates/UPDATE-076-c2-advisor-noi-that.md) | C2 advisor tells the truth (already_maxed at risk) | `DONE-CODE` | ui/cards | V-13 pending |
+| [UPDATE-077](updates/UPDATE-077-da01-shrinkage-het-ro-tuong-lai.md) | ĐA-01 shrinkage estimator; future-leak removed | `DONE-CODE` | solver/math | V-14 pending |
+| [UPDATE-078](updates/UPDATE-078-bug-s2-params-va-model-gap-nghi.md) | BUG-S2-PARAMS; rest model gap | `CORRECTED` | solver/math | numbers superseded by UPDATE-085 |
+| [UPDATE-079](updates/UPDATE-079-root-cause-dispatch-pin-bien-gioi.md) | Root cause: dispatch shortlist, SOC, boundary | `DONE-CODE` | simulator | Q-05 ① done |
+| [UPDATE-080](updates/UPDATE-080-dispatch-tang2-hungarian-va-nhan-soc.md) | Dispatcher tier 2 Hungarian; SOC mock label | `DONE-CODE` | simulator | Q-06 closed; T-045c not re-measured |
+| [UPDATE-081](updates/UPDATE-081-soi-ruot-va-do-lai-baseline.md) | Internals inspection; baseline re-measure | `CORRECTED` | simulator / evaluation | superseded by UPDATE-085 |
+| [UPDATE-082](updates/UPDATE-082-current-state-data-advisor-docs.md) | T-040 current-state dossier | `DONE-CODE` | harness/docs | source of ARCH-B and ĐA-01..09 |
+| [UPDATE-083](updates/UPDATE-083-time-fixes-marketstate-drop-cau-s4.md) | Time fixes; MarketStateView; demand-following drop; S4 revival | `DONE-CODE` | simulator | T-045a b0/b1/b2 |
+| [UPDATE-084](updates/UPDATE-084-b4-positioning-do-30seed.md) | b4 positioning, 30 seeds | `CORRECTED` | simulator / evaluation | superseded by UPDATE-086/087 |
+| [UPDATE-085](updates/UPDATE-085-cycle-r-p-va-bug-do-luong-chon-cuc-tri.md) | **BUG-EVAL-ARGMAX** — extreme-selection measurement bug | `DONE-CODE` | simulator / evaluation | **corrects UPDATE-075/078/081/084** |
+| [UPDATE-086](updates/UPDATE-086-artifact24-estimator-khong-bias.md) | Artifact 24 re-measured with unbiased cohort estimator | `DONE-CODE` | simulator / evaluation | implements Q-11 |
+| [UPDATE-087](updates/UPDATE-087-xac-nhan-100seed-va-de-xuat-cau-hinh.md) | 100-seed confirmation; config proposal | `DONE-CODE` | simulator / evaluation | basis of UPDATE-089 |
+| [UPDATE-088](updates/UPDATE-088-da09-equilibrium-poa-nguong-phu.md) | ĐA-09 multi-agent equilibrium, PoA, coverage curve | `DONE-CODE` | simulator / research | research-only; production solver is not equilibrium-aware |
+| [UPDATE-089](updates/UPDATE-089-bat-kenh-vi-tri-mac-dinh.md) | Positioning becomes the default channel; shift_plan off | `DONE-CODE` | simulator / config | Cường approved 2026-07-28 |
+| [UPDATE-090](updates/UPDATE-090-cycle-v-go-b02-registry-da-phien-ban.md) | Cycle V: multi-version schema registry + upcasters | `DONE-CODE` | data / schema | unblocks B-02, ĐA-05, T-044 |
+| [UPDATE-091](updates/UPDATE-091-cycle-w-da05-lifecycle-event-store.md) | Cycle W: ĐA-05 lifecycle event store + projections | `DOING` / WIP, paused | data / advisor | 3 findings open; full suite + fingerprint not re-run |
+| [UPDATE-092](updates/UPDATE-092-review-doc-lai-han-che-va-cai-thien.md) | Read-back review of `66268cc`: limitation ledger + improvement evidence | `DONE-CODE` | harness/docs | docs-only; opens **B6-PARITY**, REVIEW-092-1..4; fixes this section's missing links |
 
 ## 4. Task and file routing
 
