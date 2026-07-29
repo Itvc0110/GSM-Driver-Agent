@@ -112,17 +112,29 @@ def _cohort_metrics(result) -> dict:
     """Tiêu chí CÁ NHÂN không bias (Q-11): mean trên MỌI tài xế, tách theo archetype.
 
     Không chọn lọc theo bất kỳ thống kê nào của A hay B ⇒ không có regression-to-the-mean.
-    Sống trong dict `system` để `PairResult`/`compare()` giữ nguyên hình dạng."""
-    by_arch: dict[str, list[float]] = {}
-    pays, trips = [], []
+    Sống trong dict `system` để `PairResult`/`compare()` giữ nguyên hình dạng.
+
+    B1 (PLAN-cycle-wx): thêm `net_mean_all`/`net_mean_{arch}` = mean(payout − cost) và
+    `cost_mean_all` = mean(cost) — CHỈ THÊM khoá, không sửa `payout_mean_*` đã có. Mặc định
+    `cost_vnd` = 0 (T-045b) ⇒ `net_mean_all == payout_mean_all` cho tới khi B3/B4 bật chi phí."""
+    by_arch_pay: dict[str, list[float]] = {}
+    by_arch_net: dict[str, list[float]] = {}
+    pays, trips, nets, costs = [], [], [], []
     for a in result.actors:
-        by_arch.setdefault(a.archetype, []).append(float(a.payout_vnd))
+        net = float(a.payout_vnd) - float(a.cost_vnd)
+        by_arch_pay.setdefault(a.archetype, []).append(float(a.payout_vnd))
+        by_arch_net.setdefault(a.archetype, []).append(net)
         pays.append(float(a.payout_vnd))
         trips.append(float(a.trips_done))
+        nets.append(net)
+        costs.append(float(a.cost_vnd))
     out = {"payout_mean_all": round(st.mean(pays), 2) if pays else 0.0,
-           "trips_mean_all": round(st.mean(trips), 3) if trips else 0.0}
-    for arch in sorted(by_arch):
-        out[f"payout_mean_{arch}"] = round(st.mean(by_arch[arch]), 2)
+           "trips_mean_all": round(st.mean(trips), 3) if trips else 0.0,
+           "net_mean_all": round(st.mean(nets), 2) if nets else 0.0,
+           "cost_mean_all": round(st.mean(costs), 2) if costs else 0.0}
+    for arch in sorted(by_arch_pay):
+        out[f"payout_mean_{arch}"] = round(st.mean(by_arch_pay[arch]), 2)
+        out[f"net_mean_{arch}"] = round(st.mean(by_arch_net[arch]), 2)
     return out
 
 

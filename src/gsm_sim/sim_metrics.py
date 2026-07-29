@@ -145,10 +145,27 @@ def system_metrics(result) -> dict:
             "density": supply_demand_density(result)}
 
 
+def cost_summary(result) -> dict:
+    """B1 (PLAN-cycle-wx): đọc sổ chi phí `actor.cost_vnd` (T-045b) — tới nay KHÔNG thước nào
+    đọc nó, sổ chết. CHỈ đọc, không trừ vào `payout_vnd` (§5 CLAUDE.md: gross/payout/net tách
+    bạch) — `net_mean_vnd` là khoá MỚI, không đụng payout của bất kỳ actor nào.
+
+    Mặc định config chi phí = 0 (T-045b) ⇒ `cost_total_vnd == 0` và `net_mean_vnd ==
+    payout_vnd.mean` cho tới khi bước sau (B3/C1) bật chi phí thật."""
+    pays = [float(a.payout_vnd) for a in result.actors]
+    costs = [float(a.cost_vnd) for a in result.actors]
+    nets = [p - c for p, c in zip(pays, costs)]
+    return {
+        "cost_total_vnd": int(round(sum(costs))),
+        "cost_mean_vnd": round(st.mean(costs), 2) if costs else 0.0,
+        "net_mean_vnd": round(st.mean(nets), 2) if nets else 0.0,
+    }
+
+
 def full_report(result) -> dict:
     """Bộ metric đầy đủ cho 1 run. Advisor A/B nằm ở `parallel.compare` (không nhân bản)."""
     return {"seed": result.seed, "system": system_metrics(result),
-            "drivers": driver_metrics(result), "source": "MOCK"}
+            "drivers": driver_metrics(result), "cost": cost_summary(result), "source": "MOCK"}
 
 
 # ---------------------------------------------------------------------------
