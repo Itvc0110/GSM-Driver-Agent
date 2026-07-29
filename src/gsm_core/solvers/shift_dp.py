@@ -205,10 +205,17 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
                     if rl > buckets_left:
                         continue
                     best_v, best_a = NEG, 0
-                    # ONLINE (chỉ khi còn SOC, còn chỗ ngoài nghỉ bắt buộc, VÀ kỳ vọng
-                    # NET>0 — B2/C1: online mà mỗi cuốc lỗ tiền mặt thì vô ích như
-                    # demand=0, nhường END/REST. cash=0 ⇒ net==pay, hành vi y hệt cũ.)
-                    if soc > 0 and rl < buckets_left and online_net > 0:
+                    # ONLINE — gate chỉ được chặn cái KHÔNG KHẢ THI, không được chặn cái
+                    # "lỗ tức thời". F-098-01 (debate review remote `c493d89`, agent chính
+                    # reproduce 2026-07-29): bản B2 đổi `online_pay > 0` (nghĩa: CÓ CẦU —
+                    # pay=0 ⇔ exp_trips=0) thành `online_net > 0` (nghĩa: CÓ LỜI NGAY).
+                    # Đó là phá nguyên lý Bellman: giá trị để so là `reward + V[b+1]`, và
+                    # reward âm hoàn toàn có thể được trả bằng bonus cuối ca. Probe: 45
+                    # điểm, thiếu 15 điểm tới tier 60 (+30.000đ), cash 4.327đ/km ⇒ net
+                    # −6đ/cuốc; solver cũ trả `['SWAP']`, payout 0 — **bỏ 30.000đ để né lỗ
+                    # 14đ**. Nay: gate lại về CÓ CẦU; việc "lỗ thì đừng chạy" do CHÍNH phép
+                    # so `v > best_v` quyết, đúng chỗ nó phải được quyết.
+                    if soc > 0 and rl < buckets_left and exp_trips > 0:
                         v = online_net + V[b + 1, nsoc_online, np_on, rl]
                         if v > best_v:
                             best_v, best_a = v, 0  # ONLINE

@@ -148,6 +148,21 @@ def resolve_cost_params(policy: "PolicyBundle", as_of: str | None) -> dict:
         return {"battery": {**_term(0.0, UNKNOWN, why, src), "per": "swap"},
                 "cash_per_km": {**_term(0.0, UNKNOWN, why, src), "per": "km"}}
 
+    # F-098-02 (debate review remote `c493d89`, agent chính reproduce 2026-07-29): resolver
+    # từng KHÔNG hỏi `is_valid_at` dù method đã tồn tại ⇒ bundle chỉ hiệu lực 2030 vẫn cấp
+    # ACTIVE 9.000đ/lượt + 250đ/km tại 2029. Vế A5 tầm nhìn là "cập nhật giá trị biến theo
+    # chính sách" — dùng chính sách ngoài thời hạn thì đúng chữ mà sai nghĩa.
+    # ⚠ `is_valid_at` trả BA giá trị: True (trong hạn) / False (ngoài hạn) / **None (nguồn
+    # không ghi hạn — KHÔNG BIẾT)**. Chỉ chặn False. Chặn cả None là hidden fallback chiều
+    # ngược lại (bài học soc_pct=None ⇒ pin đầy) và sẽ giết mọi bundle không có
+    # `effective_from`.
+    if policy.is_valid_at(as_of) is False:
+        why = (f"bundle '{policy.version}' KHÔNG hiệu lực tại {str(as_of)[:10]} "
+               f"(hiệu lực {policy.effective_from or '?'} → {policy.effective_to or '∞'}) "
+               f"— không dùng giá của chính sách ngoài thời hạn; dùng 0 + caveat (§5)")
+        return {"battery": {**_term(0.0, UNKNOWN, why, src), "per": "swap"},
+                "cash_per_km": {**_term(0.0, UNKNOWN, why, src), "per": "km"}}
+
     day = str(as_of)[:10]
     free_until = costs.get("battery_free_until")
     by_track = costs.get("cash_cost_vnd_per_km_by_track") or {}
