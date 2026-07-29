@@ -289,8 +289,32 @@ def _baseline_naive_rest(spi: dict, policy: PolicyBundle, params: dict,
 
 
 def solve(spi: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
-    """spi = shift_plan_input record. Trả solver_report record."""
+    """spi = shift_plan_input record. Trả solver_report record.
+
+    B3 (PLAN-cycle-wx): `params["policy_costs_as_of"]` bật đường POLICY-QUYẾT-ĐỊNH-CHI-PHÍ
+    — solver tra `resolve_cost_params(policy, as_of)` để biết số hạng nào sống/chết và
+    giá trị nào được điền (vế A5 tầm nhìn: "hàm tối ưu cập nhật giá trị biến theo chính
+    sách"). Đi qua `params` CÓ CHỦ Ý: guard chống-future-leak pin chữ ký (spi, policy,
+    params) — as_of là ngữ cảnh "bây giờ", không phải data tương lai, và opt-in tường
+    minh giữ mọi caller cũ nguyên vẹn (không terms_active, không caveat mới).
+    Quy tắc nguồn: `params["cash_cost_vnd_per_km"]` TƯỜNG MINH thắng policy (đường sim
+    B2 — nguồn sự thật của sim là config). UNKNOWN ⇒ dùng 0 + caveat, KHÔNG bịa (§5).
+    """
     p = {**DEFAULT_PARAMS, **(params or {})}
+    terms_active: list[dict] | None = None
+    as_of = (params or {}).get("policy_costs_as_of")
+    if as_of is not None:
+        from gsm_core.policy import resolve_cost_params
+        resolved = resolve_cost_params(policy, as_of)
+        cash_term = dict(resolved["cash_per_km"])
+        if params is not None and "cash_cost_vnd_per_km" in params:
+            cash_term = {"value": float(params["cash_cost_vnd_per_km"]),
+                         "state": "ACTIVE", "source": "params(explicit)",
+                         "reason": "caller truyền tường minh — thắng policy (đường sim)"}
+        else:
+            p["cash_cost_vnd_per_km"] = cash_term["value"]
+        terms_active = [{"term": "cash_per_km", **cash_term},
+                        {"term": "battery", **resolved["battery"]}]
     B = int(spi["buckets_remaining"])
     fc = spi["demand_forecast"]
     forecast_source = "historical_forecast" if spi["source"] in ("MOCK", "REAL") else "dp:fallback"
@@ -355,18 +379,29 @@ def solve(spi: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
     elif not eligible:
         caveats.append("tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả "
                        "nếu giữ nguyên (E[payout] đã bỏ thưởng)")
+    if terms_active is not None:
+        for t in terms_active:
+            if t["state"] == "UNKNOWN":
+                caveats.append(f"chi phí '{t['term']}' UNKNOWN — {t['reason']}; "
+                               f"dùng 0, KHÔNG bịa số")
+
+    solution = {
+        "schedule": schedule, "next_action": next_action,
+        "expected_payout": round(exp_payout, 1), "baseline_payout": round(baseline, 1),
+        "delta_payout": round(delta, 1),
+        "projected_points": proj_points, "projected_bonus_tier": proj_tier,
+    }
+    if terms_active is not None:
+        # B3: output NÓI RA số hạng nào sống/chết + lý do (câu hỏi thiết kế #2 của Cường:
+        # "hiện không tính chi phí pin vì đang miễn phí tới 31/03/2029")
+        solution["terms_active"] = terms_active
 
     return {
         "schema_version": "1.0.0", "solver": "shift_dp",
         "problem_digest": digest,
         "inputs_used": [{"view_id": f"shift_plan_input:{spi['driver_id']}",
                          "version": spi["view_version"], "freshness": spi["t_now"]}],
-        "solution": {
-            "schedule": schedule, "next_action": next_action,
-            "expected_payout": round(exp_payout, 1), "baseline_payout": round(baseline, 1),
-            "delta_payout": round(delta, 1),
-            "projected_points": proj_points, "projected_bonus_tier": proj_tier,
-        },
+        "solution": solution,
         "numbers": numbers, "sensitivity": sensitivity,
         "confidence": confidence, "caveats": caveats, "infeasible_reason": None,
     }

@@ -1,5 +1,18 @@
 # Schema changelog
 
+## 2026-07-29 (chiều) — B3: `policy_bundle` 1.0.0 → 1.1.0 (+`costs` optional)
+
+- **`l0/policy_bundle` 1.1.0** (minor, additive): +khối `costs` optional —
+  `battery_free_until` (Platform độc quyền: 2029-03-31, official greensm 26/03/2026),
+  `swap_fee_vnd` (9.000đ/lượt sau ưu đãi), `battery_rent_vnd_month`,
+  `swap_range_km_per_pack`, `cash_cost_vnd_per_km_by_track`. Snapshot
+  `policy_bundle@1.0.0.schema.json` dựng từ git HEAD (đúng quy trình); upcaster
+  1.0.0→1.1.0 = stamp-only (KHÔNG bịa costs cho record cũ — vắng mặt ⇒
+  `resolve_cost_params` trả UNKNOWN). Consumer: `gsm_core/policy.py::resolve_cost_params`
+  (3 trạng thái ACTIVE/OFF_BY_POLICY/UNKNOWN) + `shift_dp.solve` qua
+  `params["policy_costs_as_of"]` (opt-in — caller cũ nguyên vẹn). Tương thích: record
+  1.0.0 persist vẫn validate pass (test_mockgen + test_schema_versioning xanh).
+
 ## 2026-07-29 (muộn) — Cycle W đóng: siết `occurred_at`/`observed_at` TẠI CHỖ (1.0.0)
 
 - **`advisor/advice_lifecycle_event`**: pattern hai trường timestamp siết dần qua 2 đợt

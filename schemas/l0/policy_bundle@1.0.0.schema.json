@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://gsm-driver-agent/schemas/l0/policy_bundle",
+  "$id": "https://gsm-driver-agent/schemas/l0/policy_bundle@1.0.0",
   "title": "policy_bundle",
   "description": "Nguồn số tài chính DUY NHẤT cùng payout_ledger. Version hóa — US-F0-03. Pain #4.",
   "type": "object",
@@ -191,44 +191,7 @@
       "description": "Nhãn nguồn bắt buộc (CLAUDE.md §5 — mock phải gắn nhãn)"
     },
     "schema_version": {
-      "const": "1.1.0"
-    },
-    "costs": {
-      "type": "object",
-      "description": "B3 (PLAN-cycle-wx, 2026-07-29): CHI PHÍ theo policy — nguồn số duy nhất cho số hạng chi phí của solver (vế A5 VISION-ALIGNMENT). Optional (bundle 1.0.0 không có ⇒ resolve trả UNKNOWN, không bịa). Nguồn giá trị: research/economics/driver-cost-structure-2026.md (official).",
-      "properties": {
-        "battery_free_until": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-          "description": "Hạn miễn phí đổi pin của track này (Platform độc quyền: 2029-03-31, official greensm 26/03/2026). null = không có ưu đãi"
-        },
-        "swap_fee_vnd": {
-          "type": "number",
-          "minimum": 0,
-          "description": "Phí một lượt đổi pin SAU hạn ưu đãi (official: 9.000đ)"
-        },
-        "battery_rent_vnd_month": {
-          "type": "number",
-          "minimum": 0
-        },
-        "swap_range_km_per_pack": {
-          "type": "number",
-          "exclusiveMinimum": 0,
-          "description": "Tầm hoạt động một pack — quy swap_fee ra đ/km"
-        },
-        "cash_cost_vnd_per_km_by_track": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number",
-            "minimum": 0
-          },
-          "description": "đ/km tiền mặt theo track (charge: 70–93 từ giá điện EVN; platform swap: 0 trong hạn ưu đãi)"
-        }
-      },
-      "additionalProperties": false
+      "const": "1.0.0"
     }
   },
   "required": [

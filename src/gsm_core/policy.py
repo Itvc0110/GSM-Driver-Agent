@@ -32,6 +32,11 @@ class PolicyBundle:
     # agent đọc trạng thái hiệu lực để định hình bài toán, KHÔNG tự bịa số.
     effective_from: str | None = None    # ISO date; None = nguồn không ghi (validity UNKNOWN)
     effective_to: str | None = None      # None = không có hạn trên ĐÃ BIẾT
+    # B3 (PLAN-cycle-wx, 2026-07-29) — vế A5 VISION-ALIGNMENT: policy mang CHI PHÍ để
+    # solver cập nhật giá trị biến theo chính sách. `track` cần cho resolve theo cohort.
+    # None = bundle 1.0.0 (không biết chi phí) ⇒ resolve trả UNKNOWN, không bịa.
+    track: str | None = None
+    costs: dict | None = None
 
     @classmethod
     def from_record(cls, rec: dict) -> "PolicyBundle":
@@ -53,6 +58,8 @@ class PolicyBundle:
             weekly_quota=rec.get("weekly_quota") or None,
             effective_from=rec.get("effective_from") or None,
             effective_to=rec.get("effective_to") or None,
+            track=rec.get("track") or None,
+            costs=rec.get("costs") or None,
         )
 
     def is_valid_at(self, as_of: str) -> bool | None:
@@ -104,3 +111,77 @@ class PolicyBundle:
 
     def is_peak(self, hour: int) -> bool:
         return hour in self.point_peak_hours
+
+
+# ---------- B3: policy quyết định biến chi phí sống/chết (vế A5 VISION-ALIGNMENT) ----------
+
+# Ba trạng thái — CẤM gộp UNKNOWN vào OFF_BY_POLICY: "biết là miễn phí" khác hẳn
+# "không biết" (bài học hidden-fallback đã trả giá 3 lần: supply_hhi=0.0, soc=None→đầy,
+# argmax bias). UNKNOWN ⇒ dùng 0 + caveat, KHÔNG bịa số (§5).
+ACTIVE = "ACTIVE"
+OFF_BY_POLICY = "OFF_BY_POLICY"
+UNKNOWN = "UNKNOWN"
+
+
+def _term(value: float, state: str, reason: str, source: str) -> dict:
+    return {"value": float(value), "state": state, "reason": reason, "source": source}
+
+
+def resolve_cost_params(policy: "PolicyBundle", as_of: str | None) -> dict:
+    """Bảng tra THUẦN: (policy.costs, policy.track, as_of) → trạng thái + giá trị từng
+    số hạng chi phí. Đây là phần RULE của ý tưởng A1 (agent chọn hàm/arg theo policy) —
+    con số vẫn 100% từ policy bundle versioned; không LLM, không bịa.
+
+    Trả {"battery": term, "cash_per_km": term} với term =
+    {value, state ∈ ACTIVE|OFF_BY_POLICY|UNKNOWN, reason (đọc được — output PHẢI nói ra
+    được "hiện không tính chi phí pin vì miễn phí tới <hạn>"), source}.
+    """
+    src = f"policy_v:{policy.version}"
+    costs = policy.costs
+    if costs is None:
+        why = ("bundle không có khối costs (schema 1.0.0) — KHÔNG biết chi phí, "
+               "dùng 0 + caveat, không bịa (§5)")
+        return {"battery": _term(0.0, UNKNOWN, why, src),
+                "cash_per_km": _term(0.0, UNKNOWN, why, src)}
+    if as_of is None:
+        why = "không có as_of — không xác định được chính sách nào đang hiệu lực"
+        return {"battery": _term(0.0, UNKNOWN, why, src),
+                "cash_per_km": _term(0.0, UNKNOWN, why, src)}
+
+    day = str(as_of)[:10]
+    free_until = costs.get("battery_free_until")
+    by_track = costs.get("cash_cost_vnd_per_km_by_track") or {}
+    track = policy.track or ""
+
+    # --- số hạng PIN ---
+    if free_until is not None and day <= str(free_until):
+        battery = _term(0.0, OFF_BY_POLICY,
+                        f"đổi pin miễn phí cho track '{track}' tới {free_until} "
+                        f"(official) — số hạng pin BỎ khỏi objective, không phải đặt 0",
+                        src)
+    elif "swap_fee_vnd" in costs:
+        battery = _term(costs["swap_fee_vnd"], ACTIVE,
+                        f"sau {free_until or 'ưu đãi'}: phí đổi pin "
+                        f"{costs['swap_fee_vnd']:.0f}đ/lượt — SOC thành biến kinh tế",
+                        src)
+    else:
+        battery = _term(0.0, UNKNOWN, "costs không có swap_fee_vnd", src)
+
+    # --- số hạng TIỀN MẶT/km ---
+    if battery["state"] == ACTIVE and costs.get("swap_range_km_per_pack"):
+        # pin trả phí ⇒ đ/km = phí/lượt ÷ tầm pack (cộng thêm nền theo track nếu có)
+        per_km = costs["swap_fee_vnd"] / float(costs["swap_range_km_per_pack"])
+        base = float(by_track.get(track, 0.0))
+        cash = _term(per_km + base, ACTIVE,
+                     f"{costs['swap_fee_vnd']:.0f}đ/lượt ÷ "
+                     f"{costs['swap_range_km_per_pack']:.0f}km/pack"
+                     + (f" + nền track {base:.0f}đ/km" if base else ""),
+                     src)
+    elif track in by_track:
+        v = float(by_track[track])
+        cash = _term(v, ACTIVE,
+                     f"đ/km tiền mặt theo track '{track}' = {v:.0f}đ (policy costs)", src)
+    else:
+        cash = _term(0.0, UNKNOWN,
+                     f"track '{track}' không có trong cash_cost_vnd_per_km_by_track", src)
+    return {"battery": battery, "cash_per_km": cash}

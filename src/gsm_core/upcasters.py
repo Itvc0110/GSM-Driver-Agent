@@ -29,6 +29,14 @@ def _register(entity: str, from_version: str):
     return deco
 
 
+@_register("policy_bundle", "1.0.0")
+def _pb_100_to_110(record: dict) -> dict:
+    """1.0.0 → 1.1.0 (B3 thêm khối `costs` optional). Record cũ không biết chi phí ⇒
+    KHÔNG bịa costs (vắng mặt = `resolve_cost_params` trả UNKNOWN — đúng sự thật record
+    đó mang). Chỉ stamp version."""
+    return {**record, "schema_version": "1.1.0"}
+
+
 @_register("shift_plan_input", "1.0.0")
 def _spi_100_to_110(record: dict) -> dict:
     """1.0.0 → 1.1.0 (Cycle R thêm `rest_taken_min`/`shift_elapsed_min`, additive-optional).

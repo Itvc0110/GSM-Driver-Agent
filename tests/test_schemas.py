@@ -57,7 +57,7 @@ def test_all_entities_registered():
 # Bump có chủ ý ⇒ sửa map này + CHANGELOG + snapshot @old + upcaster (quy trình schemas/README).
 # `shift_plan_input` 1.1.0 là bump THẬT đầu tiên (Cycle R thêm 2 trường rest mà const chưa đổi
 # — đúng anti-pattern B-02; nay trả nợ).
-LATEST_VERSIONS = {"shift_plan_input": "1.1.0"}   # entity vắng mặt = "1.0.0"
+LATEST_VERSIONS = {"shift_plan_input": "1.1.0", "policy_bundle": "1.1.0"}   # entity vắng mặt = "1.0.0"
 
 
 def test_all_schemas_load_and_have_version(reg):
