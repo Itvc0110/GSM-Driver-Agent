@@ -35,6 +35,15 @@ DEFAULT_PARAMS = {
     # Model note: US-F2-02 — tài xế SẼ nghỉ (nhu cầu thật); DP tối ưu ĐẶT nghỉ vào
     # demand thấp nhất. Objective = payout THUẦN (không phạt fatigue ảo). delta ≥ 0
     # so baseline "nghỉ ngây thơ đầu ca". Fatigue-as-money bị bỏ (không bịa số §5).
+    #
+    # B2/C1 (PLAN-cycle-wx, 2026-07-29) — CHI PHÍ VẬN HÀNH/km, mặc định 0:
+    # KHÔNG mâu thuẫn với dòng "fatigue-as-money bị bỏ" ở trên — fatigue là SỐ BỊA
+    # (không nguồn), còn C1 có nguồn OFFICIAL (điện 70–93đ/km sạc nhà; đổi pin 9.000đ/lượt
+    # SAU 31/03/2029 — research/economics/driver-cost-structure-2026.md). Giá trị do
+    # POLICY quyết định theo (track, as_of) ở B3; caller truyền số, solver không bịa.
+    # Chi phí đổi QUYẾT ĐỊNH (giá trị net nội bộ của DP) nhưng expected_payout_vnd
+    # BÁO CÁO vẫn là GROSS payout — §5 tách gross/payout/net, test canh.
+    "cash_cost_vnd_per_km": 0.0,
 }
 
 
@@ -168,11 +177,17 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
             V[B, soc, pb, 0] = bonus_at(pb * PBS)
             # rests_left>0 tại B = vi phạm → NEG (buộc DP nghỉ đủ trong ca)
 
+    # B2/C1: chi phí vận hành/km — mặc định 0 ⇒ online_net == online_pay (bit-identical).
+    # Giá trị QUYẾT ĐỊNH của nhánh ONLINE là NET; báo cáo payout vẫn GROSS (xem reconstruct).
+    cash_km = float(params.get("cash_cost_vnd_per_km", 0.0) or 0.0)
+    cost_per_trip = cash_km * float(params["avg_dist_km"])
+
     for b in range(B - 1, -1, -1):
         buckets_left = B - b
         exp_trips = eo[b] * p_acc
         pph = _points_of_hour(policy, hrs[b])
-        online_pay = exp_trips * ppo
+        # gross payout kỳ vọng được tính lại ở reconstruct (báo cáo); DP chỉ cần NET
+        online_net = exp_trips * (ppo - cost_per_trip)
         add_pts = int(round(exp_trips * pph))
         for soc in range(NS):
             nsoc_online = max(0, soc - soc_cost)
@@ -184,10 +199,11 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
                     if rl > buckets_left:
                         continue
                     best_v, best_a = NEG, 0
-                    # ONLINE (chỉ khi còn SOC, còn chỗ ngoài nghỉ bắt buộc, VÀ có kỳ vọng
-                    # payout>0 — online lúc demand=0 vô ích, nhường END/REST)
-                    if soc > 0 and rl < buckets_left and online_pay > 0:
-                        v = online_pay + V[b + 1, nsoc_online, np_on, rl]
+                    # ONLINE (chỉ khi còn SOC, còn chỗ ngoài nghỉ bắt buộc, VÀ kỳ vọng
+                    # NET>0 — B2/C1: online mà mỗi cuốc lỗ tiền mặt thì vô ích như
+                    # demand=0, nhường END/REST. cash=0 ⇒ net==pay, hành vi y hệt cũ.)
+                    if soc > 0 and rl < buckets_left and online_net > 0:
+                        v = online_net + V[b + 1, nsoc_online, np_on, rl]
                         if v > best_v:
                             best_v, best_a = v, 0  # ONLINE
                     # Cycle R / H3 (2026-07-28): SWAP xét TRƯỚC REST — thứ tự CÓ CHỦ Ý.

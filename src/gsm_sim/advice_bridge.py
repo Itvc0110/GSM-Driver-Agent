@@ -177,6 +177,9 @@ class AdviceActionBridge:
         # BUG-S2-PARAMS (UPDATE-078): quãng đường TB của CHÍNH thế giới này, không phải hằng
         # `avg_dist_km=3.0` trong `DEFAULT_PARAMS`. Cùng nguồn với world sinh cuốc.
         self.avg_dist_km = float(cfg.get("orders.trip_km_median", 3.5) or 3.5)
+        # B2/C1: chi phí tiền mặt/km — CÙNG khoá config với sổ chi phí của world
+        # (`vehicle.cash_cost_vnd_per_km`, T-045b). Mặc định 0 = đúng chính sách hiện hành.
+        self.cash_cost_km = float(cfg.get("vehicle.cash_cost_vnd_per_km", 0.0) or 0.0)
         # prior hoàn thành của quần thể = 1 − tỷ lệ huỷ-sau-nhận của chính thế giới này
         self.completion_prior = round(
             1.0 - float(cfg.get("orders.cancel_after_accept_rate", 0.05) or 0.05), 4)
@@ -345,6 +348,10 @@ class AdviceActionBridge:
             "avg_dist_km": self.avg_dist_km,
             "acceptance_rate": self._acc_estimate(actor),
             "completion_rate": self._comp_estimate(actor),
+            # B2/C1: CÙNG giá trị với sổ chi phí của world (T-045b) — một nguồn sự thật
+            # cho thế giới và người tối ưu; mặc định config = 0 ⇒ bit-identical.
+            # B3 sẽ chuyển nguồn sang policy_bundle.costs theo (track, as_of).
+            "cash_cost_vnd_per_km": self.cash_cost_km,
         }
 
     # ---------- hỏi ý kiến ----------
