@@ -164,13 +164,24 @@ Cường nêu chung với A1/A2. Neo vào bằng chứng đã đo trong phiên:
 
 ## B3. Chưa làm — phát sinh trong phiên, chưa được duyệt
 
-- **T-045b tách hai khái niệm bị gộp**: `behavior.py:86` tính `net = gross − pickup_km × 3.000đ`
-  (cảm nhận/disutility) nhưng `payout_vnd` **không trừ gì** (6 chỗ `+=`, 0 chỗ trừ). Đề nghị đổi
-  tên thành `pickup_disutility_vnd_per_km` và thêm `cash_cost_vnd_per_km` riêng. **Đổi hành vi ⇒
-  chờ duyệt.**
-- **①` PolicyBundle` đọc `effective_from/to`** + solver nhận `as_of` + fail-closed ngoài khoảng.
-  Schema **đã bắt buộc** `effective_from`, nhưng `policy.py:31-48` vứt cả hai trường. Rẻ, và là
-  điều kiện tiên quyết của A1.
+> ⛔ **ĐÍNH CHÍNH 2026-07-29 (UPDATE-092) — HAI MỤC ĐẦU ĐÃ LÀM XONG Ở CYCLE P. ĐỪNG LÀM LẠI.**
+> File này là **bộ nhớ của PHIÊN 28/07**, không phải trạng thái hiện hành. Verify bằng code
+> trước khi claim bất kỳ mục nào bên dưới.
+
+- ~~**T-045b tách hai khái niệm bị gộp**~~ ✅ **XONG (Cycle P)** — đã đổi tên
+  `pickup_disutility_vnd_per_km` (`behavior.py:58, 86-91, 105, 114`), sổ chi phí tiền mặt tách
+  riêng ở `actor.cost_vnd` (`world.py:97-98, 349-352`), config có `vehicle.swap_fee_vnd: 0` +
+  `cash_cost_vnd_per_km: 0` (`configs/pilot_dongda.yaml:268-269`). **Còn lại:** cả hai mặc định
+  **0** ⇒ chưa ai quét độ nhạy với số thật (30–250đ/km).
+  <br>*Nội dung cũ:* `behavior.py:86` tính `net = gross − pickup_km × 3.000đ` (cảm nhận/disutility)
+  nhưng `payout_vnd` không trừ gì.
+- ~~**①` PolicyBundle` đọc `effective_from/to`**~~ ✅ **PHẦN LỚN XONG (Cycle P)** —
+  `gsm_core/policy.py:29-34` khai field, `:54-55` đọc từ record, `:58-72` `is_valid_at()` với
+  **tri-state đúng** (`None` = KHÔNG BIẾT ≠ "còn hiệu lực"); sim đọc ở `advice_bridge.py:151-158`,
+  world cảnh báo ở `world.py:100-103`. **Còn lại 3 điểm hẹp:** (a) solver **chưa nhận `as_of` theo
+  từng request** — mới kiểm 1 lần lúc khởi tạo world cho `_BASE_DATE`; (b) ngoài hạn **chỉ `log`,
+  chưa fail-closed**; (c) `configs/pilot_dongda.yaml` **không đặt** `meta.policy_effective_from`
+  ⇒ thực tế luôn `None` ⇒ lan can chưa từng chạy.
 - **② quét độ nhạy số image-locked** (`driver_share ∈ [0,75–0,91]`) — gộp vào b4.
 - **③ corpus hồi quy vàng**: N ca `(driver_state, as_of)` → advice kỳ vọng; đổi bundle ⇒ diff cho
   biết **câu nào đổi**. Cycle riêng sau b4.
