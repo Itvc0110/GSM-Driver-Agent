@@ -21,6 +21,18 @@ Data: `research/simulation/data/` — batt_dd.json (11 tủ pin thật), poi_dd.
 | Tốc độ | cao điểm 17 · thường 25 · đêm 30 km/h; di chuyển = `grid_distance × tốc_độ(giờ)` | world-parameters §2 |
 | Dispatcher | Batched: gom đơn trong tick, candidates = `grid_disk(pickup, k=2)` res 9 (nới k=3 nếu rỗng — chú ý res 9 nên k=2 ≈ 700m, cân nhắc k=4–6 tương đương bán kính cũ ở res 8; calibrate khi build), Hungarian (`scipy.linear_sum_assignment`), ETA_max 8ph, expire 60–90s | world-parameters §3 + hiệu chỉnh res 9 |
 
+> **⚠ Đính chính 2026-07-29 — số cấu hình đã calibrate lại so với bảng gốc trên:**
+> - **N actors: 50 → 90** (`configs/pilot_dongda.yaml actors.n`). Với `orders_per_day = 1.200`
+>   không đổi ⇒ đơn/actor giảm từ 24,0 xuống **13,3** — chờ Cường chọn hướng ở **Q-07 bước ②**
+>   (`tracking/BACKLOG-QUESTIONS-2026-07-27.md`).
+> - **Dispatcher**: `candidate_ring_k = 4` (không phải k=2), `candidate_ring_k_max = 6` (đã HOÀN TÁC
+>   từ 12 — xem `tracking/TODO.md` T-045a c0/Q-07), `matching: batch` (Hungarian, không còn greedy
+>   mặc định) — khớp mô tả "Hungarian" ở trên nhưng k thật khác.
+> - **ETA_max**: 8 phút → **11 phút** (`eta_max_min`, hiệu chỉnh theo hệ số đường OSRM thật).
+> - **Patience khách**: không còn "expire 60–90s" — mô hình 2 tầng: chờ match ~ lognormal
+>   (`patience_median_min = 5.0`, `patience_sigma = 0.5`, cap `patience_max_min = 10.0`); tầng 2 huỷ
+>   nếu pickup ETA > `eta_max_min`.
+
 ## 2. Kiến trúc thời gian (chốt theo `timestep-design.md`)
 
 | Tầng | Cơ chế | Giá trị |

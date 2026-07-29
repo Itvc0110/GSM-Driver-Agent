@@ -1,6 +1,6 @@
 # P2 — Schema re-ground plan (13 bảng thật = source-of-truth → L0–L3 mới)
 
-Cập nhật: 2026-07-24 · Part 2/7 · Trạng thái: DESIGN (plan cho cycle impl, CHƯA code)
+Cập nhật: 2026-07-24 · Part 2/7 · Trạng thái: **⚠ 2026-07-29: ĐÃ CODE** (PI-1 — 13 schema `l1r/*` + registry, UPDATE-034); blueprint gốc (DESIGN, plan cho cycle impl, CHƯA code) giữ để đối chiếu lịch sử.
 Quyết định Cường: **re-ground về bảng thật**. Nguyên tắc: schema thật = canonical L1'; L0 config (rule/không gian) giữ; L2/L3 recompute; versioning additive; PII per field.
 
 ## 1. Kiến trúc lớp SAU re-ground

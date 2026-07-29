@@ -1,3 +1,5 @@
+> ✅ **ACTIVE — thuộc UI-FARE-01 (UPDATE-073, chờ verdict V-16); KHÔNG thuộc pack DEFERRED D-001.**
+
 # Thiết kế đồng nhất giá cuốc Simulator và Web Driver UI
 
 Ngày: 2026-07-27

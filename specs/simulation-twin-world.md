@@ -43,7 +43,7 @@ Nguyên tắc bắt buộc:
 
 ### 2.1 Không gian & thời gian
 
-- Lưới **H3 resolution 8** cho nội thành Hà Nội (▸RESEARCH xác nhận res + số cells; res 8 ~0.7 km²/cell). Res 7 cho vành ngoài nếu cần giảm chi phí.
+- Lưới **H3 resolution 8** cho nội thành Hà Nội (▸RESEARCH xác nhận res + số cells; res 8 ~0.7 km²/cell). Res 7 cho vành ngoài nếu cần giảm chi phí. **⚠ Đính chính 2026-07-29:** pilot Đống Đa **chạy ở res 9** (85 cells lõi, xem `specs/simulation-pilot-world.md` §1); res 8 chỉ dùng cho **heatmap/báo cáo** qua `cell_to_parent`, không phải lưới vận hành của pilot.
 - Thời gian: discrete-event trên timeline liên tục; observation fields/replay dùng per-event hoặc bins 1/5/15 phút. Profile 05:00–24:00 là compatibility pilot; M1 target = `[00:00,24:00)`. Kịch bản tuần/persistent trust vẫn deferred theo D-010.
 - Demand generator: dùng `specs/mock-order-distribution.md` (BASE × zone_share × hour_shape × dow × weather) chiếu xuống từng cell H3, sinh đơn Poisson theo cell×tick; mỗi đơn có cell đón, cell trả (ma trận OD đơn giản theo khoảng cách), giá trị cuốc.
 
@@ -187,6 +187,9 @@ Stack hiện tại: Streamlit + pydeck + Plotly; basemap không token là suppor
 | `LLM_API_KEY` (Anthropic/OpenAI) | chỉ khi chạy advisor bản LLM-in-the-loop trong sim; bản đầu dùng advisor rule-based, không cần | chưa |
 | `MLFLOW_TRACKING_URI` | nếu dùng MLflow server thay local folder | không |
 
+> **⚠ Đính chính 2026-07-29:** đã CHỐT sim **KHÔNG gọi LLM live** — advisor trong sim là rule-based/
+> deterministic (Router → Composer template-mode → Verifier); `LLM_API_KEY` không cần cho sim loop.
+
 ## 11. Việc mở tiếp (source of truth: tracking/TODO.md)
 
 - T-030 M0 integrity/audit; T-021 calibration gate xuyên milestone.
@@ -195,3 +198,8 @@ Stack hiện tại: Streamlit + pydeck + Plotly; basemap không token là suppor
 - T-035–T-037 M3 Story/actor/Diagnostic visualization.
 - T-019 + T-026 + T-020 M4 advisor/observability/A-B-C evaluator.
 - T-027 robustness validation sau M2 + M4.
+
+> **⚠ Đính chính 2026-07-29:** **T-026 (observability) DONE-CODE** (metric table + Langfuse-style
+> instrumentation qua C6/C2). **Arm A/B đã có** ở `src/gsm_sim/parallel.py` (CRN + bootstrap CI +
+> cohort estimator không bias). **Arm C (placebo) VẪN CHƯA CÓ** — đây là một khoản nợ còn treo,
+> không phải đã hoàn tất theo kiến trúc paired triplet A/B/C mô tả ở §1.

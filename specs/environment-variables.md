@@ -53,6 +53,11 @@ v(cell,t)            = max(v_floor, v_base(hour) · speed_factor(cell,t))
 ```
 Áp vào MỌI di chuyển: pickup, trip, relocate, deadhead, đi trạm. **Kèm sửa math-audit A4**: `v_base` đã gồm `detour_factor` (khoảng cách thực = chim-bay × detour ~1.3).
 
+> **⚠ Đính chính 2026-07-29 (SIM-XANH P1, UPDATE-054):** `detour_factor ≈ 1.3` ở trên nay chỉ là
+> **fallback**. Nguồn chính là **ma trận OSRM đường thật** (fetch 1 lần, offline; hệ số detour
+> **median 1.46** so với đường chim bay), dùng cho ETA/tốc độ khi có cache; detour 1.3 chỉ áp dụng
+> khi thiếu OSRM bundle.
+
 ### 2.3 Supply (survival product xác suất offline)
 ```
 p_offline(arch,t) = 1 − (1 − p_base[arch]) · (1 − p_rain(R(t),arch))
@@ -112,7 +117,7 @@ behavior:
 | A4 detour | `detour_factor` × mọi khoảng cách di chuyển (ưu tiên cao — ETA đang ngắn ~30%) |
 | A3 magic | `drop_km_per_cell`, `drop_softness_km` ra config; tính km/cell từ h3 edge |
 | A5 magic | 3 tham số accept ra config |
-| A2 demand giật giờ | nội suy tuyến tính hour_dist giữa mốc giờ (giảm răng cưa biên giờ) |
+| A2 demand giật giờ | nội suy tuyến tính hour_dist giữa mốc giờ (giảm răng cưa biên giờ) — **⚠ 2026-07-29: chưa implement; cờ `hour_interp` liên quan đã bị GỠ (cờ chết); việc này = `D-SIM-19`, DEFERRED (sev THẤP)** |
 | A6 nhiễu hint | đổi `1+N(0,σ)` clamp → `exp(N(0,σ))` lognormal (luôn dương) |
 | A1 window | ghi rõ comment "orders_per_day = kỳ vọng trong window" |
 

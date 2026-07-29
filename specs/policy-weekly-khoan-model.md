@@ -1,6 +1,6 @@
 # SPEC — Mô hình khoán tuần + clawback + điểm-theo-dịch-vụ (design, chưa code)
 
-Cập nhật: 2026-07-24 · Trạng thái: **DESIGN (spec-first)** — blueprint cho D-POL-01/02/03, KHÔNG code trong cycle này.
+Cập nhật: 2026-07-24 · Trạng thái: **⚠ 2026-07-29: S5 `WeeklyKhoanFeasibility` + schema `weekly_quota` ĐÃ CODE** (UPDATE-038/040) — D-POL-01/02 = **DONE-CODE**, `D-POL-03` (mock regen) = **PARTIAL**, cả ba vẫn **BLOCKED D-POL-05** (chỉ SỐ target thật từ GSM còn thiếu). Xem đính chính §6 bên dưới; blueprint gốc (spec-first, KHÔNG code trong cycle viết spec) giữ để đối chiếu lịch sử.
 Nguồn: `research/policy/policy-refresh-2026-07-24.md` (Vận Doanh 23/02/2026), `core-data-schema-and-advisor-architecture.md` §1/§2 (schema + solver envelope), `src/gsm_core/policy.py` (PolicyBundle hiện hành).
 
 > **Tại sao spec trước, không code ngay:** số khoán/clawback/điểm-theo-dịch-vụ **image-locked** trên trang official → phải pull **data thật GSM** (partnership). Code schema/mock với số giả bây giờ dễ phải làm lại. Spec này chốt STRUCTURE + MATH + field cần query để implement nhanh khi có số.
@@ -92,7 +92,7 @@ Tách khỏi S1 (S1 = điểm/ngày; S5 = doanh số/tuần) — **khuyến ngh�
 ## 6. Decisions (Cường chốt 2026-07-24)
 
 - **(a) ✅ CHỐT: Solver S5 MỚI** `WeeklyKhoanFeasibility` (tách khỏi S1). L3 view mới `weekly_khoan_input`.
-- **(b) ✅ CHỐT: CHƯA implement — DỪNG Ở SPEC.** Không đụng schema/solver/mock cho tới khi có **data thật GSM** + Cường mở cycle. KHÔNG code với số MOCK ở giai đoạn này (ưu tiên realism, tránh rework số).
+- **(b) ✅ CHỐT: CHƯA implement — DỪNG Ở SPEC.** Không đụng schema/solver/mock cho tới khi có **data thật GSM** + Cường mở cycle. KHÔNG code với số MOCK ở giai đoạn này (ưu tiên realism, tránh rework số). **⚠ Đính chính 2026-07-29:** cycle ĐÃ được mở sau đó — schema + S5 **ĐÃ CODE** (UPDATE-038/040); chỉ SỐ target thật (min_revenue_vnd, clawback_rate active) vẫn thiếu (D-POL-05).
 - **(c) ✅ CHỐT: GIỮ daily-proxy** cho tier điểm (gắn nhãn rõ là simplification); chỉ chuyển weekly thật sau, khi model tuần (S5) ổn.
 - **(d) ✅ CHỐT 2026-07-24 (Cường): khoán tính trên GROSS (doanh số = `total_fee`).**
   - *Căn cứ:* văn bản Vận Doanh 23/02/2026 ghi "truy thu 20% phần **doanh số** chưa đạt" — "doanh số" = turnover; bảng thật tách bạch `total_fee` (gross) vs `commission` (driver payout).
@@ -100,9 +100,13 @@ Tách khỏi S1 (S1 = điểm/ngày; S5 = doanh số/tuần) — **khuyến ngh�
 
 **Trạng thái:** spec = blueprint đóng băng; implement D-POL-01/02/03 **treo tới khi có data thật + Cường mở**. (b)/(d) chờ data; (a)/(c) đã chốt sẵn cho lúc implement.
 
+> **⚠ Đính chính 2026-07-29:** cycle implement đã mở — **D-POL-01/02 = DONE-CODE** (S5 + schema
+> additive, UPDATE-038/040); **D-POL-03 = PARTIAL** (mock re-ground xong shape, số chính xác GSM
+> chưa có); cả ba **vẫn BLOCKED D-POL-05** cho tới khi có active quota/clawback numbers thật.
+
 ## 7. Migration & không phá
 
-Field mới optional → `data/mock/v1` + toàn bộ test hiện tại (162) không đổi. Implement theo thứ tự: schema+validator+CHANGELOG (D-POL-02) → S5+L3 view+test failing-first (D-POL-01) → mock regen+verify (D-POL-03). Mỗi bước = coherent cycle riêng có plan.
+Field mới optional → `data/mock/v1` + toàn bộ test hiện tại (162) không đổi. Implement theo thứ tự: schema+validator+CHANGELOG (D-POL-02) → S5+L3 view+test failing-first (D-POL-01) → mock regen+verify (D-POL-03). Mỗi bước = coherent cycle riêng có plan. **⚠ Đính chính 2026-07-29: "162" là baseline TẠI THỜI ĐIỂM viết spec; suite hiện hành là ~707 test.**
 
 ## 8. Không thuộc spec này
 Không code (schema/solver/mock). Không OCR ảnh. Không sửa corpus T-004 (Khánh — D-POL-04). Không quyết money-definition khoán khi chưa có data thật (để open decision d).

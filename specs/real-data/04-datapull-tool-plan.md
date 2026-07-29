@@ -3,6 +3,11 @@
 Cập nhật: 2026-07-24 · Part 4/7 · Trạng thái: DESIGN
 Bối cảnh: **CHƯA có BQ access** → cycle này = interface + PII policy + test-vs-mock; kéo live sau khi Cường cấp credentials. **Không kéo data thật ở cycle nào tới khi Cường chốt.**
 
+> **⚠ Ghi chú 2026-07-29:** `src/gsm_core/datasource/` **CHƯA tồn tại trong repo** — plan P4 dưới
+> đây vẫn ở mức blueprint, chưa implement. **PI-3 (DataSource tool) là DEFERRED CHỦ Ý**
+> (`D-GCP-01`): publish hiện chạy trên mock/local data, không phải task cần unblock trong cycle
+> hiện tại — chỉ bật khi ghép data thật GSM.
+
 ## 1. Kiến trúc `DataSource` (swappable mock ⇄ real)
 
 ```python

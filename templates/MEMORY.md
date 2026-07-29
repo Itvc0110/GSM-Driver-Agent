@@ -1,3 +1,5 @@
+> ⚠ **DEFERRED (pack cũ D-001)** — template của scaffold cũ, KHÔNG phải trạng thái/quy trình hiện hành; xem `templates/DEFERRED-NOTE.md`.
+
 # Project Memory
 
 Last updated: `2026-07-16`  

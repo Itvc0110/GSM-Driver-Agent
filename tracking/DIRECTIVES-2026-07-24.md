@@ -97,11 +97,11 @@ vào sau, bên cạnh UI app.
 | Track | Nội dung | Trạng thái |
 |---|---|---|
 | **A. SIM overhaul** | mảng riêng (§5) + chỉ thị SIM-XANH (§10) | ✅ **SIM-1..5 + SIM-XANH P0-P5 XONG** (UPDATE-044..058, manifest sạch `fda8e16`): đường THẬT OSRM (factor median 1.46) · rating/tân-binh/mission trong sim · sweep độ nhạy D-SIM-06 · dashboard palette-validated + Replay + tab A/B · data 90 ngày chuỗi liên tục. **Kế tiếp: Track UI** (§11) rồi **AUDIT** |
-| **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có, chưa code |
+| **B. External data** | research + provider offline-first + cache local (§2) | ⏳ key đã có. **⚠ Đính chính 2026-07-29:** OSRM đã code (SIM-XANH P1 — ma trận offline, dùng trong sim + routing API) + Stadia tiles trong web UI; còn treo: ExternalContext/weather scheduler (D-EXT-01) |
 | **C. Mock UI xem advice** | §6 | ❌ **THAY bằng Track UI (§11)** — không build mock UI riêng nữa |
 | **UI. UI thật trên nền Khánh** | §11 | ✅ **U0-U4 XONG 2026-07-26** (UPDATE-059..063) + **UX-CARDS** (UPDATE-067: proactive cards + đo adherence + CI draft) + **R1/R4** (UPDATE-068: mo-phong đồng ngôn ngữ app, playback ×1/×4/×16, feed sự kiện). **Chờ verdict V-10** |
 | **AUDIT toàn hệ** | §10.4 | ✅ **A1+A2+A3 XONG 2026-07-27** (UPDATE-064..070; report `research/audit/2026-07-26-full-audit/REPORT.md`): 152 agent · **179 finding** · 118 CONFIRMED · **21 hàng fix batch 1–3 + 1 fix R5-A** (đính chính UPDATE-071 — số 168/16 trước đó là overcount/undercount, R5 tự bắt). **ĐA-01..ĐA-09 đã DUYỆT ĐỦ — dãy dừng ở 09, KHÔNG có ĐA-10** (Cường xác nhận 2026-07-28 sau khi agent quét repo ra 0 tham chiếu; đừng mở lại câu hỏi này). Xem `PENDING-REVIEW.md` §Đã check xong; còn D-A3-01..06. **R5-A xong; R5-B QUOTA-BLOCKED** → sau đó R2/R3. `BLOCKER-R5-MUT10` **đã gỡ 2026-07-28** (UPDATE-074, commit `6ccd8fc`) — đã chứng minh bằng re-apply mutation → đỏ → restore → xanh. |
-| **D. C7 + rà soát mô hình** | §4 | ⏳ chưa bắt đầu |
+| **D. C7 + rà soát mô hình** | §4 | ⏳ C7 (EXP-001..005, LLM live) chưa bắt đầu. **⚠ Đính chính 2026-07-29:** vế "rà soát định kỳ mô hình tối ưu" ĐÃ CHẠY — `specs/advisor-objective-model-v2.md` (duyệt 27/07) + ĐA-08/ĐA-09 + T-041/T-045 + BUG-EVAL-ARGMAX |
 | **E. Mock enrichment "thật nhất"** | §3 | ⏳ chưa bắt đầu |
 
 ## 9. Những gì ĐÃ XONG trước các chỉ thị này (nền tảng)
@@ -109,8 +109,8 @@ vào sau, bên cạnh UI app.
 - 13 schema `l1r` khớp CHÍNH XÁC metadata GSM (gate test chống trôi).
 - Generator mock 90 ngày / **150 profile** theo manifest hiện tại (90 bike-platform + 20 bike-RTO + 15 car-platform + 15 car-employee + 10 car-premium). Schema/tên cột L1R theo metadata GSM; mọi nội dung là MOCK. Report R2 30 seed không thay cho artefact-specific verify (`D-SIM-08`).
 - **9 solver** phủ UC1–UC8; advisor pipeline C6 (router→composer→verifier) template-mode.
-- Suite **378 test** là mốc lịch sử trước các track sau. Không dùng con số này như trạng thái HEAD;
-  current full-suite claim đang bị chặn bởi `BLOCKER-R5-MUT10`.
+- Suite **378 test** là mốc lịch sử trước các track sau. Không dùng con số này như trạng thái HEAD.
+  **⚠ Đính chính 2026-07-29:** `BLOCKER-R5-MUT10` đã GỠ 2026-07-28 (commit `6ccd8fc`, re-apply→đỏ→restore→xanh); suite hiện hành **707 passed / 5 skipped** (`5364395`) — câu "đang bị chặn" hết hiệu lực.
 
 ## 10. Chỉ thị bổ sung 2026-07-26 (Cường)
 
@@ -164,16 +164,19 @@ Phase U0–U4, kế hoạch chi tiết: plan đã duyệt (xem UPDATE-059). Sau 
    - Hai UI không cần giống nhau; cùng `run_id + actor_id + as_of` phải reconcile event/state/money
      từ cùng canonical ledger/provenance.
 2. **ĐA-01, ĐA-02, ĐA-03: APPROVED-DESIGN**, chưa có quyền gọi là implemented/tested.
+   **⚠ Đính chính 2026-07-29:** ĐA-01 ĐÃ implement (UPDATE-077 — shrinkage estimator `rates.shrunk_rate`, 16/60 tài xế đổi phía ngưỡng 0,85); ĐA-02 B1/ĐA-03 vẫn đúng là chưa.
    ĐA-03 approval hiện chỉ gồm p_accept + avg_dist personalization; S2-1/band-flooring vẫn là bug
    cycle riêng nếu muốn làm.
 3. **ĐA-04..06:** research direction đã được làm giàu tại
    `research/audit/2026-07-27-current-state/04-decision-areas-da01-da06.md`; phải hỏi lại Cường
    trước implementation.
+   **⚠ Đính chính 2026-07-29:** ĐA-04..09 ĐÃ DUYỆT 2026-07-27 (PENDING-REVIEW bảng ✅); ĐA-05 DONE-CODE 2026-07-29 (Cycle W, UPDATE-091); ĐA-07 chốt config 2026-07-28; ĐA-09 đã đo xong (UPDATE-088). Nghĩa vụ "hỏi lại trước implementation" đã được thực hiện.
 4. **Data:** snapshot “90 ngày” là scenario MOCK từ 2026-07-01 tới 2026-09-28, không phải 90 ngày
    data thật/lịch sử gần nhất. UI snapshot và Advisor hiện read-only; cuốc demo/action không cập
    nhật acceptance/completion/payout. External refresh scheduler chưa có.
 5. **R5 không được coi là xong:** phiên Fable dừng do quota. Commit `7739b3c` còn mutation `MUT10`
    trong `_soc_cost`; chỉ R5 cycle được restore/verify để tránh đụng tiến trình đang dở.
+   **⚠ Đính chính 2026-07-29:** mutation đã restore + chứng minh (UPDATE-074); `7739b3c` là commit LOCAL chưa từng push — `origin/main` luôn sạch. R5-A xong; R5-B vẫn QUOTA-BLOCKED.
 6. Hồ sơ source of truth cho các kết luận trên:
    `research/audit/2026-07-27-current-state/README.md`.
 

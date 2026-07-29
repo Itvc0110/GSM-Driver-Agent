@@ -1,8 +1,9 @@
 # Spec — Đo "tài xế có làm theo advice không" bằng HAI đường song song (BACKLOG Q6)
 
-Ngày: 2026-07-27 · Trạng thái: spec v0 — trả lời câu hỏi Cường *"how are we tracking if the
-driver follow instructions, are there multiple ways done in same time?"*. Implement từng phần
-đã/sẽ theo cycle riêng; file này là bản đồ chung.
+Ngày: 2026-07-27 · Trạng thái: spec v0 — **một phần DONE-CODE (Cycle W, UPDATE-091)**, xem đính
+chính 2026-07-29 dưới đây — trả lời câu hỏi Cường *"how are we tracking if the driver follow
+instructions, are there multiple ways done in same time?"*. Implement từng phần đã/sẽ theo cycle
+riêng; file này là bản đồ chung.
 
 ## Nguyên tắc
 
@@ -16,6 +17,12 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
   log jsonl local nhãn mock; đọc lại ở Cài đặt.
 - Đơn vị phân tích: (driver, date, advice_id, card_kind, action).
 - Giới hạn đã ghi: đo Ý ĐỊNH; không có side-effect (tài xế luôn tự quyết — CLAUDE §5).
+
+> **⚠ Đính chính 2026-07-29 (Cycle W, UPDATE-091):** đường ghi canonical nay là **`AdviceEventLog`**
+> (`gsm_core/lifecycle/event_log.py`, append-only, idempotent theo `event_id`) — JSONL local ở trên
+> chỉ còn vai trò **debug**, không phải nguồn sự thật. Đơn vị phân tích đổi thành
+> **`(driver, run_id, decision_id, …)`** — `decision_id` có 3 namespace, `Event.run_id` deterministic
+> kèm config digest. UI POST/GET action nay đi qua store canonical.
 
 ## Đường 2 — IMPLICIT (hành vi, sim/A-B) — ✅ NỀN ĐÃ CÓ, thiếu phần ĐỐI CHIẾU
 
@@ -31,9 +38,13 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
 1. **Join key hai đường**: `advice_id` hiện chỉ sống ở UI; sim events không mang advice_id tương
    thích. Chuẩn hoá: advice_id = hash(driver, date, solver, reason_code, at_min-bucket) sinh Ở
    BACKEND — cả card lẫn (sau này) sim bridge dùng chung → join được explicit ↔ implicit.
+   **⚠ DONE Cycle W (UPDATE-091):** đã có `decision_id` 3 namespace + `Event.run_id` deterministic
+   trong `gsm_core/lifecycle/` — join key hai đường nay tồn tại ở backend, không còn chỉ-UI.
 2. **Bảng đối chiếu**: view (driver, tuần) → tỷ lệ bấm-Làm-theo vs Δ hành vi đo được vs adherence
    coin sim — 3 cột cạnh nhau, lệch = flag. Chỗ hiển thị: khu Mô phỏng (reviewer), KHÔNG áp
-   lực lên tài xế.
+   lực lên tài xế. **⚠ Cập nhật 2026-07-29:** một nửa đã có — `adherence_view` (hai tên
+   `decision_adherence` + `event_adherence`) tính được từ projections; còn thiếu **hiển thị** view
+   này ở khu Mô phỏng (phần UI/dashboard chưa làm).
 3. **Cập nhật D-SIM-04**: khi có log explicit đủ dày (dù là mock/demo), dùng phân phối bấm-nút
    làm prior MỚI cho adherence coin thay ASSUMPTION thuần (vẫn nhãn rõ nguồn).
 4. **Ethics guard** (bài học nudge Uber): KHÔNG dùng số đo adherence để tăng áp lực nudge

@@ -1,6 +1,6 @@
 # P3 — MOCK-gen grand plan (chi tiết cho GEN-AGENT + verify harness)
 
-Cập nhật: 2026-07-24 · Part 3/7 · Trạng thái: DESIGN
+Cập nhật: 2026-07-24 · Part 3/7 · Trạng thái: **⚠ 2026-07-29: ĐÃ CODE** (PI-2 — `mockgen/realdata.py` sim→aggregate, data 90 ngày, UPDATE-034/035/036); blueprint gốc (DESIGN) giữ để đối chiếu lịch sử.
 Mục tiêu: gen mock ĐÚNG shape 13 bảng thật (P2), realistic, nhất quán chéo bảng, để pipeline chạy end-to-end như trên data thật. **Gen-agent đọc file này + `01`/`02` là đủ để gen.** Harness (agent kiểm) re-read TỪNG row/col/table.
 
 ## 0. Nguyên tắc gen (BẮT BUỘC)

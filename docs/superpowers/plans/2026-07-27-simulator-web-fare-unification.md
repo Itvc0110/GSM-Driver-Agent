@@ -1,3 +1,5 @@
+> ✅ **ACTIVE — thuộc UI-FARE-01 (UPDATE-073, chờ verdict V-16); KHÔNG thuộc pack DEFERRED D-001.**
+
 # Simulator/Web Fare Unification Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` and `superpowers:test-driven-development`. Do not touch `ui/driver_app/`.

@@ -1,6 +1,6 @@
 # USER STORIES — Nháp ban đầu (DRAFT)
 
-Cập nhật trạng thái: 2026-07-27. Story là **giả thuyết** cho đến khi được xác nhận bằng nghiên cứu (`planning/RESEARCH.md`). Mở rộng scope = thêm story ở đây trước, xác nhận pain point, rồi mới làm.
+Cập nhật trạng thái: 2026-07-29. Story là **giả thuyết** cho đến khi được xác nhận bằng nghiên cứu (`planning/RESEARCH.md`). Mở rộng scope = thêm story ở đây trước, xác nhận pain point, rồi mới làm.
 
 Quy ước ID: `US-<khối>-<số>` (khối: F0 policy, F1 trước ca, F2 trong ca, F3 sau ca).
 
@@ -22,7 +22,7 @@ Quy ước ID: `US-<khối>-<số>` (khối: F0 policy, F1 trước ca, F2 trong
 - **US-F2-01** · Là tài xế đang trong ca, tôi muốn biết **demand proxy** trong những giờ tới tương đối cao/thấp (dữ liệu mock, không phải đơn chắc chắn được phân), để chọn lúc chạy và lúc nghỉ — không phải để reposition hay quyết định một cuốc cụ thể.
 - **US-F2-02** · Là tài xế bike, tôi muốn được gợi ý khung giờ thấp điểm phù hợp để nghỉ/sạc, để không mất đơn giờ cao điểm.
 - **US-F2-03** · Là tài xế, tôi muốn nhận cập nhật voucher/ưu đãi mới ngay trong ca, để tận dụng kịp.
-- **US-F2-04** · (mở 2026-07-21 sau verify — có điều kiện) Là tài xế đang idle giữa các cuốc, tôi muốn được gợi ý khu vực đứng chờ có demand tương đối cao gần đây (heatmap mock, capacity-aware chống dồn cung, kèm cảnh báo "đơn có thể được phát khi đang di chuyển — từ chối ảnh hưởng tỷ lệ nhận"), để giảm thời gian chờ — hệ thống không hứa thu nhập và không khuyên nhận/từ chối đơn nào.
+- **US-F2-04** · (mở 2026-07-21 sau verify — có điều kiện) Là tài xế đang idle giữa các cuốc, tôi muốn được gợi ý khu vực đứng chờ có demand tương đối cao gần đây (heatmap mock, capacity-aware chống dồn cung, kèm cảnh báo "đơn có thể được phát khi đang di chuyển — từ chối ảnh hưởng tỷ lệ nhận"), để giảm thời gian chờ — hệ thống không hứa thu nhập và không khuyên nhận/từ chối đơn nào. **⚠ Cập nhật 2026-07-28:** Cường đã duyệt bật kênh này **trong SIM** (`positioning_overrides: wait_only`) để đo hiệu quả/rủi ro; **product vẫn giữ D-004/D-004b** (chưa đưa reposition ra sản phẩm thật cho tài xế).
 
 ## F3 — Sau ca
 
@@ -35,3 +35,4 @@ Quy ước ID: `US-<khối>-<số>` (khối: F0 policy, F1 trước ca, F2 trong
 ## Backlog story chưa phân loại
 
 - (trống — thêm vào đây khi có ý tưởng mới, kèm pain point giả định và cách xác nhận)
+- **US mới cần viết** (2026-07-29, chưa viết — chỉ ghi nhận nhu cầu): vòng **adherence explicit** — tài xế bấm nút **Làm theo / Bỏ qua** trên mỗi thẻ advice (UX-CARDS, UPDATE-067) và vòng này nay có hạ tầng lifecycle store để đóng kín (Cycle W, ĐA-05, UPDATE-091). Cần một US riêng mô tả trải nghiệm + kỳ vọng tài xế cho tương tác này; KHÔNG tự viết US mới ở đây, chỉ ghi nhận để viết sau khi xác nhận pain point.

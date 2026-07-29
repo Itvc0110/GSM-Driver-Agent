@@ -1,8 +1,8 @@
 # SPEC — Observability metrics per-layer (T-026 phase 1)
 
-Cập nhật: 2026-07-23 · Trạng thái: **DESIGN — thiết kế TRƯỚC khi code (spec core §6)**
+Cập nhật: 2026-07-23 · Trạng thái: **⚠ 2026-07-29: Phase 2 DONE** (UPDATE-030) — 2 hard invariant (`solver.number_traceability`, `composer.faithfulness`) đo **= 1.0**; xem đính chính bên dưới về các hàng "C6 DESIGNED".
 Nguồn: `core-data-schema-and-advisor-architecture.md` §3/§6; `advisor-optimization-layer-a.md`; `research/simulation/llm-advisor-architecture.md` (Langfuse/Phoenix).
-Phase 1 = thiết kế bảng metric đo được. Phase 2 (C6) = instrument Langfuse. **Cycle này KHÔNG code instrumentation.**
+Phase 1 = thiết kế bảng metric đo được. Phase 2 (C6) = instrument Langfuse. **Cycle này KHÔNG code instrumentation** (lịch sử — xem đính chính: Phase 2 đã code từ UPDATE-030).
 
 ## 0. Nguyên tắc
 
@@ -15,6 +15,10 @@ Phase 1 = thiết kế bảng metric đo được. Phase 2 (C6) = instrument Lan
 ## 1. Bảng metric
 
 Cột: `metric · definition · source (schema field) · unit · active_from · alert_intent (định tính — khi nào bất thường)`.
+
+> **⚠ Đính chính 2026-07-29:** mọi hàng bảng dưới đây ghi `active: C6 DESIGNED` (Router/Composer/
+> Verifier §1.1/1.3/1.4) nay đọc là **ACTIVE** — pipeline C6 đã implement và instrument xong
+> (UPDATE-030). Không sửa lại từng ô trong bảng gốc để giữ nguyên lịch sử thiết kế.
 
 ### 1.1 Router (deterministic, không LLM) — `active_from: C6`
 
@@ -62,6 +66,9 @@ Cột: `metric · definition · source (schema field) · unit · active_from · 
 | `adherence.coincident_rate` | % làm theo nhưng twin B cũng làm (không tính công advisor) | twin-diff | ratio | M4 DESIGNED | cao = advice trùng bản năng |
 | `adherence.divergence_index` | |cell_A−cell_B| + |ΔSOC|/10 + 1{state khác} | DecisionRecord | index | M4 DESIGNED | — |
 
+> **⚠ Đính chính 2026-07-29:** adherence nay đo được qua **`adherence_view`** (Cycle W, UPDATE-091)
+> — HAI TÊN `decision_adherence` + `event_adherence`, không bao giờ có khoá `adherence` trần.
+
 ### 1.6 End-metric (evaluator T-020) — `active_from: M4`
 
 | metric | definition | source | unit | active |
@@ -70,6 +77,10 @@ Cột: `metric · definition · source (schema field) · unit · active_from · 
 | `end.delta_utilization` | Δ util FT | twin evaluator | ratio | M4 DESIGNED |
 | `end.fairness_gini` | Gini payout; decile thấp nhất | twin evaluator | index | M4 DESIGNED |
 | `end.system_guardrail` | queue trạm/unserved không xấu đi do advice | twin evaluator | ratio | M4 DESIGNED |
+
+> **⚠ Đính chính 2026-07-29:** `end.delta_payout` **đã có** trong `src/gsm_sim/parallel.py`
+> (Δ(A−B) với CRN + bootstrap CI + cohort estimator không bias). **Δ(A−C) vẫn thiếu** vì arm C
+> (placebo) chưa được code (xem `specs/simulation-twin-world.md` §11).
 
 ## 2. Langfuse trace shape (cho C6 — không code bây giờ)
 

@@ -1,6 +1,6 @@
 # CLAUDE.md — Harness cho AI coding agent (GSM Driver Income Agent)
 
-Cập nhật: 2026-07-27. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
+Cập nhật: 2026-07-29. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
 
 ## 1. Dự án là gì
 
@@ -17,12 +17,22 @@ Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image
 | --- | --- |
 | `CLAUDE.md` | Harness này — đọc đầu tiên |
 | `planning/` | SCOPE (scope hiện hành), USER_STORIES, PERSONAS (5 hồ sơ mock), RESEARCH (kế hoạch nghiên cứu) |
-| `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`, `simulation/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
-| `specs/` | Đặc tả kỹ thuật để code (`mock-order-distribution`, `simulation-twin-world`, `advice-timing-state-memory`, `community-source-risk-control`) |
-| `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###) |
-| `tracking/PROJECT-GRAPH.md` | Bản đồ canonical của 66 UPDATE hiện hành: route đọc theo task, dependency/correction edges, trạng thái hiện hành, pending gates và quota loop |
+| `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`, `simulation/`, `audit/`, `experiments/`, `ux/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
+| `specs/` | Đặc tả kỹ thuật để code — **15 spec cấp 1 + `real-data/` + `simulation/`**; spec source-of-truth chính hiện hành: `advisor-objective-model-v2.md`, `core-data-schema-and-advisor-architecture.md`, `adherence-measurement.md`, `simulation/00-sim-overhaul-master.md` |
+| `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###), `PENDING-REVIEW.md`, `OPEN-THREADS-*.md`, `PLAN-cycle-*.md`, `DIRECTIVES-*`, `BACKLOG-QUESTIONS-*` |
+| `tracking/PROJECT-GRAPH.md` | Bản đồ canonical của UPDATE hiện hành: route đọc theo task, dependency/correction edges, trạng thái hiện hành, pending gates và quota loop. **85 file `UPDATE-*.md` tính tới UPDATE-091 (đếm thật 2026-07-29); §3 graph chưa reconcile 073..091** |
 | `flow image/` | drawio luồng dự kiến — `...v2.drawio` hiện hành (7 trang), `...v1.drawio` đối chiếu (source of truth về flow) |
-| `docs/`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` | **DEFERRED** — pack cũ theo hướng full optimization scaffold; chỉ dùng tham khảo, không phải scope hiện hành |
+| `docs/00–09`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` | **DEFERRED** — pack cũ theo hướng full optimization scaffold; chỉ dùng tham khảo, không phải scope hiện hành |
+| `docs/data-catalog/` | **ACTIVE** — catalog 13 bảng GSM thật (`gsm-data-catalog.csv/.xlsx`), sinh bởi `scripts/build_data_catalog.py`; `specs/real-data/*` phụ thuộc trực tiếp, KHÔNG deferred |
+| `docs/superpowers/` | **ACTIVE** — artifact plan/spec của UI-FARE-01 (UPDATE-073, chờ V-16), không thuộc pack DEFERRED D-001 |
+| `src/gsm_core/` | Core solvers (S1–S9), advisor pipeline C6, `lifecycle/` (event log + projections), `schema_registry.py` + `upcasters.py`, `mockgen/` |
+| `src/gsm_sim/` | Simulator/twin-world engine (world, dispatcher, actors, parallel A/B/C, dashboard) |
+| `schemas/` | JSON Schema đa phiên bản (`{entity}@{ver}.schema.json`) + `CHANGELOG.md` |
+| `configs/pilot_dongda.yaml` | Config pilot hiện hành (actors, dispatcher, positioning, policy costs) — nguồn sự thật cho mọi số cấu hình sim |
+| `tests/` | ~707 test (suite hiện hành sau Cycle W) |
+| `ui/` | `backend/` FastAPI chung, `web/` (Track UI), `driver_app/` (Flutter của Khánh), `contracts/` (JSON Schema versioned + design tokens) |
+| `scripts/` | Script vận hành/regen/verify (vd `regen_mock.py`, `run_parallel.py`, `build_data_catalog.py`) |
+| `data/` | Mock data (gitignored telemetry/parquet); không commit data thật |
 
 ## 3. Quy trình BẮT BUỘC trước khi làm bất kỳ việc gì
 

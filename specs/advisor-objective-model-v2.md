@@ -1,6 +1,6 @@
 # Spec — Mô hình hoá lại bài toán Advisor (v2): cá nhân + toàn cục
 
-Ngày: 2026-07-27 · Trạng thái: **SPEC — chờ Cường duyệt trước khi code** (cycle C1 của plan).
+Ngày: 2026-07-27 · Trạng thái: **⚠ ĐÃ DUYỆT 2026-07-27** (Cường: *"oke duyệt hết"*) **+ amendment Q-11/Q-12 (2026-07-28)** — xem §5 AMENDMENT bên dưới.
 Thay thế phần objective của `specs/advisor-optimization-layer-a.md` §2.1 (giữ nguyên phần còn lại).
 
 ## 0. Vì sao phải viết lại — bằng chứng, không phải cảm tính
@@ -77,12 +77,28 @@ Câu hỏi nghiên cứu phải trả lời bằng số:
 3. **Ngưỡng phủ**: quét `coverage.share` ∈ {10%, 25%, 50%, 100%} — rất có thể tồn tại ngưỡng mà
    lợi ích cá nhân chưa bị triệt tiêu.
 
+> **⚠ Đính chính 2026-07-29 (ĐA-09, UPDATE-088):** cả ba câu hỏi trên **ĐÃ TRẢ LỜI BẰNG SỐ** —
+> xem `research/simulation/multi-agent-equilibrium.md`: (1) cân bằng tồn tại & ≈ λ_config (γ=1 hội
+> tụ 1 vòng); heatmap-residual (γ=0) KHÔNG hội tụ, tệ vĩnh viễn; (2) Price of anarchy: adherence
+> thật lấy 51–73% mức tập trung; (3) phủ tăng đơn điệu không tự-triệt-tiêu, có bẫy free-rider
+> 25–50%.
+
 ### 2.3 Cơ chế chống trùng lặp (đã có thiết kế, chưa code)
 `specs/advisor-optimization-layer-a.md` §2.4 đã mô tả **capacity ledger**: đếm advice-outstanding
 theo (trạm, bucket), advice thứ N+1 vào slot đầy thì DP tự chuyển; staggering ưu tiên SOC thấp +
 jitter ±7 phút. **Chưa bao giờ được code.** Đây là điều kiện tiên quyết của §2.2.
 
+> **⚠ Đính chính 2026-07-29 (UPDATE-083/084):** capacity ledger + **S4 `capacity_alloc`** (hồi
+> sinh, `_standby_planner` batch Hungarian) **ĐÃ CODE**. Đo 30 seed × 4 thế giới (artifact `21-*`):
+> kênh vị trí cứu hệ thống SIG (served +1,03đp, đơn chết −13,4/ngày, payout đội +212k/ngày) và
+> **HHI GIẢM** (chống dồn cục thành công). Câu hỏi còn treo: veto km-rỗng (Q-10/Q-12, xem
+> `tracking/DEFERRED.md` D-SIM-14 và `tracking/TODO.md` T-045a).
+
 ## 3. `MarketStateView` — mở kênh thông tin cung
+
+> **⚠ Đính chính 2026-07-29 (T-045a b1/b2):** `MarketStateView` **ĐÃ IMPLEMENT** —
+> `gsm_core/features/market_state.py` (b1, 9 test) + producer trong sim `Actor.enroute_cell` +
+> `gsm_sim/market_state.py` (b2, 11 test) = **20 test**. Thiết kế dưới đây không còn là "chưa code".
 
 Solver hiện **mù hoàn toàn về cung**. Thiết kế view mới, cấp cho S2/S4/S7:
 
@@ -130,6 +146,9 @@ chạy được ở CẢ BA mức, và `confidence` của advice phải giảm t
 > trên artifact 25 (n=100): B3w đạt cả 1a (+6.016 SIG) lẫn 1b (0/7 archetype bị hại; 5/7
 > dương SIG). Veto 8/9 dùng bản (b): cơ chế được phép tốn km-rỗng/đổi-pin **nếu** chờ-đổi-pin
 > không tăng SIG và tổng payout đội tăng SIG cùng lúc.
+>
+> **Cross-ref 2026-07-29:** estimator cohort không bias + placebo test + banner CORRECTED trên
+> UPDATE-075/078/081/084 là nội dung của **UPDATE-086** (artifact 24), không chỉ UPDATE-085.
 
 Một kênh advice chỉ được coi là "có giá trị" khi **đồng thời**:
 
@@ -140,6 +159,10 @@ Một kênh advice chỉ được coi là "có giá trị" khi **đồng thời*
 | **Khách hàng** | đơn hết hạn không tăng; thời gian chờ khách không tăng | `sim_metrics.customer_wait()` (**đã viết, chưa ai gọi**) |
 | **Công bằng** | Gini payout không tăng | metric MỚI cần viết |
 | **Tập trung** | HHI tải trạm và concentration cung theo ô không tăng | metric MỚI cần viết |
+
+> **⚠ Đính chính 2026-07-29 (UPDATE-075):** ba dòng Khách hàng/Công bằng/Tập trung ở trên **đã
+> viết VÀ được gọi** — bước 1 của §6 (đo trước, sửa sau) đã nối `customer_wait`, viết Gini/HHI,
+> và bỏ ép `coverage="single"` trong `parallel.run_pair`.
 
 Kênh nào vi phạm bất kỳ dòng nào ⇒ **không được bật**, kể cả khi số cá nhân đẹp.
 CI chạy bộ chỉ tiêu này ở job nightly (khung đã có trong `.github/workflows/ci.yml`).
@@ -176,6 +199,12 @@ mức chỉ vì nó làm Δ dương**.
 4. C3 (rủi ro/CVaR) — đổi cách tổng hợp, đo lại.
 5. `MarketStateView` + C4 (chi phí cơ hội vị trí) — cần state cung.
 6. Capacity ledger + hồi sinh S4 → multi-agent equilibrium §2.2 (ĐA-09).
+
+> **⚠ Trạng thái từng bước 2026-07-29:** **1 ✅ DONE** (UPDATE-075) · 2 = **KẾ TIẾP**, theo
+> `tracking/PLAN-cycle-wx-2026-07-29.md` Phần B (C1 chi phí vận hành/km, thước đo đi TRƯỚC solver)
+> · 2b **chưa làm** · 3 (C2 giá trị nghỉ) **chưa làm** · 4 (C3 rủi ro/CVaR) **chưa làm** · 5 ✅
+> **DONE** (`MarketStateView` b1/b2) · 6 ✅ **DONE phần equilibrium** (capacity ledger + S4 hồi
+> sinh + ĐA-09 §2.2, UPDATE-083/084/088); veto km-rỗng vẫn treo (Q-10/Q-12).
 
 Mỗi bước: 30 seed CRN, `coverage: all`, chỉ tiêu kép §5, một UPDATE riêng.
 

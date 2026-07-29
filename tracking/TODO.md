@@ -4,7 +4,7 @@
 > của Cường (data luôn MOCK + local-only; external API keys; **SIM overhaul là mảng riêng ưu tiên
 > cao nhất**; mock UI xem advice; C7 + rà soát định kỳ mô hình tối ưu). File đó THẮNG khi xung đột.
 
-Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained for traceability). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE-CODE` / `WAITING-VERDICT` / `BLOCKED` / `QUOTA-BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
+Cập nhật: 2026-07-29 (**Cycle P/R/V/W**; xem `tracking/PLAN-cycle-wx-2026-07-29.md` cho kế hoạch đang thực thi — Phần A đã xong, Phần B đang làm; legacy CORE rows retained for traceability). Trạng thái: `TODO` / `READY` / `DOING` / `VALIDATING` / `DONE-CODE` / `WAITING-VERDICT` / `BLOCKED` / `QUOTA-BLOCKED`. Owner theo cơ chế **tự nhận việc (self-claim)** — xem `ASSIGNMENTS.md`. Xong việc phải có UPDATE trong `tracking/updates/`.
 
 > **⚠ PHIÊN 2026-07-28 — đọc [`OPEN-THREADS-2026-07-28.md`](OPEN-THREADS-2026-07-28.md)**: việc
 > dang dở + **ý tưởng kiến trúc của Cường chưa có spec** (agent làm ROUTER trên không gian solver
@@ -49,8 +49,11 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
      viễn — cảnh báo production · PoA: adherence thật lấy 51–73% mức tập trung · phủ tăng đơn
      điệu không tự-triệt-tiêu, có bẫy free-rider 25–50%. **Đề xuất cấu hình bật (UPDATE-087)
      chờ Cường.**
-  - **Ràng buộc Cường**: `accept_lift` giữ TẮT; `shift_plan` giữ BẬT + cảnh báo đỏ trong khu Mô
-    phỏng, **đo lại trước bản cuối — không hiệu quả thì TẮT để advisor im lặng**.
+  - **Ràng buộc Cường**: `accept_lift` giữ TẮT; ~~`shift_plan` giữ BẬT + cảnh báo đỏ trong khu Mô
+    phỏng, **đo lại trước bản cuối — không hiệu quả thì TẮT để advisor im lặng**.~~
+    **⚠ SAI — đính chính 2026-07-29: `shift_plan` đã TẮT** (`channels.shift_plan: false` từ
+    2026-07-28, theo điều-khoản-bản-cuối ĐA-07 — Cường DUYỆT, UPDATE-087/089). Đo lại cho thấy
+    không hiệu quả nên đã tắt để advisor im lặng đúng như điều kiện đặt ra ở trên.
 - **BUG-EVAL-ARGMAX — `DONE-CODE 2026-07-28 (UPDATE-086, Q-11 duyệt)`.** Estimator cohort
   không bias trong `parallel._cohort_metrics` + placebo test + nhãn BIASED cho argmax + banner
   CORRECTED trên UPDATE-075/078/081/084 + artifact `24-*`. **Kết quả đảo chiều**: B0 hoà (−466đ
@@ -73,7 +76,8 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
     hầu như luôn là lan can yếu. **Chưa kiểm**: các regression test khác trong repo cũng có thể
     thuộc loại này.
 - **T-045 — LỖ HỔNG ĐO ĐƯỢC (hồ sơ `12-*` + `13-*`), thay cho hướng "giá trị nghỉ":**
-  a. **`DOING` ⭐ ĐÒN BẨY LỚN NHẤT — advisor tối ưu SAI BIẾN.** 62% lượt, đơn chết vì **không ai
+  a. **`DONE-CODE` (⚠ 2026-07-29, nợ còn: kênh km-rỗng veto/C4 — xem Q-10/Q-12) ⭐ ĐÒN BẨY LỚN
+     NHẤT — advisor tối ưu SAI BIẾN.** 62% lượt, đơn chết vì **không ai
      trong bán kính 2,1 km**; tài xế rỗi median 12 người/23 km²; đơn hết hạn **không xấu về kinh
      tế** (gross 24.151đ vs 24.734đ). Biến có đòn bẩy là **VỊ TRÍ**, mà advisor không có kênh nào
      khuyên vị trí và không có state cung. ⇒ nối **ĐA-09 `MarketStateView`** + **hồi sinh S4
@@ -102,17 +106,19 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
        của Cường) + cờ `positioning_overrides` (off/wait_only/wait_and_relocate) + adherence rút
        MỘT lần lúc gán (chống D-SIM-14). 8 test, mutation S1 (bỏ trần) → 2 đỏ, S3 (ghi đè quá
        tay) → 1 đỏ. Suite **617 passed / 5 skipped**.
-     - **b3 `TODO`** hồi sinh S4 `capacity_alloc` + kênh `standby_zone` vào bridge. **Phải cùng
-       lúc với b2**, không được để sau: heatmap không có capacity ledger là **cỗ máy tạo dồn cục**
-       (hồ sơ `19-*` §5). Đây cũng là câu trả lời cho câu hỏi fairness của Cường — hiện **đo thì
-       có, cưỡng chế thì chưa**.
+     - **b3 `DONE-CODE` (⚠ 2026-07-29, thay TODO)** hồi sinh S4 `capacity_alloc` + kênh
+       `standby_zone` vào bridge đã xong cùng lúc với b2 như yêu cầu ở trên (UPDATE-083): heatmap
+       nay có capacity ledger (không còn là **cỗ máy tạo dồn cục**, hồ sơ `19-*` §5). Câu hỏi
+       fairness của Cường — nay **đo có, cưỡng chế cũng có**.
      - **b4 `DONE 2026-07-28 (UPDATE-084)`** — 30 seed × 4 thế giới (A/B0/B1/B2), artifact `21-*`.
        **Kênh vị trí là kênh ĐẦU TIÊN cứu HỆ THỐNG SIG**: served +1,03đp · đơn chết −13,4/ngày ·
        tổng payout đội **+212k/ngày** · **HHI GIẢM** (capacity ledger chống dồn cục thành công).
        NHƯNG tài xế đích −40k (B0 riêng −33k ⇒ thủ phạm chính vẫn là REST/shift_plan trên nền
        mới) và **veto km rỗng hỏng** (+0,7đp SIG — chính là cơ chế reposition, được trả công ở
-       tầng đội). **Phán quyết: giữ `off`** theo tiêu chí đã chốt; câu hỏi veto → **Q-10** chờ
-       Cường chọn (a)/(b)/(c). ⚠ B1 vs B2 chưa xếp hạng được (cần ≥100 seed).
+       tầng đội). ~~**Phán quyết: giữ `off`** theo tiêu chí đã chốt; câu hỏi veto → **Q-10** chờ
+       Cường chọn (a)/(b)/(c).~~ **⚠ Thay bằng verdict Cường 2026-07-28: bật `positioning_overrides:
+       wait_only` MẶC ĐỊNH** (`configs/pilot_dongda.yaml`, UPDATE-089) — không còn giữ `off`; câu
+       hỏi veto km-rỗng vẫn treo (Q-10/Q-12). ⚠ B1 vs B2 chưa xếp hạng được (cần ≥100 seed).
   b'. **`DONE-CODE 2026-07-28 (Cycle R, UPDATE-085)` — GỐC REST của shift_plan (Q-10c).**
      Reproduce cả 3 giả thuyết: DP mù nghỉ-đã-nghỉ ⇒ tái áp mỗi consult (tổng nghỉ +16–27%,
      11–14 lần/seed tái-khuyên ngay sau nghỉ); REST thắng SWAP khi hoà (fixture SOC 22% cho
@@ -131,13 +137,14 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
      hỏi GSM (`D-POL-05`)** trước khi đặt mặc định khác 0. Lưu ý: nhiều chương trình **miễn phí**
      đổi pin (RTO 5 lần/ngày tới 06/2028; "Tặng Xe" không giới hạn tới 31/3/2029) ⇒ chi phí pin là
      biến **theo cohort/hợp đồng**, phải versioned như policy.
-  c0. `DONE 2026-07-28 (UPDATE-079)` **BUG-DISPATCH-SHORTLIST** — `candidate_ring_k_max` 6 → 12.
-     Shortlist H3 phủ **2,22 km** trong khi `eta_max = 11′` cho phép tới **5,50 km** (v đêm 30 km/h,
-     factor OSRM min **1,00**) ⇒ tài xế thoả ETA bị loại **âm thầm**. Đo 3 seed: served
-     **0,750 → 0,789**, đơn hết hạn **−18%**, runtime ×1,8; k=16/20 **y hệt** ⇒ 12 đã bão hoà.
-     5 test, trong đó **bất biến phủ sóng** đỏ lại nếu ai đổi `eta_max`/tốc độ/res mà quên k.
-     ⚠ **Từ chối** nâng `eta_max` (cho served 0,856) — vặn realism, đã khoá bằng test.
-     ⚠ **VÔ HIỆU HOÁ baseline 30 seed** của UPDATE-075/078 (đo ở k=6) ⇒ phải đo lại.
+  c0. `UNRESOLVED / BLOCKED-Q-07` **⚠ ĐÍNH CHÍNH 2026-07-29 — dòng cũ ghi "DONE 6→12" là SAI
+     SỰ THẬT**: nâng k_max 6→12 **ĐÃ HOÀN TÁC** vì phá dung sai `accept_base` của baseline;
+     config hiện hành vẫn `candidate_ring_k_max: 6` (comment trong `configs/pilot_dongda.yaml`
+     ghi rõ *"ĐÃ TÌM RA, CHƯA SỬA ĐƯỢC"*; test pin `== 6`; UPDATE-079 ghi hoàn tác). Chờ
+     **Q-07** — Cường đã chọn hướng (c): nghiên cứu dispatch thật trước khi đụng shortlist.
+     Số đo 3-seed của lần thử (served 0,750→0,789, hết hạn −18%, k=16/20 bão hoà, cấm nâng
+     `eta_max`) giữ làm evidence cho Q-07. Baseline 30 seed của UPDATE-075/078 **VẪN HIỆU LỰC**
+     (đo ở k=6 — đúng config đang chạy).
   c. **`TODO` BUG dispatcher (còn lại)**: `dispatcher.py:77` bỏ đơn khi người **gần nhất theo haversine** fail
      ETA, viện lý do *"ETA đơn điệu theo distance"* — **tiền đề SAI** vì `factor` theo cặp ô biến
      thiên p10 1,24 → p90 1,94 (số của chính repo). Đo: **293/3.520 lượt bỏ OAN (8,3%)**, tiết kiệm
@@ -146,9 +153,11 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
   d. **`TODO` ⛔ GỐC của chờ-hàng-giờ — ĐÃ ĐO XONG BIÊN GIỚI (hồ sơ `14-*`), CHỜ Q-05 xác nhận
      thứ tự mới.** Ba sự thật đã chứng minh: **(i)** sai lệch thiết kế — `orders_per_day = 1200`
      gắn với **50 actors** nhưng `actors.n` đã lên **90** ⇒ đơn/actor 24,0 → **13,3**, tài xế
-     **rỗi 32%**; **(ii)** BUG `candidate_ring_k_max = 6` phủ **1,81 km** trong khi `eta_max = 11′`
-     cho phép tới **4,44 km** ⇒ shortlist loại chính người thoả ETA; nới k=12 làm **cả hai metric
-     cùng lên** (served 0,750→0,789, hết hạn −18%) — ⚠ **cấm nâng `eta_max`** (realism);
+     **rỗi 32%**; **(ii)** BUG `candidate_ring_k_max = 6` phủ **~2,22 km** (số theo comment
+     config; hồ sơ `14-*` từng ghi 1,81 km — số cũ, mâu thuẫn đã ghi nhận) trong khi
+     `eta_max = 11′` cho phép xa hơn hẳn ⇒ shortlist loại chính người thoả ETA; nới k=12 làm
+     **cả hai metric cùng lên** (served 0,750→0,789, hết hạn −18%) nhưng **ĐÃ HOÀN TÁC —
+     xem c0, chờ Q-07** — ⚠ **cấm nâng `eta_max`** (realism);
      **(iii)** quét lưới 16 tổ hợp × 3 seed: **0/16 PASS** cả bốn tiêu chí — `served` và
      `trips/tx` **đối nghịch**, không có điểm giao. Trần năng lực **17,7 cuốc/tx khi bão hoà**
      (biên dưới research 18–22) ⇒ **vật lý ĐÚNG**; mất mát nằm ở **`relocate` 14% + phân bố đơn
@@ -194,7 +203,9 @@ Cập nhật: 2026-07-27 (**Post-audit / R5 review**; legacy CORE rows retained 
   - Câu hỏi thật cần Cường/GSM trả lời: **mốc 200 điểm có hợp lý không** khi chỉ 0,67% ngày-công
     chạm tới? Nếu số policy thật (D-POL-05) khác thì kết luận này đổi.
   - **Điều kiện: làm rõ trước khi dùng mock nghiệm thu bất kỳ kênh advice nào liên quan mốc thưởng.**
-- **T-044 — ĐA-06 AdviceEnvelopeV2 (CHỐT 2026-07-27, xếp POLISH → làm sau T-041 b2 + T-042).**
+- **T-044 — ĐA-06 AdviceEnvelopeV2 (CHỐT 2026-07-27, xếp POLISH → làm sau T-041 b2 + T-042).
+  ⚠ 2026-07-29: hai điều kiện chặn (B-02 registry đa phiên bản · ĐA-05 projection chung) ĐÃ
+  XONG ⇒ về mặt phụ thuộc là `READY`; vẫn giữ thứ tự POLISH theo chốt của Cường.**
   Cường chốt kèm cảnh báo: *"có thể sửa nhiều trong tương lai vì còn đang phân vân"*.
   ⇒ **"Còn phân vân" là RÀNG BUỘC THI CÔNG, không phải ghi chú suông.** Thi công phải giả định
   hình dạng envelope **sẽ đổi**:
@@ -442,7 +453,7 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 
 | ID | Việc | Trạng thái | Evidence / gate |
 |---|---|---|---|
-| UI-FARE-01 | Unify Simulator and Web Driver demo fare through `PolicyBundle` | DONE-CODE / WAITING-VERDICT | UPDATE-073; V-11; do not touch Flutter `ui/driver_app/` |
+| UI-FARE-01 | Unify Simulator and Web Driver demo fare through `PolicyBundle` | DONE-CODE / WAITING-VERDICT | UPDATE-073; **V-16** (đánh số lại từ V-11 — xem PENDING-REVIEW); do not touch Flutter `ui/driver_app/` |
 | UX-CARDS | Proactive cards + explicit adherence contract | DONE-CODE / WAITING-VERDICT | UPDATE-067; V-10 |
 | R1/R4 | App-language simulation shell + playback/feed | DONE-CODE / WAITING-VERDICT | UPDATE-068; V-10 |
 | AUDIT-A1/A2/A3 | Math, integrity, agent-system audit + narrow fix batches | DONE-CODE | UPDATE-064..066, 069..070; ĐA-01..06 and D-A3-01..06 remain open |

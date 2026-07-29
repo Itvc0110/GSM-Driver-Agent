@@ -1,5 +1,10 @@
 # SPEC — Advisor Optimization Lớp A + Behavior Model B-arm (v0)
 
+> **⚠ Banner 2026-07-29:** §2.1 (objective của arm A) **SUPERSEDED bởi
+> `specs/advisor-objective-model-v2.md`** (đã DUYỆT 2026-07-27 + amendment Q-11/Q-12). Phần còn lại
+> của file này (behavior model B-arm, information model, advice scope, capacity ledger, arm C,
+> bảng harmonize §4) vẫn có hiệu lực trừ khi ghi rõ khác bên dưới.
+
 Cập nhật: 2026-07-22 · Trạng thái: READY FOR M4 SAU M0–M3 GATES · Tiền đề: `sim-policy-bundle-v0.md`, `advice-timing-state-memory.md`, `simulation-reliability-upgrade.md`.
 Nguyên tắc: deterministic theo allowed input + seed (bắt buộc cho CRN); mọi tie-break có quy tắc cố định; không dùng realized future orders/environment state ngoài forecast được phép.
 
@@ -19,7 +24,7 @@ U(rest)           = w_meal(giờ) + λ_fatigue·F(t)                       (w_me
 U(end_shift)      = w_home(t vs giờ về quen) + bonus_lock_in           (bonus_lock_in: đã đạt mốc ngày → thiên về kết ca nếu quá giờ quen)
 ```
 
-- `Ê[đơn]` = **bảng kinh nghiệm cá nhân** (per-actor demand prior trên cell×hour-bucket): khởi tạo = `true_mean × (1 + ε_a)`, ε_a ~ N(0, σ_arch); **σ_arch: P4 tân binh 0.6 · P1 0.4 · P2 0.3 · P5 0.15 · P3 0.1** (G1: "lão làng chính xác hơn" được định lượng). Cập nhật online: EMA α=0.3 theo quan sát của chính actor. → tạo coincident compliance tự nhiên.
+- `Ê[đơn]` = **bảng kinh nghiệm cá nhân** (per-actor demand prior trên cell×hour-bucket): khởi tạo = `true_mean × (1 + ε_a)`, ε_a ~ N(0, σ_arch); **σ_arch: P4 tân binh 0.6 · P1 0.4 · P2 0.3 · P5 0.15 · P3 0.1** (G1: "lão làng chính xác hơn" được định lượng). Cập nhật online: EMA α=0.3 theo quan sát của chính actor. → tạo coincident compliance tự nhiên. **⚠ Đính chính 2026-07-29:** danh sách 5 archetype ở trên đã tăng lên **7** trong sim (thêm P6 "ca sáng sớm" 0.18, P7 "ca tối-đêm" 0.12 — `src/gsm_sim/archetypes.py`, SIM-1); ĐA-08 (1b) yêu cầu báo cáo đủ P1..P7.
 - `F(t)` mệt mỏi = giờ online lũy kế / ngưỡng archetype (P3 12h, P2 10h, P5 9h, P1 5h, P4 8h), quy đổi qua λ_fatigue (VND-equivalent/10ph, default 3k).
 - Tham số λ per archetype trong config `behavior-params-v0.yaml` (sinh khi build, review được).
 - **Acceptance khi đơn nổ**: p_accept = logistic(η·(gross_ước − c_pickup·τ_pickup)) nhân hệ số archetype (P3 0.98 · P5 0.97 · P2 0.95 · P1 0.85 · P4 0.80); bị ép 1.0 khi `forced_auto_accept`.
@@ -71,11 +76,20 @@ r(END)  = 0; terminal_bonus = giá_trị_mốc_NGÀY_đạt_được(điểm_d�
 
 Ledger đếm advice-outstanding theo (trạm, bucket 30ph) [sim_extended] hoặc (khung giờ swap, bucket) [product_only]. Sức chứa kỳ vọng = throughput tủ × bucket. Advice thứ N+1 vào slot đầy → DP nhận Q̂_ledger tăng → tự chuyển bucket/hành động khác. Staggering: ưu tiên SOC thấp trước, cộng jitter ±7ph từ actor-stream.
 
+> **⚠ Đính chính 2026-07-29 (UPDATE-083/084):** capacity ledger **ĐÃ CODE** (`_standby_planner`
+> batch Hungarian + cờ `positioning_overrides`). Đo 30 seed × 4 thế giới: kênh vị trí cứu hệ thống
+> SIG (served +1,03đp, đơn chết −13,4/ngày) và **HHI GIẢM** (chống dồn cục). Không còn là spec
+> chưa code.
+
 ### 2.5 Arm C — placebo (F5, định nghĩa lại)
 
 - **Cùng trigger engine + cooldown + budget** như A (không copy lịch của A — tần suất xấp xỉ, log số advice/arm để đối chiếu).
 - Content: **random-safe** — uniform trên action hợp lệ tại trạng thái đó, ràng buộc không vi phạm an toàn (không khuyên ONLINE khi SOC<12%, không khuyên bỏ swap khi sắp stranded).
 - Chấp nhận Δ(C−B) có thể **âm**; báo hai chiều, diễn giải kèm caveat trust-tĩnh-trong-24h.
+
+> **⚠ Đính chính 2026-07-29:** arm C (placebo) **VẪN CHƯA được code** — đây là nợ còn lại của
+> chương trình 3-arm (cùng tình trạng ghi ở `specs/simulation-twin-world.md` §11); arm A/B đã có
+> ở `parallel.py`.
 
 ## 3. Adherence & đo lường (F6, F7 — bổ sung DoD)
 
@@ -91,7 +105,7 @@ Ledger đếm advice-outstanding theo (trạm, bucket 30ph) [sim_extended] hoặ
 | Field aggregation tick | 15 phút (twin-world §2.1 "5 phút" hết hiệu lực) |
 | Run window | Profile 05:00–24:00 là compatibility pilot; M1 target = **`[00:00,24:00)`**, `orders_per_day` = kỳ vọng toàn ngày; không renormalize full-day demand vào window cũ |
 | Đỉnh demand | sáng ~1,55×TB, chiều ~2,0×TB (theo bảng mock spec — bỏ mô tả "2 đỉnh ~2×") |
-| N actors | Pilot = 50 (twin-world §5.1 "300–500" chỉ cho bản mở rộng) |
+| N actors | Pilot = 50 (twin-world §5.1 "300–500" chỉ cho bản mở rộng). **⚠ Đính chính 2026-07-29: config hiện hành `actors.n = 90`** (`configs/pilot_dongda.yaml`), không còn 50 |
 | UNSEEN | = advice **expire trước khi kịp phát** vì actor bận suốt validity; nếu phát được khi về idle thì không phải UNSEEN |
 | Zone weights pilot | `w_cell = a·pop + b·POI` trên res 9 (mock spec §6 Tier A/B/C chỉ cho bản toàn HN; projection res 9 dùng công thức pilot) |
 | OD boundary (F10) | **Buffer ring**: demand sinh trong 85 cells lõi; đích sample distance-decay có thể rơi vào vành k≤4 quanh lõi (nhãn `outside`); actor trả khách ngoài → deadhead tự quay về cell lõi gần nhất (chi phí thời gian thực); metrics chỉ tính hoạt động từ lõi |

@@ -1,5 +1,10 @@
 # SPEC — Chương trình nâng cấp simulator reliability-first M0–M4 (v1)
 
+> **⚠ Banner 2026-07-29:** **M0 DONE** (T-030, UPDATE-023 — chờ human visual verdict V-01/V-02).
+> **M1–M4 (T-031..T-037/T-019/T-020/T-026) hiện PAUSED** — chương trình thực tế chạy song song là
+> Track A sim overhaul (SIM-1..5 → SIM-XANH → Track UI → AUDIT → Cycle P/R/V/W), KHÔNG theo đúng
+> thứ tự M1→M4 dưới đây. Phasing/trạng thái hiện hành: xem `specs/simulation/00-sim-overhaul-master.md`.
+
 Cập nhật: 2026-07-22 · Trạng thái: **APPROVED ROADMAP — IMPLEMENTATION GATED BY M0**  
 Nguồn: quyết định Cường 2026-07-22; kế thừa `simulation-pilot-world.md`, `simulation-twin-world.md`, `advisor-optimization-layer-a.md`, `environment-variables.md` và `research/simulation/`.
 
@@ -167,6 +172,11 @@ Audit working diff Stage A–C và baseline hiện tại trước khi thêm beha
 | Tie-break actor chưa khóa đầy đủ | Determinism gap | Stable assignment trace |
 | `order_expired` từng bọc nested `detail` | BUG đã thấy | Regression test event schema |
 
+> **⚠ Đính chính 2026-07-29 (AUDIT A1 DEMAND-1) — hàng `hour_interp` ở trên:** cờ này đã bị
+> **GỠ** (cờ chết, không còn trong config) — sim **KHÔNG nội suy** cường độ giữa mốc giờ (răng cưa
+> tại biên giờ vẫn tồn tại thật). Việc "cài nội suy thật" là **`D-SIM-19`**, vẫn `DEFERRED` (sev
+> THẤP) trong `tracking/DEFERRED.md`, không phải BUG đang mở.
+
 Danh sách này không phải kết luận root cause; T-030 phải reproduce/classify từng mục.
 
 ### 4.3 Audit artifact
@@ -285,6 +295,9 @@ Narrative 60–90 giây:
 1. **City pulse:** market 24h, demand/supply/congestion/weather/station queue và lifecycle.
 2. **Actor journey:** chọn actor, xem route, state Gantt, SOC, payout/points, cuốc, idle/relocate/rest/charge và flaw callouts.
 3. **Advisor:** trước M4 chỉ hiện placeholder `ADVISOR CHƯA ĐƯỢC BẬT`; sau M4 mới so paired A/B/C.
+   **⚠ Đính chính 2026-07-29:** ngoài lộ trình M0-M4 hình thức, **advisor đã thực sự nối vào sim**
+   qua `src/gsm_sim/advice_bridge.py` (**4 kênh** — không phải placeholder) từ Track A sim overhaul;
+   xem `specs/advisor-objective-model-v2.md` và T-045 series trong `tracking/TODO.md`.
 
 Player hỗ trợ per-event hoặc bins 1/5/15 phút; play speed 1×/4×/16×/60×; cùng playhead cho mọi chart/layer và paired arms.
 

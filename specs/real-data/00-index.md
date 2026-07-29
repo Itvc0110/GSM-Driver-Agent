@@ -6,6 +6,13 @@ Kích hoạt: Cường cấp **schema thật gsm-data-prod** (13 bảng, 2026-07
 > **Cycle này CHỈ sản xuất blueprint** (catalog + 7 part-plan). Implement = các cycle PI-1..PI-6 riêng (P7 roadmap), mỗi cycle có plan+test.
 >
 > **Trạng thái impl (UPDATE-034, 2026-07-24):** ✅ **PI-1** (13 schema `l1r/*`) + ✅ **PI-2** (`mockgen/realdata.py` sim→aggregate, 13 bảng, R1/R3/R4 verify, suite 201). Còn PI-3 (DataSource tool), PI-4 (solver+S5/S6), PI-5 (UC5-8), PI-6 (external). R2 statistical verify chưa chạy.
+>
+> **⚠ Đính chính 2026-07-29:** **PI-4** (adapter L1R→L3 + S5/S6, UPDATE-037/038) và **PI-5** (S7/S8/S9
+> + router UC5-8, UPDATE-040..043) đều **DONE**. **R2 statistical verify ĐÃ CHẠY** — xem
+> `research/experiments/mockgen/ROUND-2-stats-report.md` và
+> `research/experiments/mockgen-realdata/ROUND-2-stats-report.md`. Còn lại: **PI-3 DEFERRED chủ ý**
+> (`D-GCP-01` — publish chạy trên mock/local, không phải blocker cần unblock) + **PI-6** (External,
+> key/config đã có nhưng provider/cadence chưa implement).
 
 ## Các phần
 

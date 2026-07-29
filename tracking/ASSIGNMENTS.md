@@ -18,13 +18,14 @@ Cơ chế: công việc sống trong `tracking/TODO.md` và có thể được c
 | Ngày | Người | Việc (T-###) | Phạm vi files/folders | Trạng thái | Ghi chú |
 | --- | --- | --- | --- | --- | --- |
 | 2026-07-26 | Khánh | T-009b (Flutter mobile song song) | `ui/driver_app/` — KHÔNG ai khác đụng | READY | Bắt kịp web qua `ui/contracts/` + `ui/design-tokens.json` + `ui/docs/SCREEN-PARITY.md`; cùng backend FastAPI với web |
-| 2026-07-27 | Cường | UI-FARE-01 (đồng nhất giá cuốc demo) | `ui/backend/`, `ui/web/`, pricing tests và tracking/docs liên quan; KHÔNG đụng `ui/driver_app/` | WAITING-VERDICT | Code/tests/technical visual flow complete; user verdict V-11 is required before commit/push |
+| 2026-07-27 | Cường | UI-FARE-01 (đồng nhất giá cuốc demo) | `ui/backend/`, `ui/web/`, pricing tests và tracking/docs liên quan; KHÔNG đụng `ui/driver_app/` | WAITING-VERDICT | Code/tests/technical visual flow complete; user verdict **V-16** (đánh số lại từ V-11) required |
+| 2026-07-29 | Cường (agent) | md-refresh toàn repo + PLAN-cycle-wx Phần B (B1..B4) + tích hợp UPDATE-092 | `tracking/*` (trừ updates cũ), `planning/*`, `specs/*`, `research/*`, `schemas/*.md`, `src/gsm_sim/{parallel,sim_metrics}.py`, `tests/test_net_metric.py`, `ui/` (docs/contracts — phối hợp Khánh) | DOING | Cycle W DONE-CODE (UPDATE-091); teammate UPDATE-092 đang tích hợp |
 
 ## Lịch sử
 
 | Ngày claim → xong | Người | Việc | Kết quả / bàn giao |
 | --- | --- | --- | --- |
-| | | | |
+| 2026-07-28 → 2026-07-29 | Cường (agent) | Cycle P/R/V/W (T-045a/b, BUG-EVAL-ARGMAX, B-02 registry, ĐA-05 lifecycle store) | UPDATE-083..091; suite 707/5; fingerprint IDENTICAL; ĐA-05 DONE-CODE chờ verdict |
 | 2026-07-21 → 2026-07-22 | Khánh | T-004 | Audit nguồn T1 official (sitemap + Driver Center), curate source Bike/RTO/Platform, kiểm tra track/geo/lifecycle và raw evidence. Bàn giao: source register và corpus text-only 7 nguồn current, có provenance + guardrail; HTML/asset/OCR/crawler lặp vẫn loại, không tạo runtime/contract. |
 | 2026-07-21 → 2026-07-26 | Khánh | T-009 (UI clone) | Làm ở repo riêng `Quockhanh0712/uiuxgsm` (Stitch web demo + Flutter app + FastAPI gateway + contracts). Bàn giao: `uiuxgsm-main.zip` → Cường quyết định import vào `ui/` làm nền UI thật (UPDATE-059, DIRECTIVES §11). Tiếp nối: T-009b (Flutter song song) |
 | 2026-07-21 → 2026-07-27 | Cường | T-018 / SIM successor | Successor SIM-1..5 và SIM-XANH code-complete (UPDATE-044..058); legacy claim released. V-01..V-06, V-08/V-09 còn chờ verdict. |

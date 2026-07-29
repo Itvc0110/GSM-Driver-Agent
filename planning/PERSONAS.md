@@ -1,7 +1,9 @@
 # PERSONAS — 5 hồ sơ tài xế mock (Bike, Hà Nội)
 
-Cập nhật: 2026-07-20 · Trạng thái: nháp v1 (T-002) — chờ Cường/Khánh review.
+Cập nhật: 2026-07-29 · Trạng thái: **ACTIVE** — không còn "nháp chờ review"; 5 persona này là archetype **đang được sim sản xuất** từ SIM-1 (UPDATE-044) trở đi.
 Mọi con số là **MOCK** được tổng hợp/suy luận từ `research/` (nguồn ghi trong đó); trường chưa có căn cứ đánh dấu `TBD`.
+
+**⚠ Phân biệt PRODUCT vs SIM (2026-07-29):** persona **PRODUCT** (bảng dưới đây, F0–F3) = **5** (P1–P5). Archetype **SIM** = **7** — sim thêm **P6 "ca sáng sớm"** (tỷ trọng 0.18) và **P7 "ca tối-đêm"** (tỷ trọng 0.12) để phủ khung giờ ngoài 5 persona gốc, định nghĩa tại `src/gsm_sim/archetypes.py`. **ĐA-08 tiêu chí (1b)** (no-harm guard công bằng, `specs/advisor-objective-model-v2.md` §5) yêu cầu báo cáo đủ **P1..P7**, không chỉ 5 persona product.
 
 ## Trường hồ sơ chuẩn (nháp schema cho T-011)
 

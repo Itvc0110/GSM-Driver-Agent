@@ -114,6 +114,6 @@ Twin-world sim (specs/simulation-twin-world.md) dùng đúng cấu trúc này: a
 
 ## 5. Việc mở tiếp
 
-- Cường/Khánh review 2 quyết định thiết kế: (a) hybrid trigger + cooldown defaults; (b) ranh giới lớp A/B/C như trên.
+- ~~Cường/Khánh review 2 quyết định thiết kế: (a) hybrid trigger + cooldown defaults; (b) ranh giới lớp A/B/C như trên.~~ **⚠ Gỡ khỏi việc mở 2026-07-29: đã APPROVED ở header (Cường 2026-07-21) — không còn là item chờ review.**
 - T-011 (contract v2) phải bao gồm: advice envelope (spec + validity + confidence + trigger), session snapshot schema, persistent profile schema (đã có nháp trường trong PERSONAS).
 - Khi build sim: calibrate cooldown/budget bằng chính sim (sweep tần suất advice → adherence/hiệu quả).

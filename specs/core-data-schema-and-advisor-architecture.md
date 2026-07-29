@@ -1,6 +1,6 @@
 # SPEC — Core Data Schema & Advisor Architecture (v1)
 
-Cập nhật: 2026-07-23 · Trạng thái: **DESIGN APPROVED (brainstorm Cường 2026-07-23) — chờ review file để vào plan**
+Cập nhật: 2026-07-23 · Trạng thái: **DESIGN APPROVED — ⚠ 2026-07-29: C0–C6 ĐÃ IMPLEMENT (C7 chưa)**, xem các đính chính bên dưới
 Nguồn: brainstorm Cường 2026-07-23; kế thừa `simulation-reliability-upgrade.md` §3.5 (observable/inferable/latent), `advisor-optimization-layer-a.md` (DP), `advice-timing-state-memory.md` (trigger/memory), `planning/USER_STORIES.md`, `research/community/pain-points.md`, `research/simulation/llm-advisor-architecture.md`.
 Bối cảnh mới: **dự án hợp tác chính thức với GSM — có quyền truy cập data thật** (Cường 2026-07-23) → schema **platform-centric**.
 
@@ -94,6 +94,10 @@ Mọi field L1 là thứ **GSM đo được thật** (taxonomy §3.5). Không fi
 - **Sim map cùng schema**: sim runner xuất L1 events đúng format này (adapter từ `world.events`/`segments`) → twin-world eval và product dùng chung pipeline; dữ liệu sim phải bám phân phối thực tế (benchmark research + data thật khi có).
 - Registry `schemas/` trong repo: JSON Schema per entity + validator + changelog.
 
+> **⚠ Đính chính 2026-07-29 (Cycle V, UPDATE-090):** registry nay là **đa phiên bản**
+> (`{entity}@{ver}.schema.json`, validate route theo record, fail-loud version lạ/null) + upcaster
+> từng-bậc có chặn-treo, không còn registry một-phiên-bản như mô tả gốc.
+
 ### 1.7 Traceability biến → feature → pain point (chiều xuất phát từ BIẾN)
 
 Pain # theo `research/community/pain-points.md`: **#1** sạc/đổi pin giờ đỉnh · **#2** quỹ giờ 10–13h/ngày quá tải · **#3** áp lực tỷ lệ nhận (ngưỡng 50% forced-accept, 85% bonus) · **#4** chính sách khó hiểu/đổi liên tục.
@@ -102,6 +106,11 @@ Pain # theo `research/community/pain-points.md`: **#1** sạc/đổi pin giờ �
 > - **Pain #3 đổi bản chất:** phạt <70% + forced-accept <50% **đã bỏ** (Vận Doanh 23/02/2026). Ngưỡng còn hiệu lực = **85% eligibility thưởng tuần** + **đạt khoán tuần**. `thresholds.forced_accept_below` trong `policy_bundle` schema → review có còn dùng không (versioned).
 > - **MODEL GAP (solver):** mô hình mới = **khoán tuần (doanh số/tuần) + truy thu 20-40%** khi thiếu. S1 hiện tính theo ĐIỂM/ngày; cần biến thể/solver "gap tới khoán tuần" đơn vị **VND doanh số tuần** + cảnh báo clawback. Clawback map được vào `PayoutLedger.kind=deduction` (đã có) — nhưng solver chưa dự báo/planning quanh nó.
 > - **SCHEMA GAP:** `policy_bundle.points` chỉ có trục peak/normal; điểm thực tế còn khác theo **service_type** (5-10-15-20-30 Bike/Food/Express, PDF Q&A 12/2025) → thêm chiều service (nối `ServiceCatalog`); thêm `weekly_quota`/`clawback_rate` versioned. Mọi việc này = **cycle plan riêng**, không sửa trong refresh docs này.
+>
+> **⚠ Đính chính 2026-07-29:** "cycle plan riêng" ở trên **đã làm xong** — solver **S5
+> `WeeklyKhoanFeasibility`** + field `policy_bundle.weekly_quota` additive đã code (UPDATE-038,
+> theo blueprint `specs/policy-weekly-khoan-model.md`); exact GSM quota/clawback values vẫn
+> `BLOCKED D-POL-05`.
 
 | Nhóm biến | Feature/US nuôi | Pain # | Solver tiêu thụ |
 |---|---|---|---|
@@ -128,6 +137,11 @@ Biến nào sau này thêm vào schema PHẢI điền được hàng trong bản
 | S3 | `F3Patterns` | pattern chưa tối ưu từ SessionSummary | rules + so sánh phân phối | F3-01/02/03 | detect_flaws sim là prototype |
 | S4 | `CapacityAlloc` | phân bổ advice chống herding | linear_sum_assignment / min-cost | F2-04 có điều kiện | cần S2 candidates |
 
+> **⚠ Đính chính 2026-07-29:** bảng trên chỉ liệt kê S1–S4 gốc; **S1..S9 đã implement** — S5
+> `WeeklyKhoanFeasibility` (UPDATE-038), S6 `MissionKnapsack` (UPDATE-038), S7 `IdleReduction`
+> (UPDATE-041), S8 `PenaltyExplain` + S9 `AnomalyAlert` (UPDATE-042). Xem
+> `specs/real-data/06-new-features-and-optimization.md` cho I/O contract S5–S9.
+
 **SolverReport envelope** (hợp đồng output thống nhất — cách agent "hiểu" solver):
 
 ```yaml
@@ -153,7 +167,15 @@ AdviceRequest → Router (deterministic, không LLM)
   → AdviceEpisode → AdvisorStateStore (DecisionRecord append-only)
 ```
 
-- **Hiện trạng trung thực:** repo CHƯA có agent harness/multi-agent nào được implement (chỉ có spec DP, research llm-advisor-architecture, smoke script LLM; T-005 CrewAI đang hoãn — thiết kế này thay thế đánh giá đó). Pipeline dưới đây là bản build đầu tiên; LLM chỉ xuất hiện từ C6.
+> **⚠ Đính chính 2026-07-29:** tên gọi "AdvisorStateStore (DecisionRecord append-only)" ở trên là
+> tên THIẾT KẾ; tên thật đã code là **`AdviceEventLog` + `projections`**
+> (`gsm_core/lifecycle/{event_log,projections}.py`, Cycle W UPDATE-091); `episode_store` cũ nay là
+> **legacy adapter** đọc qua store canonical, không còn là nguồn sự thật độc lập.
+
+- **⚠ SAI, đính chính 2026-07-29 (từ UPDATE-030):** dòng dưới đây mô tả trạng thái TRƯỚC C6 —
+  **repo NAY ĐÃ CÓ agent harness**: pipeline C6 (Router → Composer → Verifier) + 9 solver S1–S9 đã
+  implement và chạy. Giữ nguyên câu gốc bên dưới để đối chiếu lịch sử.
+- **Hiện trạng trung thực (lịch sử, TRƯỚC UPDATE-030):** repo CHƯA có agent harness/multi-agent nào được implement (chỉ có spec DP, research llm-advisor-architecture, smoke script LLM; T-005 CrewAI đang hoãn — thiết kế này thay thế đánh giá đó). Pipeline dưới đây là bản build đầu tiên; LLM chỉ xuất hiện từ C6.
 - **Không multi-agent swarm** — 1 pipeline deterministic + đúng 2 vai LLM (Composer, Verifier). Model: deepseek-v4-flash chính; fallback gpt-4o-mini (403 — chờ Cường xin quyền); template fallback luôn chạy được (LLM-off mode).
 - **Loop bounds**: solver single-pass; Composer↔Verifier ≤1 repair; F0 clarify ≤2 lượt; what-if residual có token budget. Không open-ended loop.
 - **State**: agent stateless per-request; state ở L2/L3 + AdvisorStateStore (advice history, cooldown, adherence stats). Cập nhật state = ghi DecisionRecord sau mỗi episode — cơ chế duy nhất.
@@ -200,9 +222,18 @@ Per-layer (Langfuse chính): router accuracy · solver feasibility-rate/latency/
 
 `ComposedAdvice.advice_spec` → sim `AdviceEvent` → adherence model (5 nhãn, twin-world §7) → actor override behavior. Placeholder tên field đặt sẵn trong schema để không sửa contract sau. Cường cho phép tính chi tiết sau khi khung agent bản đầu xong.
 
+> **⚠ Đính chính 2026-07-29:** mapping này nay đã CỤ THỂ, không còn là khung placeholder —
+> `src/gsm_sim/advice_bridge.py` nối solver → hành động actor qua **4 kênh** (xem
+> `specs/advisor-objective-model-v2.md` và các UPDATE T-045/ĐA-09 liên quan).
+
 ## 8. Thứ tự implement + backlog
 
 **Track CORE chạy TRƯỚC; sim pause sau T-030 — M1–M4 (T-031..T-037) resume sau khung core.** Một ordering duy nhất cho observability: T-026 phase 1 (metric table) tại C2, phase 2 (Langfuse instrumentation) đồng thời C6 — không gắn sau; T-019 twin-integration kế thừa artifacts C6/C7.
+
+> **⚠ Đính chính 2026-07-29:** thứ tự thực chạy khác kế hoạch trên — sim overhaul (Track A:
+> SIM-1..5 → SIM-XANH → Track UI → AUDIT → Cycle P/R/V/W) đã chạy và hoàn tất phần lớn TRƯỚC khi
+> M1–M4 resume; M1–M4 hiện vẫn PAUSED. Xem `specs/simulation/00-sim-overhaul-master.md` cho
+> phasing hiện hành.
 
 ```text
 C0 (T-038a): schemas/ JSON Schema + validators + changelog        ← chốt schema

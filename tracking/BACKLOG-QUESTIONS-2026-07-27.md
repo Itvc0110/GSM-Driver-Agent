@@ -1,3 +1,5 @@
+> **⚠ Đính chính trạng thái 2026-07-29 (đọc trước):** UX-CARDS → DONE-CODE (UPDATE-067, chờ V-10) · Q2 A3 audit → XONG (UPDATE-069/070) · Q5 time-engineering → ĐÃ LÀM (T-045 b0, UPDATE-083: 3 lỗi thời gian, 6 test) · Q6 adherence đa tín hiệu → spec `specs/adherence-measurement.md` + hạ tầng ĐÃ KÍN (Cycle W: store canonical, `decision_adherence`/`event_adherence`) · mục "3 câu cần Cường chốt" → CLOSED (DIRECTIVES §12) · N5 CI → `.github/workflows/ci.yml` đã tồn tại · thứ tự thực tế sau audit: T-041/T-045 → ĐA-08/09 → Cycle V (B-02) → Cycle W (ĐA-05); R1–R4 UI-sim redesign chưa làm; R5-A xong, R5-B QUOTA-BLOCKED.
+
 # BACKLOG — loạt câu hỏi/ý tưởng Cường 2026-07-27 (rạng sáng)
 
 > **STATUS NOTE — 2026-07-27:** đây là backlog lịch sử trước khi audit/reconcile hoàn tất. F0 và

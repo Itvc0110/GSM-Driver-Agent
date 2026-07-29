@@ -1,6 +1,6 @@
 # P6 — Feature & optimization mới từ data thật (UC5–UC8) + map UC↔F
 
-Cập nhật: 2026-07-24 · Part 6/7 · Trạng thái: DESIGN
+Cập nhật: 2026-07-24 · Part 6/7 · Trạng thái: **⚠ 2026-07-29: ĐÃ CODE** (S5–S9, UPDATE-038/040/041/042 — UC1–UC8 phủ hết bằng 9 solver); blueprint gốc (DESIGN) giữ để đối chiếu lịch sử.
 Quyết định Cường: **mở rộng UC5-UC8**. Trả lời #6 (UC6/7/8 giống output feature ta). Mỗi mục: nguồn data, bài toán (optimization vs reasoning), I/O contract sketch, guardrail §5.
 
 ## 1. Map UC (bảng thật) ↔ Feature ta ↔ Solver

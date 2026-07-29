@@ -1,6 +1,6 @@
 # MOCK SPEC — Demand proxy Bike Hà Nội (nháp v1, T-003)
 
-Cập nhật: 2026-07-20 · Căn cứ: `research/market/order-distribution.md`, `research/policy/bonus-programs.md`, `research/community/` · Trạng thái: **SPEC READY / CODE CHƯA CLAIM**. Mọi output gắn `is_mock=true`, provenance và deterministic seed.
+Cập nhật: 2026-07-20 · Căn cứ: `research/market/order-distribution.md`, `research/policy/bonus-programs.md`, `research/community/` · Trạng thái: **⚠ 2026-07-29 — TÁCH HAI VẾ:** hour-shape (§3) + zone weight (§6) **ĐÃ THỰC THI** trong `gsm_sim/demand.py` + `mockgen`; generator `BASE_HN` 170k **ĐỘC LẬP** (§2, mức tuyệt đối toàn Hà Nội) thì **CHƯA** — sim chỉ dùng shape, không dùng mức tuyệt đối này. Mọi output gắn `is_mock=true`, provenance và deterministic seed.
 
 ## 0. Ranh giới
 
