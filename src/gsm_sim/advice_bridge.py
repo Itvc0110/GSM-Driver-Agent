@@ -537,8 +537,6 @@ class AdviceActionBridge:
         """
         if not (self.ch_accept_lift and self.covers(actor)):
             return None
-        if not self.cadence_allows(actor, "accept_lift", now_min):
-            return None                       # ĐA-04: hết cooldown/ngân sách ⇒ im
         if now_min >= actor.shift_end_min:
             return None                       # hết ca, khuyên cũng vô ích
         thr = float(self.policy.bonus_min_acceptance)
@@ -563,6 +561,15 @@ class AdviceActionBridge:
             return None
         if acc >= thr or actor.accept_lift >= self.lift_max:
             return None
+        # R-08 (soi đối kháng vòng 2): hỏi NHỊP ở ĐÂY, không phải ở đầu hàm. Đặt ở đầu thì
+        # mỗi tick không-có-gì-để-nói (đã đạt ngưỡng, hoặc `_advice_would_help` nói không)
+        # vẫn ghi một event "bị nén" — đo được **130/206 lần gọi (63%) và 27/58 event nén
+        # là MA**. Hệ quả: con số "kênh nào đói suất" — nền của chẩn đoán D-ĐA04-03 — lệch
+        # có hệ thống, và "2.670 lần bị nén" báo cho stakeholder bị phóng đại.
+        # Hành vi KHÔNG đổi: `evaluate` là hàm thuần, không tiêu RNG, và memory không đổi
+        # trong một lời gọi ⇒ cùng một kết luận nói/không-nói, chỉ khác chỗ GHI NHẬN.
+        if not self.cadence_allows(actor, "accept_lift", now_min):
+            return None                       # ĐA-04: hết cooldown/ngân sách ⇒ im
         # material_revision = ĐỘ LỚN khoảng cách tới ngưỡng (làm tròn 1%): nội dung lời
         # khuyên đổi thật thì coin mới; nhích 0,001 thì vẫn là một quyết định.
         # material_revision = NỘI DUNG ĐỊNH TÍNH ("khuyên nâng tỷ lệ"), KHÔNG phải số
@@ -648,8 +655,6 @@ class AdviceActionBridge:
              không phải biến để tối ưu.
           3. **Trần hoãn** `rest_defer_max_min` ⇒ không đẩy nghỉ đi vô hạn.
         """
-        if not self.cadence_allows(actor, "rest_window", now_min):
-            return False, ""                  # ĐA-04: nhịp chung quyết định
         if actor.soc_pct <= soc_threshold:
             return False, "soc_low"
         if actor.online_min > actor.fatigue_threshold_min:
@@ -665,6 +670,12 @@ class AdviceActionBridge:
             return False, "window_past"
         if actor.rest_deferred_min + minutes_to > self.rest_defer_max_min:
             return False, "defer_cap"
+        # R-08: hỏi nhịp SAU khi biết thật sự có khung để hoãn (xem comment ở accept_lift).
+        # Ba lan can trên (soc_low/fatigued/defer_cap) và hai kiểm khung (no_window/
+        # window_past) đều là "không có gì để nói" — nén ở đó là nén một lời khuyên KHÔNG
+        # TỒN TẠI.
+        if not self.cadence_allows(actor, "rest_window", now_min):
+            return False, ""                  # ĐA-04: nhịp chung quyết định
         self.cadence_note_spoken(actor, "rest_window", now_min)
         return True, f"defer_to_{target:02d}h"
 

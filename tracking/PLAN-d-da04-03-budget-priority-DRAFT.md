@@ -34,14 +34,21 @@ nay **đã đo lại xong và luận cứ MẠNH LÊN**. Ba confound được t�
 
 **Hệ quả cho plan:** câu hỏi #6 ("*nếu Δ co về gần 0 thì đóng luôn D-ĐA04-03?*") **đã có câu
 trả lời: KHÔNG** — Δ không co về 0, nó **to gấp đôi**. Phần *chẩn đoán cơ chế* vẫn đứng; phần
-*định lượng* nay có số thật. ⚠ Vẫn giữ cảnh báo: `D-R08` cho biết con số "2.670 lần bị nén"
-phóng đại ~47% vì ba kênh đếm "bị nén" theo quy ước khác `shift_extend`.
+*định lượng* nay có số thật. 🔴 **`D-R08` đã sửa xong và nó BÁC BỎ một nửa lập luận của plan này**: 50% số nén là MA
+(`accept_lift` 93%, `rest_window` **100%**); số nén thật là 1.377 không phải 2.756. Nghiêm
+trọng hơn: chẩn đoán *"`rest_window` chết đói ngân sách"* — một trong **hai** chân của lập
+luận D-ĐA04-03 — là **SAI**. Chạy với cadence TẮT HẲN thì `rest_window` vẫn nói 0 lần; nó im
+vì **không có khung nào để hoãn**, không liên quan gì tới ngân sách.
+
+**Chân còn lại vẫn vững**: `shift_plan` chiếm suất (0% ma trong số nén), và lưới 2×2 độc lập
+xác nhận bằng tương tác +3.249đ. Nhưng plan chính thức **phải viết lại phần chẩn đoán** — chỉ
+được dùng bằng chứng `shift_plan`, không được dùng `rest_window`.
 
 ## 0. Sự thật làm đảo đề bài (phát hiện khi đối chiếu config — cả 3 thiết kế đều tự khai)
 
 **Ở config ship hiện tại, D-ĐA04-03 tốn ≈ 0đ.** `configs/pilot_dongda.yaml`: 4 kênh chịu
 ngân sách đều `false` (ĐA-07), chỉ positioning bật mà positioning nằm NGOÀI ngân sách.
-Chi phí FIFO **+3.249đ/tài xế/ngày** (tương tác, artifact 37) chỉ xuất hiện khi bật nhiều kênh —
+Chi phí FIFO **+3.249đ/tài xế/ngày** (tương tác, artifact 37) chỉ xuất hiện khi bật nhiều kênh — ⚠ và bằng chứng chẩn đoán nay **chỉ còn `shift_plan` chiếm suất**; chân thứ hai (*"rest_window chết đói"*) đã bị chính agent bác bỏ, xem `D-R08` —
 tức ở **arm nghiên cứu**. Hệ quả:
 
 - Đây là nợ **hạ tầng ĐO**, không phải tiền đang mất: mọi phép đo "kênh X có giá trị không"
@@ -93,7 +100,7 @@ Ba cảnh báo nặng nhất:
   phát hiện artifact 31–35 sinh **trước** fix DET-01 — độc lập trùng với đính chính ở đầu file
   này. Hệ quả nó nêu: *"nếu đo lại post-fix mà khoảng cách co lại thì hành động đúng có thể là
   **không làm gì cả**"*.
-- **(5) Giá trị của `rest_window`/`shift_extend` CHƯA TỪNG được đo** (0 lần nói / 234 lần nén).
+- **(5) Giá trị của `rest_window`/`shift_extend` CHƯA TỪNG được đo** (0 lần nói; ⚠ con số "234 lần nén" là **MA 100%** — xem `D-R08`, kênh này im vì không có khung để hoãn chứ không phải bị nén).
   Nếu chúng ÂM thì phương án C **thể chế hoá "mỗi tài xế nhận ít nhất một lời khuyên hại mỗi
   ca"** và có thể âm hơn cả FIFO. Cả hai bản đề xuất C đều tự khai điều này; giám khảo không có
   số để bác.
@@ -174,7 +181,7 @@ advisor im cả ngày. **Đã reproduce, đã fix, đã có test** (`test_budget
 Giám khảo đối chiếu file và tìm ra ba nhóm sai — ghi lại để plan chính thức không kế thừa:
 
 1. **Cả 7 bản trích sai số UPDATE**: các phát hiện cadence (531/2.670, actor 89 lấy 6/6 suất,
-   `rest_window` 234 lần nén) nằm ở **UPDATE-099**, không phải UPDATE-098 (098 là debate/herding
+   ~~`rest_window` 234 lần nén~~ — con số này **SAI, đã bác bỏ**) nằm ở **UPDATE-099**, không phải UPDATE-098 (098 là debate/herding
    của teammate). Bản thân các con số thì đúng.
 2. **Hai bản mô tả sai code hiện hành**: nói `coin_follows` còn nhánh
    `cadence_enabled=False → self.rng.random()`. Nhánh đó **đã bị xoá** (fix DET-01); dòng đó nay

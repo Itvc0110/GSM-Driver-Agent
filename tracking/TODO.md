@@ -51,7 +51,7 @@ nhận xét cũ *"solver coi môi trường là ngoại sinh"* **đã bị code 
   76,9 vs 53,6). Ranh giới sim↔sản phẩm (dismiss là UI-only) khoá bằng 2 test theo chỉ thị
   Cường 2026-07-29. Visual **V-18** chờ Cường. **+ 2 defect P0 từ debate review remote `UPDATE-098` đã reproduce độc lập và FIX**: F-098-01 (gate Bellman bỏ bonus vượt mốc) và F-098-02 (resolver dùng policy ngoài thời hạn) — `tests/test_f098_defects.py`. F-098-03/04/05 → `D-F098-B`. Ba mục mới mở: `D-ĐA04-01` (material_revision
   rỗng không fail-loud), **`D-ĐA04-03` (ngân sách FIFO — kênh ÂM chiếm hết suất, rest_window
-  chết đói; cần plan riêng)**, `D-ĐA04-04` (chi phí log suppressed).
+  chết đói ⚠ **chân "rest_window chết đói" đã bị chính agent BÁC BỎ** — xem `D-R08`; bằng chứng còn lại là `shift_plan` chiếm suất; cần plan riêng)**, `D-ĐA04-04` (chi phí log suppressed), `D-R08` (**đã fix**: 50% số nén là ma).
   **ĐA-06 đã CHỐT riêng 2026-07-27** — nghĩa vụ nhắc-duyệt hoàn tất, agent **không nhắc nữa**;
   vẫn xếp POLISH, và mang nhãn **DỄ THAY ĐỔI** ⇒ thi công theo ràng buộc ở **T-044**.
 - **T-041 — MÔ HÌNH HOÁ LẠI ADVISOR (spec objective v2 §6), ưu tiên cao nhất hiện tại:**

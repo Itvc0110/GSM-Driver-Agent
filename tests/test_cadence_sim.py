@@ -239,6 +239,26 @@ def test_cadence_state_does_not_leak_across_days():
         assert per_actor and max(per_actor.values()) <= 6, (i, max(per_actor.values()))
 
 
+def test_suppressed_events_are_not_phantom():
+    """R-08: chỉ ghi "bị nén" khi THẬT SỰ có lời khuyên để nói.
+
+    Ba kênh từng hỏi `cadence_allows` ở ĐẦU hàm — trước khi biết có nội dung gì — nên mỗi
+    tick "không có gì để nói" vẫn ghi một event nén cho một lời khuyên KHÔNG TỒN TẠI. Đo
+    được 50% tổng số nén là ma (`accept_lift` 93%, `rest_window` **100%**), và chính con số
+    ma đó làm tôi chẩn đoán sai rằng "rest_window chết đói ngân sách".
+
+    Bất biến kiểm ở đây: **một kênh chưa từng NÓI thì cũng không được có event bị NÉN** —
+    nếu nó chưa bao giờ có gì để nói thì không có gì để nén."""
+    r = run_once(_cfg(accept_lift=True, shift_extend=True, rest_window=True), seed=1000)
+    spoken = {"advice_bonus_gate": "accept_lift", "advice_shift_extend": "shift_extend",
+              "advice_rest_window": "rest_window"}
+    said = {ch for k, ch in spoken.items() if any(e.kind == k for e in r.events)}
+    nen = {(e.detail or {}).get("channel") for e in r.events if e.kind == "advice_suppressed"}
+    ma = nen - said - {"positioning", "shift_plan"}   # shift_plan cố ý KHÔNG sửa (xem #23)
+    assert not ma, (
+        f"kênh {ma} có event bị NÉN nhưng chưa từng NÓI ⇒ nén một lời khuyên không tồn tại")
+
+
 def test_one_decision_one_effect_application():
     """R-01: MỘT quyết định được nghe theo ⇒ ĐÚNG MỘT lần áp tác động.
 

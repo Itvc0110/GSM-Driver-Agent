@@ -568,10 +568,18 @@ theo lúc phát hiện); dùng bảng này để tra. Cột "ai bắt" là phầ
 Đo thật seed 1000, ladder all, 90 tài xế: **531 lần advisor NÓI vs 2.670 lần bị NÉN** (83%
 nén), trong đó `shift_budget_exhausted` chiếm 2.634. Nhìn một tài xế cụ thể (actor 89):
 6/6 suất ngân sách đều bị **`shift_plan`** lấy — đúng cái kênh mà ĐA-07 kết luận ÂM và Cường
-chốt *"bản cuối trước khi chốt: TẮT để advisor IM LẶNG nếu không hiệu quả"*. Hệ quả dây
-chuyền: `advice_rest_window` **không nói được lần nào** trong cả run (234 lần bị nén) — tức là
-hiện tượng *"rest_window inert"* ở D-SIM-03/V-07 nay có thêm một lời giải thích mới: **nó chết
-đói ngân sách**, không phải chết vì logic kênh.
+chốt *"bản cuối trước khi chốt: TẮT để advisor IM LẶNG nếu không hiệu quả"*.
+
+⚠ **Con số "2.670 lần bị nén" ĐÃ ĐƯỢC ĐÍNH CHÍNH** (xem §R-08 dưới): **50% trong đó là MA** —
+`accept_lift` 93% ma, `rest_window` **100% ma**. Số nén thật là **1.377**. Phần chẩn đoán còn
+đứng vững là `shift_plan` chiếm suất (0% ma); phần *"rest_window chết đói"* thì **sai**. ~~Hệ quả dây chuyền:
+`advice_rest_window` không nói được lần nào vì chết đói ngân sách~~ ⚠ **CHẨN ĐOÁN NÀY SAI —
+đã bác bỏ 2026-07-29 bằng đo**: sau khi sửa `R-08` (hỏi nhịp SAU khi biết có nội dung),
+`rest_window` có **0 event bị nén** — tức **231 lần "bị nén" trước đó đều là MA** (100%). Và
+chạy với cadence **TẮT HẲN** nó vẫn nói **0 lần**. Kênh này im vì **không có khung nào để
+hoãn** (`no_window`/`window_past`/ba lan can `soc_low`/`fatigued`/`defer_cap`), **không phải
+vì bị ngân sách bỏ đói**. Hiện tượng *"rest_window inert"* của D-SIM-03/V-07 vẫn chưa có lời
+giải thích mới; lời giải thích tôi đưa ra ở đây là sai và đã rút.
 
 - **Phân loại:** `MODEL GAP`, không phải BUG. Code làm đúng thứ nó được viết; thứ **thiếu** là
   cơ chế ưu tiên khi các kênh tranh nhau một ngân sách chung. Design ĐA-04 có nói priority
@@ -718,6 +726,39 @@ ngân sách **CHÚ Ý của người nghe**, advisor NÓI là đã tiêu, bất 
 | **#19** (R-18) | `_phase_of(...) or phase` — record thiếu `at_min` (bản trước ĐA-04, hoặc POST không gửi vì field `default=None`) rơi về **pha của người ĐỌC** ⇒ một cú Bỏ qua cũ thành **lệnh im di động**: hỏi ở pha nào cũng im pha đó | Không biết pha thì **bỏ qua record**, không đoán. *"Không biết" khác "là pha này"* — cùng bài học `is_valid_at` trả ba giá trị ở F-098-02 |
 | **#20** (R-11a) | Ca **vắt qua nửa đêm**: query cho `shift_end_min` nhỏ tuỳ ý, ca 22:00→02:00 gửi 120 ⇒ `shift_len = 120−360 < 0` ⇒ `shift_phase` trả `"early"` **vĩnh viễn** ⇒ *"im hết pha"* biến thành *"im hết ca"*, trái verdict đã chốt | `_norm_shift_end`: kết ca sớm hơn mở ca nghĩa là hôm sau (+1440), áp ở cả GET lẫn `_phase_of`. ⚠ Phần còn lại (memory lọc theo `date` nên qua 00:00 ngân sách được cấp lại **giữa ca**) cần khái niệm `shift_id` → `D-R11b` |
 | **#21** (F4 phần dư) | Sau khi sửa Lỗi #16, `POST /action` **vẫn** ghi một trường `phase` tính bằng `DEFAULT_SHIFT_END_MIN` cứng — **trường chết** mà người đọc sau sẽ tin | Bỏ hẳn trường đó. Giữ lại một trường tính bằng công thức KHÁC chỉ để "debug" là mời gọi đúng cái nhầm lẫn vừa sửa |
+
+### Lỗi #23 (R-08) — MỘT NỬA số "bị nén" là MA, và nó làm tôi chẩn đoán SAI
+
+- **Lỗi:** ba kênh (`accept_lift`, `rest_window`, `consult`) hỏi `cadence_allows` **ở đầu
+  hàm** — trước khi biết có nội dung gì để nói. Nên mỗi tick "không có gì để nói" (đã đạt
+  ngưỡng · `_advice_would_help` nói không · `soc_low`/`fatigued`/`no_window`/`window_past`)
+  vẫn ghi một event *"bị nén"* cho một lời khuyên **không tồn tại**. `shift_extend` thì hỏi
+  SAU — nên hai quy ước đếm khác nhau và **không so được giữa các kênh**.
+- **Fix:** chuyển gate xuống **sau khi nội dung đã xác định** ở `accept_lift` và
+  `rest_window`. **KHÔNG đụng `consult`/`shift_plan`**: ở đó gate đứng cạnh
+  `self._last_consult[...] = now_min`, và chuyển nó xuống sẽ đổi ngữ nghĩa `due()` ⇒ đổi
+  HÀNH VI — đúng thứ R-08 hứa không làm. Ghi lại lý do để không ai "hoàn thiện" nốt.
+- **Chứng minh behavior-neutral** (không phải lập luận, là đo): chạy seed 1000 trước/sau và
+  so **mọi event trừ `advice_suppressed`** — **6.926 event, GIỐNG HỆT**.
+- **Kết quả đo:**
+
+  | kênh | nén TRƯỚC | nén SAU | là MA | % ma |
+  | --- | --- | --- | --- | --- |
+  | `accept_lift` | 1.234 | 86 | 1.148 | **93%** |
+  | `rest_window` | 231 | **0** | 231 | **100%** |
+  | `shift_extend` | 168 | 168 | 0 | 0% |
+  | `shift_plan` | 1.123 | 1.123 | 0 | 0% |
+  | **TỔNG** | **2.756** | **1.377** | **1.379** | **50%** |
+
+- 🔴 **Và nó bác bỏ một chẩn đoán của CHÍNH TÔI.** Tôi đã viết *"`rest_window` chết đói ngân
+  sách (234 lần bị nén)"* và dùng nó làm **một trong hai bằng chứng nền** cho `D-ĐA04-03`.
+  Sự thật: **100% số nén đó là ma**, và chạy với cadence **TẮT HẲN** thì `rest_window` vẫn
+  nói **0 lần**. Kênh này im vì **không có khung nào để hoãn**, hoàn toàn không liên quan tới
+  ngân sách. Bằng chứng còn đứng cho `D-ĐA04-03` chỉ còn **`shift_plan` chiếm suất** (0% ma)
+  — vẫn đủ mạnh vì lưới 2×2 độc lập xác nhận, nhưng **một nửa lập luận đã đổ**.
+- **Bài học:** một con số telemetry mà tôi tự đọc thành chẩn đoán ("kênh này bị bỏ đói") mà
+  **không kiểm phản chứng đơn giản nhất** ("tắt hẳn cơ chế đó xem nó có nói không") — đúng họ
+  BUG-EVAL-ARGMAX ở tầng diễn giải, không phải ở tầng đo.
 
 ### Lỗi #22 (R-12) — nhánh an toàn `QUEUE` chết ở sản phẩm, và lời khuyên bị VỨT thay vì HOÃN
 
@@ -915,7 +956,7 @@ Chỉ thị của Cường chặn lại. Không có dòng code nào sai — như
   mới vẫn đứng vững sau khi dữ liệu bên dưới đã đổi — đó là dấu hiệu chọn đúng đơn vị biểu
   diễn, không phải chỉnh cho vừa một bộ số.
 - **Agent đã verify được tới đâu (nói rõ để không ai đọc nhầm thành "đã review"):**
-  - ✅ **Data path**: chạy thật seed 1000 và đếm từ event — 531 lần NÓI / 2.670 lần NÉN; một
+  - ✅ **Data path**: chạy thật seed 1000 và đếm từ event — 531 lần NÓI / 2.670 lần NÉN (⚠ số nén này **sau R-08 còn 1.377**, một nửa là ma); một
     tài xế mẫu (actor 89) cho `{shift_plan: 6, positioning: 1}` đã nói và
     `{accept_lift: 13, shift_plan: 12, shift_extend: 9}` bị nén vì `shift_budget_exhausted`.
     Tức là **bảng nhịp có dữ liệu thật để hiện**, không phải khung rỗng.
@@ -1004,8 +1045,8 @@ và **độ lớn** của `DET-01`.
    - `D-ĐA04-01` (thấp): `material_revision` rỗng không fail-loud.
    - `D-ĐA04-04` (thấp): 2.670 event suppressed/run — chỉ chấp nhận được vì sim để RAM.
    - `V-18` (visual): chưa có mắt người.
-   - **`D-R08`** (TB): đơn vị "bị nén" không cùng quy ước giữa các kênh ⇒ con số "2.670 lần
-     bị nén" phóng đại ~47%; **`D-R11b`** (TB): ca vắt nửa đêm reset ngân sách giữa ca;
+   - ✅ **`D-R08` ĐÃ FIX** (không còn là flaw mở): 50% số nén là ma; kéo theo bác bỏ chẩn
+     đoán "rest_window chết đói" của chính tôi — xem Lỗi #23.
      **`D-R12`** (TB, an toàn): `is_driving` không có đường nuôi từ client ⇒ nhánh QUEUE
      không bao giờ chạy ở sản phẩm; **`D-R17`** (thấp): ba lưới bucket cho một khái niệm;
      **`D-R20`** (thấp): ba test bám seed 1000; **`D-R02`**+**`Q-10`**: pull-vs-push.
