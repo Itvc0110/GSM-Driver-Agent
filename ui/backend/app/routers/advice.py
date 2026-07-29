@@ -24,7 +24,18 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 
 from app.adapters import advisor, mockdata
+from gsm_core.lifecycle.cadence import (PRESENT, CadenceMemory, decision_bucket,
+                                        evaluate, shift_phase)
 from gsm_core.lifecycle.event_log import AdviceEventLog
+
+# Lời im lặng nói với tài xế — tôn trọng, không đổ lỗi, không hứa (DIRECTIVES §12.4).
+_SILENT_MSG = {
+    "dismissed_for_window": "Bạn đã bỏ qua gợi ý này, trợ lý sẽ không nhắc lại trong "
+                            "khoảng thời gian này của ca.",
+    "shift_budget_exhausted": "Hôm nay trợ lý đã nhắc đủ rồi — để bạn tập trung chạy.",
+    "topic_cooldown": "Trợ lý vừa nhắc về việc này, sẽ quay lại sau.",
+    "unsafe_while_moving": "Bạn đang chạy — trợ lý sẽ nhắc khi bạn dừng.",
+}
 
 router = APIRouter()
 
@@ -41,13 +52,162 @@ def _lifecycle_db() -> Path:
     return TELEMETRY_DIR / "advice_lifecycle.db"
 
 
+SHIFT_START_MIN = 6 * 60          # ca demo bắt đầu 06:00 (dùng để tính PHA ca)
+
+
+def _norm_shift_end(shift_end_min: int) -> int:
+    """R-11 (soi đối kháng vòng 2): ca vắt qua nửa đêm.
+
+    Query cho phép `shift_end_min` nhỏ tuỳ ý (`ge=0`), nên ca 22:00→02:00 gửi 120 ⇒
+    `shift_len = 120 − 360 < 0` ⇒ `shift_phase` trả `"early"` VĨNH VIỄN ⇒ "im hết pha" biến
+    thành "im hết ca", trái đúng verdict đã chốt. Chuẩn hoá: kết ca sớm hơn mở ca nghĩa là
+    hôm sau.
+    ⚠ Phần còn lại của R-11 (memory lọc theo `date` nên qua 00:00 ngân sách được cấp lại
+    giữa ca) KHÔNG sửa ở đây — nó cần khái niệm `shift_id`, không phải một dòng. → `D-R11b`.
+    """
+    return shift_end_min + 1440 if shift_end_min < SHIFT_START_MIN else shift_end_min
+
+
+def _phase_of(at_min: float | None, shift_end_min: int) -> str | None:
+    """Pha ca của một mốc thời gian — MỘT công thức duy nhất, dùng ở cả đường ghi lẫn đọc.
+
+    F4 (soi đối kháng 2026-07-29): trước đây `POST /action` tính pha bằng
+    `advisor.DEFAULT_SHIFT_END_MIN` **cứng 22:00** rồi lưu vào payload, còn `GET /advice`
+    tính bằng `shift_end_min` từ query ⇒ hai công thức cho CÙNG một phút, lệch nhau ngay
+    khi ca của tài xế khác ca mặc định. Đúng họ Lỗi #1 (hai lưới thời gian cho một khái
+    niệm). Cách sửa KHÔNG phải đồng bộ hai công thức mà là **bỏ một cái**: pha nay luôn
+    được tính LÚC ĐỌC từ `at_min` đã lưu; trường `phase` trong payload chỉ còn để debug và
+    **không được dùng để quyết định**.
+    """
+    if at_min is None:
+        return None
+    end = _norm_shift_end(shift_end_min)
+    return shift_phase(float(at_min) - SHIFT_START_MIN, end - SHIFT_START_MIN)
+
+
+def _cadence_memory(driver_id: str, date: str, phase: str,
+                    shift_end_min: int = advisor.DEFAULT_SHIFT_END_MIN) -> CadenceMemory:
+    """Dựng ký ức nhịp cho tài xế này HÔM NAY từ store canonical (ĐA-05).
+
+    Đây là nửa UI của "một luật": sim nuôi memory trong RAM, UI đọc lại từ
+    `AdviceEventLog` — rồi CẢ HAI gọi cùng `cadence.evaluate`.
+    """
+    mem = CadenceMemory()
+    db = _lifecycle_db()
+    if not db.exists():
+        return mem
+    with AdviceEventLog(db) as log:
+        rows = [e for e in log.events()
+                if e["origin"] == "ui" and e["driver_id"] == driver_id
+                and (e["payload"] or {}).get("date") == date]
+    # Ngân sách đếm số lần advisor NÓI = số QUYẾT ĐỊNH, không phải số event. Bản đầu
+    # `proactive_count += 1` cho mỗi event ⇒ một card "Vì sao"(displayed) rồi
+    # "Làm theo"(followed) tiêu HAI suất — 3 card là advisor im cả ngày (reproduce được).
+    # Đúng họ lỗi hai-đơn-vị-đo decision-vs-event mà Cycle W đã trả giá.
+    _spoken_ids: set[str] = set()
+    for e in rows:
+        payload = e["payload"] or {}
+        topic = payload.get("topic") or payload.get("card_kind") or "advice"
+        if e["event_type"] == "dismissed":
+            # Bỏ qua ở PHA nào thì im hết pha đó (Cường chốt 2026-07-29). Chỉ áp cho
+            # SẢN PHẨM — sim không có nhánh này (xem cadence.py §ranh giới).
+            # F4: pha tính LẠI từ `at_min` bằng công thức của người ĐỌC — không đọc
+            # `payload["phase"]` (số đó do đường ghi tính bằng shift_end CỨNG).
+            # R-18: KHÔNG fallback về pha của người ĐỌC. Record thiếu `at_min` (bản trước
+            # ĐA-04, hoặc POST không gửi — field `default=None`) mà gán vào pha hiện tại thì
+            # một cú Bỏ qua cũ thành **lệnh im di động**: hỏi ở pha nào cũng im pha đó. Không
+            # biết pha thì bỏ qua record — "không biết" khác "là pha này".
+            _ph = _phase_of(payload.get("at_min"), shift_end_min)
+            if _ph is not None:
+                mem.dismissed_in_phase[topic] = _ph
+        elif e["event_type"] in ("displayed", "followed"):
+            _spoken_ids.add(e["decision_id"])
+            # Cooldown 20′/chủ đề CHỈ chạy nếu có ai nuôi `last_decided_min`. Bản đầu của
+            # cycle này quên đúng dòng dưới ⇒ `topic_cooldown` sống ở sim nhưng CHẾT ở sản
+            # phẩm, trong khi `_SILENT_MSG` vẫn có sẵn câu cho nó — tức code tự quảng cáo
+            # một nhánh không bao giờ chạy. Đó là đúng thứ "một luật" sinh ra để xoá bỏ.
+            at = payload.get("at_min")
+            if at is not None:
+                prev = mem.last_decided_min.get(topic)
+                if prev is None or float(at) > prev:
+                    mem.last_decided_min[topic] = float(at)
+    mem.proactive_count = len(_spoken_ids)
+    return mem
+
+
 @router.get("")
 def get_advice(driver_id: str | None = Query(None), date: str | None = Query(None),
                now_min: int = Query(14 * 60, ge=0, le=24 * 60),
-               shift_end_min: int = Query(advisor.DEFAULT_SHIFT_END_MIN, ge=0, le=24 * 60)):
+               shift_end_min: int = Query(advisor.DEFAULT_SHIFT_END_MIN, ge=0, le=24 * 60),
+               is_driving: bool = Query(False),
+               topic: str = Query("bonus")):
+    """ĐA-04: nhịp do LUẬT CHUNG quyết định, không phải wall-clock của client.
+
+    Trước đây `cards.js` tự chọn giờ 09:00/14:00/21:30 và backend luôn trả card ⇒ nút
+    "Bỏ qua" của tài xế không đổi được gì (vòng adherence §12 HỞ về hành vi). Nay:
+    dismissed trong pha ⇒ im; hết ngân sách ca ⇒ im; đang lái ⇒ hoãn (QUEUE).
+    """
     dv = mockdata.default_view()
-    return advisor.advice(driver_id or dv["driver_id"], date or dv["date"],
-                          now_min, shift_end_min)
+    did = driver_id or dv["driver_id"]
+    d = date or dv["date"]
+    phase = shift_phase(now_min - SHIFT_START_MIN,
+                        _norm_shift_end(shift_end_min) - SHIFT_START_MIN)
+    verdict = evaluate(topic, float(now_min), phase,
+                       _cadence_memory(did, d, phase, shift_end_min),
+                       is_driving=is_driving)
+    if verdict.verdict != PRESENT:
+        return {"is_mock": True, "driver_id": did, "date": d, "items": [],
+                "silent": {"is_silent": True, "reason_code": verdict.reason,
+                           "message": _SILENT_MSG.get(
+                               verdict.reason,
+                               "Trợ lý tạm chưa có gì cần nói thêm lúc này.")},
+                "cadence": {"verdict": verdict.verdict, "phase": phase,
+                            "next_eligible_min": verdict.next_eligible_min}}
+    out = advisor.advice(did, d, now_min, shift_end_min)
+    _note_shown(did, d, topic, now_min, out.get("items") or [])
+    return {**out, "cadence": {"verdict": PRESENT, "phase": phase}}
+
+
+def _note_shown(driver_id: str, date: str, topic: str, now_min: int,
+                items: list[dict]) -> None:
+    """Ghi lại việc advisor ĐÃ NÓI — F1 (soi đối kháng 2026-07-29).
+
+    Lỗ hổng trước đó: `GET /advice` trả card nhưng KHÔNG ghi event nào, nên cooldown và
+    ngân sách phía SẢN PHẨM chỉ được nuôi khi tài xế **BẤM** nút. Tài xế phớt lờ 20 thẻ ⇒
+    ngân sách không hao ⇒ advisor nói mãi. Sim thì ngược lại: `cadence_note_spoken` gọi
+    ngay khi NÓI. Tức "một luật" bị hở đúng ở chỗ *đơn vị đếm*: sim đếm **lời nói**, sản
+    phẩm đếm **cú bấm**. Nay cả hai đếm lời nói.
+
+    ⚠ Đây là side-effect trên một GET — biết là mùi REST, và chọn có chủ ý: sự thật cần ghi
+    là "advisor đã nói", mà chỉ server biết chắc điều đó. Nếu để client POST "đã xem" thì
+    một client im lặng sẽ lại làm ngân sách không hao — tức là quay về đúng lỗ hổng này.
+    Idempotent nhờ `event_id` chứa `advice_id` (đã mang `now_min`) + `INSERT OR IGNORE`.
+    """
+    if not items:
+        return
+    TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
+    occurred = f"{date}T{now_min // 60:02d}:{now_min % 60:02d}:00+07:00"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    # Khoá theo BUCKET QUYẾT ĐỊNH (30′), không theo `advice_id`: `advice_id` mang `now_min`
+    # nên nếu khoá theo nó thì mỗi lần client refresh với đồng hồ nhích một phút sẽ thành
+    # "một lời khuyên mới" và đốt ngân sách. Cùng lời khuyên trong cùng bucket = MỘT lần nói.
+    bucket = decision_bucket(float(now_min))
+    with AdviceEventLog(_lifecycle_db()) as log:
+        for it in items:
+            aid = it.get("advice_id")
+            if not aid:
+                continue
+            log.append({
+                "event_id": f"ui-shown-{driver_id}-{date}-{topic}-{bucket}",
+                "decision_id": aid, "display_id": None, "driver_id": driver_id,
+                "run_id": None, "event_type": "displayed", "reason_code": None,
+                "occurred_at": occurred, "observed_at": now_iso,
+                "actor": "advisor", "origin": "ui", "source": "MOCK",
+                "context_revision": None,
+                "payload": {"action": "shown", "card_kind": it.get("kind") or "brief",
+                            "date": date, "at_min": now_min, "topic": topic},
+                "schema_version": "1.0.0",
+            })
 
 
 class AdviceAction(BaseModel):
@@ -64,6 +224,9 @@ class AdviceAction(BaseModel):
     # le=1439: 1440 sinh "T24:00:00" — lọt regex schema (`\d{2}`) nhưng `fromisoformat`
     # nổ ⇒ MỘT record độc giết toàn bộ `decision_state` của store đó.
     at_min: int | None = Field(default=None, ge=0, le=1439)
+    # ĐA-04: chủ đề của thẻ — cooldown/dismiss là THEO CHỦ ĐỀ, không phải toàn cục
+    # (bỏ qua nhắc đổi pin không được khoá miệng cảnh báo mất thưởng).
+    topic: str = Field(default="bonus", min_length=1)
 
     @field_validator("date")
     @classmethod
@@ -106,7 +269,14 @@ def post_action(body: AdviceAction):
             "source": "MOCK",
             "context_revision": None,
             "payload": {"action": body.action, "card_kind": body.card_kind,
-                        "date": body.date, "at_min": body.at_min},
+                        "date": body.date, "at_min": body.at_min,
+                        # ĐA-04: `topic` để CadencePolicy đọc lại đúng ngữ cảnh.
+                        # KHÔNG còn ghi `phase`: nó từng được tính ở đây bằng
+                        # `DEFAULT_SHIFT_END_MIN` CỨNG (F4/Lỗi #16) rồi bị người đọc tin
+                        # nhầm. Nay pha luôn tính LÚC ĐỌC từ `at_min` (`_phase_of`) — giữ
+                        # lại một trường chết tính bằng công thức khác chỉ để "debug" là
+                        # mời gọi đúng cái nhầm lẫn vừa sửa.
+                        "topic": body.topic},
             "schema_version": "1.0.0",
         })
     # JSONL: debug export song song (ĐA-05 — không còn là store canonical)

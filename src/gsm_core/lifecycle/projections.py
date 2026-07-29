@@ -119,8 +119,13 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
 
     for row in decision_state(events).values():
         agg = _row((row["run_id"], row["driver_id"], row["topic"]))
+        if row["state"] == "suppressed":
+            # ĐA-04: bị NÉN nghĩa là advisor KHÔNG NÓI — không thuộc mẫu số "đã nói bao
+            # nhiêu lần, được nghe bao nhiêu". Đếm riêng để biết nhịp chặn bao nhiêu.
+            agg["suppressed"] += 1
+            continue
         agg["decided"] += 1
-        if row["state"] in ("followed", "dismissed", "suppressed"):
+        if row["state"] in ("followed", "dismissed"):
             agg[row["state"]] += 1
     for e in _ordered(events):
         et = e["event_type"]

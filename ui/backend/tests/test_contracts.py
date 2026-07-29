@@ -19,6 +19,17 @@ CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 client = TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def _isolate_telemetry(tmp_path, monkeypatch):
+    """ĐA-04/F1 (2026-07-29): `GET /advice` nay GHI event `displayed` (advisor đếm lời NÓI,
+    không đếm cú BẤM) ⇒ test contract không còn đọc-only. Không cô lập thì chúng đọc rác
+    của lần chạy trước và của test khác, rồi đỏ ngẫu nhiên khi ngân sách 6/ca cạn —
+    đã xảy ra thật: 4 test đỏ với `KeyError: 'seed'` vì response rơi vào nhánh im lặng."""
+    from app.routers import advice as _advice
+    monkeypatch.setattr(_advice, "TELEMETRY_DIR", tmp_path)
+    monkeypatch.setattr(_advice, "ACTIONS_FILE", tmp_path / "advice_actions.jsonl")
+
+
 def _schema(name: str) -> dict:
     return json.loads((CONTRACTS / f"{name}.json").read_text(encoding="utf-8"))
 

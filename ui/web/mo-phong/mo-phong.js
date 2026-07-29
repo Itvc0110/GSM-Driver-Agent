@@ -30,9 +30,13 @@ const S = {
   feedIdx: 0,               // con trỏ feed: đã đẩy tới event thứ mấy
 };
 const SPEEDS = { 1: { step: 1, ms: 150 }, 4: { step: 4, ms: 120 }, 16: { step: 16, ms: 90 } };
-const EV_COLORS = { advice: "#7fd4db", mission_completed: "#eda100",
+// ĐA-04: `advice_suppressed` là kind MỚI (advisor chủ động IM). Không khai báo ở đây thì
+// nó rơi vào nhánh fallback và hiện chuỗi thô "advice_suppressed" cho người dùng Việt.
+const EV_COLORS = { advice: "#7fd4db", advice_suppressed: "#8b959b",
+                    mission_completed: "#eda100",
                     day_bonus: "#58c977", newbie_bonus: "#9085e9", trip_rated: "#9fb3bd" };
-const EV_VI = { advice: "advice", mission_completed: "mission", day_bonus: "thưởng ngày",
+const EV_VI = { advice: "trợ lý nhắc", advice_suppressed: "trợ lý im (giữ nhịp)",
+                mission_completed: "mission", day_bonus: "thưởng ngày",
                 newbie_bonus: "tân binh", trip_rated: "chấm sao" };
 
 /* ================= REPLAY ================= */

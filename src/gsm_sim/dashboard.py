@@ -482,15 +482,65 @@ with tab_journey:
                        title=f"Hành trình d-{pick.actor_id} (MOCK)")
     figj.update_yaxes(autorange="reversed")
     # SIM-XANH P4: đánh dấu các mốc ADVICE trên timeline (đọc từ event thật, không tự tính)
+    # ĐA-04 (V-18): phân biệt ĐÃ NÓI vs BỊ NÉN — nhịp nói phải nhìn thấy được, không
+    # chỉ nằm trong log. Bản cũ gộp mọi thứ thành một màu nên không ai thấy advisor im.
+    _SPOKEN = ("advice_given", "advice_bonus_gate", "advice_rest_window",
+               "advice_shift_extend", "standby_followed",
+               "mission_completed", "newbie_week1_bonus")
     adv_events = [e for e in result.events if e.actor_id == pick.actor_id
-                  and e.kind in ("advice_given", "advice_bonus_gate", "advice_rest_window",
-                                 "mission_completed", "newbie_week1_bonus")]
+                  and e.kind in _SPOKEN]
+    sup_events = [e for e in result.events if e.actor_id == pick.actor_id
+                  and e.kind == "advice_suppressed"]
+    _t = lambda mins: pd.Timestamp("2026-07-01") + pd.to_timedelta(mins, unit="m")
     for e in adv_events:
-        x = pd.Timestamp("2026-07-01") + pd.to_timedelta(e.t_min, unit="m")
-        figj.add_vline(x=x, line_width=1, line_dash="dot", line_color=ACCENT, opacity=0.7)
+        figj.add_vline(x=_t(e.t_min), line_width=1, line_dash="dot",
+                       line_color=ACCENT, opacity=0.7)
+
+    # Bản đầu vẽ MỘT VẠCH cho MỖI lần bị nén. Đo thật seed 1000: tài xế xấu nhất có 55
+    # vạch trên 1080 phút (một vạch mỗi 20′) — thành rừng vạch không đọc được, mà 54/55
+    # cùng một lý do `shift_budget_exhausted`. Vạch thứ 54 không nói thêm điều gì so với
+    # vạch thứ nhất. Nên: hết ngân sách vẽ MỘT mốc + tô vùng im lặng tới cuối ca; chỉ các
+    # lý do CÒN THÔNG TIN (cooldown, hoãn vì đang lái) mới vẽ từng vạch.
+    _het_ns = lambda e: (e.detail or {}).get("reason") == "shift_budget_exhausted"
+    _budget = [e for e in sup_events if _het_ns(e)]
+    # Lọc theo LÝ DO, không dùng `e not in _budget`: Event là dataclass nên `in` so sánh
+    # theo GIÁ TRỊ (hai event trùng nội dung sẽ dính nhau) và là O(n²).
+    _khac = [e for e in sup_events if not _het_ns(e)]
+    for e in _khac:
+        figj.add_vline(x=_t(e.t_min), line_width=1, line_dash="dash",
+                       line_color="#9AA0A6", opacity=0.6)
+    if _budget:
+        t0 = min(e.t_min for e in _budget)
+        # `a_pick` là Actor THẬT (dòng ~462); `pick` chỉ là hàng của selectbox và KHÔNG có
+        # `shift_end_min` — dùng getattr với fallback ở đây sẽ âm thầm tô vùng rỗng.
+        t1 = max(max(e.t_min for e in _budget), float(a_pick.shift_end_min))
+        figj.add_vrect(x0=_t(t0), x1=_t(t1), fillcolor="#9AA0A6", opacity=0.12,
+                       line_width=0, layer="below")
+        figj.add_vline(x=_t(t0), line_width=2, line_dash="dash", line_color="#6B7378",
+                       annotation_text="hết ngân sách nhắc", annotation_position="top")
     st.plotly_chart(figj, width='stretch')
-    if adv_events:
-        st.caption(f"Vạch chấm = {len(adv_events)} mốc advice/mission/thưởng (đọc từ event sim).")
+    if adv_events or sup_events:
+        _cap = f"Vạch CHẤM = {len(adv_events)} lần advisor NÓI"
+        if _khac:
+            _cap += f" · vạch GẠCH xám = {len(_khac)} lần bị nén vì cooldown/an toàn"
+        if _budget:
+            _cap += (f" · VÙNG XÁM = từ lúc hết ngân sách 6 lời khuyên/ca, advisor im"
+                     f" ({len(_budget)} lần muốn nói mà không được)")
+        st.caption(_cap + " — ĐA-04.")
+
+    # Bảng nhịp per-driver: nói bao nhiêu, nén bao nhiêu và VÌ SAO — đọc thẳng event,
+    # không tự tính lại (một nguồn sự thật).
+    if adv_events or sup_events:
+        from collections import Counter
+        spoken = Counter((e.detail or {}).get("channel") or e.kind for e in adv_events)
+        blocked = Counter(((e.detail or {}).get("channel"),
+                           (e.detail or {}).get("reason")) for e in sup_events)
+        rows = [{"chủ đề": k, "advisor NÓI": v, "bị NÉN": "", "lý do nén": ""}
+                for k, v in sorted(spoken.items())]
+        rows += [{"chủ đề": ch or "?", "advisor NÓI": "", "bị NÉN": n, "lý do nén": rs or "?"}
+                 for (ch, rs), n in sorted(blocked.items(), key=lambda x: str(x[0]))]
+        st.markdown("**Nhịp nói của advisor (ĐA-04)** — cooldown 20′/chủ đề, ngân sách 6/ca")
+        st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
     cA, cB = st.columns(2)
     with cA:

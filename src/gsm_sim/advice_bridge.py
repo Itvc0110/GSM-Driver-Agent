@@ -61,6 +61,9 @@ def _iso(minute: float) -> str:
     rem = m % _MIN_PER_DAY
     return f"{d.isoformat()}T{rem // 60:02d}:{rem % 60:02d}:00+07:00"
 
+from gsm_core.lifecycle.cadence import (PRESENT, SUPPRESS, CadenceConfig,
+                                        CadenceMemory, adherence_coin, decision_bucket,
+                                        evaluate, shift_phase)
 from gsm_core.solvers import bonus_feasibility, idle_reduction, shift_dp
 
 from .behavior import IdleAction
@@ -217,6 +220,24 @@ class AdviceActionBridge:
         self.memory: dict | None = None
         self.rng = np.random.default_rng(seed ^ 0xADD1CE)
         self._last_consult: dict[int, float] = {}
+        # ĐA-04 (2026-07-29): nhịp nói dùng LUẬT CHUNG với UI (gsm_core/lifecycle/cadence.py).
+        self.seed = int(seed)
+        cad = (adv.get("cadence") or {})
+        self.cadence_cfg = CadenceConfig(
+            min_gap_min_per_topic=float(cad.get("min_gap_min_per_topic", 20.0)),
+            max_proactive_per_shift=int(cad.get("max_proactive_per_shift", 6)))
+        self.cadence_enabled = bool(cad.get("enabled", True))
+        # positioning NGOÀI ngân sách theo mặc định — có căn cứ, không phải tiện tay:
+        # (a) đây là kênh DUY NHẤT đã chứng minh dương SIG (+4.000đ/người/ngày, artifact
+        #     29) — siết nó bằng một ngân sách chưa kiểm chứng là phá giá trị đã đo;
+        # (b) design ĐA-04 ghi rõ *"cadence chặt hơn chỉ là experiment ARM, không thay
+        #     baseline âm thầm"* ⇒ muốn siết thì bật cờ này và ĐO, đừng mặc định.
+        self.cadence_counts_positioning = bool(cad.get("count_positioning_in_budget", False))
+        self._cadence_mem: dict[int, CadenceMemory] = {}
+        self._suppressed_seen: set[tuple] = set()
+        # R-01: một quyết định chỉ được ÁP TÁC ĐỘNG một lần (xem `_claim_effect`).
+        self._effect_applied: set[str] = set()
+        self._suppressed_out: list[tuple] = []
         self._share = float(adv.get("share", 0.0))
         self._covered_cache: dict[int, bool] = {}
 
@@ -240,6 +261,104 @@ class AdviceActionBridge:
             hit = False
         self._covered_cache[actor.actor_id] = hit
         return hit
+
+    # ---------- ĐA-04: nhịp + coin theo khoá ----------
+
+    def _mem(self, actor_id: int) -> CadenceMemory:
+        m = self._cadence_mem.get(actor_id)
+        if m is None:
+            m = CadenceMemory()
+            self._cadence_mem[actor_id] = m
+        return m
+
+    def _phase(self, actor: Actor, now_min: float) -> str:
+        """Pha ca của CHÍNH tài xế này (ca lệch nhau theo archetype) — thay wall-clock."""
+        return shift_phase(now_min - actor.shift_start_min,
+                           actor.shift_end_min - actor.shift_start_min, self.cadence_cfg)
+
+    def cadence_allows(self, actor: Actor, topic: str, now_min: float) -> bool:
+        """Hỏi LUẬT CHUNG trước khi nói. SUPPRESS ⇒ ghi nhận lý do typed MỘT LẦN cho mỗi
+        (actor, topic, bucket) để world log event — không spam mỗi tick 2′."""
+        if not self.cadence_enabled:
+            return True
+        v = evaluate(topic, now_min, self._phase(actor, now_min),
+                     self._mem(actor.actor_id), self.cadence_cfg)
+        if v.verdict == PRESENT:
+            return True
+        if v.verdict == SUPPRESS:
+            key = (actor.actor_id, topic, v.reason,
+                   int(now_min // self.cadence_cfg.min_gap_min_per_topic))
+            if key not in self._suppressed_seen:
+                self._suppressed_seen.add(key)
+                self._suppressed_out.append((now_min, actor.actor_id, topic, v.reason))
+        return False
+
+    def cadence_note_spoken(self, actor: Actor, topic: str, now_min: float) -> None:
+        """Đã NÓI thật (advice tới tay tài xế) ⇒ cập nhật cooldown + ngân sách ca."""
+        if not self.cadence_enabled:
+            return
+        m = self._mem(actor.actor_id)
+        m.last_decided_min[topic] = now_min
+        if topic != "positioning" or self.cadence_counts_positioning:
+            m.proactive_count += 1
+
+    def _claim_effect(self, actor: Actor, topic: str, now_min: float,
+                      bucket_min: float | None = None) -> bool:
+        """Xin quyền ÁP TÁC ĐỘNG cho một quyết định — trả True đúng MỘT lần (R-01).
+
+        Khoá TRÙNG khoá của `coin_follows`: cùng một quyết định thì cùng một coin **và**
+        cùng một lần áp. Không có cái này thì hỏi lại = áp lại, và mức can thiệp phụ thuộc
+        vào việc advisor bị hỏi bao nhiêu lần — tức phụ thuộc chính cái cadence đang được
+        đo. Bất biến: **số lần áp tác động = số QUYẾT ĐỊNH được nghe theo**, không phải số
+        lần event được ghi.
+        """
+        key = f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+        if key in self._effect_applied:
+            return False
+        self._effect_applied.add(key)
+        return True
+
+    # Kênh nào CẦN cổng này, kênh nào KHÔNG (rà 2026-07-29 — ghi để không ai "sửa" nhầm):
+    #   ✅ `accept_lift`  : `actor.accept_lift += lift_step` — tác động MỘT-LẦN, hỏi lại mà
+    #                      cộng lại là sai. CẦN cổng.
+    #   ✅ `shift_extend` : `actor.shift_end_min += add` — cùng lý do. CẦN cổng.
+    #   ❌ `rest_window`  : `actor.rest_deferred_min += 2.0` MỖI TICK hoãn — đây KHÔNG phải
+    #                      áp lặp một tác động một-lần, mà là *"đã hoãn nghỉ thêm 2 phút
+    #                      thật"*. Cộng dồn là ĐÚNG ngữ nghĩa. Đặt cổng vào đây sẽ làm sim
+    #                      tin tài xế chỉ hoãn nghỉ 2 phút cho cả ca.
+    #   ❌ `shift_plan` / `positioning` : trả về một ACTION/gán ô cho world thi hành; world
+    #                      chỉ thi hành một hành động mỗi tick nên không có tích luỹ.
+
+    def drain_suppressed(self) -> list[tuple]:
+        """World lấy các lần bị nén để log event `advice_suppressed` (reason typed)."""
+        out, self._suppressed_out = self._suppressed_out, []
+        return out
+
+    def coin_follows(self, actor: Actor, topic: str, now_min: float,
+                     material_revision: str, bucket_min: float | None = None) -> bool:
+        """Tài xế có nghe lời khuyên NÀY không — MỘT coin cho MỘT quyết định (ĐA-04).
+
+        Khoá = (seed, actor·topic·bucket, material_revision). Hỏi lại cùng quyết định ⇒
+        cùng câu trả lời: đây chính là chỗ diệt washout D-A3-01/D-SIM-14 (bản cũ
+        `rng.random()` mỗi tick 2′ tới khi "follow" ⇒ adherence 0,30 hiệu dụng ≈1,0).
+        """
+        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
+        # DET-01 (soi đối kháng 2026-07-29, agent chính reproduce): bản đầu có nhánh
+        #     if not self.cadence_enabled: return bool(self.rng.random() < p)
+        # với ý "tắt cờ thì về hành vi cũ". Đó là một lỗi ĐO nghiêm trọng: nó bó CƠ CHẾ
+        # RÚT COIN vào cùng một cờ với NHỊP NÓI, nên arm `cadence=off` của mọi ablation
+        # vừa không có nhịp VỪA hồi sinh washout — đo thật seed 1000 (accept_lift): arm
+        # OFF có decision adherence 0,761 vs danh nghĩa 0,588 (+0,173) trong khi arm ON
+        # +0,078 ⇒ arm đối chứng có tài xế nghe lời ~10đp NHIỀU HƠN vì lý do không liên
+        # quan tới nhịp. Mọi Δ "giá của nhịp" tính từ đó đều thổi phồng.
+        # ⇒ Keyed coin là VÔ ĐIỀU KIỆN: nó là cách rút coin ĐÚNG (fix D-SIM-14), không
+        # phải một tính năng đi kèm cadence. `cadence.enabled` chỉ còn điều khiển GATE.
+        # Hệ quả tốt kèm theo (DET-02): `self.rng` không còn bị coin tiêu ⇒ bật/tắt một
+        # kênh không xê dịch stream `covers` của kênh khác ⇒ hai arm ghép cặp thật.
+        # Bucket PHẢI khớp `world._decision_id` (cùng hằng `DECISION_BUCKET_MIN`), nếu
+        # không một quyết định trải trên hai coin ⇒ washout sống lại (test đã bắt).
+        key = f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+        return adherence_coin(self.seed, key, material_revision) < p
 
     def due(self, actor: Actor, now_min: float) -> bool:
         """Chỉ hỏi khi tới hạn — hỏi mỗi tick vừa đắt vừa phi thực tế (tài xế không mở app
@@ -364,6 +483,8 @@ class AdviceActionBridge:
         """Trả `BridgedAdvice` nếu có lời khuyên áp dụng được, None nếu không."""
         if not (self.ch_shift_plan and self.covers(actor)) or not self.due(actor, now_min):
             return None
+        if not self.cadence_allows(actor, "shift_plan", now_min):
+            return None
         self._last_consult[actor.actor_id] = now_min
 
         spi = self.build_shift_plan_input(actor, now_min, demand_hint_fn, horizon_min)
@@ -380,8 +501,9 @@ class AdviceActionBridge:
         na = sol.get("next_action") or {}
 
         mapped = _map_action(solver_action, actor)
-        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
-        followed = bool(self.rng.random() < p)
+        # material_revision = NỘI DUNG lời khuyên: đổi hành động khuyên ⇒ coin mới
+        followed = self.coin_follows(actor, "shift_plan", now_min, solver_action)
+        self.cadence_note_spoken(actor, "shift_plan", now_min)
         return BridgedAdvice(
             t_min=now_min, solver_action=solver_action,
             mapped_action=mapped if followed else None,
@@ -393,7 +515,8 @@ class AdviceActionBridge:
 
     # ---------- T-045a b3: adherence cho kênh vị trí ----------
 
-    def standby_follow_draw(self, actor: Actor) -> bool:
+    def standby_follow_draw(self, actor: Actor, now_min: float = 0.0,
+                            target_cell: str = "") -> bool:
         """MỘT lần rút adherence cho MỘT lượt gán standby — rút tại thời điểm GÁN (planner),
         không rút lại mỗi vòng poll.
 
@@ -401,8 +524,8 @@ class AdviceActionBridge:
         lỗi D-SIM-14 mà ĐA-04 chốt phải sửa (*"một adherence draw cho (decision_id,
         material_revision)"*). Dùng cùng dòng RNG `seed ^ 0xADD1CE` với mọi kênh advice ⇒ bật
         kênh không dịch chuỗi ngẫu nhiên của actor (giữ CRN)."""
-        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
-        return bool(self.rng.random() < p)
+        return self.coin_follows(actor, "positioning", now_min, f"cell{target_cell}",
+                                 bucket_min=self.bucket_min)
 
     # ---------- SIM-4 kênh 2: cảnh báo tỷ lệ nhận dưới ngưỡng thưởng ----------
 
@@ -414,6 +537,8 @@ class AdviceActionBridge:
         """
         if not (self.ch_accept_lift and self.covers(actor)):
             return None
+        if not self.cadence_allows(actor, "accept_lift", now_min):
+            return None                       # ĐA-04: hết cooldown/ngân sách ⇒ im
         if now_min >= actor.shift_end_min:
             return None                       # hết ca, khuyên cũng vô ích
         thr = float(self.policy.bonus_min_acceptance)
@@ -438,10 +563,22 @@ class AdviceActionBridge:
             return None
         if acc >= thr or actor.accept_lift >= self.lift_max:
             return None
-        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
-        followed = bool(self.rng.random() < p)
+        # material_revision = ĐỘ LỚN khoảng cách tới ngưỡng (làm tròn 1%): nội dung lời
+        # khuyên đổi thật thì coin mới; nhích 0,001 thì vẫn là một quyết định.
+        # material_revision = NỘI DUNG ĐỊNH TÍNH ("khuyên nâng tỷ lệ"), KHÔNG phải số
+        # gap đang nhích từng tick — cùng một lời khuyên thì cùng một coin.
+        followed = self.coin_follows(actor, "accept_lift", now_min, "lift")
+        self.cadence_note_spoken(actor, "accept_lift", now_min)
         applied = 0.0
-        if followed:
+        # R-01 (soi đối kháng vòng 2, 2026-07-29): MỘT quyết định = MỘT lần áp tác động.
+        # Trước đây `actor.accept_lift += applied` chạy MỖI LẦN hàm này được gọi với
+        # followed=True. Keyed coin (fix DET-01) làm hỏi lại ra CÙNG câu trả lời — nên khi
+        # không có cooldown (arm `cadence=off`), cùng một quyết định bị áp lại 2,0–2,5
+        # lần/bucket (đo: gate_events/decision_id = 2,46/2,11/2,02 ở OFF vs ~1,05 ở ON)
+        # ⇒ arm đối chứng nhận LIỀU can thiệp mạnh hơn, bão hoà `lift_max` nhanh hơn, và Δ
+        # của nó không còn là "giá của nhịp". Đây là lỗi ĐÚNG-SAI, không chỉ lỗi đo: một
+        # lời khuyên được nghe theo một lần thì chỉ được nâng tỷ lệ một lần.
+        if followed and self._claim_effect(actor, "accept_lift", now_min):
             applied = min(self.lift_step, self.lift_max - actor.accept_lift)
             actor.accept_lift += applied
         return BonusGateAdvice(t_min=now_min, acceptance_now=round(acc, 4), threshold=thr,
@@ -511,6 +648,8 @@ class AdviceActionBridge:
              không phải biến để tối ưu.
           3. **Trần hoãn** `rest_defer_max_min` ⇒ không đẩy nghỉ đi vô hạn.
         """
+        if not self.cadence_allows(actor, "rest_window", now_min):
+            return False, ""                  # ĐA-04: nhịp chung quyết định
         if actor.soc_pct <= soc_threshold:
             return False, "soc_low"
         if actor.online_min > actor.fatigue_threshold_min:
@@ -526,6 +665,7 @@ class AdviceActionBridge:
             return False, "window_past"
         if actor.rest_deferred_min + minutes_to > self.rest_defer_max_min:
             return False, "defer_cap"
+        self.cadence_note_spoken(actor, "rest_window", now_min)
         return True, f"defer_to_{target:02d}h"
 
     # ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên nâng tỷ lệ ----------
@@ -660,9 +800,19 @@ class AdviceActionBridge:
         need_min = gap_points / rate * 60.0
         if need_min > self.extend_max_min - actor.shift_extended_min:
             return 0.0                        # không với tới trong trần cho phép
-        p = float(self.adherence.get(actor.archetype, DEFAULT_ADHERENCE_FALLBACK))
-        if not (self.rng.random() < p):
+        if not self.cadence_allows(actor, "shift_extend", now_min):
+            return 0.0                        # ĐA-04: hết cooldown/ngân sách ⇒ im
+        # R-09: `cadence_note_spoken` phải chạy VÔ ĐIỀU KIỆN — ngân sách là ngân sách CHÚ Ý
+        # của người nghe, advisor NÓI là đã tiêu, bất kể tài xế có làm theo hay không. Bản
+        # trước gọi nó SAU `coin_follows` nên lời khuyên bị bỏ ngoài tai KHÔNG tiêu suất ⇒
+        # kênh này được hỏi lại mỗi bucket không giới hạn, trong khi `accept_lift` (gọi vô
+        # điều kiện) thì có ⇒ hai kênh dùng hai đơn vị "đã nói" khác nhau và mọi phép chia
+        # ngân sách theo kênh ở ablation 31–34 lệch theo.
+        self.cadence_note_spoken(actor, "shift_extend", now_min)
+        if not self.coin_follows(actor, "shift_extend", now_min, "extend"):
             return 0.0
+        if not self._claim_effect(actor, "shift_extend", now_min):
+            return 0.0                        # R-01: một quyết định = một lần kéo ca
         add = min(need_min * 1.15, self.extend_max_min - actor.shift_extended_min)
         # b0-A: KHÔNG hoãn quá lúc thế giới dừng. Kéo ca tới 25:00 khi `time.end_min = 24:00` là
         # lời khuyên **không thể thực hiện được**: không sinh thêm cuốc nào, nhưng vẫn tiêu ngân

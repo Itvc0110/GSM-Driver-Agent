@@ -54,6 +54,49 @@ def test_double_click_is_one_lifecycle_event(tmp_path, monkeypatch):
     assert len(rows) == 1 and rows[0]["advice_id"] == BODY["advice_id"]
 
 
+def test_changing_mind_is_three_events_not_two(tmp_path, monkeypatch):
+    """R-07 (soi đối kháng vòng 2): bug F-3 được KỂ trong docstring đầu file nhưng KHÔNG có
+    test nào tái hiện — revert nguyên xi bản fix đó thì cả file vẫn xanh.
+
+    Bug: khoá idempotency theo `at_min` (hằng số theo loại card ở `cards.js`) ⇒ cửa sổ
+    dedupe là CẢ NGÀY ⇒ "Làm theo → đổi ý Bỏ qua → Làm theo lại" bị nuốt còn 2 event và
+    nhật ký hiện NGƯỢC hành động cuối. Fix hiện hành khoá theo GIÂY quan sát."""
+    _patch(tmp_path, monkeypatch)
+
+    # Đồng hồ phải NHÍCH giữa các lần bấm. Bản đầu của test này gọi 3 POST trong cùng một
+    # giây và đỏ với 2 event — nhưng đó là hành vi ĐÚNG: trong một giây, ba cú bấm là
+    # double-click, và thiết kế CÓ Ý gộp chúng. "Đổi ý" là hành vi của người thật qua vài
+    # giây, nên test phải dựng đúng thang thời gian đó.
+    class _Clock(datetime):
+        n = 0
+
+        @classmethod
+        def now(cls, tz=None):
+            cls.n += 1
+            return cls(2026, 7, 29, 14, 0, cls.n, tzinfo=tz or timezone.utc)
+
+    monkeypatch.setattr(advice_router, "datetime", _Clock)
+    for act in ("followed", "dismissed", "followed"):
+        assert client.post("/api/v1/advice/action",
+                           json={**BODY, "action": act}).status_code == 200
+    with AdviceEventLog(tmp_path / "advice_lifecycle.db") as log:
+        evs = log.events(decision_id=BODY["advice_id"])
+    assert len(evs) == 3, f"đổi ý phải là 3 event, nhận {len(evs)} ⇒ dedupe quá rộng"
+    rows = client.get("/api/v1/advice/actions").json()["actions"]
+    assert rows[0]["action"] == "followed", "nhật ký phải hiện hành động CUỐI CÙNG"
+
+    # Mặt đối chứng: CÙNG một giây thì vẫn phải gộp (không nới dedupe khi sửa test này).
+    _Clock.n = 100
+    monkeypatch.setattr(_Clock, "now", classmethod(
+        lambda cls, tz=None: cls(2026, 7, 29, 15, 0, 0, tzinfo=tz or timezone.utc)))
+    for _ in range(2):
+        client.post("/api/v1/advice/action", json={**BODY, "action": "dismissed"})
+    with AdviceEventLog(tmp_path / "advice_lifecycle.db") as log:
+        n_dis = len([e for e in log.events(decision_id=BODY["advice_id"])
+                     if e["event_type"] == "dismissed"])
+    assert n_dis == 2, f"double-click cùng giây phải gộp; tổng dismissed nên là 2, nhận {n_dis}"
+
+
 def test_calendar_invalid_date_rejected_422(tmp_path, monkeypatch):
     """X-1 (batch 2): `2026-02-31` qua regex `\\d{2}` nhưng không tồn tại trên lịch —
     trước sửa: HTTP 200, record độc persist VĨNH VIỄN (store append-only) rồi giết mọi
@@ -89,3 +132,167 @@ def test_dismiss_and_expand_map_to_lifecycle(tmp_path, monkeypatch):
     with AdviceEventLog(tmp_path / "advice_lifecycle.db") as log:
         dis = [e for e in log.events() if e["event_type"] == "dismissed"]
     assert dis[0]["reason_code"] == "dismissed_for_window"
+
+
+# ---------- ĐA-04: vòng adherence KÍN VỀ HÀNH VI (nút Bỏ qua đổi advisor) ----------
+
+def test_dismiss_silences_same_topic_in_phase(tmp_path, monkeypatch):
+    """Trước ĐA-04: GET /advice stateless — bấm "Bỏ qua" xong hỏi lại vẫn ra card y hệt
+    (vòng §12 HỞ về hành vi). Nay: im trong PHA đó (Cường chốt cửa sổ = hết pha)."""
+    _patch(tmp_path, monkeypatch)
+    q = "?driver_id=driver-01&date=2026-07-29&now_min=600&topic=bonus"
+    first = client.get("/api/v1/advice" + q).json()
+    assert first["cadence"]["verdict"] == "PRESENT"
+
+    assert client.post("/api/v1/advice/action", json={
+        **BODY, "action": "dismissed", "at_min": 600, "topic": "bonus"}).status_code == 200
+
+    after = client.get("/api/v1/advice" + q).json()
+    assert after["items"] == []
+    assert after["silent"]["reason_code"] == "dismissed_for_window"
+    assert after["silent"]["message"]          # nói tử tế, không đổ lỗi
+
+
+def test_dismiss_does_not_silence_other_topic(tmp_path, monkeypatch):
+    """Bỏ qua nhắc thưởng KHÔNG được khoá miệng cảnh báo chủ đề khác (cooldown theo topic)."""
+    _patch(tmp_path, monkeypatch)
+    client.post("/api/v1/advice/action", json={
+        **BODY, "action": "dismissed", "at_min": 600, "topic": "bonus"})
+    other = client.get(
+        "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=600&topic=rest").json()
+    assert other["cadence"]["verdict"] == "PRESENT"
+
+
+def test_dismiss_expires_next_phase(tmp_path, monkeypatch):
+    """Sang PHA mới được nói lại — không im hết ca (giữ đường cho cảnh báo thật)."""
+    _patch(tmp_path, monkeypatch)
+    client.post("/api/v1/advice/action", json={
+        **BODY, "action": "dismissed", "at_min": 600, "topic": "bonus"})
+    late = client.get(
+        "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=1200&topic=bonus").json()
+    assert late["cadence"]["phase"] != "mid"
+    assert late["cadence"]["verdict"] == "PRESENT"
+
+
+def test_showing_a_card_consumes_budget_without_any_tap(tmp_path, monkeypatch):
+    """F1: ngân sách phải hao khi advisor NÓI, không phải khi tài xế BẤM.
+
+    Lỗ hổng cũ: `GET /advice` trả card mà không ghi event nào ⇒ tài xế phớt lờ 20 thẻ thì
+    ngân sách không hao ⇒ advisor nói mãi. Sim thì `cadence_note_spoken` ngay khi nói —
+    tức "một luật" hở đúng ở ĐƠN VỊ ĐẾM (lời nói vs cú bấm)."""
+    _patch(tmp_path, monkeypatch)
+    # Dùng tài xế MẶC ĐỊNH (d-19) — `driver-01` của BODY không được kênh nào phủ nên GET
+    # luôn trả `no_active_channel` + items rỗng, và một test dựng trên đó sẽ XANH GIẢ.
+    q = "/api/v1/advice?topic=bonus&now_min="
+    seen = [client.get(q + str(m)).json() for m in (600, 630, 660, 690, 720, 750, 780)]
+    assert any(r.get("items") for r in seen), "kịch bản phải sinh card thật, không thì test rỗng"
+    reasons = [r.get("silent", {}).get("reason_code") for r in seen]
+    assert "shift_budget_exhausted" in reasons, (
+        f"7 lần NÓI mà ngân sách 6/ca không cạn ⇒ F1 sống lại: {reasons}")
+
+
+def test_polling_same_bucket_does_not_burn_budget(tmp_path, monkeypatch):
+    """Mặt kia của F1: client refresh liên tục trong CÙNG bucket 30′ chỉ là MỘT lần nói.
+
+    Nếu khoá event theo `advice_id` (mang `now_min`) thì đồng hồ nhích một phút đã thành
+    "lời khuyên mới" và đốt hết ngân sách trong vài giây — nên khoá theo decision bucket."""
+    _patch(tmp_path, monkeypatch)
+    dv = client.get("/api/v1/driver/default-view").json()
+    for m in range(600, 630, 2):        # 15 lần trong CÙNG bucket 30′
+        r = client.get(f"/api/v1/advice?topic=bonus&now_min={m}").json()
+    assert r["cadence"]["verdict"] == "PRESENT", "poll trong một bucket không được đốt ngân sách"
+    mem = advice_router._cadence_memory(dv["driver_id"], dv["date"], "mid")
+    assert mem.proactive_count == 1, f"15 lần poll = 1 lần nói, nhận {mem.proactive_count}"
+
+
+def test_phase_uses_one_formula_across_write_and_read(tmp_path, monkeypatch):
+    """F4: pha ca phải tính bằng MỘT công thức. Trước đây POST lưu pha tính với
+    `DEFAULT_SHIFT_END_MIN` cứng 22:00 còn GET tính với `shift_end_min` từ query ⇒ với ca
+    kết thúc sớm (18:00) hai bên cho hai pha khác nhau cho cùng một phút.
+
+    Kịch bản: ca 06:00–18:00 (720′). Bỏ qua lúc 10:00 → elapsed 240/720 = 0,33 ⇒ pha `mid`
+    theo công thức của người ĐỌC. Hỏi lại lúc 11:00 (elapsed 300/720 = 0,42, vẫn `mid`) ⇒
+    phải IM. Nếu đọc `payload["phase"]` (tính theo ca 22:00: 240/960 = 0,25 ⇒ cũng mid...
+    nhưng lúc 11:00 GET tính 300/720=0,42 mid vs 300/960=0,31 mid) — nên dùng mốc gắt hơn:
+    16:00 (elapsed 600/720 = 0,83 ⇒ `late` theo ca thật, còn theo ca mặc định 600/960 =
+    0,63 ⇒ `mid`). Hai công thức cho hai kết luận khác nhau tại đúng phút này."""
+    _patch(tmp_path, monkeypatch)
+    SHIFT_END = 18 * 60
+    assert client.post("/api/v1/advice/action", json={
+        **BODY, "action": "dismissed", "at_min": 16 * 60, "topic": "bonus"}).status_code == 200
+    r = client.get(f"/api/v1/advice?driver_id=driver-01&date=2026-07-29"
+                   f"&now_min={16 * 60 + 30}&shift_end_min={SHIFT_END}&topic=bonus").json()
+    assert r["cadence"]["phase"] == "late"
+    assert r["silent"]["reason_code"] == "dismissed_for_window", (
+        "pha của event dismissed phải được tính lại bằng công thức của người ĐỌC "
+        f"(ca 06:00–18:00 ⇒ late), không dùng pha đã lưu: {r}")
+
+
+def test_budget_counts_decisions_not_events(tmp_path, monkeypatch):
+    """Ngân sách đếm QUYẾT ĐỊNH, không đếm EVENT.
+
+    Bug tự bắt (lộ ra khi thiết kế D-ĐA04-03): một card "Vì sao"(displayed) rồi
+    "Làm theo"(followed) từng tiêu HAI suất — 3 card là advisor im cả ngày. Đúng họ lỗi
+    decision-vs-event mà Cycle W đã trả giá 4 lượt review."""
+    _patch(tmp_path, monkeypatch)
+    for i in range(3):   # 3 card, MỖI card cả expanded LẪN followed = 6 event
+        aid = f"s1-driver-01-2026-07-29-{600 + i}"
+        for act in ("expanded", "followed"):
+            assert client.post("/api/v1/advice/action", json={
+                **BODY, "advice_id": aid, "action": act, "at_min": 600 + i,
+                "topic": f"topic-{i}"}).status_code == 200
+    mem = advice_router._cadence_memory("driver-01", "2026-07-29", "mid")
+    assert mem.proactive_count == 3, (
+        f"3 card phải = 3 suất, không phải {mem.proactive_count} (đếm event = double-count)")
+    # và ngân sách 6 CHƯA cạn — advisor vẫn được nói
+    r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
+                   "&now_min=700&topic=bonus").json()
+    assert r["cadence"]["verdict"] == "PRESENT"
+
+
+def test_topic_cooldown_alive_in_product(tmp_path, monkeypatch):
+    """Cooldown 20′/chủ đề phải chạy Ở SẢN PHẨM, không chỉ ở sim.
+
+    Bug tự bắt trong cycle này: `_cadence_memory` quên nuôi `last_decided_min` ⇒ nhánh
+    `topic_cooldown` chết ở UI trong khi `_SILENT_MSG` vẫn có câu cho nó. Nửa UI im lặng
+    không chạy = "một luật" chỉ đúng một nửa."""
+    _patch(tmp_path, monkeypatch)
+    assert client.post("/api/v1/advice/action", json={
+        **BODY, "action": "expanded", "at_min": 600, "topic": "bonus"}).status_code == 200
+
+    soon = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
+                      "&now_min=610&topic=bonus").json()
+    assert soon["cadence"]["verdict"] == "SUPPRESS"
+    assert soon["silent"]["reason_code"] == "topic_cooldown"
+    assert soon["cadence"]["next_eligible_min"] == 620.0
+
+    later = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
+                       "&now_min=625&topic=bonus").json()
+    assert later["cadence"]["verdict"] == "PRESENT", "quá 20′ phải được nói lại"
+
+
+def test_shift_budget_exhausted_silences_ui(tmp_path, monkeypatch):
+    """Ngân sách ca ở SẢN PHẨM: sau 6 lần trợ lý chủ động nói, lần thứ 7 phải IM.
+
+    Đây là nửa UI của cùng luật mà sim dùng — memory dựng từ event log thay vì RAM, nhưng
+    gọi cùng `cadence.evaluate`. Không có test này thì "một luật" chỉ đúng ở sim."""
+    _patch(tmp_path, monkeypatch)
+    for i in range(6):
+        # `expanded` → event `displayed`, tức advisor đã hiện thẻ cho tài xế xem
+        assert client.post("/api/v1/advice/action", json={
+            **BODY, "advice_id": f"s1-driver-01-2026-07-29-{600 + i}", "action": "expanded",
+            "at_min": 600 + i, "topic": f"topic-{i}"}).status_code == 200
+    r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
+                   "&now_min=700&topic=bonus").json()
+    assert r["items"] == []
+    assert r["silent"]["reason_code"] == "shift_budget_exhausted"
+    assert "nhắc đủ" in r["silent"]["message"]
+
+
+def test_driving_queues_advice(tmp_path, monkeypatch):
+    """An toàn: đang lái ⇒ HOÃN (QUEUE), không mất lời khuyên."""
+    _patch(tmp_path, monkeypatch)
+    r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
+                   "&now_min=600&topic=bonus&is_driving=true").json()
+    assert r["cadence"]["verdict"] == "QUEUE"
+    assert r["silent"]["reason_code"] == "unsafe_while_moving"

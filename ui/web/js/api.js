@@ -16,8 +16,13 @@ export const api = {
     get(`/api/v1/driver/state?driver_id=${driverId}&date=${date}`),
   history: (driverId, date, days = 14) =>
     get(`/api/v1/driver/history?driver_id=${driverId}&date=${date}&days=${days}`),
-  advice: (driverId, date, nowMin) =>
-    get(`/api/v1/advice?driver_id=${driverId}&date=${date}&now_min=${nowMin}`),
+  // ĐA-04/F3: `topic` PHẢI được gửi. Không gửi thì backend rơi về default 'bonus' và
+  // cooldown/dismiss "theo chủ đề" gộp hết thành một chủ đề — bỏ qua nhắc buổi sáng sẽ
+  // khoá miệng cả tổng kết ca. Đây là nửa client của "một luật".
+  advice: (driverId, date, nowMin, topic, isDriving) =>
+    get(`/api/v1/advice?driver_id=${driverId}&date=${date}&now_min=${nowMin}`
+        + (topic ? `&topic=${encodeURIComponent(topic)}` : "")
+        + (isDriving ? "&is_driving=true" : "")),
   mapContext: (date, hour, driverId) =>
     get(`/api/v1/map-context?date=${date}&hour=${hour}${driverId ? `&driver_id=${driverId}` : ""}`),
   tripStep: (idx, step) => get(`/api/v1/trip/step?trip_index=${idx}&step=${step}`),

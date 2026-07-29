@@ -57,9 +57,21 @@ def _journey_payload(result, actor_id: int, seed: int) -> dict:
     for e in result.events:
         if e.actor_id != actor_id:
             continue
-        if e.kind.startswith("advice_"):
-            events.append({"t_min": int(e.t_min), "kind": "advice",
-                           "label": e.kind.removeprefix("advice_")})
+        if e.kind.startswith("advice_") or e.kind == "standby_followed":
+            # ĐA-04/W6: TRƯỚC ĐÂY nén thành {"kind":"advice","label":...} — mất
+            # followed/channel/reason nên khu Mô phỏng không thể cho thấy NHỊP nói
+            # (khi nào advisor im và vì sao). Nay giữ đủ để nhìn thấy cadence.
+            d = e.detail or {}
+            suppressed = e.kind == "advice_suppressed"
+            events.append({
+                "t_min": int(e.t_min),
+                "kind": "advice_suppressed" if suppressed else "advice",
+                "label": d.get("channel") or e.kind.removeprefix("advice_"),
+                "channel": d.get("channel"),
+                "followed": bool(d.get("followed")) if "followed" in d else None,
+                "reason": d.get("reason"),
+                "decision_id": d.get("decision_id"),
+            })
         elif e.kind == "mission_completed":
             events.append({"t_min": int(e.t_min), "kind": "mission_completed",
                            "label": f"mission +{e.detail.get('reward_vnd', 0):,}đ".replace(",", ".")})

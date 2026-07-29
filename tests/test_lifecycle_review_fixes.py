@@ -79,15 +79,35 @@ def test_decision_level_matches_ground_truth(run_b, view_b):
 # ---------- A2: hai tên, không bao giờ gọi trống là 'adherence' (verdict Cường) ----------
 
 def test_event_level_counters_present(run_b, view_b):
-    """accept_lift fire mỗi tick ⇒ event-level ≠ decision-level. Cả hai phải có mặt,
-    khớp ground truth: event 60/112 · decision (bucket 30') 50/65."""
+    """Hai đơn vị đo phải CÙNG có mặt và cùng khớp ground truth đếm từ event thô.
+
+    ⚠ Bản gốc (Cycle W) còn khẳng định `decided < event_decided` với lý lẽ *"accept_lift
+    fire mỗi tick ⇒ decision gộp bucket nên ít hơn event"*. **ĐA-04 (UPDATE-099) xoá bỏ
+    chính tiền đề đó**: cooldown 20′/topic khiến mỗi bucket 30′ chỉ còn một lần nói, nên
+    hai con số BẰNG NHAU (58 == 58) — đó là hiệu ứng mong muốn, không phải hồi quy.
+    Bất biến còn đúng ở mọi cấu hình là `decided <= event_decided`; phần "gộp bucket" nay
+    được kiểm ở arm cadence TẮT, nơi tiền đề spam vẫn còn."""
     ev = run_b.events
     agg = _agg(view_b)
     gt_gate = sum(1 for e in ev if e.kind == "advice_bonus_gate")
     gt_gate_f = sum(1 for e in ev if e.kind == "advice_bonus_gate" and e.detail.get("followed"))
     assert agg["accept_lift"]["event_decided"] == gt_gate
     assert agg["accept_lift"]["event_followed"] == gt_gate_f
-    assert agg["accept_lift"]["decided"] < gt_gate, "decision phải gộp bucket, ít hơn event"
+    assert agg["accept_lift"]["decided"] <= gt_gate, "decision không được VƯỢT event"
+
+
+def test_decision_level_still_collapses_buckets_without_cadence():
+    """Giữ lại sức mạnh gốc của test trên, ở đúng chỗ tiền đề còn đúng.
+
+    Tắt cadence ⇒ `accept_lift` lại fire mỗi tick ⇒ decision-level PHẢI gộp bucket và
+    nhỏ hơn hẳn event-level. Nếu một ngày nào đó phép gộp bucket hỏng, test này đỏ dù
+    arm mặc định (có cadence) trông vẫn bình thường."""
+    c = _cfg_all()
+    c.data["advice"].setdefault("cadence", {})["enabled"] = False
+    agg = _agg(P.adherence_view(P.sim_events_to_lifecycle(run_once(c, seed=1000).events)))
+    ev_n = agg["accept_lift"]["event_decided"]
+    dec_n = agg["accept_lift"]["decided"]
+    assert dec_n < ev_n, f"không cadence thì decision phải gộp bucket: {dec_n} vs {ev_n}"
 
 
 def test_no_bare_adherence_key_and_both_rates_named(view_b):

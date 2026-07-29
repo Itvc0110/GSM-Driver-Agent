@@ -175,8 +175,8 @@ class World:
         xuống 15 làm hai phân công KHÁC NHAU rơi vào cùng bucket 30' ⇒ chung
         decision_id ⇒ event bị nuốt (review đối kháng đo được 23 event mất ở
         `bucket_min=15`). Kênh vị trí vì thế dùng đúng bucket của planner."""
-        b = float(bucket_min or 30.0)
-        return f"slth-{self.run_id}-{actor_id}-{channel}-{int(now // b)}"
+        from gsm_core.lifecycle.cadence import decision_bucket
+        return f"slth-{self.run_id}-{actor_id}-{channel}-{decision_bucket(now, bucket_min)}"
 
     def _order_transition(self, oid: int, state: str) -> None:
         """M0-5: ghi chuyển trạng thái đơn (terminal chỉ ghi 1 lần — không ghi đè)."""
@@ -295,6 +295,13 @@ class World:
                     continue                     # đã có phân công còn hiệu lực
                 if cap_left.get(a.cell, 0) > 0:
                     continue                     # đang đứng ở ô CÒN TRẦN — kéo đi là churn
+                # ĐA-04: positioning nằm NGOÀI nhịp theo mặc định (kênh dương SIG duy nhất).
+                # Chỉ khi bật cờ đo `count_positioning_in_budget` nó mới chịu cooldown/ngân
+                # sách. Nhánh mặc định phải đi đúng đường cũ — nếu không, mọi số A/B đã đo
+                # với positioning sẽ đổi âm thầm.
+                if (self.advice.cadence_counts_positioning
+                        and not self.advice.cadence_allows(a, "positioning", now)):
+                    continue
                 # preferred = ô còn trần GẦN NHẤT (đỡ km rỗng — veto b4); tie-break theo tên
                 # ô để deterministic. Hungarian tự stagger phần tranh chấp.
                 pref = min(ranked, key=lambda c: (cell_distance_km(self.grid, a.cell, c), c))
@@ -328,7 +335,11 @@ class World:
                 did = self._decision_id(aid, "positioning", now, bucket_min=b)
                 assigned_by_cell.setdefault(cell, []).append(aid)
                 dids_by_cell.setdefault(cell, {})[str(aid)] = did
-                if self.advice.standby_follow_draw(self.actors[aid]):
+                # "Đã nói" = advisor đưa lời khuyên, KHÔNG phụ thuộc tài xế có theo hay không
+                # (ngân sách là ngân sách CHÚ Ý của người nghe). Chỉ ghi khi cờ đo bật.
+                if self.advice.cadence_counts_positioning:
+                    self.advice.cadence_note_spoken(self.actors[aid], "positioning", now)
+                if self.advice.standby_follow_draw(self.actors[aid], now, cell):
                     self.standby_plan[aid] = cell
                     # decision sinh tại lúc GÁN — follow (có thể ở bucket sau) dùng lại
                     self.standby_decision[aid] = did
@@ -772,6 +783,16 @@ class World:
                              decision_id=self.standby_decision.pop(actor.actor_id, ""),
                              channel="positioning")
                     action, target, reloc_reason = IdleAction.RELOCATE, sb_cell, "standby"
+
+            # ĐA-04: các lần bị nhịp chung NÉN — log typed reason (một lần/quyết định)
+            for (t_s, aid_s, topic_s, reason_s) in self.advice.drain_suppressed():
+                # decision_id RIÊNG (hậu tố -sup): cái bị nén là một CANDIDATE MỚI,
+                # KHÔNG phải quyết định đã nói trong cùng bucket — dùng chung id sẽ khiến
+                # event suppressed ĐÈ trạng thái `followed` của quyết định trước (đo được:
+                # decision_adherence tụt 0,25 trong khi event-level 0,68).
+                self.log(aid_s, "advice_suppressed", "",
+                         channel=topic_s, reason=reason_s,
+                         decision_id=self._decision_id(aid_s, topic_s, t_s) + "-sup")
 
             # --- D-SIM-03 kênh `rest_window`: dồn nghỉ/đổi pin vào khung vắng khách (solver S7) ---
             # Chỉ HOÃN, không bao giờ ÉP nghỉ: nếu bản năng chưa muốn nghỉ thì không can thiệp.

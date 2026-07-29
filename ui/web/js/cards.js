@@ -7,6 +7,12 @@
 import { api, fmtVnd } from "./api.js";
 
 const KIND_HOURS = { brief: 9 * 60, nudge: 14 * 60, recap: 21 * 60 + 30 };
+// ĐA-04/F3: chủ đề nhịp gửi kèm mọi request. TẠM ánh xạ theo LOẠI CARD vì item của backend
+// hôm nay chưa mang chủ đề thật (ĐA-06 `AdviceEnvelopeV2 = list[card]` mới có trường đó —
+// duyệt rồi, chưa implement). Ánh xạ này là PLACEHOLDER có nhãn, KHÔNG phải taxonomy chốt:
+// nó chỉ bảo đảm ba loại card không dùng chung một cooldown, chứ chưa phân biệt "nhắc thưởng"
+// với "nhắc nghỉ" trong cùng một loại card.
+const KIND_TOPIC = { brief: "brief", nudge: "nudge", recap: "recap" };
 const KIND_LABEL = { brief: "Trước ca", nudge: "Trong ca", recap: "Tổng kết ca" };
 const KIND_ICON = { brief: "🌅", nudge: "⚡", recap: "🌙" };
 
@@ -26,6 +32,7 @@ export const Cards = {
       await api.adviceAction({
         advice_id: adviceId, driver_id: driverId, date,
         action, card_kind: kind, at_min: KIND_HOURS[kind],
+        topic: KIND_TOPIC[kind] || kind,
       });
     } catch (e) { console.warn("log action fail", e); }
   },
@@ -80,7 +87,7 @@ export const Cards = {
   // -------- BRIEF (F1): mốc hôm nay + advice S1 đầu ca --------
   async brief() {
     const { driverId, date } = this.ctx.profile();
-    const a = await api.advice(driverId, date, KIND_HOURS.brief);
+    const a = await api.advice(driverId, date, KIND_HOURS.brief, KIND_TOPIC.brief);
     if (a.silent.is_silent) {
       return this._render("brief", `brief-${date}`, "Bạn đang đúng nhịp",
         a.silent.message, null, null);
@@ -92,9 +99,17 @@ export const Cards = {
 
   // -------- NUDGE (F2): NGẮN, chỉ khi KHÔNG chở khách --------
   async nudge({ isDriving }) {
-    if (isDriving) return null;  // NHTSA: không visual-manual khi đang lái — kể cả demo
+    // ĐA-04/R-12: BÁO trạng thái cho luật chung quyết, KHÔNG tự chặn ở client.
+    // Bản cũ `if (isDriving) return null` giữ đúng NHTSA nhưng có hai cái sai:
+    //   (a) backend không bao giờ thấy `is_driving` ⇒ nhánh QUEUE trong `cadence.evaluate`
+    //       CHẾT ở sản phẩm — cùng họ "code tự quảng cáo nhánh không chạy" đã trả giá ở
+    //       `topic_cooldown`; ở SIM thuộc tính này được bảo đảm bằng cấu trúc (vòng idle bỏ
+    //       ENROUTE/ON_TRIP) ⇒ thuộc tính có ở sim mà không có ở sản phẩm;
+    //   (b) lời khuyên bị VỨT thay vì HOÃN — QUEUE nghĩa là "nhắc khi bạn dừng", đúng thứ
+    //       tài xế cần; return null làm mất luôn.
+    // An toàn KHÔNG giảm: backend trả QUEUE ⇒ `silent` ⇒ không card nào được vẽ.
     const { driverId, date } = this.ctx.profile();
-    const a = await api.advice(driverId, date, KIND_HOURS.nudge);
+    const a = await api.advice(driverId, date, KIND_HOURS.nudge, KIND_TOPIC.nudge, isDriving);
     if (a.silent.is_silent) return null;   // im lặng = KHÔNG card, không bịa
     const it = a.items[0];
     // nudge rút gọn: title + 1 số chính; chi tiết nằm ở "Vì sao"
@@ -113,7 +128,7 @@ export const Cards = {
     if (!st) return null;   // R5 double-check: bấm recap trước khi hồ sơ tải xong
     const m = st.money;
     const bd = m.payout_breakdown || {};
-    const a = await api.advice(driverId, date, KIND_HOURS.recap);
+    const a = await api.advice(driverId, date, KIND_HOURS.recap, KIND_TOPIC.recap);
     const tail = a.silent.is_silent
       ? a.silent.message
       : `${a.items[0].title} — mở "Vì sao" để xem chi tiết.`;

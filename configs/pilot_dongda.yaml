@@ -362,6 +362,26 @@ advice:
   # Mức TUÂN THỦ theo archetype — ASSUMPTION có lập luận, CHƯA có số thật:
   # tân binh nghe nhiều nhất, top/lão làng đã có hệ thống riêng nên nghe ít nhất.
   # Cần hiệu chỉnh khi có dữ liệu adherence thật (khảo sát tài xế hoặc A/B thật).
+  # ĐA-04 (duyệt 2026-07-27, thi công 2026-07-29) — NHỊP nói dùng chung sim/UI.
+  # Số baseline do design chốt; design ghi rõ "tuning sau dựa telemetry, không bằng cảm
+  # giác" ⇒ đừng vặn tay. Siết chặt hơn = experiment ARM riêng, không đổi baseline.
+  cadence:
+    # ⚠ `enabled` CHỈ điều khiển các CỔNG (cooldown + ngân sách + dismissed). Nó KHÔNG đổi
+    # cơ chế rút coin tuân thủ — `adherence_coin` keyed là VÔ ĐIỀU KIỆN. Bản đầu gộp hai
+    # thứ vào một cờ (`if not enabled: rng.random()`), làm arm đối chứng của MỌI ablation
+    # bị nhiễm: tài xế ở arm OFF nghe lời ~10đp nhiều hơn vì lý do không liên quan tới nhịp
+    # ⇒ hai con số "giá của nhịp" đã báo cáo đều phải đính chính (Lỗi #13, UPDATE-099).
+    # Test khoá: `tests/test_cadence_sim.py::test_coin_is_keyed_even_when_cadence_off`.
+    enabled: true
+    min_gap_min_per_topic: 20        # cooldown mỗi chủ đề
+    max_proactive_per_shift: 6       # ngân sách advice chủ động mỗi ca
+    # positioning NGOÀI ngân sách: là kênh DUY NHẤT đã chứng minh dương SIG (+4.000đ,
+    # artifact 29). Bật cờ này để ĐO arm siết, đừng mặc định (xem docstring bridge).
+    # ⚠ Cờ này điều khiển ĐỐI XỨNG: tắt thì positioning vừa không TIÊU ngân sách vừa không
+    # BỊ nó chặn (call site short-circuit) — đã kiểm bằng đo, không kênh `positioning` nào
+    # nằm trong danh sách bị nén ở config mặc định.
+    count_positioning_in_budget: false
+
   adherence_by_archetype:
     P1: 0.55
     P2: 0.50
