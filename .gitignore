@@ -38,3 +38,4 @@ data/mock/**/*.parquet
 data/mock/**/*.csv
 # UX-CARDS (UPDATE-067): adherence log local — telemetry mock, không commit
 data/ui-telemetry/
+.superpowers/
