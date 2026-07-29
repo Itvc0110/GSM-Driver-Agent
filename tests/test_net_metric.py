@@ -9,6 +9,7 @@ tiết kiệm khoản vô hình ⇒ trông tệ oan. Bước NÀY chỉ THÊM th
 from __future__ import annotations
 
 import copy
+import statistics
 
 from gsm_sim.config import Config
 from gsm_sim.parallel import _cohort_metrics
@@ -58,6 +59,38 @@ def test_net_below_payout_when_cost_enabled_and_payout_untouched():
     assert cs1["cost_total_vnd"] > 0
     assert cs1["net_mean_vnd"] == m1["net_mean_all"], (
         "cost_summary và _cohort_metrics phải reconcile — không hai nguồn cho cùng một sự thật")
+
+    # --- review B1, mutation 1 (Important): per-archetype net phải ĐÚNG NGUỒN + ĐÚNG TÊN KHOÁ.
+    # Recompute EXACT từ r1.actors, khớp rounding của _cohort_metrics: round(mean(...), 2)
+    # trên float(payout_vnd) − float(cost_vnd) từng actor.
+    for key in m1:
+        if key.startswith("payout_mean_"):
+            arch = key[len("payout_mean_"):]
+            assert f"net_mean_{arch}" in m1, (
+                f"có {key} mà thiếu net_mean_{arch} — khoá per-archetype net sai tên hoặc thiếu")
+
+    archetypes = sorted({a.archetype for a in r1.actors})
+    assert archetypes, "run không có actor nào — test vô nghĩa"
+    n_strict_below = 0
+    for arch in archetypes:
+        group = [a for a in r1.actors if a.archetype == arch]
+        expected_net = round(
+            statistics.mean(float(a.payout_vnd) - float(a.cost_vnd) for a in group), 2)
+        assert m1[f"net_mean_{arch}"] == expected_net, (
+            f"net_mean_{arch} != mean(payout − cost) recompute từ actors — per-archetype net "
+            "đang đọc nhầm nguồn (vd. by_arch_pay) hoặc sai rounding")
+        if m1[f"net_mean_{arch}"] < m1[f"payout_mean_{arch}"]:
+            n_strict_below += 1
+    assert n_strict_below >= 1, (
+        "bật cash_cost + swap_fee mà KHÔNG archetype nào có net_mean < payout_mean strict — "
+        "cost không chạm actor nào, fixture hoặc thước sai")
+
+    # --- review B1, mutation 2 (Minor): cost_mean_all phải recompute exact từ actors —
+    # KHÔNG dùng hiệu payout_mean − net_mean (hai số đã round, lệch tới 0.01).
+    expected_cost = round(statistics.mean(float(a.cost_vnd) for a in r1.actors), 2)
+    assert expected_cost > 0, "bật chi phí mà mean(cost_vnd) == 0 — fixture không bật được cost"
+    assert m1["cost_mean_all"] == expected_cost, (
+        "cost_mean_all != mean(cost_vnd) recompute từ actors — thước cost bịa số (vd. hardcode 0)")
 
 
 # ---------- c) exact-repeat: cùng seed + cùng config chi phí ⇒ mọi số y hệt ----------
