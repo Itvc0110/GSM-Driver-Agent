@@ -127,14 +127,17 @@ def test_cadence_config_actually_parsed_from_yaml():
     """R-15: pin độ lớn ở ĐÚNG LỚP có thể hỏng — lớp PARSE, không phải dataclass mặc định.
 
     `test_defaults_match_approved_baseline` pin `CadenceConfig()`, nhưng nếu bridge đọc sai
-    key từ YAML thì dataclass vẫn đúng còn hành vi thì sai — test kia không đỏ."""
+    key từ YAML thì dataclass vẫn đúng còn hành vi thì sai — test kia không đỏ.
+
+    ⚠ Bản đầu còn assert `cadence_enabled is True`. Nay mặc định của sim là **False** (nhịp
+    thuộc SẢN PHẨM — xem `test_mac_dinh_cua_config_ship_khong_co_nhip`); nhưng **độ lớn 20/6
+    vẫn phải parse đúng** vì arm "sản phẩm-như-thiết-kế" dùng chúng."""
     from gsm_sim.advice_bridge import AdviceActionBridge
     from gsm_sim.policy import PolicyBundle as SimPolicy
     c = Config.load("configs/pilot_dongda.yaml")
     b = AdviceActionBridge(c, SimPolicy.from_config(c), seed=1)
     assert b.cadence_cfg.min_gap_min_per_topic == 20.0, b.cadence_cfg
     assert b.cadence_cfg.max_proactive_per_shift == 6, b.cadence_cfg
-    assert b.cadence_enabled is True
 
 
 def test_budget_respected_per_driver():
@@ -349,6 +352,80 @@ def test_count_positioning_in_budget_flag_is_alive():
     assert not sup_off, f"cờ TẮT: positioning không được đi qua cổng nhịp, nhận {sup_off}"
     assert sup_on, "cờ BẬT: positioning phải chịu cổng nhịp — không thấy event nén ⇒ cờ CHẾT"
     assert sum_on != sum_off, "cờ đổi mà kết quả y hệt ⇒ cờ không tới được engine"
+
+
+# ---------- NHỊP THUỘC SẢN PHẨM: sim mặc định KHÔNG có nhịp ----------
+
+@pytest.mark.parametrize("seed", [1000, 1001, 1002, 2000, 3160])
+def test_tat_nhip_khong_lam_washout_song_lai(seed):
+    """PHẢN CHỨNG cho quyết định "nhịp thuộc sản phẩm" (Cường chất vấn 2026-07-29).
+
+    Lập luận cũ của tôi: *"cooldown/ngân sách phải có ở sim vì A/B phải đo đúng thứ sẽ ship"*.
+    Cường chỉ ra nó SAI: sim đo **trần giá trị của lời khuyên**; im-sau-khi-bị-bỏ-qua và ngân
+    sách chú ý là ràng buộc **UX của sản phẩm**.
+
+    Nhưng trước khi đổi mặc định, phải loại một khả năng: **cooldown có đang gánh một phần tính
+    ĐÚNG ĐẮN của phép đo mà tôi chưa nhận ra?** Nếu tắt nhịp làm hai đơn vị adherence tách ra
+    thì washout sống lại và quyết định này SAI.
+
+    Bản ĐẦU của test này đòi *hai đơn vị adherence hội tụ* — và nó **ĐỎ cả 5 seed**
+    (decision 0,674 vs event 0,500). Tôi đã suýt kết luận "cooldown gánh tính đúng đắn, không
+    được đổi mặc định". **Sai.** Đo tiếp thì ra nguyên nhân khác hẳn: **hiệu ứng chọn lọc — số
+    lần HỎI phụ thuộc CÂU TRẢ LỜI.** Không cooldown thì bucket bị bỏ qua bị hỏi lại **4,93
+    lần**, bucket được nghe theo chỉ **2,38 lần** (được nghe theo ⇒ `acc` tăng ⇒ kênh thôi hỏi).
+    Nên event-level **đếm thiếu** các bucket followed.
+
+    Bằng chứng washout KHÔNG sống lại: **decision-level lệch so danh nghĩa +0,057 ở arm TẮT vs
+    +0,055 ở arm BẬT** — như nhau. Washout thổi phồng DECISION-level; ở đây decision-level ổn
+    định, chỉ event-level lệch.
+
+    ⇒ Bất biến ĐÚNG (test dưới đây): **decision-level phải sát danh nghĩa ở CẢ HAI arm**.
+    ⇒ **LUẬT ĐO MỚI**: ở arm không-nhịp, **KHÔNG dùng event-level adherence** — chỉ dùng
+    decision-level. `_adherence_by_topic` vẫn trả cả hai; đọc sai cột là đọc sai 17 điểm %."""
+    NOM = {"P1": .55, "P2": .50, "P3": .30, "P4": .75, "P5": .30, "P6": .50, "P7": .50}
+    for cadence in (True, False):
+        r = run_once(_cfg(cadence=cadence, accept_lift=True), seed)
+        a = _adherence_by_topic(r, None).get("accept_lift")
+        assert a and a["decided"] >= 20, f"seed {seed} cadence={cadence} thiếu mẫu"
+        dec = a["followed"] / a["decided"]
+        ids = {e.actor_id for e in r.events if e.kind == "advice_bonus_gate"}
+        arch = {x.actor_id: x.archetype for x in r.actors}
+        nom = sum(NOM.get(arch[i], .5) for i in ids) / max(len(ids), 1)
+        assert abs(dec - nom) <= 0.12, (
+            f"seed {seed} cadence={cadence}: decision {dec:.3f} vs danh nghĩa {nom:.3f} "
+            "lệch >12đp ⇒ washout hoặc lỗi họ khác")
+
+
+def test_mac_dinh_cua_config_ship_khong_co_nhip():
+    """Mặc định `configs/pilot_dongda.yaml` phải là **KHÔNG NHỊP** — sim đo trần.
+
+    Chiều ngược của test cũ (`test_cadence_config_actually_parsed_from_yaml` từng pin
+    `enabled is True`). Nhịp không bị XOÁ — vẫn bật được bằng cờ để chạy arm "sản phẩm-như-
+    thiết-kế"; chỉ đổi MẶC ĐỊNH."""
+    from gsm_sim.advice_bridge import AdviceActionBridge
+    from gsm_sim.policy import PolicyBundle as SimPolicy
+    c = Config.load("configs/pilot_dongda.yaml")
+    b = AdviceActionBridge(c, SimPolicy.from_config(c), seed=1)
+    assert b.cadence_enabled is False, (
+        "sim mặc định phải KHÔNG có nhịp — nhịp là ràng buộc UX của sản phẩm")
+    # nhưng cơ chế vẫn còn nguyên và bật được
+    c2 = Config.load("configs/pilot_dongda.yaml")
+    c2.data["advice"]["cadence"]["enabled"] = True
+    b2 = AdviceActionBridge(c2, SimPolicy.from_config(c2), seed=1)
+    assert b2.cadence_enabled is True and b2.cadence_cfg.min_gap_min_per_topic == 20.0
+    # và mặc định phải cho 0 event nén
+    r = run_once(_cfg_ship(), seed=1000)
+    assert not [e for e in r.events if e.kind == "advice_suppressed"], (
+        "config mặc định vẫn sinh event nén ⇒ nhịp chưa thật sự tắt")
+
+
+def _cfg_ship():
+    """Config SHIP nguyên bản — không ghi đè gì (dùng để kiểm mặc định thật)."""
+    c = Config.load("configs/pilot_dongda.yaml")
+    c.data["advice"].update(enabled=True, coverage="all", single_actor_id=None,
+                            channels={"shift_plan": True, "accept_lift": True,
+                                      "shift_extend": True, "rest_window": True})
+    return c
 
 
 # ---------- RANH GIỚI SIM ↔ SẢN PHẨM (chỉ thị Cường 2026-07-29) ----------

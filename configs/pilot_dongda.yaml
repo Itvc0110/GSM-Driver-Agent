@@ -366,13 +366,28 @@ advice:
   # Số baseline do design chốt; design ghi rõ "tuning sau dựa telemetry, không bằng cảm
   # giác" ⇒ đừng vặn tay. Siết chặt hơn = experiment ARM riêng, không đổi baseline.
   cadence:
-    # ⚠ `enabled` CHỈ điều khiển các CỔNG (cooldown + ngân sách + dismissed). Nó KHÔNG đổi
-    # cơ chế rút coin tuân thủ — `adherence_coin` keyed là VÔ ĐIỀU KIỆN. Bản đầu gộp hai
-    # thứ vào một cờ (`if not enabled: rng.random()`), làm arm đối chứng của MỌI ablation
-    # bị nhiễm: tài xế ở arm OFF nghe lời ~10đp nhiều hơn vì lý do không liên quan tới nhịp
-    # ⇒ hai con số "giá của nhịp" đã báo cáo đều phải đính chính (Lỗi #13, UPDATE-099).
-    # Test khoá: `tests/test_cadence_sim.py::test_coin_is_keyed_even_when_cadence_off`.
-    enabled: true
+    # ⚠⚠ MẶC ĐỊNH LÀ **false** — NHỊP THUỘC SẢN PHẨM, KHÔNG THUỘC SIM (Cường chất vấn
+    # 2026-07-29; `tracking/PLAN-2026-07-29-cadence-thuoc-san-pham.md`).
+    #
+    #   SIM trả lời: *"nội dung lời khuyên có giá trị không?"* — tức đo TRẦN giá trị advisor.
+    #   SẢN PHẨM trả lời: *"advisor nói bao nhiêu là không phiền?"*
+    #
+    # Cooldown 20′ và ngân sách 6/ca là **ngân sách CHÚ Ý của người nghe** ⇒ ràng buộc UX của
+    # sản phẩm, không phải thuộc tính của lời khuyên. Để chúng bật trong sim làm sim trả lời
+    # câu thứ hai trong khi mọi người đọc nó như câu thứ nhất — và đo được là nó LÀM BẨN phép
+    # đo giá trị từng kênh (tương tác FIFO +3.249đ, artifact 37).
+    #
+    # Cái giữ phép đo khỏi washout là `DECISION_BUCKET_MIN` 30′ + `_claim_effect`, **KHÔNG
+    # phải** cooldown — đã chứng minh: tắt nhịp, decision-level vẫn lệch danh nghĩa +0,057
+    # (arm bật: +0,055). Test khoá `test_tat_nhip_khong_lam_washout_song_lai` (5 seed).
+    #
+    # ⚠ **LUẬT ĐO khi nhịp TẮT: KHÔNG dùng event-level adherence, chỉ dùng decision-level.**
+    # Không cooldown ⇒ số lần HỎI phụ thuộc CÂU TRẢ LỜI (bucket bị bỏ qua bị hỏi 4,93 lần,
+    # bucket được nghe theo 2,38 lần) ⇒ event-level đếm thiếu followed, lệch tới 17đp.
+    #
+    # Bật `true` để chạy arm **"sản phẩm-như-thiết-kế"** — cơ chế còn nguyên, chỉ đổi mặc định.
+    # `enabled` CHỈ điều khiển các CỔNG; `adherence_coin` keyed là VÔ ĐIỀU KIỆN (Lỗi #13).
+    enabled: false
     min_gap_min_per_topic: 20        # cooldown mỗi chủ đề
     max_proactive_per_shift: 6       # ngân sách advice chủ động mỗi ca
     # positioning NGOÀI ngân sách: là kênh DUY NHẤT đã chứng minh dương SIG (+4.000đ,
