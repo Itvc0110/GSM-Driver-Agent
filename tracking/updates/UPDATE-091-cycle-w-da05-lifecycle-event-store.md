@@ -1,12 +1,14 @@
 # UPDATE-091 — Cycle W: ĐA-05 — advice lifecycle store (event log append-only + projections một-luật)
 
-> ⏸ **TRẠNG THÁI: ĐANG DỞ — PAUSE theo yêu cầu Cường (2026-07-29 ~03:40).** KHÔNG đọc
-> update này như một cycle đã hoàn tất. Review đối kháng 2 lăng kính tìm ra **16 finding
-> có reproduce thật** (hồ sơ đầy đủ: `research/audit/2026-07-29-cycle-w-review/findings.md`),
-> trong đó nghiêm trọng nhất: **`adherence_view` báo 0%/2%/100% trong khi sự thật
-> 53,6%/52,2%/48,8%** — thước đo sai nằm ngay trong "một luật" mà cycle này quảng cáo.
-> 13/16 finding đã sửa; **3 finding còn lại + full suite + fingerprint chưa chạy lại**.
-> Cường chốt: phần còn lại phải **qua plan mode** trước khi sửa tiếp.
+> ✅ **TRẠNG THÁI CUỐI (2026-07-29, sau PLAN-cycle-wx Phần A được duyệt): `DONE-CODE`,
+> chờ verdict Cường.** Cycle này đi qua **4 lượt review đối kháng (2 batch × 2 lăng kính)
+> trả tổng 36 finding có reproduce** — TẤT CẢ đã sửa (hồ sơ đầy đủ + kết quả đo cuối:
+> `research/audit/2026-07-29-cycle-w-review/findings.md`). Nghiêm trọng nhất:
+> `adherence_view` từng báo **0%/2%/100%** trong khi sự thật **53,6%/52,2%/48,8%**, và
+> bản sửa đầu lại **double-count** (54,2%) — thước đo chỉ được tin sau khi PIN bằng
+> ground truth tính độc lập. Verdict Cường giữa phiên: adherence báo **HAI TÊN**
+> (`decision_adherence` + `event_adherence`), cấm khoá `adherence` trần.
+> Lịch sử pause giữa cycle (banner cũ) xem git history của file này.
 
 - **Ngày:** 2026-07-29
 - **Người thực hiện:** AI agent, dưới claim của **Cường** (mạch *"hướng tốn thời gian, khó,
@@ -30,10 +32,11 @@ Hệ quả sống: nút "Bỏ qua" trên UI không bao giờ đổi được hà
 | W1 `gsm_core/lifecycle/event_log.py` | SQLite **append-only** (`INSERT OR IGNORE` theo `event_id` — không API update/delete, test canh bằng hasattr); validate qua registry TRƯỚC khi ghi; busy_timeout + bounded retry + đếm `sqlite_busy_count`; KHÔNG bật WAL (bug ≤3.51.2); `close()`/context manager (đóng LAYEROUT-16) |
 | W2 schema | `advisor/advice_lifecycle_event` 1.0.0 qua registry đa phiên bản Cycle V ⇒ replay-qua-migration sẵn từ ngày đầu; IDs tách `decision_id`/`display_id`/`event_id`; `occurred_at`+`observed_at`; `actor`/`origin`/`source`; `reason_code`; `context_revision` |
 | W3 `projections.py` | **MỘT LUẬT pure-function trên iterable**: `decision_state` (máy trạng thái decided→displayed→followed/dismissed/expired/superseded; suppressed nhánh hệ thống), `adherence_view` (**denominator = decided** — khắc BRIDGE-3 vào luật), `sim_events_to_lifecycle` (RAM→envelope, deterministic, không uuid). Sort theo **thời gian thật** (xem §flaws #1) |
-| W4 sim | `Event.run_id` (field DUY NHẤT thêm — đúng chốt); `derive_run_id(cfg,seed)` deterministic `{seed}-{arm}-{kênh}-{coverage}[-pos.mode]` (A/B cùng seed phân biệt được; A cache xuyên ladder giữ MỘT id); `_decision_id` bucket 30' stamp vào 7 chỗ emit advice; standby: decision sinh lúc GÁN, follow dùng lại (`standby_decision` dict); manifest thêm `run_id_deterministic` (folder `runs/` giữ tên wall-clock — không phá) |
+| W4 sim | `Event.run_id` (field DUY NHẤT thêm — đúng chốt); `derive_run_id(cfg,seed)` deterministic `{seed}-{arm}-{kênh}-{coverage[.actor]}[-pos.mode]-c{digest8}` (digest toàn config trừ `meta` — F-4/W-1: hai run vật lý khác nhau từng chung ID và bị store nuốt im lặng run thứ hai); `_decision_id` bucket theo `advice.bucket_min` cho kênh vị trí, 30' cho kênh tick (F-5); standby: decision sinh lúc GÁN kèm `assigned_ids`/`decision_ids` trong `standby_alloc` (mẫu số kênh vị trí — F-1); manifest thêm `run_id_deterministic`; multiday cũng stamp (bug tự bắt #5) |
 | W4 pipeline | reset `last_verify_result` mỗi request (R5 hết mang verdict stale); episode mang `verify` verdict (FAILCLOSED-3) + `solver_report_refs` = problem_digest THẬT (MEMSTATE-4) |
-| W4 UI | POST /advice/action ghi event vào store canonical (idempotent — double-click cùng phút = 1 event); GET /actions đọc từ event log, GIỮ nguyên hình dạng contract; JSONL giữ làm debug export song song (đúng quyết định duyệt) |
-| W5 adapter | EpisodeStore giữ 4 chữ ký cũ: `append_episode`→event `decided` (một đường ghi, không double-write), `count_episodes`→projection, cache giữ nguyên bảng cùng file |
+| W4 UI | POST /advice/action ghi store CANONICAL TRƯỚC, JSONL debug SAU (F-8); idempotent theo (advice, action, GIÂY quan sát — F-3: khoá `at_min` cũ cho cửa sổ dedupe cả ngày); pydantic chặn date lịch-sai (X-1), at_min≤1439 (W-4), ID rỗng (X-6); GET /actions đọc event log, GIỮ hình dạng contract |
+| W5 adapter | EpisodeStore giữ 4 chữ ký cũ: `append_episode`→event `decided` (một đường ghi), `count_episodes`→projection LỌC `origin="pipeline"` (F-6), cache giữ bảng mutable cùng file (scope lời hứa append-only ghi rõ — F-S2) |
+| Adherence | **HAI TÊN** (verdict Cường): `decision_adherence` (bucket, denominator=decided) + `event_adherence` (mỗi lần nói); khoá `(run_id, driver_id, topic)` (F-2); không double-count (F-S1); nhận generator (X-3) |
 
 ## Kiểm chứng
 
@@ -46,8 +49,10 @@ Hệ quả sống: nút "Bỏ qua" trên UI không bao giờ đổi được hà
 | Exact-repeat | 2 lần cùng cfg+seed ⇒ event stream + run_id + decision_id y hệt (test) |
 | Test cũ | test_advisor_pipeline 22/22 xanh KHÔNG SỬA (12 call site EpisodeStore nguyên vẹn); UI backend 43/43 |
 | Windows lock | close() + test unlink sau close (LAYEROUT-16) |
-| Full suite | (điền khi suite nền `bilqav794` xong — kỳ vọng 653+28 mới) |
-| Review đối kháng | (điền khi workflow `w7dlwkqb5` xong) |
+| Full suite | **707 passed / 5 skipped** (suite CUỐI sau toàn bộ 36 fix; mốc giữa: 698/5 sau Phần A trước batch 2; baseline trước cycle: 653/5) |
+| Review đối kháng | **4 lượt, 36 finding có reproduce, sửa 36/36** — batch 1: F-1..F-8 (ngữ nghĩa) + W-1..W-8 (consumer); batch 2: X-1..X-7 (input thù địch) + F-S1..F-S13 (kỷ luật). Lượt workflow 4-agent đầu chết session-limit (0 finding) — chạy lại 2+2 agent theo quota guard. Hồ sơ + số đo cuối: `research/audit/2026-07-29-cycle-w-review/findings.md` |
+| Mutation | MW1-4 (batch đầu) + MA1-3 (Phần A: bỏ lọc origin/recorder bịa True/nới regex) — 7/7 đỏ đúng test, restore xanh |
+| Fingerprint CUỐI | IDENTICAL vs **trước-toàn-bộ-Cycle-W** (`32a20c7`): run_once 5 seed × 2 arm + multiday 3 ngày, chạy lại SAU 36 fix |
 
 ## Visual verification
 
@@ -98,13 +103,16 @@ rác lọt vào là vĩnh viễn. Chi phí lan can ~30 dòng, giá phải trả 
 ## Files
 
 MỚI: `src/gsm_core/lifecycle/{__init__,event_log,projections}.py` ·
-`schemas/advisor/advice_lifecycle_event.schema.json` · `tests/test_lifecycle_store.py` (19) ·
-`tests/test_lifecycle_wiring.py` (9) · `ui/backend/tests/test_lifecycle_actions.py` (2).
-SỬA: `schema_registry.py` (entity) · `episode_store.py` (viết lại thành adapter) ·
-`pipeline.py` (reset verdict + enrich episode) · `world.py` (Event.run_id, `_decision_id`,
-7 emit sites, standby_decision) · `runner.py` (derive_run_id) · `logging_ev.py` (manifest) ·
-`ui/backend/app/routers/advice.py` · `tests/test_schemas.py` (EXPECTED +1) ·
-`schemas/{README,CHANGELOG}.md`.
+`schemas/advisor/advice_lifecycle_event.schema.json` · `tests/test_lifecycle_store.py` (23) ·
+`tests/test_lifecycle_wiring.py` (11) · `tests/test_lifecycle_review_fixes.py` (20) ·
+`ui/backend/tests/test_lifecycle_actions.py` (4) ·
+`research/audit/2026-07-29-cycle-w-review/findings.md` · `tracking/PLAN-cycle-wx-2026-07-29.md`.
+SỬA: `schema_registry.py` (entity) · `episode_store.py` (adapter + lọc origin) ·
+`pipeline.py` (reset verdict + enrich + close) · `observability.py` (tri-state + infer=None) ·
+`world.py` (Event.run_id, `_decision_id`, 7 emit sites, standby_decision + assigned_ids) ·
+`runner.py` (derive_run_id + digest) · `multiday.py` (stamp run_id) · `logging_ev.py`
+(manifest + infer=None) · `ui/backend/app/routers/advice.py` · `tests/test_schemas.py`
+(EXPECTED +1) · `schemas/{README,CHANGELOG}.md`.
 
 ## Docs cập nhật kèm
 

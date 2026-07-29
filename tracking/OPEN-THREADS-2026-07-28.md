@@ -18,11 +18,17 @@
 ## Việc kế tiếp theo thứ tự (đã có verdict, KHÔNG cần hỏi lại)
 
 1. ~~Đọc kết quả suite `bofqb0q04`~~ ✅ XONG (653/5, số đã ghi UPDATE-090, đã push).
-2. ~~**Cycle kế — ĐA-05 event store append-only**~~ ✅ **XONG 2026-07-29 (Cycle W, UPDATE-091)** —
-   event log + projections một-luật + run_id/decision_id + EpisodeStore adapter; fingerprint
-   5 seeds × 2 arm IDENTICAL. Chờ verdict Cường. **Kế tiếp đề xuất: ĐA-04 cadence memory**
-   (tiêu thụ `adherence_view` + `decision_id` vừa tạo; Cường yêu cầu "khó nhất, phải visualize").
-   Chi tiết cũ giữ lại bên dưới để tra cứu:
+2. ~~**Cycle kế — ĐA-05 event store append-only**~~ **DONE-CODE 2026-07-29 (Cycle W,
+   UPDATE-091) — chờ verdict Cường, KHÔNG tự đọc thành "đã reviewed".** Đường đến đích
+   không thẳng: sau bản đầu, **4 lượt review đối kháng (2 batch × 2 lăng kính) trả 36
+   finding có reproduce** — nặng nhất là chính thước đo `adherence_view` báo 0%/2%/100%
+   trong khi sự thật 53,6%/52,2%/48,8%, rồi phiên bản sửa đầu lại double-count (54,2%).
+   Tất cả đã sửa + test pin theo ground truth; fingerprint IDENTICAL vs TRƯỚC-toàn-bộ-
+   Cycle-W (run_once 5 seed × 2 arm + multiday 3 ngày, chạy lại SAU mọi fix). Hồ sơ:
+   `research/audit/2026-07-29-cycle-w-review/findings.md`. Verdict adherence của Cường:
+   **hai tên** (`decision_adherence` + `event_adherence`), cấm khoá `adherence` trần.
+   **Kế tiếp đã duyệt (PLAN-cycle-wx Phần B)**: B1 `net_mean_all` → B2 C1 hệ số 0 →
+   B3 policy costs + `as_of` → B4 hai nợ nhỏ. Chi tiết cũ giữ bên dưới để tra cứu:
    ~~**ĐA-05 event store append-only**~~ (VỪA được B-02 mở khoá; Cường đã duyệt design
    từ 27/07, chi tiết `research/audit/2026-07-27-current-state/04-*` §6): SQLite local
    append-only + projections rebuild + JSONL export + EpisodeStore thành legacy adapter;

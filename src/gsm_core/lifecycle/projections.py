@@ -91,17 +91,49 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
     use-case A/B mà ĐA-05 sinh ra để phục vụ. Đường UI/pipeline có `run_id=None` nên
     khoá vẫn ổn định.
 
-    Denominator là **số decision** (mỗi `decision_id` đúng một lần), không phải số event
-    `followed` — khắc BRIDGE-3 vào luật thay vì để mỗi consumer tự đếm.
+    ## HAI ĐƠN VỊ, HAI TÊN — verdict Cường 2026-07-29
+
+    Cùng dữ liệu cho hai con số khác nhau tuỳ đơn vị đếm (accept_lift seed 1000:
+    **76,9%** theo decision vs **53,6%** theo event — kênh fire mỗi tick 2' nhưng
+    decision gộp bucket 30'). Vì thế view trả CẢ HAI, tên đầy đủ, và **cấm khoá
+    `adherence` trần** (test canh): số không rõ đơn vị là số sẽ bị đọc sai —
+    đúng họ lỗi BUG-EVAL-ARGMAX.
+
+    - `decided/followed/dismissed/suppressed`: đếm theo DECISION (mỗi decision_id một
+      lần, kết cục = state cuối). Denominator = decided — khắc BRIDGE-3 vào luật.
+    - `event_decided/event_followed`: đếm theo EVENT (mỗi lần advisor nói / mỗi lần theo).
+    - `decision_adherence` = followed/decided · `event_adherence` =
+      event_followed/event_decided; denominator 0 ⇒ **None** (không bịa 0%).
     """
+    # X-3 (review batch 2): hàm lặp `events` HAI lần (decision_state + vòng event) —
+    # generator bị tiêu ở lần đầu ⇒ event-count = 0 IM LẶNG (event_adherence=None đọc
+    # thành "không có dữ liệu"). Materialize một lần, giữ đúng lời hứa "iterable".
+    events = list(events)
     view: dict[tuple[str | None, str, str | None], dict] = {}
+
+    def _row(key):
+        return view.setdefault(key, {
+            "decided": 0, "followed": 0, "dismissed": 0, "suppressed": 0,
+            "event_decided": 0, "event_followed": 0,
+        })
+
     for row in decision_state(events).values():
-        key = (row["run_id"], row["driver_id"], row["topic"])
-        agg = view.setdefault(key, {"decided": 0, "followed": 0, "dismissed": 0,
-                                    "suppressed": 0})
+        agg = _row((row["run_id"], row["driver_id"], row["topic"]))
         agg["decided"] += 1
         if row["state"] in ("followed", "dismissed", "suppressed"):
             agg[row["state"]] += 1
+    for e in _ordered(events):
+        et = e["event_type"]
+        if et not in ("decided", "followed"):
+            continue
+        agg = _row((e.get("run_id"), e["driver_id"],
+                    (e.get("payload") or {}).get("topic")))
+        agg[f"event_{et}"] += 1
+    for agg in view.values():
+        agg["decision_adherence"] = (agg["followed"] / agg["decided"]
+                                     if agg["decided"] else None)
+        agg["event_adherence"] = (agg["event_followed"] / agg["event_decided"]
+                                  if agg["event_decided"] else None)
     return view
 
 
@@ -127,8 +159,12 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
 _ALWAYS_FOLLOWED = {"advice_shift_extend", "advice_rest_window"}
 _FOLLOW_FLAG_KINDS = {"advice_given", "advice_bonus_gate"}
 _DECIDED_KINDS = _ALWAYS_FOLLOWED | _FOLLOW_FLAG_KINDS
+# F-S1 (review batch 2): `advice_followed` KHÔNG map — nó là marker BRIDGE-3 (chỉ log
+# khi advice ĐỔI hành động) và LUÔN đi kèm `advice_given` cùng tick mang
+# `followed=True` ⇒ map cả hai là đếm MỘT lần theo thành HAI (đo được: 655 thay vì
+# 631 ⇒ event_adherence 54,2% thay vì 52,2%). `standby_followed` thì PHẢI map — kênh
+# vị trí không có event decided mang cờ (mẫu số nằm ở standby_alloc.assigned_ids).
 _TERMINAL_ONLY = {
-    "advice_followed": ("followed", "driver"),
     "standby_followed": ("followed", "driver"),
     "advice_suppressed": ("suppressed", "system"),
 }
@@ -167,7 +203,13 @@ def _offer_events(e, run_id: str, epoch_iso: str) -> list[dict]:
     for aid in ids:
         did = detail.get("decision_ids", {}).get(str(aid))
         if not did:
-            continue
+            # X-4: silent-drop ở đây mở lại đúng lỗ F-1 (mẫu số positioning hụt im
+            # lặng) từ hướng producer — fail-loud nhất quán với F-7.
+            raise ValueError(
+                f"standby_alloc t={e.t_min}: actor {aid} có trong assigned_ids nhưng "
+                f"không có decision_id (decision_ids có: "
+                f"{sorted(detail.get('decision_ids', {}))}) — producer lệch, mẫu số "
+                f"positioning sẽ hụt im lặng nếu bỏ qua")
         out.append({
             "event_id": f"sim-{run_id}:{aid}:standby_offer:{e.t_min:g}",
             "decision_id": did, "display_id": None, "driver_id": str(aid),

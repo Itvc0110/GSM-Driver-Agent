@@ -1,4 +1,9 @@
-# Review đối kháng Cycle W (ĐA-05 lifecycle store) — 16 finding có reproduce thật
+# Review đối kháng Cycle W (ĐA-05 lifecycle store) — 36 finding có reproduce, 4 lượt
+
+> **Cập nhật cuối 2026-07-29 (Phần A của PLAN-cycle-wx):** TẤT CẢ finding của cả 2 batch
+> đã xử lý. Batch 2 (X-1..X-7 input thù địch · F-S1..F-S13 kỷ luật) ghi ở cuối file.
+> Mọi cột "CHƯA SỬA" của batch 1 bên dưới đã lỗi thời — F-6/W-6/W-7/W-4b sửa trong
+> Phần A (xem UPDATE-091 bản cuối); giữ nguyên bảng gốc làm sử liệu.
 
 - **Ngày:** 2026-07-29 (02:30–03:30)
 - **Cách chạy:** 2 agent độc lập, mỗi agent một lăng kính, **bắt buộc chạy repro thật**
@@ -97,3 +102,53 @@ Xanh tại thời điểm commit: `test_lifecycle_store` + `test_lifecycle_wirin
   ngoài vùng mà tác giả tự nghi ngờ.
 - **Xác nhận chéo có giá trị**: F-4 và W-1 là cùng một lỗi được hai agent tìm ra bằng hai
   ca khác nhau (`bucket_min` vs `dow`) ⇒ độ tin cậy cao hơn hẳn một báo cáo đơn lẻ.
+
+
+---
+
+# BATCH 2 (2026-07-29 muộn) — 2 lăng kính còn lại, sau khi Phần A plan được duyệt
+
+Chạy sau khi A1/A2 xong (2 agent, quota guard §3.5). Full suite lúc đó: **698 passed/5 skipped**.
+
+## Lăng kính 3 — INPUT THÙ ĐỊCH (X-1..X-7)
+
+| # | Finding | Sev | Trạng thái |
+|---|---|---|---|
+| X-1 | Ngày KHÔNG TỒN TẠI trên lịch (2026-02-31, tháng 13, ngày 45, offset +25h) lọt cả pydantic lẫn schema (regex không kiểm được lịch; `format: date-time` vô hiệu vì validator không có FormatChecker) ⇒ POST 200, record độc VĨNH VIỄN trong store append-only, giết mọi decision_state về sau | **MED-HIGH** | ✅ SỬA — parse thật `fromisoformat` tại `event_log.append` + pydantic `field_validator` date + test 4 dạng độc |
+| X-2 | `derive_run_id` digest `default=str`: np.int64(30)≠30 (cùng semantic khác ID) · set ⇒ ID đổi theo PYTHONHASHSEED (6 process 6 ID — phá exact-repeat) · datetime == chuỗi ISO (khác semantic CÙNG ID) | MED | ✅ SỬA — `_digest_default`: numpy 0-d `.item()`, date/datetime → tag `__dt__iso`, kiểu lạ TypeError |
+| X-3 | `adherence_view` lặp events HAI lần ⇒ generator cho event-count = 0 IM LẶNG | LOW-MED | ✅ SỬA — materialize `list(events)` |
+| X-4 | `_offer_events` silent-drop người được gán thiếu decision_id ⇒ mẫu số positioning hụt im lặng (mở lại F-1 từ hướng producer); bất nhất với triết lý fail-loud của F-7 | LOW-MED | ✅ SỬA — ValueError tường minh |
+| X-5 | DB ngoại lai đủ 15 cột nhưng KHÔNG PRIMARY KEY ⇒ INSERT OR IGNORE vô dụng, append trùng trả True cả hai lần — idempotency chết không tiếng động | LOW | ✅ SỬA — PRAGMA table_info kiểm PK lúc mở, fail-loud nêu path |
+| X-6 | `advice_id`/`driver_id` rỗng đi xuyên tới store ⇒ HTTP 500 thay vì 422 (boundary validate không đối xứng) | LOW | ✅ SỬA — pydantic min_length=1 |
+| X-7 | `_normalize`: `np.array([5])` scalarize IM LẶNG mất shape; array nhiều phần tử nổ ValueError lạc đề; dict key numpy không normalize | LOW | ✅ SỬA — chỉ 0-d `.item()`, ndarray rơi xuống json ⇒ TypeError tường minh |
+
+Sạch (đã kiểm bằng chạy thật): ID thù địch 7 biến thể (emoji/10k ký tự/NUL/…) round-trip nguyên vẹn, không code nào parse ngược event_id; tie-break cùng-timestamp ổn định cả 6 hoán vị; fix F-8 và W-6/W-7 đứng vững dưới input thù địch.
+
+## Lăng kính 4 — KỶ LUẬT SCHEMA/DOCS/T-046 (F-S1..F-S13)
+
+| # | Finding | Sev | Trạng thái |
+|---|---|---|---|
+| **F-S1** | **Thước A2 vừa xây DOUBLE-COUNT**: sim log một lần theo bằng HAI event cùng decision_id (`advice_given` followed=True + `advice_followed` BRIDGE-3) ⇒ event_followed shift_plan = 655 thay vì 631 (54,2% vs 52,2%) — đúng họ BUG-EVAL-ARGMAX ngay trong hàm tuyên bố phòng nó | **MED-HIGH** | ✅ SỬA — `advice_followed` không map (marker dư thừa; `standby_followed` GIỮ vì positioning không có cờ); test pin GT |
+| F-S2 | Claim "KHÔNG UPDATE/DELETE ở bất kỳ đường code nào" đúng cho BẢNG, sai cho FILE (advice_cache REPLACE cùng file) | LOW | ✅ SỬA — docstring scope rõ hai nơi |
+| F-S3 | Schema description `run_id` mô tả format KHÔNG tồn tại (`-d{day}` không có; thiếu `-pos.{mode}`/`-c{digest8}`) | MED | ✅ SỬA |
+| F-S4 | Regex W-4b chỉ đóng 1/4 lỗ cùng họ (tháng 13/ngày 45/offset 25h vẫn lọt) | MED | ✅ SỬA — siết regex + lớp chặn thật là X-1 |
+| F-S5 | Siết constraint tại chỗ không CHANGELOG — vi phạm quy trình của chính repo | MED-LOW | ✅ SỬA — entry CHANGELOG kèm lý do không-bump tường minh |
+| F-S6 | `test_decision_id_bucket_follows_config` xanh VACUOUS nếu ids rỗng | MED-LOW | ✅ SỬA — `assert ids` |
+| F-S7 | Plan hứa pin "76,9%" nhưng test chỉ `<` suông | MED-LOW | ✅ SỬA — pin GT decision-level tính độc lập |
+| F-S8 | Docstring UI test nói "cùng phút" (stale) + test phụ thuộc ranh giới giây ⇒ flaky | MED-LOW | ✅ SỬA — docstring + freeze clock |
+| F-S9 | `ObservabilityRecorder.flush` infer 100 hàng — verifier_passed nay tri-state ⇒ rủi ro dtype (họ W-2) | LOW | ✅ SỬA — infer_schema_length=None |
+| F-S10 | OPEN-THREADS nói "✅ XONG" trong khi UPDATE-091 nói "ĐANG DỞ" — tracking nói dối người resume | MED | ✅ SỬA — đồng bộ DONE-CODE + cảnh báo |
+| F-S11 | Ba file tracking trích fingerprint cũ như bằng chứng còn hiệu lực | MED | ✅ SỬA — cập nhật theo fingerprint MỚI (chạy SAU mọi fix) |
+| F-S12 | TODO/GRAPH còn ghi nợ positioning-decided mà F-1 ĐÃ đóng (chiều ngược: tracking nói dở, code đã xong) | LOW-MED | ✅ SỬA |
+| F-S13 | UPDATE-091 stale nhiều điểm + Files thiếu multiday.py | MED | ✅ SỬA — bản cuối |
+
+Sạch: 1(b)/1(c) docstring projections + derive_run_id khớp code; fixture module-scope không bị mutate; quy ước §5/§6 CLAUDE.md toàn diff không vi phạm; ba fix F-6/W-6/W-7 được xác nhận độc lập là đúng claim.
+
+## Kết quả đo CUỐI sau toàn bộ 36 fix (seed 1000, coverage=all)
+
+| Kênh | decision_adherence | event_adherence | Ground truth |
+|---|---|---|---|
+| shift_plan | 631/1208 = 52,2% | 631/1208 = 52,2% | 52,2% ✓ (due 30' = bucket ⇒ hai đơn vị trùng) |
+| accept_lift | 50/65 = 76,9% | 60/112 = 53,6% | đúng theo từng đơn vị ✓ (pin bằng GT độc lập) |
+| shift_extend | 43/43 = 100% | 43/43 = 100% | 100% ✓ |
+| positioning | 36/86 = 41,9% | 36/86 = 41,9% | mẫu số 86 = người được gán ✓ |

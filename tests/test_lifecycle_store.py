@@ -276,17 +276,21 @@ def test_sim_events_to_lifecycle_valid_and_mapped(reg):
     from gsm_sim.world import Event
     p = _proj()
     run_id = "7-B-positioning-single"
+    # `advice_given` mang cờ followed như producer THẬT (world.py) — `advice_followed`
+    # là marker BRIDGE-3 dư thừa, adapter cố ý KHÔNG map (F-S1: map cả hai là đếm một
+    # lần theo thành hai — event_followed 655 thay vì 631).
     sim_events = [
         Event(t_min=480.0, actor_id=3, kind="advice_given",
-              detail={"decision_id": "slth-7-3-shift_plan-8", "action": "REST"}),
+              detail={"decision_id": "slth-7-3-shift_plan-8", "action": "REST",
+                      "followed": True}),
         Event(t_min=485.0, actor_id=3, kind="advice_followed",
-              detail={"decision_id": "slth-7-3-shift_plan-8"}),
+              detail={"decision_id": "slth-7-3-shift_plan-8"}),  # bị bỏ qua có chủ ý
         Event(t_min=490.0, actor_id=4, kind="advice_suppressed",
               detail={"decision_id": "slth-7-4-rest_window-8", "reason": "wait_only"}),
         Event(t_min=500.0, actor_id=5, kind="order_pickup", detail={}),  # không decision_id → bỏ
     ]
     lc = p.sim_events_to_lifecycle(sim_events, run_id=run_id)
-    assert len(lc) == 3
+    assert len(lc) == 3  # decided + followed (từ cờ) + suppressed
     for e in lc:
         assert reg.validate("advice_lifecycle_event", e) == [], e
         assert e["run_id"] == run_id

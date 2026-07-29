@@ -202,10 +202,28 @@ class AdvisorPipeline:
         })
         if self.recorder is not None:
             latency_ms = (time.perf_counter() - getattr(self, "_t0", time.perf_counter())) * 1000
+            # W-6 (review đối kháng): `or {"passed": True}` từng BỊA verdict PASS cho
+            # request chưa hề chạy verify (R5 từ chối lịch sự) — hai audit trail nói
+            # ngược nhau (episode ghi None, recorder ghi True). passed=None = "không
+            # chạy verify", phân biệt với False = "verify fail". KHÔNG gộp.
             self.recorder.record(
                 request_id=req["request_id"], driver_id=req["driver_id"],
                 feature=req["feature"], route=r,
                 solver_reports=solver_reports or [], advice=advice,
-                verify_result=self.last_verify_result or {"passed": True, "errors": []},
+                verify_result=(self.last_verify_result
+                               or {"passed": None, "errors": []}),
                 latency_ms=latency_ms)
         return advice
+
+    # W-7 (review đối kháng): 12/13 call site sở hữu store QUA pipeline — close() ở
+    # tầng store không ai với tới ⇒ vẫn PermissionError [WinError 32] khi dọn
+    # TemporaryDirectory trên Windows (LAYEROUT-16 chỉ đóng được một nửa).
+
+    def close(self) -> None:
+        self.store.close()
+
+    def __enter__(self) -> "AdvisorPipeline":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()

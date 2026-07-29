@@ -1,8 +1,10 @@
 """AdviceEventLog — SQLite event log APPEND-ONLY cho vòng đời advice (ĐA-05, Cycle W).
 
 Nguồn sự thật canonical: mọi trạng thái đọc qua projections (rebuild được từ events).
-KHÔNG có UPDATE/DELETE ở bất kỳ đường code nào — sửa sai = append event mới
-(`superseded`), không đụng lịch sử.
+Lời hứa append-only là của **BẢNG `advice_events`** — không UPDATE/DELETE ở bất kỳ
+đường code nào TRÊN BẢNG NÀY; sửa sai = append event mới (`superseded`), không đụng
+lịch sử. (F-S2: cùng FILE sqlite còn bảng `advice_cache` của EpisodeStore dùng
+INSERT OR REPLACE — bảng đó mutable có chủ đích, không thuộc lời hứa này.)
 
 Quyết định đã duyệt (audit `04-*` §6 + verdict Cường PENDING-REVIEW ĐA-05):
 
@@ -21,6 +23,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+from datetime import datetime
 from pathlib import Path
 
 _COLUMNS = ("event_id", "decision_id", "display_id", "driver_id", "run_id",
@@ -47,10 +50,15 @@ def _normalize(v):
     KHÔNG dùng `default=str`: str hoá làm hỏng số im lặng (1.5 thành "1.5" — consumer đọc
     ra chuỗi, phép so sánh/tổng sai mà không ai biết). Kiểu lạ thật sự thì để `json.dumps`
     nổ tường minh — đúng nguyên tắc normalize-hoặc-fail-loud ở boundary dữ liệu ngoài.
+
+    X-7 (review batch 2): chỉ scalar 0-chiều mới được `.item()` — `np.array([5])` từng
+    bị scalarize IM LẶNG (mất shape), array nhiều phần tử nổ ValueError lạc đề. Nay
+    ndarray rơi xuống json.dumps ⇒ TypeError tường minh nêu kiểu.
     """
-    item = getattr(v, "item", None)          # numpy scalar → int/float/bool Python
-    if item is not None and type(v).__module__ != "builtins":
-        return item()
+    if (getattr(v, "item", None) is not None
+            and type(v).__module__ != "builtins"
+            and getattr(v, "ndim", None) == 0):
+        return v.item()                      # numpy scalar 0-d → int/float/bool Python
     if isinstance(v, dict):
         return {k: _normalize(x) for k, x in v.items()}
     if isinstance(v, (list, tuple)):
@@ -78,6 +86,18 @@ class AdviceEventLog:
                         " ON advice_events(decision_id)")
         self.db.execute("CREATE INDEX IF NOT EXISTS ix_ae_run ON advice_events(run_id)")
         self.db.commit()
+        # X-5 (review batch 2): `CREATE TABLE IF NOT EXISTS` KHÔNG kiểm bảng có sẵn —
+        # DB ngoại lai đủ 15 cột nhưng thiếu PRIMARY KEY làm INSERT OR IGNORE hết tác
+        # dụng: append cùng event_id trả True cả hai lần, idempotency chết im lặng
+        # (reproduce: 2 row). Kiểm PK ngay lúc mở, fail-loud nêu path.
+        pk_cols = [r[1] for r in self.db.execute(
+            "PRAGMA table_info(advice_events)") if r[5]]
+        if pk_cols != ["event_id"]:
+            self.db.close()
+            raise ValueError(
+                f"{db_path}: bảng advice_events không có PRIMARY KEY(event_id) "
+                f"(pk hiện tại: {pk_cols}) — idempotency sẽ chết im lặng; DB này "
+                f"không phải store hợp lệ của AdviceEventLog")
         self._registry = _registry()
         self.sqlite_busy_count = 0
 
@@ -103,6 +123,18 @@ class AdviceEventLog:
         errs = self._registry.validate("advice_lifecycle_event", event)
         if errs:
             raise ValueError(f"advice_lifecycle_event không hợp lệ: {errs}")
+        # X-1/F-S4 (review batch 2): regex KHÔNG kiểm được lịch — '2026-02-31',
+        # tháng 13, ngày 45, offset +25:00 đều khớp pattern rồi persist VĨNH VIỄN
+        # (store append-only, không gỡ được) và giết mọi decision_state về sau.
+        # Boundary phải parse THẬT — cùng parser mà projections dùng để sort.
+        for f in ("occurred_at", "observed_at"):
+            try:
+                datetime.fromisoformat(event[f])
+            except ValueError as exc:
+                raise ValueError(
+                    f"{f} '{event[f]}' không phải thời điểm có thật trên lịch "
+                    f"({exc}) — record độc trong store append-only là vĩnh viễn, "
+                    f"chặn tại append") from exc
         payload = json.dumps(_normalize(event["payload"]), ensure_ascii=False)
         row = tuple(payload if c == "payload" else event.get(c) for c in _COLUMNS)
         for attempt in range(_BUSY_RETRIES):

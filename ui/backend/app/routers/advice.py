@@ -18,8 +18,10 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from datetime import date as _date
+
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.adapters import advisor, mockdata
 from gsm_core.lifecycle.event_log import AdviceEventLog
@@ -49,8 +51,10 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
 
 
 class AdviceAction(BaseModel):
-    advice_id: str
-    driver_id: str
+    # X-6 (review batch 2): ID rỗng từng đi xuyên tới store rồi nổ HTTP 500 —
+    # boundary validate phải đối xứng với date/at_min (422 tại pydantic).
+    advice_id: str = Field(min_length=1)
+    driver_id: str = Field(min_length=1)
     # `date` được ghép thành `occurred_at` ISO ⇒ phải đúng dạng NGAY TỪ ĐẦU. Không
     # validate ở đây thì store canonical từ chối SAU khi JSONL đã ghi ⇒ HTTP 500 và hai
     # store lệch nhau vĩnh viễn (review đối kháng reproduce với date='hom-nay').
@@ -60,6 +64,15 @@ class AdviceAction(BaseModel):
     # le=1439: 1440 sinh "T24:00:00" — lọt regex schema (`\d{2}`) nhưng `fromisoformat`
     # nổ ⇒ MỘT record độc giết toàn bộ `decision_state` của store đó.
     at_min: int | None = Field(default=None, ge=0, le=1439)
+
+    @field_validator("date")
+    @classmethod
+    def _date_exists_on_calendar(cls, v: str) -> str:
+        """X-1 (review batch 2): '2026-02-31' khớp regex nhưng không tồn tại — trước
+        đây HTTP 200 và record độc persist VĨNH VIỄN (store append-only) rồi giết mọi
+        decision_state về sau. Regex không kiểm được lịch — phải parse thật."""
+        _date.fromisoformat(v)
+        return v
 
 
 @router.post("/action")

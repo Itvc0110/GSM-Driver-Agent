@@ -8,8 +8,9 @@ không join được với UI JSONL/sim events (D-A3-04). Nay:
   cho pipeline C6 — pipeline vẫn gọi API cũ, không double-write);
 - `count_episodes` đếm distinct decision qua projection (rebuild từ events);
 - `cache_get/put` giữ nguyên bảng `advice_cache` CÙNG FILE (exact-key, TTL 6h — research
-  đợt 7: TUYỆT ĐỐI KHÔNG semantic cache). Cache theo `problem_digest` là ý tưởng A2 của
-  Cường — cycle riêng, KHÔNG nuôi thêm ở đây.
+  đợt 7: TUYỆT ĐỐI KHÔNG semantic cache). ⚠ Bảng cache là bảng MUTABLE (INSERT OR
+  REPLACE) — lời hứa append-only chỉ thuộc bảng `advice_events` (F-S2). Cache theo
+  `problem_digest` là ý tưởng A2 của Cường — cycle riêng, KHÔNG nuôi thêm ở đây.
 
 12 call site cũ (pipeline + tests) giữ nguyên chữ ký. `close()` mới — LAYEROUT-16
 (connection giữ file ⇒ PermissionError khi cleanup TemporaryDirectory trên Windows).
@@ -83,7 +84,11 @@ class EpisodeStore:
         })
 
     def count_episodes(self) -> int:
-        return len(decision_state(self.log.events()))
+        """Số DECISION của PIPELINE — lọc `origin` bắt buộc (F-6, review đối kháng):
+        "một database" nghĩa là event UI/sim ghi CHUNG file; không lọc thì 12 episode
+        + 1 event UI + 3 event sim đếm thành 16 (đo được trước khi sửa)."""
+        return len(decision_state(
+            e for e in self.log.events() if e["origin"] == "pipeline"))
 
     def cache_get(self, **key_parts):
         k = _key(**key_parts)

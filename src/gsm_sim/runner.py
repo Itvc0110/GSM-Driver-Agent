@@ -81,8 +81,27 @@ def derive_run_id(cfg: Config, seed: int) -> str:
         rid += f"-pos.{pos}"
     body = {k: v for k, v in (cfg.data or {}).items() if k != "meta"}
     digest = hashlib.sha256(
-        json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()[:8]
+        json.dumps(body, sort_keys=True, default=_digest_default).encode()
+    ).hexdigest()[:8]
     return f"{rid}-c{digest}"
+
+
+def _digest_default(v):
+    """Encoder cho digest run_id — X-2 (review batch 2): `default=str` phá identity
+    CẢ HAI chiều: np.int64(30) ≠ 30 (cùng semantic, khác ID — str thêm ngoặc kép);
+    `set` ⇒ ID đổi theo PYTHONHASHSEED (phá exact-repeat, đo được 6 process 6 ID);
+    datetime(2026,1,1) == chuỗi "2026-01-01 00:00:00" (khác semantic, CÙNG ID — chiều
+    nuốt-run của W-1). Normalize semantic-preserving; kiểu lạ nổ TypeError tường minh."""
+    import datetime as _dt
+    if (getattr(v, "item", None) is not None
+            and type(v).__module__ != "builtins"
+            and getattr(v, "ndim", None) == 0):
+        return v.item()                                  # numpy scalar → Python thuần
+    if isinstance(v, (_dt.datetime, _dt.date)):
+        return f"__dt__{v.isoformat()}"                  # tag để không trùng chuỗi thường
+    raise TypeError(
+        f"config chứa kiểu {type(v).__name__} không digest được deterministic — "
+        f"run_id là identity của store append-only, không được phụ thuộc str() ngẫu nhiên")
 
 
 def build_environment(grid: Grid, cfg: Config, seed: int) -> EnvironmentContext | None:

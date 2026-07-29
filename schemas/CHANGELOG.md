@@ -1,5 +1,18 @@
 # Schema changelog
 
+## 2026-07-29 (muộn) — Cycle W đóng: siết `occurred_at`/`observed_at` TẠI CHỖ (1.0.0)
+
+- **`advisor/advice_lifecycle_event`**: pattern hai trường timestamp siết dần qua 2 đợt
+  review đối kháng — (đợt 1, W-4b) giờ `([01]\d|2[0-3])`; (đợt 2, F-S4) tháng `01-12`,
+  ngày `01-31`, offset giờ `00-23`. **Không bump version — lý do ghi tường minh** (README
+  bước 2 yêu cầu khai): đây là bugfix NARROWING chặn record độc (`T24:00:00`, tháng 13…
+  từng lọt regex rồi giết toàn bộ projection — store append-only không gỡ được), và
+  **không record persist nào từng mang giá trị bị siết** (store mới ra đời trong chính
+  cycle này, chỉ có ở tmp/test). Lớp chặn THẬT là `datetime.fromisoformat` tại
+  `event_log.append` (X-1 — regex không kiểm được lịch: `2026-02-31` khớp mọi pattern);
+  regex chỉ là tài liệu + lớp phòng đầu. Description `run_id` sửa theo format thật của
+  `runner.derive_run_id` (thêm `-c{digest8}`, bỏ `-d{day}` không tồn tại — F-S3).
+
 ## 2026-07-29 — Cycle W (ĐA-05): advice lifecycle event log
 
 - **`advisor/advice_lifecycle_event` MỚI (1.0.0)**: envelope một event vòng đời advice —

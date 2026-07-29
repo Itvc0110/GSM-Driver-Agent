@@ -64,7 +64,10 @@ def build_span_row(request_id: str, driver_id: str, feature: str, route: dict,
         "composer_fallback_used": bool(advice.get("fallback_used")),
         "composer_confidence": advice.get("confidence"),
         # verifier
-        "verifier_passed": bool(verify_result.get("passed", True)),
+        # W-6: giữ BA trạng thái — None = "không chạy verify" (R5) ≠ False = "verify
+        # fail". `bool(...)` cũ ép None→False (vu oan) và default True (bịa PASS).
+        "verifier_passed": (None if verify_result.get("passed") is None
+                            else bool(verify_result["passed"])),
         "verifier_error_count": len(verify_result.get("errors", [])),
         "verifier_errors": "; ".join(verify_result.get("errors", [])),
         # outcome
@@ -97,7 +100,7 @@ class ObservabilityRecorder:
 
     def record(self, **kwargs) -> dict:
         row = build_span_row(**kwargs)
-        self.rows.append(row)
+        self.rows.append(row)  # F-S9: flush() dùng infer_schema_length=None (họ W-2)
         # cảnh báo HARD invariant ngay (không chặn — chỉ đánh dấu để điều tra)
         row["hard_invariant_ok"] = (row["solver_number_traceability"] == 1.0
                                     and row["composer_faithfulness"] == 1.0)
@@ -108,5 +111,8 @@ class ObservabilityRecorder:
             return None
         import polars as pl
         self.parquet_path.parent.mkdir(parents=True, exist_ok=True)
-        pl.DataFrame(self.rows).write_parquet(self.parquet_path)
+        # F-S9 (cùng họ W-2): infer mặc định 100 hàng — verifier_passed nay tri-state
+        # (None/False/True, W-6): batch mà 100 hàng đầu toàn None rồi gặp bool sẽ lệch
+        # dtype. Quét toàn bộ hàng như logging_ev.
+        pl.DataFrame(self.rows, infer_schema_length=None).write_parquet(self.parquet_path)
         return self.parquet_path

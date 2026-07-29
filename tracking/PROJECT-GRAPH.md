@@ -50,7 +50,7 @@ The graph never silently resolves a conflict. It records the conflict and points
 | Audit A1/A2/A3 | `DONE-CODE` for narrow fixes | Cường decisions required | UPDATE-064..071, audit REPORT | ĐA-01..06, D-A3-01..06, R5-B |
 | Policy corpus | `BLOCKED` | Q-03 / D-POL-04 belongs to Khánh | UPDATE-020/031, corpus usage/register | Missing 23/02/2026 policy record and conflict flag |
 | Schema registry đa phiên bản (Cycle V) | `DONE-CODE` | B-02 gỡ; suite 653/5 xác nhận | UPDATE-090, `schemas/README.md` §quy trình bump | bump l1r đầu tiên sẽ đòi sửa `build_l1r_schemas.py`; `ui/contracts/*` vẫn chưa version |
-| Advice lifecycle store ĐA-05 (Cycle W) | `DONE-CODE / WAITING-VERDICT` | Cường check code | UPDATE-091, `src/gsm_core/lifecycle/*` | positioning thiếu event `decided` phía sim (làm cùng ĐA-04); W6 = UI sim đọc projection (có visual gate) |
+| Advice lifecycle store ĐA-05 (Cycle W) | `DONE-CODE / WAITING-VERDICT` | Cường check code | UPDATE-091, `research/audit/2026-07-29-cycle-w-review/findings.md`, `src/gsm_core/lifecycle/*` | 36 finding từ 4 lượt review đối kháng đã sửa hết (kể cả nợ positioning-decided — F-1); còn W6 = khu Mô phỏng web đọc projection (visual gate, cycle riêng); kế tiếp đã duyệt: PLAN-cycle-wx Phần B (net_mean_all → C1 → policy costs) |
 
 Status meanings:
 
