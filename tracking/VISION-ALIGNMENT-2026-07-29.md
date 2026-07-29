@@ -5,6 +5,42 @@
 > Đây là tài liệu NEO cho mọi plan mới: plan nào không trỏ được về một vế ở đây thì phải
 > tự hỏi vì sao tồn tại. Cập nhật khi trạng thái đổi; không viết lại lời của Cường.
 
+## §0. Tầm nhìn là MỘT HỆ THỐNG, không phải danh sách (tổng hợp — đọc trước bảng)
+
+Năm vế production và các vế sim không đứng cạnh nhau — chúng là **một mệnh đề duy nhất
+nhìn từ nhiều phía**: *hệ thống phải giữ ĐÚNG khi thực tại đổi bên dưới nó, và mọi tuyên
+bố về giá trị phải ĐO ĐƯỢC trước khi chạm tài xế thật.*
+
+- **Thực tại đổi ở tầng DATA** (A1: dtype lạ, API ngoài, policy plain text) ⇒ câu trả lời
+  là *normalize-hoặc-fail-loud tại boundary* + *schema versioned có upcaster* — vì record
+  độc trong store append-only là vĩnh viễn, và data cũ phải sống chung data mới.
+- **Thực tại đổi ở tầng CHÍNH SÁCH** (A5: miễn phí pin có HẠN, không phải hằng số vật lý)
+  ⇒ câu trả lời là *objective do policy quyết định biến sống/chết* — cùng một tài xế, sau
+  31/03/2029 bài toán KHÁC, và hệ phải tự đổi mà không ai sửa code.
+- **Thực tại đổi ở tầng HÀNH VI** (A3: part-time, random, không nghe lời) ⇒ câu trả lời là
+  *adherence đo trung thực, đúng đơn vị, pin bằng ground truth* — vì mọi lời khuyên chỉ có
+  giá trị nhân với xác suất được nghe.
+- **Thực tại đổi ở tầng TẬP THỂ** (A4: ai cũng ra chỗ đông thì chỗ đông chết) ⇒ câu trả
+  lời là *equilibrium/anti-herding đo bằng số* — lời khuyên đúng cho MỘT người có thể sai
+  cho NINETY người, nên coverage:all là chế độ đo bắt buộc.
+- **Và mọi câu trả lời trên phải VÔ HẠI với hệ đang chạy** (A2) ⇒ ranh giới §5 là bất
+  biến, không phải tuỳ chọn.
+
+**SIM là nửa còn lại của cùng mệnh đề**: nó tồn tại để các thất bại mà production sợ
+(herding, thước đo sai, policy đổi) xảy ra TRONG SIM trước — rẻ, đảo ngược được, đo được.
+Vì thế sim cố ý ĐƠN GIẢN Ở HỒ SƠ (full-time, một quận) nhưng NGHIÊM Ở CƠ CHẾ (CRN, không
+LLM trong loop, structured data y hệt thật, một luật projection chung với UI): đơn giản
+chỗ không đo, nghiêm chỗ đang đo. Gap giữa hai nửa (API thật chưa kiểm chứng, agent chưa
+trong loop) là gap ĐƯỢC KHAI BÁO, không phải gap bị quên.
+
+**Hệ quả điều hướng (đã và sẽ quyết định việc chọn việc):** B1→B2→B3 làm theo đúng thứ tự
+"thước trước, solver sau, policy trên cùng" vì đảo thứ tự là tối ưu vào thước hỏng
+(BUG-EVAL-ARGMAX đã dạy bằng máu). Kế tiếp cũng suy từ mệnh đề này: **B6-PARITY** (thứ
+được đo phải là thứ được ship — nếu không, mọi phép đo sim vô nghĩa với sản phẩm),
+**format_checker** (boundary phải chặn thật, không trang trí), **ĐA-04 cadence** (vòng
+hành vi: advice bị bỏ qua phải đổi hành vi advisor). Plan nào không truy được về mệnh đề
+này thì phải tự hỏi vì sao tồn tại.
+
 ## A. Vế PRODUCTION (phần mềm cuối chạy thật)
 
 | # | Vế tầm nhìn (tóm tắt trung thực) | Đã có | Gap + route |
