@@ -90,14 +90,19 @@ def test_platform_before_deadline_battery_off_by_policy():
 
 
 def test_platform_after_deadline_battery_active():
-    """Sau hạn: biến pin SỐNG LẠI — swap_fee 9.000đ/lượt quy ra đ/km theo tầm pack;
-    'cùng một tài xế, chi phí khác' đúng như hồ sơ chi phí §7.4."""
+    """Sau hạn: biến pin SỐNG LẠI — 9.000đ/lượt tính TẠI SỰ KIỆN swap (per_swap, C5).
+
+    ⚠ Kỳ vọng ĐỔI so bản B3 đầu (từng là cash_per_km = 150đ/km khấu hao): C5 chống
+    ĐẾM KÉP — solver có state SOC tính phí tại sự kiện, nên cash_per_km chỉ còn phần
+    nền by_track (platform = 0); số khấu hao 150đ/km giữ trong reason làm tham khảo."""
     p = PolicyBundle.from_record(_rec(costs=COSTS))
     cp = resolve_cost_params(p, as_of="2029-04-01")
     assert cp["battery"]["state"] == "ACTIVE"
     assert cp["battery"]["value"] == 9000
+    assert cp["battery"]["per"] == "swap"
     assert cp["cash_per_km"]["state"] == "ACTIVE"
-    assert cp["cash_per_km"]["value"] == pytest.approx(9000 / 60.0)   # 150 đ/km
+    assert cp["cash_per_km"]["value"] == 0.0   # nền platform; khấu hao KHÔNG cộng (C5)
+    assert "150" in cp["cash_per_km"]["reason"]
 
 
 def test_charge_track_cash_always_alive():
@@ -148,13 +153,15 @@ def test_solver_terms_active_before_deadline():
     assert terms["cash_per_km"]["state"] == "ACTIVE"
 
 
-def test_solver_uses_policy_cash_after_deadline():
-    """as_of SAU hạn ⇒ solver dùng 150đ/km từ POLICY (không ai truyền tay) — 'hàm tối ưu
-    cập nhật giá trị biến theo thay đổi chính sách' thành sự thật đo được."""
+def test_solver_uses_policy_costs_after_deadline():
+    """as_of SAU hạn ⇒ solver dùng chi phí TỪ POLICY (không ai truyền tay) — 'hàm tối ưu
+    cập nhật giá trị biến theo thay đổi chính sách' thành sự thật đo được.
+    (C5 đổi hình thức: giá pin nằm ở battery per_swap 9.000đ, không còn khấu hao /km.)"""
     p = PolicyBundle.from_record(_rec(costs=COSTS))
     rep = solve(_spi(), p, {"policy_costs_as_of": "2029-04-01"})
     terms = {t["term"]: t for t in rep["solution"]["terms_active"]}
-    assert terms["cash_per_km"]["value"] == pytest.approx(150.0)
+    assert terms["battery"]["value"] == 9000 and terms["battery"]["per"] == "swap"
+    assert terms["cash_per_km"]["value"] == 0.0   # nền platform (C5 chống đếm kép)
     assert terms["cash_per_km"]["state"] == "ACTIVE"
 
 

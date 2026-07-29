@@ -141,19 +141,19 @@ def resolve_cost_params(policy: "PolicyBundle", as_of: str | None) -> dict:
     if costs is None:
         why = ("bundle không có khối costs (schema 1.0.0) — KHÔNG biết chi phí, "
                "dùng 0 + caveat, không bịa (§5)")
-        return {"battery": _term(0.0, UNKNOWN, why, src),
-                "cash_per_km": _term(0.0, UNKNOWN, why, src)}
+        return {"battery": {**_term(0.0, UNKNOWN, why, src), "per": "swap"},
+                "cash_per_km": {**_term(0.0, UNKNOWN, why, src), "per": "km"}}
     if as_of is None:
         why = "không có as_of — không xác định được chính sách nào đang hiệu lực"
-        return {"battery": _term(0.0, UNKNOWN, why, src),
-                "cash_per_km": _term(0.0, UNKNOWN, why, src)}
+        return {"battery": {**_term(0.0, UNKNOWN, why, src), "per": "swap"},
+                "cash_per_km": {**_term(0.0, UNKNOWN, why, src), "per": "km"}}
 
     day = str(as_of)[:10]
     free_until = costs.get("battery_free_until")
     by_track = costs.get("cash_cost_vnd_per_km_by_track") or {}
     track = policy.track or ""
 
-    # --- số hạng PIN ---
+    # --- số hạng PIN (per_swap — C5: tính TẠI SỰ KIỆN, không khấu hao) ---
     if free_until is not None and day <= str(free_until):
         battery = _term(0.0, OFF_BY_POLICY,
                         f"đổi pin miễn phí cho track '{track}' tới {free_until} "
@@ -162,26 +162,30 @@ def resolve_cost_params(policy: "PolicyBundle", as_of: str | None) -> dict:
     elif "swap_fee_vnd" in costs:
         battery = _term(costs["swap_fee_vnd"], ACTIVE,
                         f"sau {free_until or 'ưu đãi'}: phí đổi pin "
-                        f"{costs['swap_fee_vnd']:.0f}đ/lượt — SOC thành biến kinh tế",
+                        f"{costs['swap_fee_vnd']:.0f}đ/lượt — SOC thành biến kinh tế, "
+                        f"tính TẠI mỗi lần swap (C5)",
                         src)
     else:
         battery = _term(0.0, UNKNOWN, "costs không có swap_fee_vnd", src)
+    battery["per"] = "swap"   # ngữ nghĩa đơn vị tường minh (bài học adherence hai-tên)
 
-    # --- số hạng TIỀN MẶT/km ---
-    if battery["state"] == ACTIVE and costs.get("swap_range_km_per_pack"):
-        # pin trả phí ⇒ đ/km = phí/lượt ÷ tầm pack (cộng thêm nền theo track nếu có)
-        per_km = costs["swap_fee_vnd"] / float(costs["swap_range_km_per_pack"])
-        base = float(by_track.get(track, 0.0))
-        cash = _term(per_km + base, ACTIVE,
-                     f"{costs['swap_fee_vnd']:.0f}đ/lượt ÷ "
-                     f"{costs['swap_range_km_per_pack']:.0f}km/pack"
-                     + (f" + nền track {base:.0f}đ/km" if base else ""),
-                     src)
-    elif track in by_track:
-        v = float(by_track[track])
-        cash = _term(v, ACTIVE,
-                     f"đ/km tiền mặt theo track '{track}' = {v:.0f}đ (policy costs)", src)
+    # --- số hạng TIỀN MẶT/km (per_km) ---
+    # C5 CHỐNG ĐẾM KÉP: khi battery ACTIVE per_swap, KHÔNG cộng khấu hao fee/range vào
+    # đ/km nữa (bản B3 từng cộng — một đồng bị trừ hai lần nếu solver có state SOC tính
+    # phí tại sự kiện). Số khấu hao giữ trong reason làm tham khảo.
+    if track in by_track:
+        base = float(by_track[track])
+        note = ""
+        if battery["state"] == ACTIVE and costs.get("swap_range_km_per_pack"):
+            amort = costs["swap_fee_vnd"] / float(costs["swap_range_km_per_pack"])
+            note = (f" (tham khảo: khấu hao pin ≈ {amort:.0f}đ/km = "
+                    f"{costs['swap_fee_vnd']:.0f}÷{costs['swap_range_km_per_pack']:.0f}km — "
+                    f"KHÔNG cộng vào đây, đã tính per_swap ở số hạng battery)")
+        cash = _term(base, ACTIVE,
+                     f"đ/km tiền mặt nền theo track '{track}' = {base:.0f}đ (policy costs)"
+                     + note, src)
     else:
         cash = _term(0.0, UNKNOWN,
                      f"track '{track}' không có trong cash_cost_vnd_per_km_by_track", src)
+    cash["per"] = "km"
     return {"battery": battery, "cash_per_km": cash}

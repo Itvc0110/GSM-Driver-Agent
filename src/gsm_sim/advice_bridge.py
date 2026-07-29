@@ -180,6 +180,7 @@ class AdviceActionBridge:
         # B2/C1: chi phí tiền mặt/km — CÙNG khoá config với sổ chi phí của world
         # (`vehicle.cash_cost_vnd_per_km`, T-045b). Mặc định 0 = đúng chính sách hiện hành.
         self.cash_cost_km = float(cfg.get("vehicle.cash_cost_vnd_per_km", 0.0) or 0.0)
+        self.swap_fee_solver = float(cfg.get("vehicle.swap_fee_vnd", 0.0) or 0.0)  # C5
         # prior hoàn thành của quần thể = 1 − tỷ lệ huỷ-sau-nhận của chính thế giới này
         self.completion_prior = round(
             1.0 - float(cfg.get("orders.cancel_after_accept_rate", 0.05) or 0.05), 4)
@@ -352,6 +353,8 @@ class AdviceActionBridge:
             # cho thế giới và người tối ưu; mặc định config = 0 ⇒ bit-identical.
             # B3 sẽ chuyển nguồn sang policy_bundle.costs theo (track, as_of).
             "cash_cost_vnd_per_km": self.cash_cost_km,
+            # C5: phí một lượt swap — cùng khoá config với world (mặc định 0).
+            "swap_fee_vnd": self.swap_fee_solver,
         }
 
     # ---------- hỏi ý kiến ----------

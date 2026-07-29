@@ -192,6 +192,7 @@ files (074–091) had no graph link. Do not delete rows here without re-running 
 | [UPDATE-094](updates/UPDATE-094-b2-c1-cost-term-he-so-0.md) | B2: C1 cost term vào objective S2 (hệ số 0, bit-identical) | `DONE-CODE` | solver / objective-v2 §6 bước 2 | DEPENDS UPDATE-093 (B1 thước net); UNBLOCKS B3 policy costs |
 | [UPDATE-095](updates/UPDATE-095-b3-policy-driven-costs.md) | B3: policy_bundle 1.1.0 +costs; resolve_cost_params 3 trạng thái; terms_active | `DONE-CODE` | solver / policy / vế A5 VISION-ALIGNMENT | DEPENDS UPDATE-094 (C1) + UPDATE-090 (registry đa phiên bản); phần RULE của A1 agent-router |
 | [UPDATE-096](updates/UPDATE-096-b4-rename-disutility-va-nhan-nguon.md) | B4: rename pickup_disutility + nhãn dải driver_share (hành vi không đổi) | `DONE-CODE` | config / docs | đóng Phần B PLAN-cycle-wx |
+| [UPDATE-097](updates/UPDATE-097-c5-swap-co-gia.md) | C5: swap có giá tại sự kiện (per_swap, chống đếm kép B3); s2_only ÂM SIG ở kịch bản 2029 — bằng chứng #3 cho ĐA-07 tắt shift_plan | `DONE-CODE` | solver / objective-v2 §6 bước 2 | DEPENDS UPDATE-095; MEASURES ĐA-07 |
 
 ## 4. Task and file routing
 

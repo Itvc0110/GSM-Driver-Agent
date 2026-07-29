@@ -44,6 +44,10 @@ DEFAULT_PARAMS = {
     # Chi phí đổi QUYẾT ĐỊNH (giá trị net nội bộ của DP) nhưng expected_payout_vnd
     # BÁO CÁO vẫn là GROSS payout — §5 tách gross/payout/net, test canh.
     "cash_cost_vnd_per_km": 0.0,
+    # C5 (plan 2026-07-29): phí MỘT LƯỢT đổi pin — nguồn official 9.000đ/lượt sau
+    # 31/03/2029 (driver-cost-structure-2026). Mặc định 0 = đúng chính sách hiện hành.
+    # Tính TẠI SỰ KIỆN swap (không khấu hao vào cash/km — chống đếm kép, xem policy.py).
+    "swap_fee_vnd": 0.0,
 }
 
 
@@ -181,6 +185,8 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
     # Giá trị QUYẾT ĐỊNH của nhánh ONLINE là NET; báo cáo payout vẫn GROSS (xem reconstruct).
     cash_km = float(params.get("cash_cost_vnd_per_km", 0.0) or 0.0)
     cost_per_trip = cash_km * float(params["avg_dist_km"])
+    # C5: gia MOT LUOT swap — fee=0 ⇒ nhánh SWAP y hệt cũ (tie-break Cycle R giữ nguyên)
+    swap_fee = float(params.get("swap_fee_vnd", 0.0) or 0.0)
 
     for b in range(B - 1, -1, -1):
         buckets_left = B - b
@@ -217,7 +223,9 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
                     # (Không thêm số bịa nào — chỉ đổi tie-break.)
                     # SWAP (nạp đầy; tính như 1 bucket không kiếm tiền)
                     if rl < buckets_left:
-                        v = 0.0 + V[b + 1, NS - 1, pb, rl]
+                        # C5: swap có GIÁ THẬT (policy) — fee=0 giữ 0.0 + tie-break cũ;
+                        # fee>0 ⇒ swap thừa thua REST, DP tự cân "chạy nốt hay giữ pin"
+                        v = -swap_fee + V[b + 1, NS - 1, pb, rl]
                         if v > best_v:
                             best_v, best_a = v, 2  # SWAP
                     # REST (giảm rests_left nếu còn cần)
@@ -235,7 +243,7 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
 
     # reconstruct
     schedule, soc, pb, rl = [], soc0, pts0, R
-    proj_points, exp_payout = spi["points_now"], 0.0
+    proj_points, exp_payout, n_swaps = spi["points_now"], 0.0, 0
     ended = False
     for b in range(B):
         if ended:
@@ -255,10 +263,11 @@ def _solve_dp(spi: dict, policy: PolicyBundle, params: dict, demand_scale: float
             rl = max(0, rl - 1)
         elif act == "SWAP":
             soc = NS - 1
+            n_swaps += 1
         elif act == "END":
             ended = True
     exp_payout += bonus_at(proj_points)
-    return schedule, exp_payout, proj_points
+    return schedule, exp_payout, proj_points, n_swaps
 
 
 def _baseline_naive_rest(spi: dict, policy: PolicyBundle, params: dict,
@@ -267,11 +276,11 @@ def _baseline_naive_rest(spi: dict, policy: PolicyBundle, params: dict,
     DP đặt nghỉ vào demand thấp nhất → luôn ≥ baseline này."""
     B, eo, hrs, _ = _forecast_arrays(spi, params, demand_scale)
     if B <= 0:
-        return 0.0
+        return 0.0, 0
     eligible, _hr = _bonus_eligible(params, policy)
     R = _required_rest(B, params)
     ppo = _payout_per_order(policy, params["avg_dist_km"])
-    pts, payout = spi["points_now"], 0.0
+    pts, payout, n_swaps = spi["points_now"], 0.0, 0
     soc = params["soc_bands"] - 1 if spi.get("soc_pct") is None else \
         min(params["soc_bands"] - 1, int(spi["soc_pct"] / (100.0 / params["soc_bands"])))
     for i in range(B):
@@ -279,13 +288,14 @@ def _baseline_naive_rest(spi: dict, policy: PolicyBundle, params: dict,
             continue
         if soc <= 0:
             soc = params["soc_bands"] - 1
-            continue  # bucket này đi swap
+            n_swaps += 1
+            continue  # bucket này đi swap (C5: chi phí expose ở baseline_swap_cost_vnd)
         et = eo[i] * params["p_accept"]
         payout += et * ppo
         pts += int(round(et * _points_of_hour(policy, hrs[i])))
         soc -= _soc_cost(params)
     payout += policy.bonus_at(pts) if eligible else 0
-    return payout
+    return payout, n_swaps
 
 
 def solve(spi: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
@@ -313,16 +323,23 @@ def solve(spi: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
                          "reason": "caller truyền tường minh — thắng policy (đường sim)"}
         else:
             p["cash_cost_vnd_per_km"] = cash_term["value"]
+        battery_term = dict(resolved["battery"])
+        if params is not None and "swap_fee_vnd" in params:
+            battery_term = {"value": float(params["swap_fee_vnd"]), "state": "ACTIVE",
+                            "per": "swap", "source": "params(explicit)",
+                            "reason": "caller truyền tường minh — thắng policy (đường sim)"}
+        elif battery_term["state"] == "ACTIVE":
+            p["swap_fee_vnd"] = battery_term["value"]   # C5: DP trả phí tại sự kiện swap
         terms_active = [{"term": "cash_per_km", **cash_term},
-                        {"term": "battery", **resolved["battery"]}]
+                        {"term": "battery", **battery_term}]
     B = int(spi["buckets_remaining"])
     fc = spi["demand_forecast"]
     forecast_source = "historical_forecast" if spi["source"] in ("MOCK", "REAL") else "dp:fallback"
     confidence = 0.8 if len(fc) >= B and B > 0 else 0.5
     pv = f"policy_v:{policy.version}"
 
-    schedule_acts, exp_payout, proj_points = _solve_dp(spi, policy, p)
-    baseline = _baseline_naive_rest(spi, policy, p)
+    schedule_acts, exp_payout, proj_points, n_swaps = _solve_dp(spi, policy, p)
+    baseline, baseline_swaps = _baseline_naive_rest(spi, policy, p)
     delta = exp_payout - baseline
 
     # S2-2: nhãn bucket lấy từ danh sách ĐÃ GỘP-SORT (không phải fc[i] thô đa-cell)
@@ -357,8 +374,8 @@ def solve(spi: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
     # sensitivity: demand −20%/−40% → re-solve delta (cùng demand_scale cho cả baseline)
     sensitivity = []
     for pct in (0.20, 0.40):
-        _, ep2, _ = _solve_dp(spi, policy, p, demand_scale=1 - pct)
-        bl2 = _baseline_naive_rest(spi, policy, p, demand_scale=1 - pct)
+        _, ep2, _, _ = _solve_dp(spi, policy, p, demand_scale=1 - pct)
+        bl2, _ = _baseline_naive_rest(spi, policy, p, demand_scale=1 - pct)
         sensitivity.append({"param": f"demand_-{int(pct * 100)}%",
                             "delta_payout": round(ep2 - bl2, 1)})
 
@@ -385,11 +402,16 @@ def solve(spi: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
                 caveats.append(f"chi phí '{t['term']}' UNKNOWN — {t['reason']}; "
                                f"dùng 0, KHÔNG bịa số")
 
+    fee_out = float(p.get("swap_fee_vnd", 0.0) or 0.0)
     solution = {
         "schedule": schedule, "next_action": next_action,
         "expected_payout": round(exp_payout, 1), "baseline_payout": round(baseline, 1),
         "delta_payout": round(delta, 1),
         "projected_points": proj_points, "projected_bonus_tier": proj_tier,
+        # C5: chi phí swap MINH BẠCH cho CẢ HAI lịch — KHÔNG trộn vào payout/delta (§5:
+        # gross giữ gross; consumer muốn net thì tự trừ, có đủ số để trừ công bằng).
+        "expected_swap_cost_vnd": round(n_swaps * fee_out, 1),
+        "baseline_swap_cost_vnd": round(baseline_swaps * fee_out, 1),
     }
     if terms_active is not None:
         # B3: output NÓI RA số hạng nào sống/chết + lý do (câu hỏi thiết kế #2 của Cường:
