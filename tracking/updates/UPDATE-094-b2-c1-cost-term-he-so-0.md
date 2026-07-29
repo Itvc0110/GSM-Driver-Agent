@@ -33,7 +33,7 @@ D-SIM-09. B1 (UPDATE-093) đã cho THƯỚC thấy chi phí trước; B2 cho SOL
 | Bộ test | `test_c1_cost_term` (6) + `test_shift_dp` (19) + `test_advice_bridge` + `test_bridge_passes_solver_params` + `test_net_metric` = **58 passed** |
 | Bit-identical | fingerprint 5 seed × 2 arm vs HEAD `d362cf2`: **IDENTICAL** (mặc định 0 — cổng an toàn hoạt động) |
 | Ngưỡng cơ học | cash 5.000đ/km × 3km > ppo 12.975đ ⇒ ONLINE chết; 1,5km ⇒ sống (test scales — chi phí nhân đúng quãng đường) |
-| Sweep 30 seed × cash ∈ {0,70,150,250} | **ĐANG CHẠY NỀN** (seeds tươi 3100–3129, coverage=all, positioning wait_only) → artifact `research/audit/2026-07-27-current-state/29-b2-cost-sweep-30seed.json`; đọc `net_mean_all` (B1). Số điền ở UPDATE kế khi xong |
+| Sweep 30 seed × cash ∈ {0,70,150,250} | **XONG** (seeds tươi 3100–3129, coverage=all, positioning wait_only; artifact `29-b2-cost-sweep-30seed.json`). **Δnet_mean_all (B−A): +4.000 → +3.822 → +3.618 → +3.363đ — DƯƠNG SIG Ở MỌI MỨC** (CI thấp nhất [1.543, 5.166] vẫn loại 0); Δpayout +4.000đ hằng theo mức (CRN — cash không đổi hành vi vì shift_plan OFF, chỉ trừ tiền km); Δserved +1,38đp SIG. Suy ra km rỗng thêm của kênh vị trí ≈ **2,5 km/người/ngày**; break-even ≈ **1.570đ/km** — GẤP >6 LẦN cận trên chi phí thực (250đ/km). **Kết luận câu hỏi plan B2: kênh vị trí sống khoẻ với chi phí thực ở mọi kịch bản đã biết** |
 
 ## Visual verification
 
