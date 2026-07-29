@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AdviceActionContract",
-  "description": "v1.0 (2026-07-27, DIRECTIVES §12). Đo adherence EXPLICIT: tài xế bấm nút trên card advice. Đây là MỘT trong hai đường đo — đường IMPLICIT (hành vi thật đổi sau advice) nằm ở sim/A-B (advice_given/followed events). Log local nhãn mock, không phải telemetry thật.",
+  "description": "v1.0 (2026-07-27, DIRECTIVES §12; cập nhật 2026-07-29 ĐA-05). Đo adherence: tài xế bấm nút trên card advice. Canonical store nay là AdviceEventLog (append-only, validate qua registry trước khi ghi); advice_actions.jsonl chỉ còn debug export; GET /actions đọc từ event log. Hai đường đo EXPLICIT (bấm nút)/IMPLICIT (hành vi thật đổi sau advice, sim/A-B) đã hợp nhất vào MỘT event log + MỘT projection (phân biệt theo origin ui/sim). 3 namespace decision_id: adv-* (pipeline) / s1-* (UI) / slth-* (sim). Log local nhãn mock, không phải telemetry thật.",
   "type": "object",
   "properties": {
     "advice_id": { "type": "string" },
@@ -9,7 +9,7 @@
     "date": { "type": "string", "description": "ngày hồ sơ đang xem (YYYY-MM-DD)" },
     "action": { "type": "string", "enum": ["followed", "dismissed", "expanded"] },
     "card_kind": { "type": "string", "enum": ["brief", "nudge", "recap"] },
-    "at_min": { "type": "integer", "minimum": 0, "maximum": 1440, "description": "phút trong ngày sim/demo lúc bấm" },
+    "at_min": { "type": "integer", "minimum": 0, "maximum": 1439, "description": "phút trong ngày sim/demo lúc bấm (0-1439; 1440 sinh T24:00:00 — W-4)" },
     "client_ts": { "type": "string", "description": "ISO timestamp máy client (chỉ để debug, không dùng phân tích)" },
     "is_mock": { "type": "boolean", "const": true }
   },

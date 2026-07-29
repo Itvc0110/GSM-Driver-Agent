@@ -3,8 +3,9 @@
 > **HISTORICAL WORKING SNAPSHOT:** phần mở đầu bên dưới phản ánh thời điểm A1 vừa xong nên có
 > trạng thái/số liệu đã lỗi thời. Kết quả reconcile của audit là [`REPORT.md`](REPORT.md); trạng
 > thái code/data/UX mới nhất và blocker R5 xem
-> [`../2026-07-27-current-state/README.md`](../2026-07-27-current-state/README.md). Không sửa lại
-> nội dung lịch sử phía dưới để giữ evidence trail.
+> [`../2026-07-27-current-state/README.md`](../2026-07-27-current-state/README.md); hiện trạng
+> mới nhất (Cycle W) xem thêm [`../2026-07-29-cycle-w-review/findings.md`](../2026-07-29-cycle-w-review/findings.md).
+> Không sửa lại nội dung lịch sử phía dưới để giữ evidence trail.
 
 Trạng thái: **A1 MATH AUDIT xong vòng find+verify** (2026-07-27 rạng sáng) · A2 data đã gom bằng
 chứng · A3 agent-system chưa chạy · A4 fix đang tiến hành.

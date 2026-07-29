@@ -13,7 +13,7 @@ Quy ước: **[NGUỒN]** = có URL kiểm chứng; **[ƯỚC LƯỢNG]** = suy 
 | Khe/tủ | **6 slot (5 pin + 1 trống nhận pin cũ)** | [Phụ Kiện VinFast](https://phukienvinfast.vn/san-pham/tu-doi-pin-xe-may-dien-vinfast/), khớp tag OSM `capacity=6` |
 | Pin đổi | Pack LFP **1,5 kWh** | [Electrive](https://www.electrive.com/2025/08/25/vinfast-to-install-150000-battery-swapping-stations-in-vietnam/) |
 | Thời gian đổi | ~1–2 phút/lần, tự phục vụ qua app | [zauto.vn](https://zauto.vn/tram-doi-pin-xe-may-dien-vinfast-tai-ha-noi-danh-sach-dia-chi-chi-tiet/) |
-| Phí | 9.000đ/lượt; Xanh SM Platform miễn phí đến ~30/6/2028 | [Electrive](https://www.electrive.com/2025/08/25/vinfast-to-install-150000-battery-swapping-stations-in-vietnam/), [Tiền Phong](https://tienphong.vn/vinfast-evo-doi-pin-sieu-toc-co-hoi-de-tai-xe-cong-nghe-toi-uu-thu-nhap-post1816460.tpo) |
+| Phí | 9.000đ/lượt; **⚠ SỬA SAI SỰ THẬT (29-07):** Xanh SM Platform miễn phí đổi pin **KHÔNG GIỚI HẠN** vì độc quyền, hiệu lực tới **31/03/2029** (greensm official 26/03/2026). Mốc 30/6/2028 KHÔNG áp dụng cho Platform — đó là mốc "miễn 20 lượt/tháng cho khách thường". Chi tiết: `research/economics/driver-cost-structure-2026.md`. | [Electrive](https://www.electrive.com/2025/08/25/vinfast-to-install-150000-battery-swapping-stations-in-vietnam/), [Tiền Phong](https://tienphong.vn/vinfast-evo-doi-pin-sieu-toc-co-hoi-de-tai-xe-cong-nghe-toi-uu-thu-nhap-post1816460.tpo), `research/economics/driver-cost-structure-2026.md` |
 | Giờ hoạt động | Đa số 24/7 | zauto.vn |
 | Quá tải ghi nhận | Cục bộ giờ cao điểm khu trung tâm; "xí chỗ" bằng mũ bảo hiểm; app báo còn pin nhưng tủ hết pin đầy; VinFast dự kiến thêm **đặt chỗ đổi pin** trong app | [Báo Xây Dựng 23/6/2026](https://xe.baoxaydung.vn/tu-doi-pin-xe-may-dien-qua-tai-cuc-bo-tai-xe-cong-nghe-dung-chieu-xi-cho-192260616224440811.htm), khớp [ĐỢT 1] |
 
@@ -38,7 +38,7 @@ Quy ước: **[NGUỒN]** = có URL kiểm chứng; **[ƯỚC LƯỢNG]** = suy 
 
 | Tham số | Đề xuất | Căn cứ |
 | --- | --- | --- |
-| Tốc độ cao điểm (7–8h30, 16h30–19h) | 15–20 km/h (chọn 17) | [NGUỒN] [thienthanhlimousine](https://thienthanhlimousine.com/10km-di-xe-may-bao-nhieu-phut/), [fxbike](https://fxbike.vn/10km-di-xe-may-bao-nhieu-phut/) |
+| Tốc độ cao điểm (config hiện hành `peak_hours: [6,7,8,16,17,18]`) | 15–20 km/h (chọn 17) | [NGUỒN] [thienthanhlimousine](https://thienthanhlimousine.com/10km-di-xe-may-bao-nhieu-phut/), [fxbike](https://fxbike.vn/10km-di-xe-may-bao-nhieu-phut/) |
 | Tốc độ ngoài cao điểm | 22–28 (chọn 25) | [ƯỚC LƯỢNG] phần trên dải 15–30 |
 | Tốc độ đêm 21h–6h | 28–35 | [ƯỚC LƯỢNG]; trần pháp lý 50–60 ([baochinhphu](https://baochinhphu.vn/quy-dinh-ve-toc-do-toi-da-cua-xe-co-gioi-ap-dung-tu-01-01-2025-102241127101044466.pdf)) |
 | Quãng đường cuốc | lognormal median ~3,5 km (3–5, đuôi 10–12) | [ƯỚC LƯỢNG] từ giá cuốc 15–30k [ĐỢT 1] + [daytripsvietnam](https://daytripsvietnam.com/guides/vietnam-grab-prices-2026/) |
@@ -49,6 +49,16 @@ Quy ước: **[NGUỒN]** = có URL kiểm chứng; **[ƯỚC LƯỢNG]** = suy 
 | Tiêu hao | Feliz/Evo200: 0,85 %/km (~27 Wh/km thực); xe swap: 1,4–1,8 %/km/pack | [ƯỚC LƯỢNG] = 100/tầm thực |
 | Ngưỡng đi đổi pin | SoC 15–25% (hoặc pack còn <20 km) | [ƯỚC LƯỢNG] hành vi + pattern [ĐỢT 1] |
 
+**Cập nhật config hiện hành (29-07):**
+
+(a) Km lộ trình nay là **THẬT** từ ma trận OSRM offline (`routing.enabled: true`, factor median
+**1,46**) + tầng congestion (cap 0,35, normalize theo `global_peak`); `detour_factor: 1.3` cũ chỉ
+còn dùng làm **fallback** khi OSRM không trả được route.
+
+(b) `drop_demand_alpha: 0.4` — điểm trả cuốc bám theo cầu: `m(c) = 1 + α·(w/w̄ − 1)` (w = cầu tại
+cell điểm trả, w̄ = cầu trung bình); α=0 cho corr −0,22 (điểm trả LỆCH khỏi cầu), α=0,4 → +0,418
+(điểm trả bám cầu thật hơn).
+
 **Khuyến nghị**: sim v1 mô phỏng **đội xe đổi pin** (khớp cơ chế trạm 6-slot); đội Feliz S sạc cắm 4–10h là biến thể sau (tài xế nghỉ trưa sạc thay vì ghé trạm).
 
 ## 3. Dispatcher baseline
@@ -56,21 +66,28 @@ Quy ước: **[NGUỒN]** = có URL kiểm chứng; **[ƯỚC LƯỢNG]** = suy 
 Industry công khai: DiDi giải **bipartite matching theo batch bằng Hungarian** trên đồ thị driver–order trong window ([DiDi INFORMS 2020](https://tonyzqin.wordpress.com/wp-content/uploads/2020/11/inte.2020.1047.pdf), [arXiv:2408.10479](https://arxiv.org/html/2408.10479v1)); batch-delay được nghiên cứu riêng ([Springer 2025](https://link.springer.com/article/10.1007/s11518-025-5710-8)).
 
 ```text
-mỗi TICK (batch window 2–5s):
-  O = orders chưa gán (tồn tối đa T_wait=60–90s rồi expire)
+mỗi TICK (dispatch_tick_s = 5s):
+  O = orders chưa gán (patience 2 tầng: lognormal median 5', sigma 0.5, cap 10' rồi expire)
   D = drivers idle, SoC đủ (SoC sau cuốc dự kiến > ngưỡng đổi pin)
   # Tầng 1 — bán kính H3
-  candidates(o) = drivers trong grid_disk(h3(o.pickup), k=2) tại res 8   # ≈2–2.5 km
-  rỗng → nới k=3; vẫn rỗng → giữ sang tick sau
+  candidates(o) = drivers trong grid_disk(h3(o.pickup), k=candidate_ring_k=4) tại res 9
+  rỗng → nới dần tới candidate_ring_k_max=6; vẫn rỗng → giữ sang tick sau
   # Tầng 2 — matching
-  |O|==1 hoặc |D|==1 → greedy nearest (ETA min)
-  ngược lại → bipartite cost(o,d)=ETA_pickup, giải scipy linear_sum_assignment
-              chỉ nhận cặp ETA ≤ ETA_max (8 phút); cặp loại → tồn sang tick sau
+  matching: batch (Hungarian) — bipartite cost(o,d)=ETA_pickup, giải scipy linear_sum_assignment
+              chỉ nhận cặp ETA ≤ eta_max_min=11 phút; cặp loại → tồn sang tick sau
+  greedy nearest (ETA min) = baseline/đường lui khi cần so sánh, không còn là default
 ```
 
-Mặc định: window 4s, k=2, ETA_max 8 ph, expire 60–90s. Greedy nearest giữ làm baseline so sánh với batched-Hungarian.
+**Config hiện hành (29-07, đã ship):** H3 **res 9**, `candidate_ring_k: 4` (nới dần tới
+`candidate_ring_k_max: 6`), `eta_max_min: 11`, `dispatch_tick_s: 5`, patience 2 tầng lognormal
+median 5', sigma 0.5, cap 10'. `matching: batch` (Hungarian) là **mặc định đã ship** (UPDATE-080);
+greedy chỉ còn là baseline/đường lui.
 
 ## 4. Quy mô đề xuất
+
+**⚠ Nhãn (29-07):** bảng dưới đây là quy mô **THÀNH PHỐ** — **chưa triển khai** (D-SIM-01 defer).
+Pilot hiện hành khác hẳn quy mô này: **1 quận, H3 res 9, 90 tài xế, 1.200 đơn/ngày**
+(`research/simulation/pilot-world-dongda.md`).
 
 | Tham số | Đề xuất | Căn cứ |
 | --- | --- | --- |

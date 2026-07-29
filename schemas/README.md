@@ -1,7 +1,8 @@
 # schemas/ — Data schema registry (T-038 C0)
 
 Nguồn sự thật về contract dữ liệu core. Spec: `specs/core-data-schema-and-advisor-architecture.md`.
-Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen đều đi qua đây.
+Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen, UI backend
+(`POST /api/v1/advice/action`) và sim đều đi qua đây.
 
 ## Cấu trúc tầng
 
@@ -12,7 +13,7 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
 | `l2/` | State fields (supply/demand/station/driver-day) | derivation job có version |
 | `l2i/` | Inferred views | **tầng RIÊNG — nhãn INFERRED + rule version bắt buộc** |
 | `l3/` | Feature views cho solver | read-only |
-| `advisor/` | I/O pipeline (request / solver report / composed advice) + lifecycle event log (ĐA-05) | đóng băng contract |
+| `advisor/` | I/O pipeline (request / solver report / composed advice) + lifecycle event log (ĐA-05): entity thứ 4 `advice_lifecycle_event` (1.0.0) — **append-only, idempotent theo `event_id`**; 3 namespace `decision_id`: `adv-*` (pipeline) / `s1-*` (UI) / `slth-*` (sim); store canonical + projections **MỘT LUẬT** (UI + sim) ra **hai tên** `decision_adherence`/`event_adherence` | đóng băng contract |
 
 ## Quy ước (spec §1.6)
 
@@ -32,6 +33,11 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
   trong spec §1.6 (ESTIMATED/COARSE labels).
 - **Latent cấm ở L1** (taxonomy reliability-upgrade §3.5): meals/fatigue/belief/patience
   là sim-only ground truth — test `test_latent_fields_absent_from_l1` enforce.
+- **⚠ CẢNH BÁO (quan trọng nhất):** `SchemaRegistry` dựng `Draft202012Validator` **KHÔNG có
+  `format_checker`** ⇒ mọi `"format": "date-time"` trong schema chỉ là TÀI LIỆU, **không chặn
+  gì** ở validate-time. Lớp chặn thật là `pattern` regex + parse thật (`datetime.fromisoformat`)
+  tại boundary (`event_log.append`) — bản thân regex không kiểm được lịch hợp lệ (vd
+  `2026-02-31` vẫn khớp mọi pattern, xem X-1).
 - **Data quality assumption:** L1 nhận data ĐÃ clean/normalize (dedup, UTC+7, hợp lệ)
   — pipeline ingest ngoài scope (spec §0).
 - Sim và data thật GSM dùng CÙNG schema — chỉ đổi `source`.
@@ -43,7 +49,10 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen 
    hình dạng đã bị sửa tại chỗ trước đó (như Cycle R từng làm) thì file hiện tại KHÔNG còn là
    hình dạng cũ. Thêm hậu tố `@{version}` vào `$id`. ⚠ Registry TỪ CHỐI file snapshot có const
    không khớp version trên tên file — đặt sai là fail ngay lúc load, không âm thầm.
-2. Sửa file latest `.schema.json` + **bump `schema_version.const`** theo semver.
+2. Sửa file latest `.schema.json` + **bump `schema_version.const`** theo semver. Narrowing
+   bugfix **KHÔNG bump** ⇒ **PHẢI khai lý do tường minh trong CHANGELOG** + chứng minh không
+   record persist nào mang giá trị bị siết (đồng bộ với entry CHANGELOG 2026-07-29 muộn đang
+   viện dẫn quy tắc này).
 3. Viết **upcaster** `({entity}, {version_cũ})` trong `src/gsm_core/upcasters.py` — additive
    optional ⇒ chỉ stamp version; đổi ngữ nghĩa ⇒ dịch dữ liệu thật (và cân nhắc MAJOR).
 4. Cập nhật `LATEST_VERSIONS` trong `tests/test_schemas.py` (pin tường minh) + `CHANGELOG.md`

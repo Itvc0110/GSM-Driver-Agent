@@ -1,6 +1,7 @@
 # SPEC — Sim Policy Bundle v0 (MOCK, frozen snapshot)
 
-Cập nhật: 2026-07-21 · Trạng thái: READY (vá blocker F1/F2/G3/G6 từ red-team audit) · Version: `sim-policy-v0`
+Cập nhật: 2026-07-21 (rà lại 2026-07-29 — xem `research/economics/driver-cost-structure-2026.md`)
+· Trạng thái: READY (vá blocker F1/F2/G3/G6 từ red-team audit) · Version: `sim-policy-v0`
 **Toàn bộ là MOCK** — đóng băng từ các policy snapshot đã verify trong `research/policy/bonus-programs.md` + `research/economics/income-structure.md`, KHÔNG phải số hiện hành của GSM; chỉ dùng trong simulator, không bao giờ hiển thị cho tài xế thật như fact. Mỗi giá trị có provenance hoặc [MOCK-DERIVED].
 
 ## 1. Fare model (gross revenue mỗi cuốc)
@@ -13,6 +14,8 @@ Phụ phí (mưa/đêm/cao điểm) = 0 trong v0  [đơn giản hóa; ghi nhận
 ```
 
 Sanity: cuốc median 3,5 km → gross ≈ 19,5k; 20 cuốc/ngày → ~400–460k gross/ngày — khớp dải tự khai 300–700k.
+⚠ Cập nhật 29-07: km nay là lộ trình THẬT (OSRM, ×~1,46 so với đường chim bay) ⇒ gross trung vị
+cao hơn sanity trên — đây là lý do `accept_logit_center_vnd` chuyển từ 15.400 → **21.200**.
 
 ## 2. Revenue share & payout
 
@@ -30,7 +33,11 @@ Sanity: cuốc median 3,5 km → gross ≈ 19,5k; 20 cuốc/ngày → ~400–460
 ## 4. Kỷ luật (trong sim = cờ/hệ quả hành vi, không trừ tiền trong run 1 ngày)
 
 - `acceptance_rate (ngày) < 50%` → bật `forced_auto_accept` tới 23h59 (decline vô hiệu).
+  ⚠ Đính chính: cơ chế forced-accept đã **BỎ** theo policy Vận Doanh 23/02/2026 (audit A1 S3-2);
+  còn dư `threshold_forced` trong `f3_patterns.py:75` — nợ dọn.
 - `acceptance/completion < 70%` → cờ `at_risk` (phạt 100–200k/TUẦN ngoài đời — trong run 1 ngày chỉ log cảnh báo + advisor được nhắc).
+  ⚠ Đính chính: hình phạt 100–200k/tuần đã bị thay bằng **KHOÁN TUẦN + truy thu 20%** (HN/HCM
+  tới 40%) phần doanh số chưa đạt (policy Vận Doanh 23/02/2026).
 - Advisor không bao giờ khuyên hành vi làm rơi tỷ lệ (đã có trong điều kiện an toàn advice khu vực).
 
 ## 5. Chi phí theo archetype/track (cho estimated_net)
@@ -38,14 +45,23 @@ Sanity: cuốc median 3,5 km → gross ≈ 19,5k; 20 cuốc/ngày → ~400–460
 | Archetype | Track | Chi phí/ngày trong sim |
 | --- | --- | --- |
 | P1, P3, P5 | Xe cá nhân | Điện: sạc nhà ~10k/lần đầy (~120km) [research đợt 1]; đổi pin tại trạm 9k/lượt nếu dùng |
-| P2, P4 | RTO/thuê xe công ty | Thuê 60k/ngày + đổi pin **0đ** (Platform miễn phí tới 2028 — snapshot) |
+| P2, P4 | RTO/thuê xe công ty | Thuê 60k/ngày + đổi pin **0đ** (Platform miễn phí tới **31/03/2029** — đính chính 29-07, không phải 2028; xem `research/economics/driver-cost-structure-2026.md`) |
 | Tất cả | — | ĐBTN (đảm bảo thu nhập cohort mới) KHÔNG mô hình hóa trong v0 — defer, ghi nhãn |
+
+⚠ Đính chính 29-07 (dòng 41): (a) sim **KHÔNG** mô hình hoá tiền thuê xe trong payout; chi phí
+tiền mặt là **sổ riêng** `actor.cost_vnd` (T-045b), mặc định `swap_fee_vnd: 0` + `cash_cost_vnd_per_km: 0`,
+**KHÔNG đụng payout**. (b) Mốc miễn phí đổi pin đúng là **31/03/2029**, không phải 2028.
+
+⚠ Ghi chú config hiện hành (29-07): số archetype nay là **7** (thêm P6 0.18, P7 0.12 — SIM-1);
+P6/P7 **thiếu track/đội xe** trong bundle này — nợ chưa gán. Tên cờ thật trong config là
+`charge_fleet_ratio_p3p5` (không phải `charge_fleet_ratio` trơn).
 
 ## 6. Đội xe (giải quyết G3)
 
 - P2, P4: 100% xe đổi pin (Evo swap, ~60 km/pack, ngưỡng đi đổi SoC 20%).
 - P1: 100% xe cá nhân sạc cắm (Feliz S ~110 km, sạc nhà 3–4h).
-- P3, P5: **50% swap / 50% sạc cắm** (config `charge_fleet_ratio`, default 0.5).
+- P3, P5: **50% swap / 50% sạc cắm** (config `charge_fleet_ratio_p3p5`, default 0.5).
+- P6, P7 (SIM-1, tỷ trọng 0.18/0.12): **chưa gán track/đội xe** trong bundle v0 — nợ, ghi nhận.
 
 ## 7. Assumption log
 

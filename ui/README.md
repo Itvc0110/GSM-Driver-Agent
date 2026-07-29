@@ -209,3 +209,12 @@ table. See `tracking/updates/UPDATE-073-simulator-web-fare-unification.md`.
   `backend/`, `web/` (sắp tạo), `contracts/` — Cường/agent (đổi contracts phải báo nhau).
 - Kế hoạch tích hợp: xem `tracking/updates/UPDATE-059-*.md` trở đi (Track UI, phase U0–U4).
 - Nội dung phía trên của README là nguyên bản của Khánh tại thời điểm import (chỉ thêm mục này).
+
+## Trạng thái repo (cập nhật 2026-07-29 bởi phía Cường)
+
+- Gốc thật của UI trong repo này là `ui/` (không phải `UIUXgsm/` như mô tả cấu trúc thư mục phía
+  trên — đó là repo gốc lúc import).
+- Đã có thêm `web/` + `design-tokens.json` bên cạnh cấu trúc gốc.
+- Backend tests nay có **8 file** (45 passed).
+- Đường advice actions nay đi qua **store canonical** (không còn chỉ append JSONL) — chi tiết ở
+  `ui/docs/SCREEN-PARITY.md`.
