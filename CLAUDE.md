@@ -18,7 +18,7 @@ Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image
 | `CLAUDE.md` | Harness này — đọc đầu tiên |
 | `planning/` | SCOPE (scope hiện hành), USER_STORIES, PERSONAS (5 hồ sơ mock), RESEARCH (kế hoạch nghiên cứu) |
 | `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`, `simulation/`, `audit/`, `experiments/`, `ux/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
-| `specs/` | Đặc tả kỹ thuật để code — **15 spec cấp 1 + `real-data/` + `simulation/`**; spec source-of-truth chính hiện hành: `advisor-objective-model-v2.md`, `core-data-schema-and-advisor-architecture.md`, `adherence-measurement.md`, `simulation/00-sim-overhaul-master.md` |
+| `specs/` | Đặc tả kỹ thuật để code — **14 spec cấp 1 + `real-data/` + `simulation/`**; spec source-of-truth chính hiện hành: `advisor-objective-model-v2.md`, `core-data-schema-and-advisor-architecture.md`, `adherence-measurement.md`, `simulation/00-sim-overhaul-master.md` |
 | `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###), `PENDING-REVIEW.md`, `OPEN-THREADS-*.md`, `PLAN-cycle-*.md`, `DIRECTIVES-*`, `BACKLOG-QUESTIONS-*` |
 | `tracking/PROJECT-GRAPH.md` | Bản đồ canonical của UPDATE hiện hành: route đọc theo task, dependency/correction edges, trạng thái hiện hành, pending gates và quota loop. **86 file `UPDATE-*.md` tính tới UPDATE-092 (2026-07-29); §3.7 phủ 074–092 (UPDATE-092), route đọc theo task ở `PROJECT-GRAPH-2026-07-29-addendum.md`** |
 | `flow image/` | drawio luồng dự kiến — `...v2.drawio` hiện hành (7 trang), `...v1.drawio` đối chiếu (source of truth về flow) |

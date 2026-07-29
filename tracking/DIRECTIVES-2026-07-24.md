@@ -110,6 +110,7 @@ vào sau, bên cạnh UI app.
 - Generator mock 90 ngày / **150 profile** theo manifest hiện tại (90 bike-platform + 20 bike-RTO + 15 car-platform + 15 car-employee + 10 car-premium). Schema/tên cột L1R theo metadata GSM; mọi nội dung là MOCK. Report R2 30 seed không thay cho artefact-specific verify (`D-SIM-08`).
 - **9 solver** phủ UC1–UC8; advisor pipeline C6 (router→composer→verifier) template-mode.
 - Suite **378 test** là mốc lịch sử trước các track sau. Không dùng con số này như trạng thái HEAD.
+  ~~; current full-suite claim đang bị chặn bởi `BLOCKER-R5-MUT10`.~~
   **⚠ Đính chính 2026-07-29:** `BLOCKER-R5-MUT10` đã GỠ 2026-07-28 (commit `6ccd8fc`, re-apply→đỏ→restore→xanh); suite hiện hành **707 passed / 5 skipped** (`5364395`) — câu "đang bị chặn" hết hiệu lực.
 
 ## 10. Chỉ thị bổ sung 2026-07-26 (Cường)

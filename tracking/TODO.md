@@ -316,7 +316,7 @@ Các section cũ bên dưới là timeline/backlog tích lũy; khi mâu thuẫn,
    - **PI-6 External** (treo): ExternalContext theo stack hiện hành WeatherAPI + OSRM + Stadia + Jina. Google Maps không cần (Q-02 closed). Cần cycle provider/cache/freshness riêng, không còn blocked chỉ vì key.
    - **Cần Cường/GSM chốt trước live integration:** semantics 5 field + target KPI + cột thật 5 bảng; BQ auth/env. External key/config đã có, nhưng provider/cache/freshness là cycle riêng. **LOẠI TRỪ**: hiệu năng AI-Advisor/observability/CICD/optimize.
 9. **C7**: EXP-001..005 trên instrumentation C6 (episode store đã bandit-ready). **Gated:** eval set F0 phải phản ánh policy hiện hành (post-refresh) + snapshot MOCK được regen/verify đúng schema và provenance; không gọi PI-2 là data thật.
-7. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
+10. **T-039** checkpoint mở rộng sau mỗi C#/T# hoàn thành (section bắt buộc trong UPDATE_TEMPLATE).
 
 **Track A — SIM OVERHAUL (ưu tiên cao nhất, Cường 2026-07-24; spec `specs/simulation/00-sim-overhaul-master.md`):**
 

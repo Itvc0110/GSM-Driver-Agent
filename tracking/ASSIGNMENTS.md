@@ -19,7 +19,7 @@ Cơ chế: công việc sống trong `tracking/TODO.md` và có thể được c
 | --- | --- | --- | --- | --- | --- |
 | 2026-07-26 | Khánh | T-009b (Flutter mobile song song) | `ui/driver_app/` — KHÔNG ai khác đụng | READY | Bắt kịp web qua `ui/contracts/` + `ui/design-tokens.json` + `ui/docs/SCREEN-PARITY.md`; cùng backend FastAPI với web |
 | 2026-07-27 | Cường | UI-FARE-01 (đồng nhất giá cuốc demo) | `ui/backend/`, `ui/web/`, pricing tests và tracking/docs liên quan; KHÔNG đụng `ui/driver_app/` | WAITING-VERDICT | Code/tests/technical visual flow complete; user verdict **V-16** (đánh số lại từ V-11) required |
-| 2026-07-29 | Cường (agent) | md-refresh toàn repo + PLAN-cycle-wx Phần B (B1..B4) + tích hợp UPDATE-092 | `tracking/*` (trừ updates cũ), `planning/*`, `specs/*`, `research/*`, `schemas/*.md`, `src/gsm_sim/{parallel,sim_metrics}.py`, `tests/test_net_metric.py`, `ui/` (docs/contracts — phối hợp Khánh) | DOING | Cycle W DONE-CODE (UPDATE-091); teammate UPDATE-092 đang tích hợp |
+| 2026-07-29 | Cường (agent) | md-refresh toàn repo + PLAN-cycle-wx Phần B (B1..B4) + tích hợp UPDATE-092 | `tracking/*` (trừ updates lịch sử), `planning/*`, `specs/*`, `research/*`, `schemas/*.md`, `CLAUDE.md`, `src/gsm_sim/{parallel,sim_metrics}.py`, `tests/test_net_metric.py`, `ui/` (docs/contracts — phối hợp Khánh), `templates/` (banner), `docs/superpowers/` (banner) | DOING | Cycle W DONE-CODE (UPDATE-091); teammate UPDATE-092 đang tích hợp |
 
 ## Lịch sử
 

@@ -23,8 +23,8 @@ Data: `research/simulation/data/` — batt_dd.json (11 tủ pin thật), poi_dd.
 
 > **⚠ Đính chính 2026-07-29 — số cấu hình đã calibrate lại so với bảng gốc trên:**
 > - **N actors: 50 → 90** (`configs/pilot_dongda.yaml actors.n`). Với `orders_per_day = 1.200`
->   không đổi ⇒ đơn/actor giảm từ 24,0 xuống **13,3** — chờ Cường chọn hướng ở **Q-07 bước ②**
->   (`tracking/BACKLOG-QUESTIONS-2026-07-27.md`).
+>   không đổi ⇒ đơn/actor giảm từ 24,0 xuống **13,3** — chờ THỰC THI **Q-05 bước ②** (khôi phục
+>   tỷ lệ đơn/actor — Cường đã chốt thứ tự ①→④, xem `tracking/PENDING-REVIEW.md` dòng Q-05).
 > - **Dispatcher**: `candidate_ring_k = 4` (không phải k=2), `candidate_ring_k_max = 6` (đã HOÀN TÁC
 >   từ 12 — xem `tracking/TODO.md` T-045a c0/Q-07), `matching: batch` (Hungarian, không còn greedy
 >   mặc định) — khớp mô tả "Hungarian" ở trên nhưng k thật khác.
