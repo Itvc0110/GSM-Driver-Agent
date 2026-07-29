@@ -46,6 +46,12 @@ nhận xét cũ *"solver coi môi trường là ngoại sinh"* **đã bị code 
 - **ĐA-01..03 APPROVED-DESIGN, NOT IMPLEMENTED.**
 - **ĐA-04..ĐA-09 + `specs/advisor-objective-model-v2.md` DUYỆT 2026-07-27** (Cường: *"oke duyệt
   hết"*). Chi tiết verdict trong `PENDING-REVIEW.md` §Đã check xong.
+  **ĐA-04 → `DONE-CODE` 2026-07-29 (UPDATE-099)**: nhịp nói MỘT LUẬT dùng chung sim+UI +
+  keyed adherence draw. Washout D-A3-01/D-SIM-14 CHẾT (decision 68,1% ≈ event 67,6%; trước
+  76,9 vs 53,6). Ranh giới sim↔sản phẩm (dismiss là UI-only) khoá bằng 2 test theo chỉ thị
+  Cường 2026-07-29. Visual **V-18** chờ Cường. **+ 2 defect P0 từ debate review remote `UPDATE-098` đã reproduce độc lập và FIX**: F-098-01 (gate Bellman bỏ bonus vượt mốc) và F-098-02 (resolver dùng policy ngoài thời hạn) — `tests/test_f098_defects.py`. F-098-03/04/05 → `D-F098-B`. Ba mục mới mở: `D-ĐA04-01` (material_revision
+  rỗng không fail-loud), **`D-ĐA04-03` (ngân sách FIFO — kênh ÂM chiếm hết suất, rest_window
+  chết đói; cần plan riêng)**, `D-ĐA04-04` (chi phí log suppressed).
   **ĐA-06 đã CHỐT riêng 2026-07-27** — nghĩa vụ nhắc-duyệt hoàn tất, agent **không nhắc nữa**;
   vẫn xếp POLISH, và mang nhãn **DỄ THAY ĐỔI** ⇒ thi công theo ràng buộc ở **T-044**.
 - **T-041 — MÔ HÌNH HOÁ LẠI ADVISOR (spec objective v2 §6), ưu tiên cao nhất hiện tại:**

@@ -61,3 +61,52 @@ kiểm lại độc lập bằng cả source hiện tại và `git show 7739b3c`
 - Các phần ghi `PROPOSAL` chưa cấp quyền sửa code/contract.
 - Số liệu mock chỉ mô tả artefact synthetic, không suy diễn uplift hay hành vi thật của tài xế GSM.
 - Không tiếp quản hoặc hoàn tất thay cho phiên R5. Các finding R5 chỉ được lập chỉ mục để không mất dấu.
+
+## ~~Artifact 31–34 — lưới ablation ĐA-04~~ ⚠ **BỊ TREO — đọc artifact 37 thay thế**
+
+> Mọi con số trong mục này đo với arm đối chứng **bị nhiễm ba confound** (xem mục cuối file). Giữ nguyên văn làm hồ sơ về việc kết luận đã sai thế nào — **không được trích cho quyết định**. Số đúng nằm ở artifact 37.
+
+### (nguyên văn bản cũ, 2026-07-29, UPDATE-099)
+
+Bốn file JSON là **một lưới 2×2 đầy đủ**, cùng 30 seed CRN 3160–3189, `coverage=all`,
+`positioning_overrides=wait_only`. Đọc chúng như MỘT thí nghiệm, không phải bốn phép đo rời:
+
+| File | Arm | Δ payout/tài xế |
+| --- | --- | --- |
+| `31-da04-cadence-30seed.json` | `default_positioning` (chỉ kênh vị trí) · `ladder_all` | +4.469đ SIG · +5.701đ SIG |
+| `32-da04-ablation-30seed.json` | `ladder_all`, **cadence OFF** | +8.586đ SIG |
+| `33-da04-no-shiftplan-30seed.json` | bỏ `shift_plan`, cadence ON | +7.135đ SIG |
+| `34-da04-2x2-cell-30seed.json` | bỏ `shift_plan`, cadence OFF | +8.561đ SIG |
+
+**Kết luận rút ra được (và CHỈ rút ra được nhờ ô thứ tư):** bỏ `shift_plan` khi cadence TẮT
+gần như vô hại (−25đ) nhưng khi cadence BẬT lại đáng +1.433đ ⇒ tương tác +1.458đ nằm
+trọn ở việc kênh đó chiếm suất trong ngân sách chú ý, không phải ở nội dung lời khuyên.
+Ba arm đầu **không tách được** confound này.
+
+~~⚠ Δ giữa các arm cách nhau 1,4–2,9k trên SD ~40k/seed ⇒ thứ tự giữa các arm là gợi ý
+mạnh, chưa phải kết luận thống kê chắc chắn; số nào dùng để ra quyết định phải chạy lại
+ở n≈100.~~ **ĐÃ CHẠY — `35-da04-cost-of-cadence-n100.json`** (100 seed tươi 4000–4099,
+ước lượng GHÉP CẶP `B_on−B_off` trên cùng seed, 3 thế giới/seed): giá của nhịp
+**−3.048đ CI[−4.117, −2.005] SIG**, gini **−0,0051 SIG** (công bằng hơn — lần đầu có
+bằng chứng ghép cặp trực tiếp), served −0,85đp SIG, nhịp có lợi 34/100 seed. Kết luận
+n=30 đứng vững. Phân rã FIFO/nội-tại vẫn là số n=30 (lưới 2×2 chưa chạy ở n=100).
+
+## ⚠ Artifact 31–35 BỊ TREO — đọc 36/37 trước (thêm 2026-07-29)
+
+Hai vòng soi đối kháng tìm ra **ba confound** trong arm đối chứng `cadence=off`, tất cả **sau khi** 31–35 đã được đo và báo cáo:
+
+1. **DET-01** — tắt `cadence.enabled` cũng tắt luôn keyed coin ⇒ arm đối chứng có adherence hiệu dụng cao hơn ~10đp (đo: 0,761 vs danh nghĩa 0,588, so với arm ON 0,681 vs 0,603).
+2. **R-01** — một lời khuyên được nghe theo bị **áp tác động 2,0–2,5 lần** ở arm OFF (`gate_events/decision_id` = 2,46/2,11/2,02 vs ~1,05 ở ON). Lỗi đúng-sai, không chỉ lỗi đo.
+3. **R-09** — ba kênh dùng ba định nghĩa "đã nói" ⇒ ngân sách chia không đồng nhất.
+
+**`36-da04-DET01-corrected.json`** = đo lại với fix (1): giá của nhịp n=100 đi từ **−3.048đ → −2.593đ** (hẹp 15%), và ô `OFF_nosp` của lưới 2×2 đổi **+8.561 → +6.597đ** ⇒ **cấu trúc tương tác của lưới cũ không còn đứng; con số "FIFO tốn 1.458đ" KHÔNG dùng được nữa.**
+
+**`37-da04-all-confounds-fixed.json`** = đo lại **cả 5 arm** với đủ ba fix. Đây là artifact duy nhất được phép trích cho quyết định.
+
+**Kết quả 37 (n=100 ghép cặp):** giá của nhịp **−1.530đ CI[−2.401, −673] SIG** — bằng đúng một nửa con số từng báo (−3.048đ). Mọi chỉ tiêu khác cũng giảm ~½ và vẫn SIG: `gini` −0,0030 · served −0,46đp · đơn hoàn thành −5,47 · payout người khác −140k.
+
+**Lưới 2×2 (30 seed, cả 5 arm):** `ON_all` +5.624 · `OFF_all` +8.488 · `ON_nosp` +7.173 · `OFF_nosp` +6.789 · `ON_pos_only` +4.469. ⇒ bỏ `shift_plan` khi cadence ON **+1.549đ**, khi OFF **−1.700đ** (ĐẢO DẤU so với −25đ của lưới cũ) ⇒ **tương tác +3.249đ**. Giá của nhịp khi CÓ `shift_plan` −2.865đ, khi KHÔNG **+384đ**.
+⇒ **Toàn bộ chi phí của nhịp tập trung ở tương tác với `shift_plan`** — nhịp tự nó gần như miễn phí. ⚠ Các hiệu số này là hiệu của ĐIỂM ƯỚC LƯỢNG (không lưu per-seed cho 4 ô ⇒ **không có CI**); chỉ ước lượng ghép cặp n=100 mới có CI hợp lệ.
+
+**Cái KHÔNG đổi qua mọi bước:** `gini_payout` −0,0051 SIG — kết luận *"nhịp mua công bằng bằng tiền"* vững; chỉ GIÁ là thứ bị báo cao hơn thực tế. Thêm `D-R08`: con số "2.670 lần bị nén" cũng phóng đại ~47% vì ba kênh đếm "bị nén" trước khi biết có nội dung khuyên hay không.
+

@@ -1,0 +1,247 @@
+{
+ "ladder_no_shiftplan_cadence_ON": {
+  "system": {
+   "payout_mean_all": {
+    "delta_mean": 7134.5663,
+    "ci95": [
+     5023.3514,
+     9231.3336
+    ],
+    "significant": true
+   },
+   "trips_mean_all": {
+    "delta_mean": 0.3444,
+    "ci95": [
+     0.2684,
+     0.4215
+    ],
+    "significant": true
+   },
+   "net_mean_all": {
+    "delta_mean": 7134.5663,
+    "ci95": [
+     5023.3514,
+     9231.3336
+    ],
+    "significant": true
+   },
+   "cost_mean_all": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "payout_mean_P1": {
+    "delta_mean": 3324.3723,
+    "ci95": [
+     -105.7298,
+     6664.5456
+    ],
+    "significant": false
+   },
+   "net_mean_P1": {
+    "delta_mean": 3324.3723,
+    "ci95": [
+     -105.7298,
+     6664.5456
+    ],
+    "significant": false
+   },
+   "payout_mean_P2": {
+    "delta_mean": 3764.4497,
+    "ci95": [
+     -3813.0592,
+     11167.4135
+    ],
+    "significant": false
+   },
+   "net_mean_P2": {
+    "delta_mean": 3764.4497,
+    "ci95": [
+     -3813.0592,
+     11167.4135
+    ],
+    "significant": false
+   },
+   "payout_mean_P3": {
+    "delta_mean": -4630.0333,
+    "ci95": [
+     -23229.9587,
+     13847.3223
+    ],
+    "significant": false
+   },
+   "net_mean_P3": {
+    "delta_mean": -4630.0333,
+    "ci95": [
+     -23229.9587,
+     13847.3223
+    ],
+    "significant": false
+   },
+   "payout_mean_P4": {
+    "delta_mean": 14983.8963,
+    "ci95": [
+     12534.7501,
+     17619.1525
+    ],
+    "significant": true
+   },
+   "net_mean_P4": {
+    "delta_mean": 14983.8963,
+    "ci95": [
+     12534.7501,
+     17619.1525
+    ],
+    "significant": true
+   },
+   "payout_mean_P5": {
+    "delta_mean": -608.9137,
+    "ci95": [
+     -8893.5603,
+     8450.2828
+    ],
+    "significant": false
+   },
+   "net_mean_P5": {
+    "delta_mean": -608.9137,
+    "ci95": [
+     -8893.5603,
+     8450.2828
+    ],
+    "significant": false
+   },
+   "payout_mean_P6": {
+    "delta_mean": 4159.521,
+    "ci95": [
+     -1238.0631,
+     9716.175
+    ],
+    "significant": false
+   },
+   "net_mean_P6": {
+    "delta_mean": 4159.521,
+    "ci95": [
+     -1238.0631,
+     9716.175
+    ],
+    "significant": false
+   },
+   "payout_mean_P7": {
+    "delta_mean": 23153.414,
+    "ci95": [
+     12043.6806,
+     34470.8882
+    ],
+    "significant": true
+   },
+   "net_mean_P7": {
+    "delta_mean": 23153.414,
+    "ci95": [
+     12043.6806,
+     34470.8882
+    ],
+    "significant": true
+   },
+   "served_rate": {
+    "delta_mean": 0.0255,
+    "ci95": [
+     0.0199,
+     0.0312
+    ],
+    "significant": true
+   },
+   "orders_completed": {
+    "delta_mean": 31.0,
+    "ci95": [
+     24.1658,
+     37.9342
+    ],
+    "significant": true
+   },
+   "others_payout_vnd": {
+    "delta_mean": 647349.9,
+    "ci95": [
+     458374.3208,
+     835131.5667
+    ],
+    "significant": true
+   },
+   "others_trips": {
+    "delta_mean": 33.0333,
+    "ci95": [
+     25.9325,
+     40.2
+    ],
+    "significant": true
+   },
+   "swap_wait_mean": {
+    "delta_mean": -0.4081,
+    "ci95": [
+     -1.1114,
+     0.2792
+    ],
+    "significant": false
+   },
+   "total_payout_vnd": {
+    "delta_mean": 642111.0333,
+    "ci95": [
+     452101.7342,
+     830820.2083
+    ],
+    "significant": true
+   },
+   "expired_n": {
+    "delta_mean": -32.5,
+    "ci95": [
+     -38.9333,
+     -26.2333
+    ],
+    "significant": true
+   },
+   "wait_median_min": {
+    "delta_mean": -0.0031,
+    "ci95": [
+     -0.0041,
+     -0.0022
+    ],
+    "significant": true
+   },
+   "gini_payout": {
+    "delta_mean": -0.0011,
+    "ci95": [
+     -0.0054,
+     0.0032
+    ],
+    "significant": false
+   },
+   "station_hhi": {
+    "delta_mean": -0.015,
+    "ci95": [
+     -0.0262,
+     -0.0037
+    ],
+    "significant": true
+   },
+   "supply_cell_hhi": {
+    "delta_mean": -0.0002,
+    "ci95": [
+     -0.0007,
+     0.0003
+    ],
+    "significant": false
+   },
+   "starved_hours_n": {
+    "delta_mean": -0.2333,
+    "ci95": [
+     -0.4333,
+     -0.0667
+    ],
+    "significant": true
+   }
+  },
+  "n_seeds": 30
+ }
+}
