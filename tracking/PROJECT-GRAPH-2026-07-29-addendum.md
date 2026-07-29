@@ -1,10 +1,11 @@
 # PROJECT-GRAPH — ADDENDUM 2026-07-29 (UPDATE-073..091)
 
-> **Vai trò:** `tracking/PROJECT-GRAPH.md` §3 dừng ở UPDATE-072. File này phủ **073–091**
-> (19 update của đợt 2026-07-27..29) theo cùng ngữ nghĩa node/edge. Khi reconcile chính
-> thức, gộp nội dung này vào graph gốc rồi xoá file. Nguồn: 5 reader agent đọc từng file
-> UPDATE (fan-out), controller tổng hợp; mọi edge đều nêu TƯỜNG MINH trong file gốc,
-> không suy diễn.
+> **Vai trò (cập nhật sau merge `4dc963b`):** PROJECT-GRAPH.md **§3.7** (do UPDATE-092 của
+> teammate thêm, cùng ngày) là bảng INDEX canonical cho 074–092. File này KHÔNG lặp lại
+> index — nó bổ khuyết phần §3.7 không có: **one-line + reads per node, correction chains
+> (mermaid), route đọc theo task, trạng thái mở**. Hai file dùng cùng nhau; khi reconcile
+> lớn thì gộp cả hai vào graph gốc. Nguồn: 5 reader agent đọc từng file UPDATE (fan-out),
+> controller tổng hợp; mọi edge đều nêu TƯỜNG MINH trong file gốc, không suy diễn.
 
 ## 1. Bảng node
 
