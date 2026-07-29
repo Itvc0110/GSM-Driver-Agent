@@ -38,7 +38,7 @@ Quy ước: **[NGUỒN]** = có URL kiểm chứng; **[ƯỚC LƯỢNG]** = suy 
 
 | Tham số | Đề xuất | Căn cứ |
 | --- | --- | --- |
-| Tốc độ cao điểm (config hiện hành `peak_hours: [6,7,8,16,17,18]`) | 15–20 km/h (chọn 17) | [NGUỒN] [thienthanhlimousine](https://thienthanhlimousine.com/10km-di-xe-may-bao-nhieu-phut/), [fxbike](https://fxbike.vn/10km-di-xe-may-bao-nhieu-phut/) |
+| Tốc độ cao điểm (nguồn research gốc: 7–8h30, 16h30–19h; config sim hiện hành: `peak_hours: [6,7,8,16,17,18]`) | 15–20 km/h (chọn 17) | [NGUỒN] [thienthanhlimousine](https://thienthanhlimousine.com/10km-di-xe-may-bao-nhieu-phut/), [fxbike](https://fxbike.vn/10km-di-xe-may-bao-nhieu-phut/) |
 | Tốc độ ngoài cao điểm | 22–28 (chọn 25) | [ƯỚC LƯỢNG] phần trên dải 15–30 |
 | Tốc độ đêm 21h–6h | 28–35 | [ƯỚC LƯỢNG]; trần pháp lý 50–60 ([baochinhphu](https://baochinhphu.vn/quy-dinh-ve-toc-do-toi-da-cua-xe-co-gioi-ap-dung-tu-01-01-2025-102241127101044466.pdf)) |
 | Quãng đường cuốc | lognormal median ~3,5 km (3–5, đuôi 10–12) | [ƯỚC LƯỢNG] từ giá cuốc 15–30k [ĐỢT 1] + [daytripsvietnam](https://daytripsvietnam.com/guides/vietnam-grab-prices-2026/) |

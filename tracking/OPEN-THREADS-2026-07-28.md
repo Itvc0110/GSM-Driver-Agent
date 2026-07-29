@@ -27,7 +27,7 @@
    Cycle-W (run_once 5 seed × 2 arm + multiday 3 ngày, chạy lại SAU mọi fix). Hồ sơ:
    `research/audit/2026-07-29-cycle-w-review/findings.md`. Verdict adherence của Cường:
    **hai tên** (`decision_adherence` + `event_adherence`), cấm khoá `adherence` trần.
-   **Kế tiếp đã duyệt (PLAN-cycle-wx Phần B)**: B1 `net_mean_all` → B2 C1 hệ số 0 →
+   **Kế tiếp đã duyệt (PLAN-cycle-wx Phần B)**: ~~B1 `net_mean_all`~~ ✅ DONE-CODE (`8fc02ba`+`b251d6e`, UPDATE-093) → B2 C1 hệ số 0 →
    B3 policy costs + `as_of` → B4 hai nợ nhỏ. Chi tiết cũ giữ bên dưới để tra cứu:
    ~~**ĐA-05 event store append-only**~~ (VỪA được B-02 mở khoá; Cường đã duyệt design
    từ 27/07, chi tiết `research/audit/2026-07-27-current-state/04-*` §6): SQLite local

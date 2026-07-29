@@ -186,8 +186,9 @@ files (074–091) had no graph link. Do not delete rows here without re-running 
 | [UPDATE-088](updates/UPDATE-088-da09-equilibrium-poa-nguong-phu.md) | ĐA-09 multi-agent equilibrium, PoA, coverage curve | `DONE-CODE` | simulator / research | research-only; production solver is not equilibrium-aware |
 | [UPDATE-089](updates/UPDATE-089-bat-kenh-vi-tri-mac-dinh.md) | Positioning becomes the default channel; shift_plan off | `DONE-CODE` | simulator / config | Cường approved 2026-07-28 |
 | [UPDATE-090](updates/UPDATE-090-cycle-v-go-b02-registry-da-phien-ban.md) | Cycle V: multi-version schema registry + upcasters | `DONE-CODE` | data / schema | unblocks B-02, ĐA-05, T-044 |
-| [UPDATE-091](updates/UPDATE-091-cycle-w-da05-lifecycle-event-store.md) | Cycle W: ĐA-05 lifecycle event store + projections | `DOING` / WIP, paused | data / advisor | 3 findings open; full suite + fingerprint not re-run |
+| [UPDATE-091](updates/UPDATE-091-cycle-w-da05-lifecycle-event-store.md) | Cycle W: ĐA-05 lifecycle event store + projections | `DOING` / WIP, paused **⚠ đính chính 2026-07-29 (final review): row này rà tại `66268cc` — trạng thái hiện hành là `DONE-CODE / WAITING-VERDICT`, 36/36 finding đã sửa, suite 707/5, fingerprint IDENTICAL (xem board §2 + chính file 091)** | data / advisor | ~~3 findings open; full suite + fingerprint not re-run~~ đã đóng tại `5364395` |
 | [UPDATE-092](updates/UPDATE-092-review-doc-lai-han-che-va-cai-thien.md) | Read-back review of `66268cc`: limitation ledger + improvement evidence | `DONE-CODE` | harness/docs | docs-only; opens **B6-PARITY**, REVIEW-092-1..4; fixes this section's missing links |
+| [UPDATE-093](updates/UPDATE-093-md-refresh-b1-net-metric-graph-addendum.md) | md-refresh toàn repo + B1 `net_mean_all` + graph addendum + merge UPDATE-092 | `DONE-CODE` | harness/docs + metrics | route đọc theo task: `PROJECT-GRAPH-2026-07-29-addendum.md`; B1 mở khoá B2/C1 (PLAN-cycle-wx Phần B) |
 
 ## 4. Task and file routing
 
