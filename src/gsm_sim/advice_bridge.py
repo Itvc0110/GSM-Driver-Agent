@@ -362,12 +362,32 @@ class AdviceActionBridge:
         hỏi lại cùng một quyết định cho ra cùng coin, nên chỉ được sinh MỘT event — không
         phải một event mỗi tick 2′. Đây chính là bài học Lỗi #2/`R-08`.
         """
-        key = (f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
-               f"-{material_revision}")
+        key = self._outcome_key(actor, topic, now_min, material_revision, bucket_min)
         if key in self._spoken_outcome_seen:
             return
         self._spoken_outcome_seen.add(key)
         self._spoken_outcome_out.append((now_min, actor.actor_id, topic, followed, reason))
+
+    def _outcome_key(self, actor: Actor, topic: str, now_min: float,
+                     material_revision: str, bucket_min: float | None = None) -> str:
+        """Khoá dedupe kết cục — TRÙNG khoá `coin_follows` (bucket + revision)."""
+        return (f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+                f"-{material_revision}")
+
+    def mark_outcome_logged(self, actor: Actor, topic: str, now_min: float,
+                            material_revision: str, bucket_min: float | None = None) -> None:
+        """Quyết định này ĐÃ có kết cục được world log trực tiếp (nhánh áp thành công) —
+        các lần hỏi lại trong cùng bucket không được sinh thêm outcome event.
+
+        Suite bắt được 2026-07-31 (sau `L1-04`, `test_decision_level_matches_ground_truth`:
+        decided 101 vs event 104 — **3 event MA**): quyết định đã ÁP làm `shift_end_min`
+        chạm `world_end_min` ⇒ các lần hỏi lại cùng bucket rơi vào nhánh `add ≤ 0` ⇒ note
+        `infeasible` cho một quyết định ĐÃ ÁP XONG. Trước `L1-04` thì `_claim_effect` chặn
+        trước nên im — tức `L1-04` behavior-neutral về HÀNH VI (Δ=0 n=100 đã đo) nhưng
+        KHÔNG neutral về EVENT LOG; phép đo n=100 mù với điều này vì mọi chỉ tiêu của nó
+        là decision-level."""
+        self._spoken_outcome_seen.add(
+            self._outcome_key(actor, topic, now_min, material_revision, bucket_min))
 
     def drain_spoken_outcomes(self) -> list[tuple]:
         """World lấy các kết cục cần log để giữ MẪU SỐ adherence đúng.
@@ -883,8 +903,6 @@ class AdviceActionBridge:
             self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
                                      followed=False, reason="not_followed")
             return 0.0
-        if not self._claim_effect(actor, "shift_extend", now_min):
-            return 0.0                        # R-01: một quyết định = một lần kéo ca
         add = min(need_min * 1.15, self.extend_max_min - actor.shift_extended_min)
         # b0-A: KHÔNG hoãn quá lúc thế giới dừng. Kéo ca tới 25:00 khi `time.end_min = 24:00` là
         # lời khuyên **không thể thực hiện được**: không sinh thêm cuốc nào, nhưng vẫn tiêu ngân
@@ -901,6 +919,18 @@ class AdviceActionBridge:
             self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
                                      followed=True, reason="infeasible_world_end")
             return 0.0
+        # L1-04 (2026-07-30, UPDATE-107): `_claim_effect` phải đứng SAU clamp khả thi.
+        # Bản trước nó đứng TRƯỚC ⇒ lời khuyên bất khả thi vẫn TIÊU token, và vì token đã
+        # cháy nên mọi lần hỏi lại trong cùng bucket 30′ trả 0.0 ⇒ quyết định mất hẳn —
+        # đo được **38/135 = 28%** quyết định "được nghe theo" biến mất kiểu này (UPDATE-102
+        # §2b). Ngữ nghĩa R-01 GIỮ NGUYÊN: "MỘT quyết định = MỘT lần ÁP TÁC ĐỘNG" — token
+        # cháy khi tác động ĐƯỢC ÁP, không phải khi lời khuyên được nói.
+        if not self._claim_effect(actor, "shift_extend", now_min):
+            return 0.0                        # R-01: một quyết định = một lần kéo ca
+        # Kết cục của quyết định này sẽ được world log trực tiếp (event mang added_min) —
+        # đánh dấu để các lần hỏi lại cùng bucket không sinh event `infeasible` MA sau khi
+        # `shift_end_min` đã chạm trần (xem `mark_outcome_logged`).
+        self.mark_outcome_logged(actor, "shift_extend", now_min, "extend")
         actor.shift_extended_min += add
         actor.shift_end_min += add
         return add

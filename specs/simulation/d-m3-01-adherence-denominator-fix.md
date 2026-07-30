@@ -44,20 +44,52 @@ default) — chúng là **UI/contract**, chạm vào cùng lúc sẽ làm không
 
 ## §4 Thiết kế sửa — và phân loại ĐỔI HÀNH VI vs KHÔNG
 
-Đây là mục quan trọng nhất: **ba trong bốn thay đổi là quan sát thuần (không đổi hành vi), một thay
-đổi HÀNH VI THẬT.** Gộp chúng vào một Δ là không quy được nhân quả.
+> 🔴 **ĐÍNH CHÍNH 2026-07-30 (UPDATE-107, sau khi thi công D và đo n=100 ghép cặp):** dòng D dưới
+> đây SAI khi viết. Cả **BỐN** thay đổi là quan sát thuần — **không có thay đổi nào đổi hành vi**.
+> Δ đo được ở n=100, cả 11 chỉ tiêu: **0,00 [0,00, 0,00]** tuyệt đối. Lý do đầy đủ ở cuối mục này.
+
+Đây là mục quan trọng nhất: ban đầu tôi phân loại ba trong bốn thay đổi là quan sát thuần và một
+đổi HÀNH VI THẬT — **cách phân loại đó dựa trên một sự hiểu sai đã được đo bác bỏ**, xem dưới.
 
 | # | Thay đổi | Đổi hành vi? | Chứng minh bằng gì |
 | --- | --- | --- | --- |
 | **A** | Tầng 1: thêm `coin_follows` cho `rest_window` | ❌ **KHÔNG** — kênh nói **0/873** lần nên coin không bao giờ được rút; và `adherence_coin` là sha256, **không tiêu RNG dùng chung** ⇒ không dịch dòng | `fingerprint_actors` IDENTICAL, ≥5 seed |
 | **B** | Tầng 2: log event khi KHÔNG theo (`followed=False`) cho `rest_window` + `shift_extend` | ❌ **KHÔNG** ở sim — ngân sách nhịp đọc `cadence_note_spoken`, **không** đọc event | `fingerprint_actors` IDENTICAL; nhưng **`n_advice` của `/ab` đổi nghĩa** ⇒ phải ghi vào UPDATE |
 | **C** | Tầng 3: bỏ 2 kind khỏi `_ALWAYS_FOLLOWED`, đưa vào `_FOLLOW_FLAG_KINDS` | ❌ **KHÔNG** — projection thuần | test projection đọc `detail["followed"]` |
-| **D** | `L1-04`: dời `_claim_effect` xuống **SAU** clamp khả thi trong `check_shift_extend` | ✅ **CÓ, ĐỔI THẬT** | phải đo Δ riêng, **không gộp với A/B/C** |
+| **D** | `L1-04`: dời `_claim_effect` xuống **SAU** clamp khả thi trong `check_shift_extend` | ~~✅ CÓ, ĐỔI THẬT~~ → ❌ **KHÔNG** (đo n=100: Δ=0 tuyệt đối) | `fingerprint_actors` IDENTICAL, n=100 ghép cặp, 11 chỉ tiêu |
 
-**Vì sao D đổi hành vi:** hôm nay lời khuyên bất khả thi (kéo ca vượt `time.end_min`) **tiêu token
-`_claim_effect`** rồi bị clamp về 0 ⇒ mọi lần hỏi lại trong bucket đó trả False ⇒ quyết định mất hẳn
-(đo: **38/135 = 28%**). Sau khi dời, token không cháy ⇒ một lần hỏi sau trong cùng bucket **có thể áp
-được** ⇒ liều can thiệp tăng ⇒ Δ đổi. **Bắt buộc một UPDATE riêng + đo n≥100 ghép cặp.**
+### ~~Vì sao D đổi hành vi~~ → Vì sao D KHÔNG đổi hành vi, và tôi đã hiểu sai gì
+
+**Lập luận cũ (sai):** *"lời khuyên bất khả thi tiêu token `_claim_effect` rồi bị clamp về 0 ⇒ mọi
+lần hỏi lại trong bucket đó trả False ⇒ quyết định mất hẳn (đo: 38/135 = 28%). Sau khi dời, token
+không cháy ⇒ một lần hỏi sau trong cùng bucket có thể áp được ⇒ Δ đổi."*
+
+**Root cause thật, chứng minh bằng đọc code + microbenchmark trực tiếp (2026-07-30):**
+
+1. `self.world_end_min` (`advice_bridge.py:165`) là **hằng số đọc từ config một lần lúc khởi
+   tạo bridge** — không đổi trong suốt một run.
+2. Mọi nhánh `return 0.0` **trước** dòng `actor.shift_extended_min += add` (rate≤0, need_min quá
+   lớn, cadence chặn, coin=False, add≤0) **không mutate bất kỳ state nào** của actor.
+3. ⇒ Trong **cùng một bucket 30′**, coin cho cùng kết quả (khoá theo bucket), và mọi state ảnh
+   hưởng tới `add` (`actor.shift_end_min`, `actor.shift_extended_min`, `need_min`, `world_end_min`)
+   **không đổi** giữa các lần gọi liên tiếp ⇒ **`add` là deterministic trong bucket**: nếu lần đầu
+   bất khả thi thì **mọi lần sau trong cùng bucket cũng bất khả thi**, bất kể token có cháy hay không.
+4. Microbenchmark xác nhận: actor có `shift_end_min = world_end_min` (bất khả thi tuyệt đối), gọi
+   `check_shift_extend` **15 lần liên tiếp trong cùng bucket** ⇒ **`add = 0.0` cả 15 lần**, dù token
+   (`_effect_applied`) không hề cháy ở code mới. Kết quả quan sát được **giống hệt** code cũ.
+
+**Vậy con số 38/135 nghĩa là gì?** Nó đo **gap LOGGING**: `_claim_effect` trả `True` (claim thành
+công) nhưng world.py **cũ** chỉ log event `advice_shift_extend` khi `add > 0` — nên 38 quyết định
+bất khả thi có claim mà **không có event**. Đó là thiếu **dấu vết đo lường**, không phải thiếu
+**tác động thật** (tác động thật — `add` — đằng nào cũng bằng 0, có claim hay không). Gap logging
+đó **đã được đóng bởi chính `D-M3-01`** (nhánh `note_spoken_outcome(..., reason="infeasible_world_end")`
+ở §5 bước 2 dưới) — **không phải bởi `L1-04`**. Tôi đã gộp hai cơ chế khác nhau thành một khi viết
+motivation ban đầu.
+
+`L1-04` vẫn **đúng về semantic** (`R-01`: "một quyết định = một lần **áp tác động**" — token nên
+cháy khi tác động được áp, không phải khi lời khuyên chỉ được *hỏi*) và **giữ lại vì đúng, rẻ, vô
+hại** — nhưng nó không sửa một bug quan sát được, và **không cần "UPDATE riêng + n≥100"** như phân
+loại ban đầu đòi. Việc đo n=100 vẫn đã làm — và nó chính là thứ **bác bỏ** giả thuyết ban đầu.
 
 Ràng buộc bất di dịch (đã là luật, đừng phá):
 - `cadence_note_spoken` chạy **VÔ ĐIỀU KIỆN** — advisor NÓI là đã tiêu ngân sách chú ý, bất kể tài xế

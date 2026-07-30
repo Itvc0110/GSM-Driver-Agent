@@ -194,3 +194,77 @@ def test_no_phantom_bucket_beyond_world_end(bridge):
     assert spi["buckets_remaining"] == n_within, (
         f"B = {spi['buckets_remaining']} nhưng chỉ có {n_within} bucket nằm trong "
         f"[{1320}, {WORLD_END_MIN:.0f}) — phần dư là bucket MA")
+
+
+def test_infeasible_extend_does_not_burn_claim(cfg):
+    """`L1-04` — lời khuyên BẤT KHẢ THI không được tiêu token `_claim_effect`.
+
+    Đo được (UPDATE-102 §2b): **38/135 = 28%** quyết định `shift_extend` đã tiêu token,
+    tiêu suất ngân sách nhịp, rút coin — rồi bị clamp `b0-A` (kéo ca vượt `time.end_min`)
+    và biến mất: không event tác động, không đường quay lại, vì token đã cháy nên mọi lần
+    hỏi lại trong cùng bucket 30′ đều trả 0.0.
+
+    Kịch bản tái dựng đúng theo acceptance (`PLAN-2026-07-30-hang-doi-cong-viec.md` §1):
+    lần 1 hỏi khi thế giới hẹp (bất khả thi) ⇒ không có gì xảy ra; NỚI `world_end_min`
+    rồi hỏi lại TRONG CÙNG bucket ⇒ phải áp được. Trước fix, lần 2 trả 0.0 — token đã
+    cháy ở lần 1 dù chưa hề có tác động nào.
+
+    ⚠ Ngữ nghĩa `R-01` GIỮ NGUYÊN: "MỘT quyết định = MỘT lần ÁP TÁC ĐỘNG". Token phải
+    cháy khi tác động ĐƯỢC ÁP — không phải khi lời khuyên được nói. Lần 1 ở đây không áp
+    được gì, nên chưa có "lần áp" nào để đếm.
+    """
+    b = _bridge(cfg)                     # world_end mặc định 1440
+    b.ch_shift_extend = True
+    a = _actor(1430.0)                   # ca kết thúc 23:50 — cách world_end đúng 10′
+    a.points, a.online_min = 95, 300.0   # sát mốc ⇒ vào nhánh hoãn (bài học T-046 ở test trên)
+
+    now = 1200.0
+    # Lần 1: need_min ≈ 16′ nhưng trần thế giới chỉ còn 10′... vẫn KHẢ THI một phần (add>0).
+    # Muốn BẤT KHẢ THI hẳn phải hết chỗ: đặt shift_end = world_end.
+    a.shift_end_min = WORLD_END_MIN      # 24:00 — không còn một phút nào để kéo
+    got1 = 0.0
+    for _ in range(20):                  # đủ lần để chắc chắn coin có lần True
+        got1 += b.check_shift_extend(a, now)
+    assert got1 == 0.0 and a.shift_extended_min == 0.0, (
+        "fixture hỏng: lần 1 phải BẤT KHẢ THI hoàn toàn (add = 0)")
+
+    # Thế giới "nới" ra (mô phỏng việc điều kiện đổi trong cùng bucket) — quyết định
+    # CÙNG bucket 30′, CÙNG material_revision ⇒ cùng coin ⇒ nếu token chưa cháy thì áp được.
+    b.world_end_min = WORLD_END_MIN + 120.0
+    got2 = 0.0
+    for _ in range(20):
+        got2 += b.check_shift_extend(a, now + 2.0)   # vẫn bucket [1200, 1230)
+    assert got2 > 0.0, (
+        "L1-04: quyết định bất khả thi ở lần 1 đã TIÊU token `_claim_effect` ⇒ lần 2 "
+        "(cùng bucket, nay khả thi) không áp được nữa — 28% quyết định mất hẳn kiểu này")
+
+
+def test_applied_decision_does_not_spawn_ghost_infeasible_event(cfg):
+    """Regression cho event MA mà SUITE bắt sau `L1-04` (decided 101 vs event 104, seed 1000).
+
+    Ca: quyết định ĐÃ ÁP làm `shift_end_min` chạm `world_end_min`; các lần hỏi lại trong
+    CÙNG bucket rơi vào nhánh `add ≤ 0` ⇒ trước fix, sinh outcome `infeasible` cho một
+    quyết định đã áp xong — event thừa cùng `decision_id` làm event-count ≠ decision-count.
+
+    Lưu ý phương pháp: phép đo n=100 của L1-04 KHÔNG bắt được lỗi này vì mọi chỉ tiêu của
+    nó là decision-level/hành vi; lỗi nằm ở EVENT LOG. Test này pin đúng tầng event.
+    """
+    b = _bridge(cfg)
+    b.ch_shift_extend = True
+    a = _actor(1430.0)                   # còn 10′ tới world_end
+    a.points, a.online_min = 95, 300.0
+
+    now = 1200.0
+    applied = 0.0
+    for _ in range(20):                  # lần đầu coin=True sẽ áp ~10′ ⇒ shift_end chạm 1440
+        applied += b.check_shift_extend(a, now)
+    assert applied > 0.0, "fixture yếu: chưa áp được lần nào — test không kiểm gì"
+    assert a.shift_end_min == WORLD_END_MIN, "fixture lệch: chưa chạm trần thế giới"
+
+    # Hỏi lại trong CÙNG bucket sau khi đã áp + chạm trần: không được sinh outcome mới.
+    for _ in range(10):
+        b.check_shift_extend(a, now + 4.0)
+    ghosts = [o for o in b.drain_spoken_outcomes() if o[2] == "shift_extend"]
+    assert ghosts == [], (
+        f"{len(ghosts)} event MA cho quyết định ĐÃ ÁP — event-count sẽ lệch decision-count "
+        f"(suite từng đo: 104 vs 101)")

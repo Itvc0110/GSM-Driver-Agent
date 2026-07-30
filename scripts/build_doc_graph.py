@@ -33,11 +33,12 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "graph-out"
 
 # Thư mục chứa tài liệu "sống". docs/00-09 pack cũ là DEFERRED (CLAUDE.md §2) — vẫn quét
-# để bắt link gãy trỏ vào chúng, nhưng KHÔNG tính chúng là mồ côi (chúng cố ý bị treo).
+# để bắt link gãy trỏ vào chúng. Kiểm mồ côi CHỈ áp cho tracking/ + specs/ (xem vòng
+# orphan bên dưới) nên pack DEFERRED tự động nằm ngoài — không cần danh sách loại trừ
+# riêng. (Lượt rà 2026-07-30 đã xoá hằng `DEFERRED_PREFIXES`: khai báo mà không dùng,
+# comment của nó hứa một hành vi không tồn tại — đúng họ lỗi D-R12.)
 SCAN_DIRS = ["tracking", "specs", "planning", "research", "docs", "schemas", "ui/contracts"]
 ROOT_FILES = ["CLAUDE.md", "AGENTS.md", "MASTER_PROMPT.md", "README.md"]
-DEFERRED_PREFIXES = ("docs/00", "docs/01", "docs/02", "docs/03", "docs/04", "docs/05",
-                     "docs/06", "docs/07", "docs/08", "docs/09", "contracts/", "templates/")
 
 # Họ ID của repo — mỗi mẫu bắt ĐÚNG quy ước đã dùng, không đoán.
 ID_PATTERNS = {

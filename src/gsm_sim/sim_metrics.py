@@ -368,17 +368,42 @@ def adherence_audit(result, run_id: str | None = None) -> dict:
             row["event_adherence"] = (row["event_followed"] / row["event_decided"]
                                       if row["event_decided"] else None)
 
+    # Rà 2026-07-30 (UPDATE-107): cổng BẤT KHẢ phải biết NOMINAL của run. Với arm
+    # tuân-thủ-tuyệt-đối (`adherence_by_archetype: 1.0` — chính khái niệm "so thế giới
+    # không advisor vs HOÀN TOÀN tuân thủ"), adherence đo được 1,0 là ĐÚNG chứ không
+    # bất khả; cổng cũ sẽ TREO oan mọi kênh mọi seed ⇒ arm hợp lệ nhất bị chặn vĩnh
+    # viễn ⇒ cổng bị tắt (mẫu D-R20). Bounds tính per-KÊNH từ archetype kênh đó chạm.
+    from .advice_bridge import DEFAULT_ADHERENCE
+    adv = (getattr(result, "config", None) and result.config.data.get("advice")) or {}
+    nominal = {**DEFAULT_ADHERENCE, **(adv.get("adherence_by_archetype") or {})}
+    bounds: dict[str, tuple[float, float]] = {}
+    for key in by_ch_ar:
+        ch, _, ar = key.partition("|")
+        p = nominal.get(ar)
+        if p is None:
+            continue
+        lo, hi = bounds.get(ch, (1.0, 0.0))
+        bounds[ch] = (min(lo, float(p)), max(hi, float(p)))
+
     return {"by_channel": by_ch, "by_channel_archetype": by_ch_ar,
-            "flags": adherence_flags(by_ch)}
+            "flags": adherence_flags(by_ch, channel_nominal_bounds=bounds)}
 
 
-def adherence_flags(by_channel: dict) -> list[str]:
+def adherence_flags(by_channel: dict,
+                    channel_nominal_bounds: dict[str, tuple[float, float]] | None = None
+                    ) -> list[str]:
     """Cổng BẤT KHẢ (loại 1): trạng thái không thể đúng dù nhiễu thế nào.
 
     Mỗi flag là một câu nói rõ **cái gì** sai và **vì sao nó bất khả** — để người đọc
     artifact không phải tra cứu. Có flag ⇒ kết quả arm đó phải bị TREO, không phải
     "ghi chú nhỏ".
+
+    `channel_nominal_bounds`: {kênh: (min_p, max_p)} nominal của các archetype kênh đó
+    chạm. adherence = 1,0 chỉ BẤT KHẢ khi `max_p < 1.0` (coin còn tính ngẫu nhiên);
+    tương tự 0,0 chỉ bất khả khi `min_p > 0.0`. Không có bounds ⇒ giả định coin ngẫu
+    nhiên thật (hành vi cũ) — đúng cho mọi config không set nominal cực trị.
     """
+    bounds = channel_nominal_bounds or {}
     out: list[str] = []
     for ch, r in sorted(by_channel.items()):
         d, adh = r["decided"], r["decision_adherence"]
@@ -388,12 +413,14 @@ def adherence_flags(by_channel: dict) -> list[str]:
             continue
         if d < IMPOSSIBLE_ADHERENCE_MIN_DENOM:
             continue                      # mẫu số quá nhỏ: 1,0/0,0 có thể là may mắn thật
-        if adh is not None and adh >= 1.0:
+        min_p, max_p = bounds.get(ch, (0.5, 0.5))   # không bounds ⇒ coi coin ngẫu nhiên
+        if adh is not None and adh >= 1.0 and max_p < 1.0:
             out.append(f"{ch}: decision_adherence = 1,000 trên {d} quyết định — BẤT KHẢ với "
-                       f"coin ngẫu nhiên; dấu hiệu mẫu số chỉ chứa người ĐÃ THEO (D-M3-01)")
-        if adh is not None and adh <= 0.0:
-            out.append(f"{ch}: decision_adherence = 0,000 trên {d} quyết định — BẤT KHẢ; "
-                       f"dấu hiệu tử số không được ghi")
+                       f"coin ngẫu nhiên (nominal ≤ {max_p:.2f}); dấu hiệu mẫu số chỉ chứa "
+                       f"người ĐÃ THEO (D-M3-01)")
+        if adh is not None and adh <= 0.0 and min_p > 0.0:
+            out.append(f"{ch}: decision_adherence = 0,000 trên {d} quyết định — BẤT KHẢ "
+                       f"(nominal ≥ {min_p:.2f}); dấu hiệu tử số không được ghi")
         if r["event_decided"] == 0 and r["decided"] > 0:
             out.append(f"{ch}: event_decided=0 trong khi decided={d} — một nửa bộ đo "
                        f"hai-đơn-vị chết im lặng (event_adherence sẽ là None)")

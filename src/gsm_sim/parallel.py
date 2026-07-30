@@ -321,11 +321,25 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
                 system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid),
                 adherence_a=adherence_audit(ra), adherence_b=adherence_audit(rb)))
         out[name] = compare(pairs)
-        out[name]["adherence"] = aggregate_adherence(pairs)
+        out[name]["adherence"] = aggregate_adherence(pairs, nominal=nominal_adherence(cfg))
     return out
 
 
-def aggregate_adherence(pairs: list[PairResult]) -> dict:
+def nominal_adherence(cfg: Config) -> dict[str, float]:
+    """Adherence DANH NGHĨA của run này — ĐÚNG bộ số mà bridge dùng làm p của coin.
+
+    Rà 2026-07-30 (UPDATE-107) bắt được: cổng thống kê dùng `DEFAULT_ADHERENCE` cứng trong
+    khi bridge merge `advice.adherence_by_archetype` từ config (`advice_bridge.py:148`) —
+    hai nguồn sự thật, hôm nay TÌNH CỜ trùng giá trị. Khoá config đó tồn tại để được đổi
+    (quét độ nhạy, calibrate E10); khi đổi, cổng so với null CŨ ⇒ bắn oan hàng loạt ⇒ bị
+    tắt (mẫu `D-R20`). Null của phép kiểm PHẢI là tham số của chính run được kiểm.
+    """
+    from .advice_bridge import DEFAULT_ADHERENCE
+    adv = cfg.data.get("advice") or {}
+    return {**DEFAULT_ADHERENCE, **(adv.get("adherence_by_archetype") or {})}
+
+
+def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | None = None) -> dict:
     """Gộp adherence của arm B qua các seed + cổng BẤT KHẢ (`D-M3-10`).
 
     Vì sao phải gộp thay vì lấy per-seed: ngưỡng 0,02 của luật gốc là ngưỡng cho TỔNG.
@@ -334,8 +348,18 @@ def aggregate_adherence(pairs: list[PairResult]) -> dict:
 
     Cổng BẤT KHẢ thì áp per-seed được, vì nó không phải phép kiểm thống kê:
     `decision_adherence` đúng 1,0 hay 0,0 trên mẫu số ≥20 là dấu hiệu mẫu số/tử số hụt.
+
+    `nominal`: adherence danh nghĩa của RUN (xem `nominal_adherence`) — None thì rơi về
+    `DEFAULT_ADHERENCE`, chỉ đúng khi run không override `adherence_by_archetype`.
     """
+    from .advice_bridge import DEFAULT_ADHERENCE
+    from .sim_metrics import adherence_stat_flags
+
+    if nominal is None:
+        nominal = DEFAULT_ADHERENCE
+
     tot: dict[str, dict] = {}
+    tot_arche: dict[str, dict] = {}
     flags: list[str] = []
     for pr in pairs:
         for ch, r in (pr.adherence_b.get("by_channel") or {}).items():
@@ -343,6 +367,10 @@ def aggregate_adherence(pairs: list[PairResult]) -> dict:
                                       "event_decided": 0, "event_followed": 0})
             for k in row:
                 row[k] += int(r.get(k) or 0)
+        for key, r in (pr.adherence_b.get("by_channel_archetype") or {}).items():
+            row = tot_arche.setdefault(key, {"decided": 0, "followed": 0})
+            row["decided"] += int(r.get("decided") or 0)
+            row["followed"] += int(r.get("followed") or 0)
         for f in pr.adherence_b.get("flags") or []:
             msg = f"seed {pr.seed}: {f}"
             if msg not in flags:
@@ -351,6 +379,11 @@ def aggregate_adherence(pairs: list[PairResult]) -> dict:
         r["decision_adherence"] = (r["followed"] / r["decided"]) if r["decided"] else None
         r["event_adherence"] = ((r["event_followed"] / r["event_decided"])
                                 if r["event_decided"] else None)
+    # D-M3-10 cổng THỐNG KÊ (chốt UPDATE-103, thi công UPDATE-107): áp trên TỔNG nhiều seed —
+    # đúng ngưỡng |z|>4 dẫn xuất được thiết kế cho, không phải per-seed (SE quá thô).
+    for f in adherence_stat_flags(tot_arche, nominal):
+        if f not in flags:
+            flags.append(f)
     return {"by_channel": tot, "flags_per_seed": flags,
             # ⚠ ĐỌC CÁI NÀY TRƯỚC KHI TIN Δ CỦA ARM: có flag ⇒ thước đo của arm đó hỏng
             # ⇒ TREO kết quả, không phải "ghi chú nhỏ" (D-M3-10).

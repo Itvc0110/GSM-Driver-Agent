@@ -197,3 +197,90 @@ def test_stat_gate_mixture_aggregation_fires():
     assert flags and "gộp hỗn hợp archetype" in flags[0], (
         "hai ô cùng lệch 3,5σ mà tầng kênh (z gộp ≈ 4,9) không bắn — mất đúng ca mà "
         "per-ô một mình không bắt được")
+
+
+def test_ladder_stat_gate_wired_and_can_fire(cfg):
+    """Cổng THỐNG KÊ (chốt UPDATE-103, thi công UPDATE-107) nay chạy trong `run_ladder` thật —
+    không chỉ đơn vị. Chứng minh ĐỎ ĐƯỢC (bài học `L5-04`): dựng đủ 500 quyết định lệch 0,10 rồi
+    ghép giả vào `by_channel_archetype`."""
+    from gsm_sim.parallel import aggregate_adherence
+
+    class _FakePair:
+        def __init__(self, adh):
+            self.seed = 0
+            self.adherence_b = adh
+
+    lệch = {"by_channel": {}, "by_channel_archetype": {"x|P2": {"decided": 500, "followed": 300}},
+           "flags": []}
+    out = aggregate_adherence([_FakePair(lệch)])
+    assert any("TREO" in f for f in out["flags_per_seed"]), (
+        "cổng thống kê đã nối vào run_ladder nhưng KHÔNG bắn trên lệch 0,10 @ n=500")
+
+
+def test_stat_gate_uses_run_nominal_not_hardcoded_default():
+    """Flaw bắt ở lượt rà 2026-07-30 (UPDATE-107): cổng thống kê dùng `DEFAULT_ADHERENCE`
+    cứng trong khi bridge merge `advice.adherence_by_archetype` từ config — hai nguồn sự
+    thật, hôm nay TÌNH CỜ trùng. Test này khoá: null của phép kiểm phải là nominal của
+    CHÍNH run. Ô đo 250/500 = 0,50: với nominal override P2=0,90 phải TREO (z ≈ −29,8);
+    với DEFAULT P2=0,50 thì im — nếu ai hardcode lại default, test đỏ."""
+    from gsm_sim.parallel import aggregate_adherence
+
+    class _FakePair:
+        def __init__(self, adh):
+            self.seed = 0
+            self.adherence_b = adh
+
+    adh = {"by_channel": {}, "flags": [],
+           "by_channel_archetype": {"x|P2": {"decided": 500, "followed": 250}}}
+    quiet = aggregate_adherence([_FakePair(adh)], nominal={"P2": 0.50})
+    assert not quiet["flags_per_seed"], "0,50 đúng nominal 0,50 mà vẫn bắn"
+    fired = aggregate_adherence([_FakePair(adh)], nominal={"P2": 0.90})
+    assert any("TREO" in f for f in fired["flags_per_seed"]), (
+        "nominal override 0,90 vs đo 0,50 mà cổng im — gate đang dùng default cứng")
+
+
+def test_nominal_adherence_reads_config_override(cfg):
+    """`nominal_adherence` phải trả về ĐÚNG bộ số bridge dùng (merge config lên default)."""
+    import copy
+    from gsm_sim.parallel import nominal_adherence
+    from gsm_sim.advice_bridge import DEFAULT_ADHERENCE
+
+    assert nominal_adherence(cfg)["P4"] == 0.75          # pilot hiện trùng default
+    c2 = Config(copy.deepcopy(cfg.data), cfg.root_dir)
+    c2.data["advice"]["adherence_by_archetype"] = {"P4": 0.10}
+    got = nominal_adherence(c2)
+    assert got["P4"] == 0.10, "override config bị bỏ qua"
+    assert got["P1"] == DEFAULT_ADHERENCE["P1"], "merge phải giữ default cho archetype không override"
+
+
+def test_impossible_gate_respects_full_compliance_arm(cfg):
+    """Flaw #4 lượt rà 2026-07-30: arm TUÂN-THỦ-TUYỆT-ĐỐI (`adherence_by_archetype: 1.0` —
+    chính khái niệm "so thế giới không advisor vs HOÀN TOÀN tuân thủ") cho adherence đo
+    được = 1,0 là ĐÚNG. Cổng cũ coi 1,0 là bất khả vô điều kiện ⇒ TREO oan mọi kênh mọi
+    seed ⇒ arm hợp lệ nhất bị chặn vĩnh viễn ⇒ cổng bị tắt (mẫu `D-R20`)."""
+    import copy
+    c = Config(copy.deepcopy(cfg.data), cfg.root_dir)
+    c.data["advice"].update(enabled=True, coverage="all", single_actor_id=None,
+                            channels={"shift_plan": True, "accept_lift": True,
+                                      "shift_extend": True, "rest_window": True},
+                            positioning_overrides="wait_only")
+    c.data["advice"]["adherence_by_archetype"] = {
+        k: 1.0 for k in ("P1", "P2", "P3", "P4", "P5", "P6", "P7")}
+    r = run_once(c, 1000)
+    audit = adherence_audit(r)
+    ext = audit["by_channel"].get("shift_extend", {})
+    assert ext.get("decided", 0) >= IMPOSSIBLE_ADHERENCE_MIN_DENOM, (
+        "fixture yếu: kênh không đủ mẫu số để cổng có thể bắn — test mất nghĩa")
+    assert ext["decision_adherence"] == 1.0, "nominal 1.0 mà adherence đo ≠ 1.0 — coin hỏng?"
+    ones = [f for f in audit["flags"] if "1,000" in f]
+    assert ones == [], (
+        f"TREO OAN arm tuân-thủ-tuyệt-đối: {ones} — adherence 1,0 là ĐÚNG khi nominal = 1,0")
+
+
+def test_impossible_gate_still_fires_without_bounds():
+    """Hành vi cũ giữ nguyên khi không có bounds (mọi caller dựng tay): 1,0 vẫn bất khả."""
+    flags = adherence_flags({"shift_extend": {
+        "decided": 101, "followed": 101, "dismissed": 0, "suppressed": 0,
+        "event_decided": 101, "event_followed": 101,
+        "decision_adherence": 1.0, "event_adherence": 1.0}})
+    assert flags and "BẤT KHẢ" in flags[0]

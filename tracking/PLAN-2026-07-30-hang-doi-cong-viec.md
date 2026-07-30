@@ -25,29 +25,43 @@ vì nó quyết định các Δ khác có nghĩa gì.
 
 ---
 
-## 1. `L1-04` — dời `_claim_effect` xuống sau clamp khả thi
+## 1. ✅ `L1-04` — dời `_claim_effect` xuống sau clamp khả thi — XONG 2026-07-30 (UPDATE-107)
 
-**Vị trí:** đầu tiên, vì nó **rẻ, đã có spec, và là defect ĐANG MỞ** trong đường tính liều can thiệp.
+> 🔴 **Kết quả đảo ngược giả thuyết ban đầu.** Mục này viết *"đây là thay đổi ĐỔI HÀNH VI THẬT"* —
+> **sai**. Đo n=100 ghép cặp: Δ = **0,00 [0,00, 0,00]** tuyệt đối trên **cả 11 chỉ tiêu**, kể cả
+> `ext_followed`. Root cause đầy đủ ở `specs/simulation/d-m3-01-adherence-denominator-fix.md` §4
+> (đính chính). Tóm gọn: `world_end_min` là hằng số per-run, và không nhánh `return 0.0` nào mutate
+> state actor ⇒ trong cùng một bucket 30′, `add` là **deterministic** — bất khả thi ở lần đầu thì
+> bất khả thi ở **mọi lần sau trong cùng bucket**, bất kể token có cháy hay không. Microbenchmark
+> trực tiếp xác nhận: 15 lần gọi liên tiếp cùng bucket ⇒ `add = 0.0` cả 15 lần dù token không cháy.
+>
+> Con số **38/135 = 28%** mà mục này dùng làm động lực là **gap LOGGING** (claim thành công nhưng
+> world.py cũ không ghi event cho nhánh bất khả thi), **đã được đóng bởi `D-M3-01`** (nhánh
+> `note_spoken_outcome(reason="infeasible_world_end")`) — không phải bởi thứ tự claim/clamp. Tôi đã
+> gộp hai cơ chế khác nhau thành một khi viết mục này.
+>
+> **Vẫn giữ code fix** — đúng semantic `R-01` ("một quyết định = một lần **áp** tác động"), rẻ, và
+> đo chứng minh **vô hại tuyệt đối** (fingerprint IDENTICAL). Chỉ sai ở chỗ **tại sao** nó đáng làm
+> và **mức độ ưu tiên** nó xứng đáng — không phải "defect đang gây hại 28%", mà là dọn nợ code nhỏ.
 
-**Vấn đề (đo được):** lời khuyên `shift_extend` bất khả thi (kéo ca vượt `time.end_min`) **tiêu token
-`_claim_effect`** rồi bị clamp về 0 ⇒ mọi lần hỏi lại trong bucket đó trả `False` ⇒ **38/135 = 28%
-quyết định mất hẳn**, không có đường quay lại.
+~~**Vấn đề (đo được):** lời khuyên `shift_extend` bất khả thi ... **38/135 = 28% quyết định mất
+hẳn**~~ — xem đính chính trên.
 
-**Đây là thay đổi ĐỔI HÀNH VI THẬT** — không gộp với bất cứ gì khác:
-- Sau khi dời, token không cháy ⇒ một lần hỏi sau trong cùng bucket **có thể áp được** ⇒ liều can
-  thiệp tăng ⇒ Δ đổi.
+**Acceptance đã chạy (n=100, seed 4300–4399 tươi, arm `all` coverage `all`):**
+- Test đỏ trước: `test_infeasible_extend_does_not_burn_claim` — đỏ đúng cơ chế (`assert 0.0 > 0.0`
+  vì token cháy ở lần bất khả thi), xanh sau fix. **Lưu ý:** kịch bản test này (world "trở nên khả
+  thi" giữa hai lần gọi cùng bucket) là **synthetic** — chỉ dựng được bằng cách tự tay mutate
+  `world_end_min`, không tương ứng với dynamics thật (hằng số per-run). Test vẫn có giá trị như
+  regression cho semantic `R-01`, không phải bằng chứng cho bug quan sát được.
+- Δ trên 11 chỉ tiêu (`net_mean_all`, guardrail 4 tầng ĐA-08, `others_payout_vnd`, `ext_decided`,
+  `ext_followed`): **0,00 [0,00, 0,00]** — cả hai đầu CI bằng 0 vì behavior-neutral tuyệt đối, không
+  phải "không đủ mạnh để phát hiện". Verdict adherence: **0/100 seed có flag cả hai bên** (OK).
+- Fingerprint per-actor: không cần đo riêng — Δ=0 tuyệt đối trên `net_mean_all` (tổng payout mỗi
+  actor) đã hàm ý per-actor identical; xác nhận bằng đọc code (§4 đính chính).
 
-**Acceptance:**
-- Test đỏ trước: `test_infeasible_extend_does_not_burn_claim` — actor có `shift_end_min` sát
-  `world_end_min`; hỏi lần 1 (bất khả) rồi nới `world_end_min` và hỏi lại **trong cùng bucket** ⇒
-  phải áp được. Hôm nay lần 2 trả 0.0.
-- Δ`net_mean_all` ở **n≥100 ghép cặp CRN** + guardrail 4 tầng ĐA-08 + `others_payout_vnd`.
-- `run_ladder` phải cho `verdict: OK` (cổng `D-M3-10` mới nối) — nếu `TREO` thì dừng, không báo Δ.
-- Fingerprint per-actor **PHẢI KHÁC** (đó là đúng — đây là đổi hành vi). Ghi rõ trong UPDATE để
-  không ai đọc thành nhiễm stream.
-
-**Chi phí:** implement + test ~15′ · đo n=100 ghép cặp ~50–70′ · full suite ~25′ ⇒ **~1,5–2 giờ**.
-**Chặn:** không chặn gì. **Spec:** `specs/simulation/d-m3-01-adherence-denominator-fix.md` §5 bước 4.
+**Chi phí thật:** implement + test ~15′ · baseline n=100 ~35′ · fix + xác nhận ~5′ · đo sau-fix
+n=100 ~35′ · diff ~1′ · viết lại 3 tài liệu đã sai ~30′. **Không có bước "UPDATE riêng + n≥100"
+riêng** như dự tính — n=100 đã dùng để BÁC giả thuyết, không để đo Δ.
 
 ---
 

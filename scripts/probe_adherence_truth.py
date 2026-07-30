@@ -155,6 +155,19 @@ def main() -> None:
     args = ap.parse_args()
 
     base = Config.load(CONFIG)
+
+    if args.fingerprint:
+        # Nhánh này TỪNG là cờ chết (khai báo arg mà không có handler — đúng họ lỗi
+        # D-R12 "code tự quảng cáo tính năng không chạy"; bắt ở lượt rà 2026-07-30,
+        # bằng chứng: chạy --fingerprint vẫn in probe thường). Nay là handler thật.
+        print(f"FINGERPRINT per-actor · seeds={args.seeds} · coverage=all")
+        for ladder in args.ladders:
+            for sd in args.seeds:
+                r = run_once(_cfg_with(base, enabled=True, actor_id=None,
+                                       channels=CHANNEL_LADDER[ladder], coverage="all"), sd)
+                print(f"  {ladder:<12} seed {sd}  {fingerprint_actors(r)}")
+        return
+
     print(f"MOCK · {CONFIG} · seeds={args.seeds} · coverage=all · ladder=all\n")
 
     coins, events, proj, dec = probe_coins(base, args.seeds)
