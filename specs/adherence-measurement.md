@@ -1,7 +1,9 @@
 # Spec — Đo "tài xế có làm theo advice không" bằng HAI đường song song (BACKLOG Q6)
 
-Ngày: 2026-07-27 · Trạng thái: spec v0 — **một phần DONE-CODE (Cycle W, UPDATE-091)**, xem đính
-chính 2026-07-29 dưới đây — trả lời câu hỏi Cường *"how are we tracking if the driver follow
+Ngày: 2026-07-27 · Trạng thái: spec v0 — **một phần DONE-CODE** (Cycle W UPDATE-091; `D-M3-01` +
+`D-M3-10` UPDATE-102).
+🔴 **Đọc ĐÍNH CHÍNH 2026-07-30 ngay dưới §Nguyên tắc TRƯỚC khi dùng file này** — nó đảo một kết luận
+của spec (*"thiếu hiển thị"* → **thiếu khả năng đối chiếu**). Xem cả đính chính 2026-07-29 — trả lời câu hỏi Cường *"how are we tracking if the driver follow
 instructions, are there multiple ways done in same time?"*. Implement từng phần đã/sẽ theo cycle
 riêng; file này là bản đồ chung.
 
@@ -10,6 +12,61 @@ riêng; file này là bản đồ chung.
 Một đường đo đơn lẻ nói dối: nút bấm đo Ý ĐỊNH (dễ bấm cho xong), hành vi đo THỰC TẾ (nhưng
 nhiễu — hành vi đổi có thể không do advice). Phải chạy CẢ HAI và đối chiếu; lệch giữa hai đường
 chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
+
+> ## 🔴 ĐÍNH CHÍNH 2026-07-30 (`D-M3-01` + `D-M3-10`, UPDATE-102) — nguyên tắc trên ĐÚNG nhưng THIẾU
+>
+> Spec này giả định hai đường đều **hợp lệ nhưng khác nhau**, và việc còn lại chỉ là *đối chiếu*.
+> Thực tế đo được: **đường IMPLICIT tự nó có mẫu số HỎNG**, và **hai đường hiện KHÔNG JOIN ĐƯỢC**.
+> Đó là hai vấn đề khác hẳn "hai đường lệch nhau" — và cả hai đã sống nhiều tháng mà không ai thấy.
+>
+> ### (a) Đường IMPLICIT: mẫu số thiếu ⇒ adherence = 1,0 **theo cấu trúc**
+>
+> Với `shift_extend` và `rest_window`, event **chỉ được ghi khi tài xế ĐÃ THEO** ⇒ tử số = mẫu số ⇒
+> `decision_adherence` **không thể khác 1,0**. Đo được: báo **1,000** trong khi sự thật (đo từ coin,
+> độc lập với event log) là **0,473** ⇒ **thổi 2,1×**, và số đó đã sống trong **39 artifact**.
+>
+> ⚠ Đơn vị: **2,1×** là theo đơn vị QUYẾT ĐỊNH. Con số 0,311 hay "3,2×" mà một bản đính chính trước
+> đã báo là theo đơn vị **LẦN HỎI** — trộn hai đơn vị là chính lỗi mà bản đính chính đó mắc lại.
+>
+> **Đã sửa** (3 tầng, `advice_bridge` + `world` + `projections`): `shift_extend` nay báo **0,475** vs
+> sự thật **0,473**. Kèm nhánh mà spec cũ không lường: *"tài xế ĐỒNG Ý nhưng thế giới không thi hành
+> được"* (kéo ca vượt `time.end_min`) cũng phải log — nó thuộc **cả tử số lẫn mẫu số**.
+>
+> ### (b) Vì sao không ai thấy: cổng hợp lệ chỉ tồn tại trên giấy
+>
+> Luật *"mọi arm phải báo `decision_adherence` per archetype so danh nghĩa; lệch ⇒ TREO"* **chưa từng
+> được thi hành**: `parallel.py` / `sim_metrics.py` / `run_parallel.py` tham chiếu
+> `adherence`/`followed`/`decided` **ĐÚNG 0 LẦN**; artifact **35–39 không có khoá `adherence` nào**.
+> ⇒ **Đã nối** (`D-M3-10`): `adherence_audit()` theo (kênh × archetype) · cổng **BẤT KHẢ** ·
+> `PairResult` mang adherence **cả hai arm** · `run_ladder` ghi `verdict` TREO/OK.
+>
+> ### (c) 🔴 HAI ĐƯỜNG KHÔNG JOIN ĐƯỢC — đây là chỗ spec cũ sai nhiều nhất
+>
+> §Phần THIẾU #2 dưới đây viết *"còn thiếu **hiển thị** view này ở khu Mô phỏng"*. **Không phải thiếu
+> hiển thị — thiếu khả năng đối chiếu.** Bốn lý do cấu trúc, mỗi cái tự nó đủ chặn:
+>
+> | # | Vấn đề | Hệ quả |
+> | --- | --- | --- |
+> | 1 | Sản phẩm ghi `event_type = "displayed"`, **không bao giờ** ghi `decided`; `adherence_view` chỉ đếm `event_decided` khi `et in ("decided","followed")` | **`event_adherence` ở sản phẩm VĨNH VIỄN `None`** — một nửa bộ đo hai-tên chết im lặng ở đúng nơi có tài xế thật |
+> | 2 | Không gian `topic` **rời nhau hoàn toàn**: sản phẩm `{brief, nudge, recap}` + default `bonus`; sim `{shift_plan, positioning, accept_lift, shift_extend, rest_window}`. `adherence_view` khoá theo `(run_id, driver_id, topic)` | **Không có một khoá nào so được** giữa hai đường |
+> | 3 | `followed` ở sản phẩm là **CÚ BẤM TỰ KHAI**; `followed` ở sim là **ĐỔI HÀNH VI THẬT** (chỉ log khi `mapped_action != hành động bản năng`) | **Cùng tên, cùng field, cùng projection — hai nghĩa khác nhau.** Đối chiếu hai cột này là so ý định với hành vi rồi gọi kết quả là "lệch" |
+> | 4 | Sản phẩm ship **1/5 kênh** (S1 bonus-gap); kênh giá trị nhất của sim (`positioning`) bị **D-004 CẤM** ở sản phẩm | Tập kênh của hai đường **không giao nhau** |
+>
+> ⇒ **Việc phải làm KHÔNG phải "thêm một view"** mà là **thống nhất taxonomy `topic` và ngữ nghĩa
+> `followed` trước đã**. Chi tiết + 13 finding sev CAO khác của đường sản phẩm:
+> `tracking/SOI-2026-07-30-mau-so-adherence.md` §1/§4. ⚠ **Chưa cái nào qua phản biện đối kháng**
+> (16/16 agent phản biện fail vì session limit, hai lần) — nhưng bốn mục trong bảng trên tôi **tự
+> kiểm bằng đọc code**.
+>
+> ### (d) Bài học đổi cách viết spec này
+>
+> Nguyên tắc mở đầu vẫn đúng, nhưng phải thêm một tầng **TRƯỚC** nó:
+> **mỗi đường đo phải tự chứng minh mẫu số của nó tồn tại, TRƯỚC khi hai đường được đối chiếu.**
+> Cổng bắt buộc cho mọi đường đo mới:
+> 1. adherence tính ra được có thể **khác 1,0 và khác 0,0** không? (nếu không ⇒ mẫu số hỏng)
+> 2. có tồn tại một **ground truth ĐỘC LẬP** để pin nó vào không? (sim: coin. Sản phẩm: **chưa có**)
+> 3. cổng nghiệm thu có **chứng minh được là ĐỎ ĐƯỢC** không? (test tautology của `F-1` sống 39
+>    artifact vì không ai đòi điều này)
 
 ## Đường 1 — EXPLICIT (ý định, UI) — ✅ ĐÃ CÓ từ UPDATE-067
 
@@ -28,6 +85,11 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
 
 - Sim: coin adherence theo archetype (D-SIM-04 ASSUMPTION) + event `advice_given/followed`
   (world.py) + **thế giới song song CRN** đo hiệu ứng nhân-quả sạch (Δ payout theo cặp seed).
+  **⚠ 2026-07-30:** coin là **ground truth ĐỘC LẬP với event log** — đó là thứ duy nhất phát hiện được
+  mẫu số hỏng (xem đính chính (a)). Mọi kênh nay đều rút coin; `rest_window` là kênh cuối cùng được
+  nối (`D-M3-01`). Adherence THẬT đo được theo đơn vị QUYẾT ĐỊNH: `shift_plan` 0,534 · `accept_lift`
+  0,565 · `positioning` 0,500 · `shift_extend` 0,473 · `rest_window` **kênh chưa nói lần nào**
+  (`D-M3-04`: bậc thang của nó **bit-identical với `s2_only`** trên 5 seed).
 - Data thật (tương lai): so hành vi cửa-sổ-sau-advice vs baseline cá nhân (vd: advice "nâng tỷ
   lệ nhận" lúc 14h → acceptance realized 14h-18h vs cùng khung các ngày không-advice).
   **Chặn bởi**: bảng GSM không có accept/decline event (chỉ daily aggregate — F-U2-A/EST-6);
@@ -42,9 +104,16 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
    trong `gsm_core/lifecycle/` — join key hai đường nay tồn tại ở backend, không còn chỉ-UI.
 2. **Bảng đối chiếu**: view (driver, tuần) → tỷ lệ bấm-Làm-theo vs Δ hành vi đo được vs adherence
    coin sim — 3 cột cạnh nhau, lệch = flag. Chỗ hiển thị: khu Mô phỏng (reviewer), KHÔNG áp
-   lực lên tài xế. **⚠ Cập nhật 2026-07-29:** một nửa đã có — `adherence_view` (hai tên
-   `decision_adherence` + `event_adherence`) tính được từ projections; còn thiếu **hiển thị** view
-   này ở khu Mô phỏng (phần UI/dashboard chưa làm).
+   lực lên tài xế. ~~**⚠ Cập nhật 2026-07-29:** một nửa đã có … còn thiếu **hiển thị**.~~
+   🔴 **ĐÍNH CHÍNH 2026-07-30: KHÔNG phải thiếu hiển thị — thiếu khả năng ĐỐI CHIẾU.** Bốn chặn cấu
+   trúc ở đính chính (c). Việc thật phải làm, theo thứ tự:
+   **(2a)** thống nhất taxonomy `topic` giữa sim và sản phẩm;
+   **(2b)** sản phẩm phải emit `decided` (nay chỉ có `displayed`) ⇒ `event_adherence` mới tồn tại;
+   **(2c)** tách tên: `followed_selfreport` (bấm nút) vs `followed_behavior` (đổi hành vi thật) —
+   dùng chung một field cho hai nghĩa là mời người đọc so ý định với hành vi rồi gọi là "lệch";
+   **(2d)** CHỈ khi đó mới dựng view 3 cột.
+   ✅ Phần đã xong 2026-07-30: `adherence_view` có hai tên, **và** adherence nay được ghi vào mọi
+   artifact A/B kèm `verdict` TREO/OK (`D-M3-10`) — trước đó không artifact nào mang nó.
 3. **Cập nhật D-SIM-04**: khi có log explicit đủ dày (dù là mock/demo), dùng phân phối bấm-nút
    làm prior MỚI cho adherence coin thay ASSUMPTION thuần (vẫn nhãn rõ nguồn).
 4. **Ethics guard** (bài học nudge Uber): KHÔNG dùng số đo adherence để tăng áp lực nudge

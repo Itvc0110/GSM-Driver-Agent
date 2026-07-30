@@ -1,6 +1,6 @@
 # CLAUDE.md — Harness cho AI coding agent (GSM Driver Income Agent)
 
-Cập nhật: 2026-07-29. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
+Cập nhật: 2026-07-30. Đây là file điều khiển hành vi bắt buộc cho mọi AI coding agent làm việc trong repo này. Khi có xung đột giữa file này và tài liệu khác, **file này thắng** (trừ khi Cường/Khánh nói khác trực tiếp trong hội thoại).
 
 ## 1. Dự án là gì
 
@@ -18,9 +18,9 @@ Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image
 | `CLAUDE.md` | Harness này — đọc đầu tiên |
 | `planning/` | SCOPE (scope hiện hành), USER_STORIES, PERSONAS (5 hồ sơ mock), RESEARCH (kế hoạch nghiên cứu) |
 | `research/` | Kết quả nghiên cứu, **chia theo loại** (`policy/`, `economics/`, `community/`, `market/`, `simulation/`, `audit/`, `experiments/`, `ux/`) — xem `research/README.md`; đọc trước `research/00_SUMMARY.md` |
-| `specs/` | Đặc tả kỹ thuật để code — **14 spec cấp 1 + `real-data/` + `simulation/`**; spec source-of-truth chính hiện hành: `advisor-objective-model-v2.md`, `core-data-schema-and-advisor-architecture.md`, `adherence-measurement.md`, `simulation/00-sim-overhaul-master.md` |
-| `tracking/` | TODO (backlog), ASSIGNMENTS (bảng tự nhận việc — không ai giao việc), DEFERRED (mục đã hoãn), `updates/` (nhật ký thay đổi UPDATE-###), `PENDING-REVIEW.md`, `OPEN-THREADS-*.md`, `PLAN-cycle-*.md`, `DIRECTIVES-*`, `BACKLOG-QUESTIONS-*` |
-| `tracking/PROJECT-GRAPH.md` | Bản đồ canonical của UPDATE hiện hành: route đọc theo task, dependency/correction edges, trạng thái hiện hành, pending gates và quota loop. **93 file `UPDATE-*.md` tính tới UPDATE-099 (2026-07-29 — 098 debate-herding của remote, 099 ĐA-04 cadence); §3.7 phủ 074–093, route đọc theo task ở `PROJECT-GRAPH-2026-07-29-addendum.md`** |
+| `specs/` | Đặc tả kỹ thuật để code — **14 spec cấp 1 + `real-data/` + `simulation/`**; spec source-of-truth chính hiện hành: `advisor-objective-model-v2.md` (⚠ **§1.2b** ranh giới sức khoẻ, C2 HUỶ, `C2′` thay), `core-data-schema-and-advisor-architecture.md`, `adherence-measurement.md` (⚠ **đọc ĐÍNH CHÍNH 2026-07-30** — hai đường đo hiện KHÔNG join được), `simulation/00-sim-overhaul-master.md`, `simulation/d-m3-01-adherence-denominator-fix.md`, `real-data/data-contract-counterfactual.md` (**§4** = 17 kết luận xếp VỮNG/LUNG LAY/KHÔNG THỂ KIỂM) |
+| `tracking/` | **`BOOTSTRAP-SESSION.md` = điểm vào cho session mới** (state · hàng đợi · §5 bảy bẫy đã sập) · **`PLAN-2026-07-30-hang-doi-cong-viec.md` = thứ tự thi công hiện hành** · TODO (backlog), ASSIGNMENTS (tự nhận việc — không ai giao việc), DEFERRED, `updates/` (UPDATE-###), `PENDING-REVIEW.md`, `SOI-*`, `QUYET-DINH-*`, `PHAN-QUYET-*`, `OPEN-THREADS-*`, `DIRECTIVES-*`, `BACKLOG-QUESTIONS-*` |
+| `tracking/PROJECT-GRAPH.md` | Bản đồ canonical của UPDATE hiện hành: route đọc theo task, dependency/correction edges, trạng thái hiện hành, pending gates và quota loop. **97 file `UPDATE-*.md` tính tới UPDATE-103 (2026-07-30 — 100 E5+phán quyết mệt/nghỉ, 101 chốt 5 quyết định V-15, 102 `D-M3-01`+`D-M3-10` mẫu số adherence, 103 bootstrap+rà soát docs); §3.7 phủ 074–093, route đọc theo task ở `PROJECT-GRAPH-2026-07-29-addendum.md`.** ⚠ **Điểm vào session mới KHÔNG phải file này mà là `tracking/BOOTSTRAP-SESSION.md`** — nó có state + hàng đợi + §5 bảy bẫy đã sập thật |
 | `flow image/` | drawio luồng dự kiến — `...v2.drawio` hiện hành (7 trang), `...v1.drawio` đối chiếu (source of truth về flow) |
 | `docs/00–09`, `contracts/`, `templates/`, `MASTER_PROMPT.md`, `AGENTS.md` | **DEFERRED** — pack cũ theo hướng full optimization scaffold; chỉ dùng tham khảo, không phải scope hiện hành |
 | `docs/data-catalog/` | **ACTIVE** — catalog 13 bảng GSM thật (`gsm-data-catalog.csv/.xlsx`), sinh bởi `scripts/build_data_catalog.py`; `specs/real-data/*` phụ thuộc trực tiếp, KHÔNG deferred |

@@ -1,6 +1,6 @@
 # BOOTSTRAP SESSION — prompt để nạp một AI coding agent mới vào dự án này
 
-Cập nhật: **2026-07-30** · `origin/main` = **`101df8f`**
+Cập nhật: **2026-07-30** · `origin/main` = **`3943cb2`**
 
 **Cách dùng:** mở session mới, paste đoạn trong khung §0 dưới đây. Không cần paste cả file này —
 đoạn đó trỏ agent tới đúng các file phải đọc, theo đúng thứ tự.
@@ -58,12 +58,15 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 ## §2. STATE hiện tại (2026-07-30)
 
 ```
-origin/main = 101df8f   (15 commit từ c493d89, fast-forward, cây sạch)
+origin/main = 3943cb2   (16 commit từ c493d89, fast-forward, cây sạch)
 suite       = 860 passed / 5 skipped / 0 failed
               uv run pytest -q                  -> 804 + 5 skip   (809 thu thập)
               uv run pytest -q ui/backend/tests -> 56
-UPDATE       = 96 file, mới nhất UPDATE-102
-PENDING      = 17 mục V- đang chờ Cường
+UPDATE       = 97 file, mới nhất UPDATE-103
+PENDING      = 17 mục V- đang chờ Cường:
+              V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
+              V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor)
+              ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
 ```
 
 🔴 **BẮT BUỘC: luôn chạy CẢ HAI lệnh khi nói "suite xanh".** `pyproject.toml` có
@@ -121,13 +124,15 @@ cho luật positioning (sẽ đo ra ≈0 — xem §5 bẫy #7).
 
 ---
 
-## §4. Bốn tài liệu source-of-truth (đọc khi task chạm tới)
+## §4. Tài liệu source-of-truth (đọc khi task chạm tới)
 
 | File | Khi nào đọc |
 | --- | --- |
 | `specs/advisor-objective-model-v2.md` | Bất cứ gì chạm hàm mục tiêu. **§1.2b** = ranh giới sức khoẻ, C2 huỷ, `C2′` thay |
 | `specs/real-data/data-contract-counterfactual.md` | Bất cứ gì chạm dữ liệu. **§4 (dòng 746)** = 17 kết luận xếp VỮNG/LUNG LAY/KHÔNG THỂ KIỂM |
 | `specs/simulation/d-m3-01-adherence-denominator-fix.md` | Chạm adherence / mẫu số / thước đo |
+| `specs/adherence-measurement.md` | Bản đồ chung hai đường đo. ⚠ **ĐỌC ĐÍNH CHÍNH 2026-07-30** — nó đảo một kết luận của spec: **hai đường hiện KHÔNG JOIN ĐƯỢC** (topic rời nhau · sản phẩm không emit `decided` · `followed` mang hai nghĩa · kênh không giao nhau) |
+| `research/audit/2026-07-27-current-state/README.md` | **TRƯỚC KHI TRÍCH BẤT KỲ SỐ NÀO.** Có cảnh báo chung: artifact 31–39 đo bằng thước chưa được kiểm, và 31–35 **BỊ TREO** |
 | `tracking/QUYET-DINH-2026-07-30-nam-diem.md` | 5 quyết định V-15 + **cổng TIỀN-ĐĂNG-KÝ** của `rest_window` (khoá, không sửa sau khi đo) |
 
 ---

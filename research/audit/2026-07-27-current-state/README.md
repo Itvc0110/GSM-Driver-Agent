@@ -163,5 +163,28 @@ lập bác. ĐA-07 (*"`shift_plan` không hiệu quả ⇒ giữ TẮT"*) **đú
 bỏ nó lúc nhịp bật). Và ở n=100 thì **bỏ nó còn hơi TỐT hơn** (+8.117 vs +7.666), ngược hẳn thứ tự
 của lưới n=30 (6.789 < 8.488).
 
+## 🔴 CẢNH BÁO CHUNG cho MỌI artifact trong thư mục này (thêm 2026-07-30, `D-M3-01`+`D-M3-10`)
+
+**Mọi artifact ở đây được đo bằng một cái thước CHƯA TỪNG ĐƯỢC KIỂM.** Hai sự thật đo được:
+
+1. **`shift_extend` báo `decision_adherence = 1,000` trong khi sự thật là `0,473`** (thổi **2,1×**).
+   Nguyên nhân: event chỉ được ghi khi tài xế ĐÃ THEO ⇒ tử số = mẫu số ⇒ 1,0 **theo cấu trúc**, không
+   thể khác. Đã sửa ở UPDATE-102 → nay báo **0,475**.
+2. **Không artifact nào trong 31–39 mang khoá `adherence`.** Luật *"mọi arm phải báo
+   `decision_adherence` per archetype so danh nghĩa; lệch ⇒ TREO"* **chưa từng được thi hành** —
+   `parallel.py` / `sim_metrics.py` / `run_parallel.py` tham chiếu `adherence` **ĐÚNG 0 LẦN**. Đó là
+   **lý do trực tiếp** lỗi (1) sống được qua 39 artifact mà không cổng nào bắn. Đã nối ở UPDATE-102.
+
+**Hệ quả phải giữ khi trích số từ thư mục này:**
+
+- Δ **payout/served/gini** vẫn dùng được — adherence là **thước**, không phải đại lượng bị đo trong Δ.
+- **Nhưng LIỀU can thiệp thấp hơn liều danh nghĩa** ở arm có `shift_extend` bật: `L1-04` đo được
+  **28% quyết định đã tiêu token rồi biến mất** (bất khả thi bị clamp sau khi đã claim). Chưa sửa.
+- **Mọi con số adherence trích từ 31–39 phải mang nhãn "đo bằng thước chưa được kiểm"** và **không
+  hồi tố được** — artifact cũ không thể tính lại adherence vì event log của chúng thiếu nhánh
+  không-theo ngay từ khi sinh.
+- Artifact **mới** (từ UPDATE-102 trở đi) mang `adherence` + `verdict` TREO/OK. **Đọc `verdict`
+  trước khi tin Δ của arm đó.**
+
 **Cái KHÔNG đổi qua mọi bước:** `gini_payout` −0,0051 SIG — kết luận *"nhịp mua công bằng bằng tiền"* vững; chỉ GIÁ là thứ bị báo cao hơn thực tế. Thêm `D-R08`: con số "2.670 lần bị nén" cũng phóng đại ~47% vì ba kênh đếm "bị nén" trước khi biết có nội dung khuyên hay không.
 

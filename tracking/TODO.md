@@ -1,7 +1,7 @@
 # TODO — Backlog công việc
 
 > 📋 **THỨ TỰ THI CÔNG HIỆN HÀNH: `tracking/PLAN-2026-07-30-hang-doi-cong-viec.md`**
-> Hàng đợi đã sắp thứ tự + acceptance + chi phí cho từng mục, kèm §8 *"việc KHÔNG làm và vì sao"* để không ai đào lại. Thứ tự: `L1-04` → cổng thống kê → 🔴 **`E10` advisor-cũng-nhiễu** → 3 tiên quyết cổng `rest_window` → cycle đường SẢN PHẨM (13 finding sev CAO) → `E9`.
+> Hàng đợi đã sắp thứ tự + acceptance + chi phí cho từng mục, kèm §8 *"việc KHÔNG làm và vì sao"* để không ai đào lại. Thứ tự: `L1-04` → cổng thống kê → cổng thống kê (**đã CHỐT cơ chế**: z Poisson-binomial `|z|>4`, UPDATE-103) → 🔴 **`E10` advisor-cũng-nhiễu** → 3 tiên quyết cổng `rest_window` → cycle đường SẢN PHẨM (13 finding sev CAO) → `E9`.
 > ⚠ `E10` đứng trên mọi thí nghiệm kênh khác **không phải vì nó mới** mà vì advisor hiện nhận **đúng λ của generator** trong khi tài xế chỉ nhận `λ×nhiễu` ⇒ `T-047` §4 xếp con số chủ lực **+6.016đ vào cột LUNG LAY**. `E10` quyết định các Δ khác có nghĩa gì.
 
 

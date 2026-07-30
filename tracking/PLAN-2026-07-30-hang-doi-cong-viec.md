@@ -1,7 +1,7 @@
 # KẾ HOẠCH — hàng đợi công việc còn lại, sắp theo thứ tự thi công
 
 Ngày 2026-07-30 · Trạng thái: `READY` — chờ Cường ra lệnh làm tiếp
-`origin/main` = **`86d9abf`** · suite **860 passed / 5 skipped / 0 failed** · cây sạch
+`origin/main` = **`3943cb2`** · suite **860 passed / 5 skipped / 0 failed** · cây sạch
 
 Tài liệu này là **thứ tự thi công**, không phải danh sách ước. Mỗi mục có: **vì sao ở vị trí này**,
 **chặn cái gì**, **acceptance**, **chi phí**. Ai đọc cũng làm tiếp được mà không cần hỏi lại.
@@ -272,7 +272,7 @@ về lever này.
 ## 10. Trạng thái để bắt đầu lại
 
 ```
-origin/main = 86d9abf   (14 commit từ c493d89)
+origin/main = 3943cb2   (16 commit từ c493d89)
 suite       = 860 passed / 5 skipped / 0 failed
               uv run pytest -q            -> 804 + 5 skip  (809 thu thập)
               uv run pytest -q ui/backend/tests -> 56
