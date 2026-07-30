@@ -27,7 +27,7 @@ default) — chúng là **UI/contract**, chạm vào cùng lúc sẽ làm không
 | `shift_plan` | ✅ `:505` | ✅ (`advice_given` mang cờ `followed`) | ❌ | **0,534** | 0,534 ✅ |
 | `accept_lift` | ✅ `:577` | ✅ (`advice_bonus_gate` mang cờ) | ❌ | **0,434** | 0,434 ✅ |
 | `positioning` | ✅ `:527` | ✅ (mẫu số = `standby_alloc.assigned_ids`) | ❌ | **0,498** | — (đã sửa ở `F-1`) |
-| **`shift_extend`** | ✅ `:823` | ❌ **KHÔNG** | ✅ **CÓ** | **0,311** | **1,000** 🔴 **sai 3,2×** |
+| **`shift_extend`** | ✅ `:823` | ❌ **KHÔNG** | ✅ **CÓ** | **0,473** (quyết định) · 0,311 (lần hỏi) | **1,000** 🔴 **sai 2,1×** |
 | **`rest_window`** | ❌ **KHÔNG** | ❌ **KHÔNG** | ✅ **CÓ** | **không tồn tại** | **1,000** 🔴 |
 
 Đếm thô (3 seed): `shift_extend` — advisor nói **1051**, nghe theo **327**, event ghi **97**.
@@ -37,7 +37,7 @@ default) — chúng là **UI/contract**, chạm vào cùng lúc sẽ làm không
 
 | Số đã báo | Ở đâu | Sai thế nào | Cần đo lại? |
 | --- | --- | --- | --- |
-| `shift_extend 43/43 = 100%` · *"Ground truth 100% ✓"* | `research/audit/2026-07-29-cycle-w-review/findings.md:153` | **thổi 3,2×** (thật 31,1%); nhãn "Ground truth" là **vòng tròn** — lấy GT từ chính event hỏng | ✅ sửa số + gỡ nhãn GT |
+| `shift_extend 43/43 = 100%` · *"Ground truth 100% ✓"* | `research/audit/2026-07-29-cycle-w-review/findings.md:153` | **thổi 2,1×** (thật 0,473 theo đơn vị QUYẾT ĐỊNH — đơn vị của `decision_adherence`); nhãn "Ground truth" là **vòng tròn** — lấy GT từ chính event hỏng | ✅ sửa số + gỡ nhãn GT |
 | Arm `rest_window` trong mọi bậc thang A/B | artifact 31–39 | Arm đó **bit-identical với `s2_only`** ⇒ **không phải can thiệp khác**, là arm dán nhãn sai | ✅ gắn nhãn "arm trùng" vào mọi artifact |
 | `decision 68,1% ≈ event 67,6%` (bằng chứng *"washout D-A3-01 CHẾT"*) | UPDATE-099, HANDOFF §2 | Agent `L5-01` nói số này tính **chỉ trên `accept_lift`** ⇒ `D-M3-01` thổi nó lên **0,00đp**. **CHƯA tôi kiểm.** Nếu đúng thì số **không sai**, nhưng câu *"washout đã chết"* phát biểu cho **cả hệ** trong khi bằng chứng phủ **1/5 kênh** | ⚠ phải kiểm phạm vi trước khi giữ câu đó |
 | Mọi Δ A/B có `shift_extend` bật | artifact 31–39 | Δ **không** sai vì adherence chỉ là thước; nhưng **28% quyết định mất hẳn** (`L1-04`) nghĩa là liều can thiệp thực tế **thấp hơn** liều danh nghĩa | ⚠ Δ vẫn dùng được, nhưng phải ghi rõ liều |

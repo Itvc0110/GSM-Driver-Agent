@@ -61,7 +61,7 @@ với LLM live, 4 feature faithfulness 1.0.
 | Kênh | Trước sửa | Sau sửa | Ground truth | Nhận xét |
 |---|---|---|---|---|
 | `shift_plan` | 2,0% | **52,2%** (631/1208) | 52,2% (631/1208) | **khớp chính xác** |
-| `shift_extend` | 0,0% | **100%** (43/43) | 100% | **khớp chính xác** |
+| ~~`shift_extend`~~ | ~~0,0%~~ | ~~**100%** (43/43)~~ | ~~100%~~ | 🔴 ~~khớp chính xác~~ — **"khớp" vì cả hai cột lấy từ CÙNG event bị hỏng.** Đính chính: sự thật **0,473**, xem `D-M3-01`/UPDATE-102 |
 | `positioning` | 100% (36/**36**) | 41,9% (36/**86**) | 48,8% (42/86) | **mẫu số đã đúng** (86 = số người được gán). Tử số 36 = số người THỰC SỰ dịch chuyển; 42 = số người *nhận* lời khuyên (draw thành công) — 6 người nhận nhưng chưa kịp đi (tới ô đúng trước / hết ca). Hai đại lượng khác nhau, projection đo cái thứ hai — **đúng ý nghĩa "đã làm theo"** |
 | `accept_lift` | 0,0% | 76,9% (50/65) | 53,6% (60/112) | **khác ĐƠN VỊ, không phải sai**: GT đếm theo EVENT (gate fire mỗi tick 2′), projection đếm theo DECISION (gộp bucket 30′ theo spec adherence). 112 event → 65 decision; decision được tính followed nếu có ít nhất một lần theo trong bucket. Cần chốt định nghĩa nào là "adherence" chính thức trước khi báo cáo số này ra ngoài |
 
@@ -150,5 +150,5 @@ Sạch: 1(b)/1(c) docstring projections + derive_run_id khớp code; fixture mod
 |---|---|---|---|
 | shift_plan | 631/1208 = 52,2% | 631/1208 = 52,2% | 52,2% ✓ (due 30' = bucket ⇒ hai đơn vị trùng) |
 | accept_lift | 50/65 = 76,9% | 60/112 = 53,6% | đúng theo từng đơn vị ✓ (pin bằng GT độc lập) |
-| shift_extend | 43/43 = 100% | 43/43 = 100% | 100% ✓ |
+| ~~shift_extend~~ | ~~43/43 = 100%~~ | ~~43/43 = 100%~~ | ~~100% ✓~~ | 🔴 **SỐ NÀY LÀ ARTIFACT CỦA LỖI — đính chính 2026-07-30 (`D-M3-01`, UPDATE-102).** Sự thật đo từ COIN **theo đơn vị QUYẾT ĐỊNH**: **0,473** ⇒ con số 100% thổi lên **2,1×** vì event `advice_shift_extend` chỉ được ghi khi tài xế ĐÃ THEO ⇒ mẫu số chỉ chứa người đã theo ⇒ 1,0 **theo cấu trúc**. Và nhãn *"Ground truth ✓"* là **VÒNG TRÒN**: ground truth được lấy từ chính event bị hỏng (`tests/test_lifecycle_review_fixes.py:67-70` assert cả `decided` và `followed` bằng CÙNG một biến đếm ⇒ đồng nhất thức, test không bao giờ đỏ được). Sau fix: **0,475** |
 | positioning | 36/86 = 41,9% | 36/86 = 41,9% | mẫu số 86 = người được gán ✓ |

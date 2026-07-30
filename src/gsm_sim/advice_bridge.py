@@ -238,6 +238,9 @@ class AdviceActionBridge:
         # R-01: một quyết định chỉ được ÁP TÁC ĐỘNG một lần (xem `_claim_effect`).
         self._effect_applied: set[str] = set()
         self._suppressed_out: list[tuple] = []
+        # D-M3-01: "đã NÓI mà KHÔNG theo" — mẫu số adherence của `shift_extend`/`rest_window`.
+        self._spoken_outcome_seen: set[str] = set()
+        self._spoken_outcome_out: list[tuple] = []
         self._share = float(adv.get("share", 0.0))
         self._covered_cache: dict[int, bool] = {}
 
@@ -332,6 +335,47 @@ class AdviceActionBridge:
     def drain_suppressed(self) -> list[tuple]:
         """World lấy các lần bị nén để log event `advice_suppressed` (reason typed)."""
         out, self._suppressed_out = self._suppressed_out, []
+        return out
+
+    def note_spoken_outcome(self, actor: Actor, topic: str, now_min: float,
+                            material_revision: str, *, followed: bool, reason: str,
+                            bucket_min: float | None = None) -> None:
+        """Advisor ĐÃ NÓI, và đây là kết cục — cho những nhánh KHÔNG tự log event.
+
+        Hai nhánh cần nó, cả hai đều thuộc MẪU SỐ:
+          - `followed=False, reason="not_followed"` — tài xế nghe rồi không làm;
+          - `followed=True,  reason="infeasible_..."` — tài xế ĐỒNG Ý nhưng thế giới không
+            thi hành được (vd kéo ca vượt `time.end_min`) ⇒ vẫn là một quyết định ĐƯỢC NGHE
+            THEO, chỉ là `applied = 0`. Bỏ nó khỏi TỬ SỐ làm adherence bị báo THẤP: đo được
+            `shift_extend` 0,394 trong khi sự thật 0,473 (hụt 24/121 quyết định).
+            ⚠ Consumer đo ĐỘ LỚN can thiệp phải dùng `added_min`, KHÔNG dùng số event —
+            event này tồn tại để giữ mẫu số, không phải để nói "có can thiệp" (xem `b0-A`).
+
+        `D-M3-01`: hai kênh `shift_extend` và `rest_window` trước đây chỉ ghi event **khi
+        tài xế ĐÃ THEO** (`return 0.0` / `return False` không để lại dấu vết) ⇒ mẫu số
+        adherence chỉ chứa người đã theo ⇒ `decision_adherence` = **1,0 theo cấu trúc**.
+        Đo được (`scripts/probe_adherence_truth.py`, 3 seed): `shift_extend` báo **1,000**
+        trong khi sự thật là **0,311**. Đây là họ lỗi `BUG-EVAL-ARGMAX` và là tái diễn
+        `F-1` (mẫu số kênh `positioning` từng hụt đúng như vậy).
+
+        Dedupe theo ĐÚNG khoá của `coin_follows` (cùng bucket + cùng `material_revision`):
+        hỏi lại cùng một quyết định cho ra cùng coin, nên chỉ được sinh MỘT event — không
+        phải một event mỗi tick 2′. Đây chính là bài học Lỗi #2/`R-08`.
+        """
+        key = (f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+               f"-{material_revision}")
+        if key in self._spoken_outcome_seen:
+            return
+        self._spoken_outcome_seen.add(key)
+        self._spoken_outcome_out.append((now_min, actor.actor_id, topic, followed, reason))
+
+    def drain_spoken_outcomes(self) -> list[tuple]:
+        """World lấy các kết cục cần log để giữ MẪU SỐ adherence đúng.
+
+        `now_min` trong bản ghi là thời điểm NÓI, không phải thời điểm drain — `decision_id`
+        phải tính từ nó để trùng với nhánh đã-theo của cùng quyết định.
+        """
+        out, self._spoken_outcome_out = self._spoken_outcome_out, []
         return out
 
     def coin_follows(self, actor: Actor, topic: str, now_min: float,
@@ -677,7 +721,18 @@ class AdviceActionBridge:
         if not self.cadence_allows(actor, "rest_window", now_min):
             return False, ""                  # ĐA-04: nhịp chung quyết định
         self.cadence_note_spoken(actor, "rest_window", now_min)
-        return True, f"defer_to_{target:02d}h"
+        # D-M3-01: kênh này từng là kênh DUY NHẤT không rút coin (4 kênh kia đều rút) ⇒
+        # adherence hiệu dụng cắm cứng 1,0, tức MỌI tài xế luôn nghe lời khuyên hoãn nghỉ.
+        # Chốt 2026-07-30: `rest_window` là DEMAND-TIMING — ở trong bảng tiền, chịu cadence
+        # VÀ chịu coin như mọi kênh khác.
+        # `material_revision` = nội dung ĐỊNH TÍNH (hoãn tới GIỜ NÀO), không phải con số
+        # nhích từng tick: đổi giờ đích ⇒ coin mới; cùng giờ đích ⇒ cùng coin (ĐA-04).
+        rev = f"defer_to_{target:02d}h"
+        if not self.coin_follows(actor, "rest_window", now_min, rev):
+            self.note_spoken_outcome(actor, "rest_window", now_min, rev,
+                                     followed=False, reason="not_followed")
+            return False, "not_followed"
+        return True, rev
 
     # ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên nâng tỷ lệ ----------
 
@@ -821,6 +876,12 @@ class AdviceActionBridge:
         # ngân sách theo kênh ở ablation 31–34 lệch theo.
         self.cadence_note_spoken(actor, "shift_extend", now_min)
         if not self.coin_follows(actor, "shift_extend", now_min, "extend"):
+            # D-M3-01: bản trước `return 0.0` không để lại dấu vết nào ⇒ event
+            # `advice_shift_extend` chỉ tồn tại ở ca ĐÃ THEO ⇒ mẫu số adherence hụt hoàn
+            # toàn phần không-theo ⇒ báo 1,000 trong khi đo từ coin là 0,473 theo đơn vị
+            # QUYẾT ĐỊNH (sai 2,1×; 0,311 là đơn vị LẦN HỎI — đừng trộn hai đơn vị).
+            self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
+                                     followed=False, reason="not_followed")
             return 0.0
         if not self._claim_effect(actor, "shift_extend", now_min):
             return 0.0                        # R-01: một quyết định = một lần kéo ca
@@ -832,6 +893,13 @@ class AdviceActionBridge:
         # này. Cắt ở đây, không cắt ở chỗ tiêu thụ — nếu không thì mỗi consumer phải tự nhớ.
         add = min(add, max(0.0, self.world_end_min - actor.shift_end_min))
         if add <= 0.0:
+            # D-M3-01: tài xế ĐÃ ĐỒNG Ý (coin=True) nhưng thế giới không thi hành được.
+            # Đây vẫn là một quyết định ĐƯỢC NGHE THEO với `applied = 0` ⇒ nó thuộc CẢ tử số
+            # lẫn mẫu số. Bản trước `return 0.0` trắng ⇒ tử số hụt 24/121 quyết định ⇒
+            # adherence bị báo THẤP (0,394 thay vì 0,473). `b0-A` cắt ĐỘ LỚN ở đây là đúng;
+            # nhưng cắt luôn dấu vết ĐO LƯỜNG thì thành một lỗi mẫu số khác.
+            self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
+                                     followed=True, reason="infeasible_world_end")
             return 0.0
         actor.shift_extended_min += add
         actor.shift_end_min += add

@@ -161,8 +161,22 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
 #
 # Map theo kind cho ra: shift_plan 2,0% · accept_lift 0,0% · shift_extend 0,0% ·
 # positioning 100% — trong khi sự thật 52,2% · 53,6% · 100% · 48,8%.
-_ALWAYS_FOLLOWED = {"advice_shift_extend", "advice_rest_window"}
-_FOLLOW_FLAG_KINDS = {"advice_given", "advice_bonus_gate"}
+# D-M3-01 (2026-07-30): `_ALWAYS_FOLLOWED` nay RỖNG. Trước đây nó chứa
+# {"advice_shift_extend", "advice_rest_window"} với lý lẽ "sự tồn tại của event nghĩa là ĐÃ
+# THEO" — lý lẽ đó đúng với hiện trạng LÚC ĐÓ (hai kênh chỉ log khi đã theo) nhưng nó khoá
+# `decision_adherence` của hai kênh vào ĐÚNG HAI giá trị: 1,0 hoặc None. Tức tầng này BỎ QUA
+# `detail["followed"]`, nên sửa bridge + world mà không sửa đây thì con số VẪN 100%.
+#
+# Đo được (`scripts/probe_adherence_truth.py`, 3 seed, coverage=all): `shift_extend` báo
+# **1,000** trong khi sự thật từ coin là **0,473** theo đơn vị QUYẾT ĐỊNH (sai 2,1×). Nay cả hai kênh đã ghi event
+# mang cờ `followed` ở cả hai nhánh (xem `world._NOT_FOLLOWED_KIND`) nên chúng đọc cờ như
+# `advice_given`/`advice_bonus_gate`.
+#
+# ⚠ Giữ tên biến và để RỖNG thay vì xoá: nếu tương lai có kind nào thật sự chỉ tồn tại ở ca
+# đã-theo thì chỗ khai báo phải nằm ở đây, kèm lý do đo được — không phải thêm âm thầm.
+_ALWAYS_FOLLOWED: set[str] = set()
+_FOLLOW_FLAG_KINDS = {"advice_given", "advice_bonus_gate",
+                      "advice_shift_extend", "advice_rest_window"}
 _DECIDED_KINDS = _ALWAYS_FOLLOWED | _FOLLOW_FLAG_KINDS
 # F-S1 (review batch 2): `advice_followed` KHÔNG map — nó là marker BRIDGE-3 (chỉ log
 # khi advice ĐỔI hành động) và LUÔN đi kèm `advice_given` cùng tick mang

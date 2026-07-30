@@ -67,7 +67,7 @@ theo. 3 seed (1000–1002), `coverage=all`, `ladder=all`.
 | --- | --- | --- | --- | --- | --- | --- |
 | `shift_plan` | 3464 | 1851 | **0,534** | 3464 | 0,534 | ✅ mẫu số ĐÚNG |
 | `accept_lift` | 760 | 330 | **0,434** | 760 | 0,434 | ✅ mẫu số ĐÚNG |
-| **`shift_extend`** | **1051** | **327** | **0,311** | **97** | **1,000** | 🔴 **SAI 3,2×** |
+| **`shift_extend`** | **1051** | **327** | **0,311** *(đơn vị LẦN HỎI)* | **97** | **1,000** | 🔴 sai — nhưng xem §2d: đơn vị đúng là **0,473**, thổi **2,1×** |
 | `rest_window` | — | — | **không rút coin** | 0 | 1,000 | 🔴 không có khái niệm "không theo" |
 | `positioning` | 251 | 125 | **0,498** | — | — | (kênh dùng `standby_*`, probe chưa map — **giới hạn của probe**, không phải lỗi) |
 
@@ -79,7 +79,7 @@ theo. 3 seed (1000–1002), `coverage=all`, `ladder=all`.
 | `L5-03` (agent soi) | ~50% | ❌ **SAI** |
 | Tôi trích "danh nghĩa 0,59–0,68" | — | ❌ **SAI, lỗi của tôi**: `DEFAULT_ADHERENCE` thật là **0,30–0,75** theo archetype (P3/P5 = 0,30 · P4 = 0,75). Số 0,59–0,68 là adherence **hiệu dụng đã đo** ở artifact cũ, tôi trích lại thành "danh nghĩa" |
 
-⇒ Con số **đã báo** *"`shift_extend` 43/43 = 100% · Ground truth 100% ✓"* thổi lên **3,2×** so với
+⇒ Con số **đã báo** *"`shift_extend` 43/43 = 100% · Ground truth 100% ✓"* thổi lên **2,1×** (xem §2d) so với
 sự thật **31,1%**. Và nhãn *"Ground truth ✓"* của nó là vòng tròn — lấy ground truth từ chính event
 bị hỏng (`L5-04`).
 
@@ -98,6 +98,68 @@ nhịp, đã rút coin — rồi bị clamp bất khả thi và biến mất kh�
 
 ⚠ Cột HỤT **chỉ có nghĩa cho kênh log-khi-đã-theo**. `accept_lift` log vô điều kiện (760 event = mọi
 lần hỏi, mang cờ `followed`) nên −606 là so lệch đơn vị, **không phải finding**.
+
+### 2d. 🔴 Vòng soi thứ hai bắt lỗi trong CHÍNH BẢN ĐÍNH CHÍNH của tôi — và nó đúng
+
+Workflow resume (2026-07-30, chạy được tầng L2, 63 finding) trả về hai finding nhắm vào bản sửa của
+tôi. **Cả hai đúng.**
+
+**`L5-05` — tôi mắc lại đúng lỗi ĐƠN VỊ mà tôi đang đi sửa.** Con số *"sự thật 0,311 ⇒ sai 3,2×"* trộn
+hai đơn vị: 0,311 = 327/1051 là tỷ lệ theo **LẦN HỎI**, còn `decision_adherence` đếm theo **QUYẾT
+ĐỊNH**. Cùng đơn vị thì sự thật là **0,473** ⇒ mức thổi là **2,1×**, không phải 3,2×.
+
+| | |
+| --- | --- |
+| 1,000 / 0,311 *(lần hỏi)* | 3,22× ← **số tôi đã báo, SAI ĐƠN VỊ** |
+| 1,000 / 0,473 *(quyết định)* | **2,11× ← đúng** |
+
+Tôi đã sửa ở **8 chỗ** (`findings.md`, spec `d-m3-01`, `projections.py`, `advice_bridge.py`,
+test, và 2 chỗ trong tài liệu này). ⚠ **Commit `c46a379` đã đẩy lên `origin/main` với con số 3,2×
+trong message** — không sửa được message, nên đính chính nằm ở đây và trong `findings.md`.
+
+Đây là lần thứ **tư** trong cycle này một lỗi đơn vị/định dạng ở tầng ĐO cho ra một con số sai
+(28,67 · "LỆCH" oan cho `accept_lift` · 15/15 KHÁC do CRLF · và giờ là 3,2×). **Công cụ đo phải bị
+soi như code sản phẩm** — đó là bài học vận hành lớn nhất của cycle.
+
+**`L5-06` — cổng nghiệm thu của tôi là MỘT PHÍA.** `assert ext_adh < 0.99` sẽ **xanh** trên một con số
+sai theo chiều THẤP. Và điều đó đã xảy ra thật: bản vá giữa kỳ cho **0,394** trong khi sự thật 0,473
+(**−7,9đp**) mà cổng vẫn xanh. *(Nửa còn lại của finding — "bản vá để tử số hụt" — đúng ở thời điểm
+agent đọc file, nhưng tôi đã tự bắt và sửa trước khi nó báo, bằng nhánh `infeasible_world_end`.)*
+
+⇒ Đã thêm cổng **HAI PHÍA** `test_shift_extend_adherence_matches_coin_truth`: pin
+`decision_adherence` vào ground truth **độc lập** (coin, gộp theo quyết định), tolerance 0,03.
+
+**Và tôi chứng minh cổng đó ĐỎ ĐƯỢC** — theo đúng bài học `L5-04` (cổng không đỏ được thì vô giá trị).
+Tạm bỏ nhánh `infeasible_world_end` ⇒ cổng đỏ với thông điệp chỉ đúng chiều:
+
+```
+adherence BÁO 0.430 vs COIN 0.515 (lệch -0.085) — thước đo lệch ground truth độc lập.
+Chiều DƯƠNG = mẫu số hụt (D-M3-01); chiều ÂM = tử số hụt. 52/101 quyết định theo coin.
+```
+
+Phục hồi ⇒ `22 passed`.
+
+### 2e. `L2-01` — cơ chế ĐÚNG của việc `rest_window` bất động (tầng L2, lần đầu được soi)
+
+Tầng L2 (`world.py`) fail hai lần vì session limit; lần này chạy được và cho **cơ chế đúng hơn cả
+`L1-02` và cả suy luận của tôi**:
+
+> World **chỉ hỏi** kênh `rest_window` đúng vào lúc lan can số 1 của nó **cấm** hoãn: `GO_SWAP` sinh
+> ra **VÌ** pin thấp, mà lan can đầu tiên là *"pin thấp ⇒ không hoãn"* ⇒ **vị từ kích hoạt và lan can
+> loại trừ nhau**.
+
+Khớp đúng số đo của tôi: `soc_low` là blocker lớn nhất (**44,1%**). ⇒ Không phải "kênh yếu" cũng không
+phải "lan can trùng khít mọi đường" (`L1-02` nói quá) — mà là **một trong ba đường kích hoạt tự loại
+trừ với lan can của chính nó**. Hai đường còn lại (`REST`, `GO_CHARGE`) chết ở `window_past`/`no_window`.
+
+### 2f. `L5-07` — cổng hợp lệ bắt buộc của mọi arm A/B **CHƯA TỪNG được thi hành**
+
+> Không một artifact A/B nào ghi adherence: `parallel`/`sim_metrics`/`run_parallel` **không tham chiếu**
+> `adherence`·`followed`·`decided` một lần nào.
+
+Nghĩa là luật *"mọi arm phải báo kèm `decision_adherence` per archetype so với danh nghĩa; lệch > 0,02
+⇒ TREO kết quả"* là **một luật chỉ tồn tại trong tài liệu**. **CHƯA tôi kiểm** — nhưng nếu đúng thì nó
+giải thích vì sao `shift_extend` báo 1,000 suốt 39 artifact mà không cổng nào bắn.
 
 ## 2c. (lịch sử) Ba số đá nhau trước khi đo
 

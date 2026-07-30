@@ -51,6 +51,60 @@ def _agg(view) -> dict[str, dict]:
     return out
 
 
+# ---------- D-M3-01: cổng HAI PHÍA — pin adherence vào ground truth ĐỘC LẬP ----------
+
+
+def test_shift_extend_adherence_matches_coin_truth():
+    """`decision_adherence` phải khớp COIN, không chỉ "khác 1,0".
+
+    Vì sao cần test này dù `test_decision_level_matches_ground_truth` đã có: cổng ở đó
+    (`ext_adh < 0.99`) là **MỘT PHÍA**. Soi độc lập (`L5-06`) chỉ ra nó sẽ **xanh** trên một
+    con số sai theo chiều THẤP — và đúng như vậy: bản vá giữa kỳ của `D-M3-01` cho 0,394
+    trong khi sự thật 0,473 (**−7,9đp**), mà cổng một phía vẫn xanh.
+
+    Ground truth ở đây ĐỘC LẬP với event log: mỗi lần `coin_follows` được gọi là một lần
+    advisor NÓI, giá trị trả về là tài xế có nghe theo. Gộp theo QUYẾT ĐỊNH (bucket 30′ +
+    `material_revision`) — **cùng đơn vị** với `decision_adherence`.
+
+    ⚠ Đừng so với tỷ lệ theo LẦN HỎI (327/1051 = 0,311): trộn hai đơn vị cho ra "sai 3,2×"
+    thay vì 2,1× — chính lỗi mà bản đính chính đầu tiên mắc lại (`L5-05`).
+    """
+    from gsm_core.lifecycle.cadence import decision_bucket
+    from gsm_sim import advice_bridge as AB
+
+    decisions: dict[tuple, bool] = {}
+    orig = AB.AdviceActionBridge.coin_follows
+
+    def spy(self, actor, topic, now_min, material_revision, bucket_min=None):
+        out = orig(self, actor, topic, now_min, material_revision, bucket_min)
+        if topic == "shift_extend":
+            decisions[(actor.actor_id,
+                       decision_bucket(now_min, bucket_min), material_revision)] = out
+        return out
+
+    AB.AdviceActionBridge.coin_follows = spy
+    try:
+        r = run_once(_cfg_all(), seed=1000)
+    finally:
+        AB.AdviceActionBridge.coin_follows = orig
+
+    n_dec = len(decisions)
+    n_fol = sum(1 for v in decisions.values() if v)
+    assert n_dec > 0, "kênh shift_extend không nói lần nào — test mất ý nghĩa"
+    truth = n_fol / n_dec
+
+    agg = _agg(P.adherence_view(P.sim_events_to_lifecycle(r.events)))
+    reported = agg["shift_extend"]["followed"] / agg["shift_extend"]["decided"]
+
+    # HAI PHÍA: |báo − thật| nhỏ. 0,03 đủ chặt để bắt cả hai lỗi đã xảy ra thật
+    # (mẫu số hụt ⇒ +0,53đp; tử số hụt ⇒ −7,9đp) và đủ lỏng cho làm tròn bucket biên ca.
+    assert abs(reported - truth) < 0.03, (
+        f"adherence BÁO {reported:.3f} vs COIN {truth:.3f} "
+        f"(lệch {reported - truth:+.3f}) — thước đo lệch ground truth độc lập. "
+        f"Chiều DƯƠNG = mẫu số hụt (D-M3-01); chiều ÂM = tử số hụt (nhánh 'đồng ý nhưng "
+        f"bất khả thi' không được log). {n_fol}/{n_dec} quyết định theo coin.")
+
+
 # ---------- F-1 regression: khớp GROUND TRUTH của sim (đã sửa 66268cc) ----------
 
 def test_decision_level_matches_ground_truth(run_b, view_b):
@@ -64,10 +118,39 @@ def test_decision_level_matches_ground_truth(run_b, view_b):
     assert agg["shift_plan"]["decided"] == gt_given
     assert agg["shift_plan"]["followed"] == gt_follow
 
-    # shift_extend: chỉ log KHI đã hoãn ⇒ 100% followed
-    gt_ext = sum(1 for e in ev if e.kind == "advice_shift_extend")
-    assert agg["shift_extend"]["decided"] == gt_ext
-    assert agg["shift_extend"]["followed"] == gt_ext
+    # shift_extend: mẫu số = MỌI lần advisor nói; tử số = lần MANG CỜ followed.
+    #
+    # D-M3-01 (2026-07-30): bản trước của ba dòng này là
+    #     gt_ext = sum(1 for e in ev if e.kind == "advice_shift_extend")
+    #     assert agg["shift_extend"]["decided"]  == gt_ext
+    #     assert agg["shift_extend"]["followed"] == gt_ext
+    # — assert CẢ HAI bằng CÙNG MỘT biến đếm ⇒ **đồng nhất thức**, adherence = 1,0 luôn,
+    # test KHÔNG BAO GIỜ đỏ được. Tức chính test regression của họ lỗi F-1 ("mẫu số chỉ
+    # chứa người đã theo") lại KHẮC đúng lỗi đó thành kỳ vọng cho một kênh khác. Hai kênh
+    # bên trên/dưới (`shift_plan` :62-65, `positioning` :73-76) pin bằng HAI đại lượng
+    # khác nhau — đúng; chỉ kênh này bị pin tautology.
+    #
+    # Sự thật đo được (`scripts/probe_adherence_truth.py`, 3 seed, coverage=all): advisor
+    # nói 1051 lần, nghe theo 327 ⇒ adherence THẬT 0,311, trong khi event log cho 1,000
+    # ⇒ con số đã báo ("43/43 = 100% · Ground truth 100% ✓") thổi lên 2,1× so với đơn vị
+    # QUYẾT ĐỊNH (0,473). ⚠ 0,311 là đơn vị LẦN HỎI — trộn hai đơn vị cho ra 3,2× SAI.
+    gt_ext_decided = sum(1 for e in ev if e.kind == "advice_shift_extend")
+    gt_ext_followed = sum(1 for e in ev if e.kind == "advice_shift_extend"
+                          and e.detail.get("followed"))
+    assert agg["shift_extend"]["decided"] == gt_ext_decided
+    assert agg["shift_extend"]["followed"] == gt_ext_followed
+    # Cổng chống tái phát: adherence = 1,0 nghĩa là mẫu số chỉ chứa người đã theo.
+    # ⚠ KHÔNG được nới ngưỡng — nới là xoá đúng cái test này sinh ra để bắt.
+    #
+    # ⚠ Phải tính tỷ lệ TỪ HAI TỔNG, không đọc `agg["decision_adherence"]`: `_agg` cộng dồn
+    # MỌI trường số, nên trường đó là TỔNG TỶ LỆ của ~86 tài xế (đo được 28,67), không phải
+    # một tỷ lệ. Bản đầu của assert này đọc thẳng nó và báo "adherence 28,67" — lỗi đơn vị
+    # của test, không phải lỗi của code.
+    ext_adh = agg["shift_extend"]["followed"] / agg["shift_extend"]["decided"]
+    assert ext_adh < 0.99, (
+        f"adherence {ext_adh:.3f} ≈ 1,0 ⇒ mẫu số chỉ chứa người ĐÃ THEO (D-M3-01)")
+    # ⚠ Cổng trên là MỘT PHÍA: nó xanh trên một con số sai theo chiều THẤP. Cổng hai phía
+    # nằm ở `test_shift_extend_adherence_matches_coin_truth` — pin vào ground truth ĐỘC LẬP.
 
     # positioning: mẫu số = người ĐƯỢC GÁN (planner), không phải người đã theo
     assigned = sum(e.detail.get("n_assigned", 0) for e in ev if e.kind == "standby_planner")

@@ -22,6 +22,17 @@ from .entities import Actor, ActorState, BatteryInStation, FleetType, Station
 from .geo import Grid, cell_distance_km, grid_disk
 from .policy import PolicyBundle
 
+# D-M3-01: kind event cho các nhánh KHÔNG tự log của hai kênh từng thiếu mẫu số —
+# "đã NÓI mà không theo" và "đã theo nhưng thế giới không thi hành được".
+# CÙNG kind với nhánh đã-theo-thi-hành-được: khác nhau ở cờ `followed` + `reason`, KHÔNG khác
+# ở kind — `projections` gom mẫu số theo kind, nên tách kind ra là tách mẫu số khỏi tử số.
+# ⚠ Event ở nhánh này mang `added_min=0.0`: consumer đo ĐỘ LỚN can thiệp phải dùng
+# `added_min`, không dùng SỐ EVENT (xem `b0-A` trong advice_bridge.check_shift_extend).
+_SPOKEN_OUTCOME_KIND = {
+    "shift_extend": "advice_shift_extend",
+    "rest_window": "advice_rest_window",
+}
+
 
 @dataclass
 class Event:
@@ -719,7 +730,7 @@ class World:
             if added:
                 self.log(actor.actor_id, "advice_shift_extend", actor.cell,
                          added_min=round(added, 1), points=int(actor.points),
-                         new_shift_end=round(actor.shift_end_min, 1),
+                         new_shift_end=round(actor.shift_end_min, 1), followed=True,
                          decision_id=self._decision_id(actor.actor_id, "shift_extend", now),
                          channel="shift_extend")
 
@@ -803,11 +814,29 @@ class World:
                 if defer:
                     actor.rest_deferred_min += 2.0
                     self.log(actor.actor_id, "advice_rest_window", actor.cell,
-                             deferred_from=action.value, reason=why,
+                             deferred_from=action.value, reason=why, followed=True,
                              deferred_total_min=round(actor.rest_deferred_min, 1),
                              decision_id=self._decision_id(actor.actor_id, "rest_window", now),
                              channel="rest_window")
                     action, target = IdleAction.WAIT, None
+
+            # D-M3-01: kết cục của quyết định ĐÃ NÓI mà nhánh đó không tự log. Drain SAU cả hai
+            # chỗ gọi (`check_shift_extend` ở trên, `should_defer_rest` ngay trên) — drain
+            # sớm hơn thì bản ghi của tick này rơi sang tick sau.
+            #
+            # Không có nhánh này thì event của hai kênh đó chỉ tồn tại ở ca ĐÃ THEO ⇒ mẫu số
+            # adherence chỉ chứa người đã theo ⇒ `decision_adherence` = 1,0 THEO CẤU TRÚC.
+            # Đúng họ lỗi `F-1` (mẫu số `positioning` từng hụt) và `BUG-EVAL-ARGMAX`.
+            #
+            # `decision_id` tính từ `t_nf` (lúc NÓI), KHÔNG từ `now` (lúc drain), để trùng
+            # đúng quyết định ở nhánh đã-theo. Và KHÔNG có hậu tố `-sup`: đây không phải bị
+            # nén — advisor ĐÃ nói, tài xế nghe rồi không làm. Nó thuộc mẫu số.
+            for (t_nf, aid_nf, topic_nf, followed_nf, reason_nf) in \
+                    self.advice.drain_spoken_outcomes():
+                self.log(aid_nf, _SPOKEN_OUTCOME_KIND[topic_nf], "",
+                         channel=topic_nf, followed=followed_nf, reason=reason_nf,
+                         added_min=0.0,
+                         decision_id=self._decision_id(aid_nf, topic_nf, t_nf))
 
             if action == IdleAction.END_SHIFT:
                 actor.state = ActorState.OFFLINE
