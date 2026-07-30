@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import copy
 import statistics as st
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -60,6 +60,14 @@ class PairResult:
     b: dict          # ... ở World B
     system_a: dict   # metric hệ thống (guardrail)
     system_b: dict
+    # D-M3-10: adherence PHẢI nằm trong mọi PairResult. Luật "mọi arm báo kèm
+    # decision_adherence, lệch danh nghĩa > 0,02 ⇒ TREO" từng chỉ tồn tại trên giấy —
+    # đo được 2026-07-30: đường ống A/B tham chiếu `adherence` ĐÚNG 0 LẦN, và artifact
+    # 35–39 không có khoá nào. Đó là lý do `shift_extend` báo 1,000 (sự thật 0,473) suốt
+    # 39 artifact mà không cổng nào bắn. `adherence_b` là arm CÓ advice; `adherence_a` giữ
+    # cho arm đối chứng (bài học DET-01: arm đối chứng cũng phải được đo, không giả định sạch).
+    adherence_a: dict = field(default_factory=dict)
+    adherence_b: dict = field(default_factory=dict)
 
 
 def _cfg_with(cfg: Config, *, enabled: bool, actor_id: int | None,
@@ -196,7 +204,9 @@ def run_pair(cfg: Config, seed: int, channels: dict | None = None,
     aid = actor_id if actor_id is not None else pick_target(ra, archetype)
     rb = run_once(_cfg_with(cfg, enabled=True, actor_id=aid, channels=channels,
                             coverage=coverage), seed)
+    from .sim_metrics import adherence_audit
     return PairResult(seed=seed, actor_id=aid,
+                      adherence_a=adherence_audit(ra), adherence_b=adherence_audit(rb),
                       a=_driver_metrics(ra, aid), b=_driver_metrics(rb, aid),
                       system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid))
 
@@ -291,6 +301,7 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
     Hiệu năng: World A **chạy MỘT LẦN cho mỗi seed** rồi dùng lại cho mọi bậc — A không phụ
     thuộc cấu hình kênh. Ngây thơ chạy lại A ở từng bậc sẽ tốn gấp đôi mà kết quả y hệt.
     """
+    from .sim_metrics import adherence_audit
     cfg_a = _cfg_with(cfg, enabled=False, actor_id=None, channels=None)
     ra0 = run_once(cfg_a, seeds[0])
     aid = pick_target(ra0, archetype)
@@ -307,6 +318,40 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
             pairs.append(PairResult(
                 seed=s, actor_id=aid,
                 a=_driver_metrics(ra, aid), b=_driver_metrics(rb, aid),
-                system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid)))
+                system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid),
+                adherence_a=adherence_audit(ra), adherence_b=adherence_audit(rb)))
         out[name] = compare(pairs)
+        out[name]["adherence"] = aggregate_adherence(pairs)
     return out
+
+
+def aggregate_adherence(pairs: list[PairResult]) -> dict:
+    """Gộp adherence của arm B qua các seed + cổng BẤT KHẢ (`D-M3-10`).
+
+    Vì sao phải gộp thay vì lấy per-seed: ngưỡng 0,02 của luật gốc là ngưỡng cho TỔNG.
+    Với ~250 quyết định/seed, sai số chuẩn lấy mẫu ≈ 0,03 ⇒ cổng 0,02 mỗi seed sẽ bắn
+    liên tục vì NHIỄU, và người sửa sẽ nới ngưỡng thay vì sửa lỗi (mẫu đã thấy ở `D-R20`).
+
+    Cổng BẤT KHẢ thì áp per-seed được, vì nó không phải phép kiểm thống kê:
+    `decision_adherence` đúng 1,0 hay 0,0 trên mẫu số ≥20 là dấu hiệu mẫu số/tử số hụt.
+    """
+    tot: dict[str, dict] = {}
+    flags: list[str] = []
+    for pr in pairs:
+        for ch, r in (pr.adherence_b.get("by_channel") or {}).items():
+            row = tot.setdefault(ch, {"decided": 0, "followed": 0,
+                                      "event_decided": 0, "event_followed": 0})
+            for k in row:
+                row[k] += int(r.get(k) or 0)
+        for f in pr.adherence_b.get("flags") or []:
+            msg = f"seed {pr.seed}: {f}"
+            if msg not in flags:
+                flags.append(msg)
+    for r in tot.values():
+        r["decision_adherence"] = (r["followed"] / r["decided"]) if r["decided"] else None
+        r["event_adherence"] = ((r["event_followed"] / r["event_decided"])
+                                if r["event_decided"] else None)
+    return {"by_channel": tot, "flags_per_seed": flags,
+            # ⚠ ĐỌC CÁI NÀY TRƯỚC KHI TIN Δ CỦA ARM: có flag ⇒ thước đo của arm đó hỏng
+            # ⇒ TREO kết quả, không phải "ghi chú nhỏ" (D-M3-10).
+            "verdict": "TREO — thước đo hỏng" if flags else "OK"}

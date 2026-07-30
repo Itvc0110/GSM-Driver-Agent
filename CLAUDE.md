@@ -29,7 +29,7 @@ Scope hiện hành: đọc `planning/SCOPE.md`. Luồng dự kiến: `flow image
 | `src/gsm_sim/` | Simulator/twin-world engine (world, dispatcher, actors, parallel A/B/C, dashboard) |
 | `schemas/` | JSON Schema đa phiên bản (`{entity}@{ver}.schema.json`) + `CHANGELOG.md` |
 | `configs/pilot_dongda.yaml` | Config pilot hiện hành (actors, dispatcher, positioning, policy costs) — nguồn sự thật cho mọi số cấu hình sim |
-| `tests/` | **799 test** (2026-07-30). ⚠ **`pytest -q` từ root CHỈ thu thư mục này** (`pyproject.toml` `testpaths = ["tests"]`) ⇒ **BỎ 56 test ở `ui/backend/tests/`**. Suite đầy đủ = **855** (799 + 56). Muốn nói "suite xanh" thì phải chạy **CẢ HAI**: `uv run pytest -q` **và** `uv run pytest -q ui/backend/tests`. Bẫy này đã làm một con số suite bị báo thiếu 56 test |
+| `tests/` | **809 test** (2026-07-30). ⚠ **`pytest -q` từ root CHỈ thu thư mục này** (`pyproject.toml` `testpaths = ["tests"]`) ⇒ **BỎ 56 test ở `ui/backend/tests/`**. Suite đầy đủ = **865** (809 + 56). Muốn nói "suite xanh" thì phải chạy **CẢ HAI**: `uv run pytest -q` **và** `uv run pytest -q ui/backend/tests`. Bẫy này đã làm một con số suite bị báo thiếu 56 test |
 | `ui/` | `backend/` FastAPI chung, `web/` (Track UI), `driver_app/` (Flutter của Khánh), `contracts/` (JSON Schema versioned + design tokens) |
 | `scripts/` | Script vận hành/regen/verify (vd `regen_mock.py`, `run_parallel.py`, `build_data_catalog.py`) |
 | `data/` | Mock data (gitignored telemetry/parquet); không commit data thật |

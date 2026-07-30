@@ -198,6 +198,82 @@ IDENTICAL ⇒ không đổi dynamics, không đổi output số nào của sim, 
 là **thước đo adherence**, và nó đổi theo hướng ĐÚNG (khớp ground truth độc lập).
 ⚠ Khi `L1-04` được làm thì visual gate **CÓ** áp dụng — đó là thay đổi hành vi.
 
+## 10. 🔴 `D-M3-10` — LÀM LUÔN trong cùng cycle, vì nó là NGUYÊN NHÂN GỐC
+
+Sửa `D-M3-01` mà không nối cổng thì lần sau lỗi cùng loại lại sống 39 artifact nữa. Nên tôi làm
+luôn, và nó là phần **giá trị lâu dài nhất** của cycle này.
+
+### 10.1 Vấn đề: một cổng chỉ tồn tại trên giấy
+
+Luật đã viết từ lâu: *"mọi arm phải báo kèm `decision_adherence` per archetype so với danh nghĩa;
+lệch > 0,02 ⇒ **TREO** kết quả"*. Đo được:
+
+| Kiểm | Kết quả |
+| --- | --- |
+| `parallel.py` · `sim_metrics.py` · `scripts/run_parallel.py` tham chiếu `adherence`/`followed`/`decided` | **0 lần** |
+| Artifact 35–39 có khoá `adherence` | **không có khoá nào** |
+
+⇒ **Đây là lý do trực tiếp `D-M3-01` sống được qua 39 artifact.** Cổng được thiết kế để bắt đúng
+loại lỗi đó, nhưng không có một dòng code nào.
+
+### 10.2 Đã nối
+
+| Chỗ | Gì |
+| --- | --- |
+| `sim_metrics.adherence_audit()` | `decided/followed/adherence` theo **kênh** và theo **(kênh × archetype)** — đọc `projections.adherence_view`, **không** tự cài lại phép đếm (chống lỗi "hai nguồn sự thật" của `D-SIM-09`) |
+| `sim_metrics.adherence_flags()` | Cổng **BẤT KHẢ**: adherence đúng 1,0 / 0,0 trên mẫu số ≥20 · `decided=0` · `event_decided=0` trong khi `decided>0` |
+| `PairResult.adherence_a/_b` | adherence của **CẢ HAI** arm — bài học `DET-01`: arm đối chứng phải được **đo**, không **giả định** sạch |
+| `run_ladder` → `out[step]["adherence"]` | `by_channel` + `flags_per_seed` + **`verdict`** (`"TREO — thước đo hỏng"` / `"OK"`) ⇒ artifact tự mang phán quyết |
+| `tests/test_adherence_gate.py` | **9 test** |
+
+### 10.3 Hai loại cổng — và vì sao KHÔNG được gộp
+
+| | Loại | Áp ở đâu | Lý do |
+| --- | --- | --- | --- |
+| (1) | **BẤT KHẢ** (hard) | **per-seed** | Không phải phép kiểm thống kê. adherence đúng 1,0 trên 101 quyết định là **bất khả với coin ngẫu nhiên** |
+| (2) | **THỐNG KÊ** (soft) | **TỔNG nhiều seed** | ⚠ Ngưỡng **0,02 của luật gốc KHÔNG áp per-seed được**: với ~250 quyết định, SE lấy mẫu ≈ **0,03** ⇒ cổng 0,02 mỗi seed **bắn liên tục vì NHIỄU**, và người sửa sẽ **nới ngưỡng thay vì sửa lỗi** — đúng mẫu `D-R20` |
+
+Đã ghi lý do đó **vào code**, không chỉ vào UPDATE — vì người nới ngưỡng trong tương lai sẽ đọc code
+chứ không đọc UPDATE này.
+
+### 10.4 Chứng minh cổng ĐỎ ĐƯỢC (bài học `L5-04`)
+
+Tạm hoàn nguyên `_ALWAYS_FOLLOWED` về trạng thái lỗi cũ ⇒ cổng bắn ngay:
+
+```
+🔴 shift_extend: decision_adherence = 1,000 trên 101 quyết định — BẤT KHẢ với coin ngẫu nhiên;
+   dấu hiệu mẫu số chỉ chứa người ĐÃ THEO (D-M3-01)
+```
+
+Và `test_gate_catches_d_m3_01_denominator_bug` dựng lại đúng trạng thái đó trong test, nên nó
+**không thể mục lặng lẽ**. Kèm `test_gate_does_not_cry_wolf_on_small_denominator`: mẫu số < 20 thì
+1,0 **có thể là may mắn thật** ⇒ không được bắn, nếu không cổng sẽ bị tắt vì nhiễu.
+
+### 10.5 Behavior-neutral + suite
+
+Fingerprint per-actor 3 ladder × 5 seed: **15/15 IDENTICAL** so với trạng thái ngay trước khi thêm
+`D-M3-10`. Đúng như phải vậy — `adherence_audit` chỉ **đọc** `result.events`.
+
+Full suite **CẢ HAI lệnh** (`D-M3-09`), sau khi đã có mọi thay đổi của cycle:
+
+| Lệnh | Kết quả |
+| --- | --- |
+| `uv run pytest -q` | **804 passed · 5 skipped** (24′54″) — khớp 809 thu thập |
+| `uv run pytest -q ui/backend/tests` | **56 passed** |
+| **Tổng** | **860 passed / 5 skipped / 0 failed** |
+
+Suite đi từ 850 → **860**: +1 cổng hai phía (`D-M3-01`) + 9 test cổng adherence (`D-M3-10`).
+
+### 10.6 Điều `D-M3-10` KHÔNG giải quyết
+
+- Cổng **thống kê** (so danh nghĩa, tolerance) **chưa nối** — chỉ có cổng BẤT KHẢ. Cần một quyết định
+  về tolerance đúng cho từng cỡ mẫu; nối một ngưỡng sai còn tệ hơn không nối (nó sẽ bị tắt).
+- `control_arm_effective_adherence` mà `T-047` §2.7 đòi: `adherence_a` **có** trong `PairResult` nhưng
+  arm A tắt advice nên nó rỗng. Trường hợp `DET-01` thật (arm `cadence=off` **có** advice) là arm B
+  variant ⇒ đã được `adherence_b` phủ. Ghi ra đây để không ai tưởng `adherence_a` rỗng là bug.
+- Artifact **31–39 cũ không có** adherence và **không hồi tố được** — chúng phải giữ nhãn "đo bằng
+  thước chưa được kiểm".
+
 ## 9. ⏳ NHẮC LẠI PENDING-REVIEW (lệ CLAUDE.md §3.1 — hoãn ≠ waive)
 
 Còn mở: **V-01…V-14** (14 mục visual/data) · **V-18** (nhịp nói advisor, UPDATE-099) · mục ❓ và ⛔

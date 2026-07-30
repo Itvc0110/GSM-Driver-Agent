@@ -304,3 +304,97 @@ def system_guardrail(result) -> dict:
     # A/B: số giờ "đói cung" (>40% đơn hết hạn trong giờ đó). Không định nghĩa lại — gọi hàm gốc.
     out["starved_hours_n"] = len(supply_demand_density(result)["starved_hours"])
     return out
+
+
+# ---------------------------------------------------------------------------
+# D-M3-10: CỔNG HỢP LỆ CỦA MỌI ARM A/B — adherence phải nằm TRONG artifact
+#
+# Luật đã có từ lâu trong tài liệu: *"mọi arm phải báo kèm `decision_adherence` per
+# archetype so với danh nghĩa; lệch > 0,02 ⇒ TREO kết quả"*. Đo được 2026-07-30:
+# `parallel.py` / `sim_metrics.py` / `scripts/run_parallel.py` tham chiếu
+# `adherence`/`followed`/`decided` **ĐÚNG 0 LẦN**, và artifact 35–39 **không có khoá
+# `adherence` nào**. Tức cổng chỉ tồn tại trên giấy.
+#
+# Đó là LÝ DO TRỰC TIẾP `D-M3-01` sống được qua 39 artifact: `shift_extend` báo
+# `decision_adherence = 1,000` (sự thật 0,473) suốt 39 lần mà không cổng nào bắn.
+# ---------------------------------------------------------------------------
+
+# Hai loại cổng, và chúng KHÁC NHAU về bản chất — đừng gộp:
+#
+#   (1) BẤT KHẢ (hard, per-seed): trạng thái không thể đúng dù nhiễu thế nào.
+#       `decision_adherence` đúng bằng 1,0 hoặc 0,0 trên mẫu số đủ lớn là dấu hiệu
+#       mẫu số/tử số hụt, KHÔNG phải may mắn thống kê. Cổng này bắt `D-M3-01` ngay
+#       từ artifact đầu tiên nếu nó đã tồn tại.
+#   (2) THỐNG KÊ (soft, aggregate): |đo − danh nghĩa| > tolerance.
+#       ⚠ Ngưỡng 0,02 của luật gốc **KHÔNG áp per-seed được**: với ~250 quyết định,
+#       sai số chuẩn lấy mẫu ≈ 0,03 ⇒ cổng 0,02 mỗi seed sẽ bắn liên tục vì NHIỄU.
+#       Nó chỉ có nghĩa trên TỔNG nhiều seed. Ghi rõ ở đây để người sau không "sửa"
+#       bằng cách nới ngưỡng.
+IMPOSSIBLE_ADHERENCE_MIN_DENOM = 20     # dưới mức này thì 1,0/0,0 có thể là may mắn thật
+
+
+def adherence_audit(result, run_id: str | None = None) -> dict:
+    """`decided/followed/adherence` theo KÊNH và theo (kênh × archetype).
+
+    Đọc `projections.adherence_view` — **không** tự cài lại phép đếm (chống lỗi
+    "hai nguồn sự thật" mà `D-SIM-09` đã trả giá).
+
+    Trả `{"by_channel": {...}, "by_channel_archetype": {...}, "flags": [...]}`.
+    `flags` rỗng = không phát hiện trạng thái bất khả.
+    """
+    from gsm_core.lifecycle import projections as P
+
+    view = P.adherence_view(P.sim_events_to_lifecycle(result.events, run_id)
+                            if run_id else P.sim_events_to_lifecycle(result.events))
+    arche = {str(a.actor_id): a.archetype for a in result.actors}
+
+    by_ch: dict[str, dict] = {}
+    by_ch_ar: dict[str, dict] = {}
+    for (_run, drv, topic), v in view.items():
+        if topic is None:
+            continue
+        for bucket, key in ((by_ch, topic),
+                            (by_ch_ar, f"{topic}|{arche.get(str(drv), '?')}")):
+            row = bucket.setdefault(key, {"decided": 0, "followed": 0, "dismissed": 0,
+                                          "suppressed": 0, "event_decided": 0,
+                                          "event_followed": 0})
+            for k in row:
+                row[k] += int(v.get(k) or 0)
+
+    for bucket in (by_ch, by_ch_ar):
+        for row in bucket.values():
+            row["decision_adherence"] = (row["followed"] / row["decided"]
+                                         if row["decided"] else None)
+            row["event_adherence"] = (row["event_followed"] / row["event_decided"]
+                                      if row["event_decided"] else None)
+
+    return {"by_channel": by_ch, "by_channel_archetype": by_ch_ar,
+            "flags": adherence_flags(by_ch)}
+
+
+def adherence_flags(by_channel: dict) -> list[str]:
+    """Cổng BẤT KHẢ (loại 1): trạng thái không thể đúng dù nhiễu thế nào.
+
+    Mỗi flag là một câu nói rõ **cái gì** sai và **vì sao nó bất khả** — để người đọc
+    artifact không phải tra cứu. Có flag ⇒ kết quả arm đó phải bị TREO, không phải
+    "ghi chú nhỏ".
+    """
+    out: list[str] = []
+    for ch, r in sorted(by_channel.items()):
+        d, adh = r["decided"], r["decision_adherence"]
+        if d == 0:
+            out.append(f"{ch}: decided=0 — kênh có event nhưng KHÔNG có quyết định nào "
+                       f"vào mẫu số (mẫu số RỖNG, không phải 'thiếu')")
+            continue
+        if d < IMPOSSIBLE_ADHERENCE_MIN_DENOM:
+            continue                      # mẫu số quá nhỏ: 1,0/0,0 có thể là may mắn thật
+        if adh is not None and adh >= 1.0:
+            out.append(f"{ch}: decision_adherence = 1,000 trên {d} quyết định — BẤT KHẢ với "
+                       f"coin ngẫu nhiên; dấu hiệu mẫu số chỉ chứa người ĐÃ THEO (D-M3-01)")
+        if adh is not None and adh <= 0.0:
+            out.append(f"{ch}: decision_adherence = 0,000 trên {d} quyết định — BẤT KHẢ; "
+                       f"dấu hiệu tử số không được ghi")
+        if r["event_decided"] == 0 and r["decided"] > 0:
+            out.append(f"{ch}: event_decided=0 trong khi decided={d} — một nửa bộ đo "
+                       f"hai-đơn-vị chết im lặng (event_adherence sẽ là None)")
+    return out
