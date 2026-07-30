@@ -121,8 +121,12 @@ Chọn 4 vì family-wise trên **28 ô** (4 kênh × 7 archetype):
 Đó là điều kiện để cổng **không bị tắt vì nhiễu** — nguyên nhân đã giết ngưỡng 0,02.
 
 **Acceptance (phải chứng minh được, không chỉ mô tả):**
-1. Arm dựng adherence lệch danh nghĩa **0,10** ở n≥250 ⇒ **TREO**.
-2. Arm lệch **0,01** ở n≥250 ⇒ **OK** (không bắn oan).
+⚠ *Đính chính 2026-07-30 khi thi công:* bản đầu viết "lệch 0,10 ở **n≥250** ⇒ TREO" — **tự mâu
+thuẫn với ngưỡng 4 vừa dẫn xuất**: z = 0,10/√(0,25/250) = **3,16 < 4**, không bắn. Chính bảng z ở
+trên đã nói điều đó; người viết acceptance (tôi) không tính lại từng ca. Sửa theo toán: cần
+n ≥ (2/0,10)² = **400** cho lệch 0,10 chạm z=4 ⇒ dùng n=500.
+1. Arm dựng adherence lệch danh nghĩa **0,10** ở **n=500** ⇒ **TREO** (z ≈ 4,47).
+2. Arm lệch **0,01** ở n=500 ⇒ **OK** (z ≈ 0,45 — không bắn oan).
 3. Dựng lại đúng trạng thái `D-M3-01` (adherence 1,000) ⇒ **TREO**, và z báo ra ≈10.
 4. Một kênh chỉ chạm **P3/P5** (p=0,30) với adherence đo 0,30 ⇒ **OK** — chứng minh null theo hỗn hợp
    archetype, không theo trung bình toàn đội. Đây là test mà bootstrap **không** vượt được.

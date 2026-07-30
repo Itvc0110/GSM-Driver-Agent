@@ -398,3 +398,82 @@ def adherence_flags(by_channel: dict) -> list[str]:
             out.append(f"{ch}: event_decided=0 trong khi decided={d} — một nửa bộ đo "
                        f"hai-đơn-vị chết im lặng (event_adherence sẽ là None)")
     return out
+
+
+# ---------------------------------------------------------------------------
+# D-M3-10 cổng THỐNG KÊ — chốt 2026-07-30 (UPDATE-103 §3, Cường duyệt nguyên tắc):
+# kiểm định z Poisson-binomial PHÂN TÍCH, không bootstrap, TREO khi |z| > 4.
+#
+# Vì sao không bootstrap: ta BIẾT CHÍNH XÁC phân phối null — mỗi quyết định i là
+# Bernoulli(p_i) với p_i = adherence danh nghĩa của archetype của CHÍNH tài xế đó.
+# Bootstrap resample các quyết định ĐÃ QUAN SÁT nên coi mọi quyết định là trao đổi
+# được; công thức đóng thì không — nó tự xử lý HỖN HỢP ARCHETYPE: một kênh chỉ chạm
+# P3/P5 (p=0,30) có null là 0,30, không phải trung bình toàn đội.
+#
+# Vì sao |z| > 4 (DẪN XUẤT, không chọn bừa — UPDATE-103 §3):
+#   - lỗi thật D-M3-01 (adherence 1,000 trên 101 QĐ, mu 0,500) cho z = 10 ⇒ biên 2,5×;
+#   - "lệch 0,02" của luật cũ là 0,40σ ở n=100 và 2,83σ ở n=5000 ⇒ ngưỡng cố định
+#     trên hiệu tuyệt đối không thể đúng ở cả hai đầu — đó là lý do luật cũ chết;
+#   - family-wise trên 28 ô (4 kênh × 7 archetype): >3,0 = 7,29% (quá ồn, sẽ bị tắt);
+#     >4,0 = 0,18%; >4,5 = 0,02% (chặt hơn mức cần).
+# ⚠ ĐỪNG NỚI ngưỡng này khi nó bắn — nó bắn oan 0,18%/lần chạy; nếu nó bắn thì gần
+# chắc chắn thước đo hỏng, không phải nhiễu (mẫu D-R20: người sửa nới ngưỡng thay
+# vì sửa lỗi).
+# ---------------------------------------------------------------------------
+
+ADHERENCE_Z_MAX = 4.0
+STAT_GATE_MIN_DENOM = 20      # dưới mức này phương sai ước lượng quá thô — bỏ qua ô
+
+
+def poisson_binomial_z(followed: int, ps: list[float]) -> float:
+    """z của `followed` so với null Poisson-binomial xác định bởi `ps`.
+
+    `ps[i]` = xác suất nghe theo DANH NGHĨA của quyết định i (theo archetype của tài
+    xế ra quyết định đó). Điều kiện dùng được công thức đóng: các quyết định độc lập —
+    ĐÚNG với coin keyed sha256 (`adherence_coin`): seed nằm trong khoá ⇒ độc lập giữa
+    khoá và giữa seed.
+    """
+    n = len(ps)
+    if n == 0:
+        return 0.0
+    mu = sum(ps)
+    var = sum(p * (1.0 - p) for p in ps)
+    if var <= 0.0:                # danh nghĩa 0 hoặc 1 tuyệt đối — z vô nghĩa
+        return 0.0
+    return (float(followed) - mu) / (var ** 0.5)
+
+
+def adherence_stat_flags(by_channel_archetype: dict, nominal: dict[str, float]) -> list[str]:
+    """Cổng THỐNG KÊ trên các ô (kênh × archetype) + tổng hợp theo KÊNH.
+
+    Input đúng dạng `adherence_audit(...)["by_channel_archetype"]` (khoá `"kênh|arche"`).
+    `nominal` = adherence danh nghĩa theo archetype (`advice_bridge.DEFAULT_ADHERENCE`).
+    Trả list câu TREO — rỗng nghĩa là không ô/kênh nào lệch null quá |z| > 4.
+    """
+    out: list[str] = []
+    per_channel: dict[str, tuple[int, list[float]]] = {}
+    for key, row in sorted(by_channel_archetype.items()):
+        ch, _, arche = key.partition("|")
+        p = nominal.get(arche)
+        d, f = int(row.get("decided") or 0), int(row.get("followed") or 0)
+        if p is None or d == 0:
+            continue                      # archetype lạ: không có null để so — cổng BẤT KHẢ lo phần denom
+        fol, ps = per_channel.get(ch, (0, []))
+        per_channel[ch] = (fol + f, ps + [p] * d)
+        if d < STAT_GATE_MIN_DENOM:
+            continue
+        z = poisson_binomial_z(f, [p] * d)
+        if abs(z) > ADHERENCE_Z_MAX:
+            out.append(f"{key}: adherence {f}/{d} = {f / d:.3f} vs danh nghĩa {p:.2f} — "
+                       f"z = {z:+.1f} (|z| > {ADHERENCE_Z_MAX:.0f}) ⇒ TREO: thước đo lệch "
+                       f"null quá mức nhiễu cho phép")
+    for ch, (fol, ps) in sorted(per_channel.items()):
+        if len(ps) < STAT_GATE_MIN_DENOM:
+            continue
+        z = poisson_binomial_z(fol, ps)
+        if abs(z) > ADHERENCE_Z_MAX:
+            mu = sum(ps) / len(ps)
+            out.append(f"{ch} (gộp hỗn hợp archetype): adherence {fol}/{len(ps)} = "
+                       f"{fol / len(ps):.3f} vs null Poisson-binomial mu={mu:.3f} — "
+                       f"z = {z:+.1f} ⇒ TREO")
+    return out
