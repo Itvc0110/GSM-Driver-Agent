@@ -108,5 +108,60 @@ Hai vòng soi đối kháng tìm ra **ba confound** trong arm đối chứng `ca
 **Lưới 2×2 (30 seed, cả 5 arm):** `ON_all` +5.624 · `OFF_all` +8.488 · `ON_nosp` +7.173 · `OFF_nosp` +6.789 · `ON_pos_only` +4.469. ⇒ bỏ `shift_plan` khi cadence ON **+1.549đ**, khi OFF **−1.700đ** (ĐẢO DẤU so với −25đ của lưới cũ) ⇒ **tương tác +3.249đ**. Giá của nhịp khi CÓ `shift_plan` −2.865đ, khi KHÔNG **+384đ**.
 ⇒ **Toàn bộ chi phí của nhịp tập trung ở tương tác với `shift_plan`** — nhịp tự nó gần như miễn phí. ⚠ Các hiệu số này là hiệu của ĐIỂM ƯỚC LƯỢNG (không lưu per-seed cho 4 ô ⇒ **không có CI**); chỉ ước lượng ghép cặp n=100 mới có CI hợp lệ.
 
+## ✅ `38-e5-2x2-perseed-n100.json` — lưới 2×2 lần đầu CÓ CI (thêm 2026-07-29)
+
+Đóng đúng lỗ hổng mà artifact 37 tự ghi ra ở trên: 100 seed (4200–4299) × **4 world/seed**,
+**lưu per-seed cả 4 ô** rồi bootstrap ⇒ tương tác có CI hợp lệ.
+
+| Ước lượng (`net_mean_all`, đ/tài xế/ngày) | mean | CI95 | |
+| --- | --- | --- | --- |
+| **TƯƠNG TÁC ngân sách FIFO** | **+2.207** | [+1.077, +3.372] | **SIG** |
+| Giá của nhịp **khi CÓ** `shift_plan` | −2.466 | [−3.420, −1.570] | **SIG** |
+| Giá của nhịp **khi KHÔNG có** `shift_plan` | **−259** | [−1.111, **+589**] | **ns** |
+| Bỏ `shift_plan` khi nhịp BẬT | +2.259 | [+1.161, +3.323] | **SIG** |
+| Bỏ `shift_plan` ở TRẦN (nhịp tắt) | **+53** | [−974, +1.102] | **ns** |
+
+Tương tác cũng SIG trên: `gini_payout` +0,0043 · `served_rate` +0,52đp · `orders_completed`
++6,28 · `expired_n` −7,33 · `others_payout` +195.979đ.
+
+**Hai đính chính mà artifact này bắt buộc:**
+
+1. *"Nhịp tự nó gần như miễn phí"* — trước chỉ là **điểm ước lượng +384đ**; nay là
+   **−259đ với CI trùm 0** ⇒ có bằng chứng thống kê rằng **không phân biệt được với 0**.
+   Chi phí của nhịp **không** nằm ở việc advisor nói ít, mà ở **cách chia ngân sách**.
+2. **`−1.700đ` ở dòng trên là NHIỄU n=30 — đã bị bác.** Ở n=100, bỏ `shift_plan` ở trần chỉ
+   **+53đ ns** ⇒ `shift_plan` **trung tính khi đứng một mình**, KHỚP kết luận ĐA-07, không
+   ngược. Nhưng nó **độc hại dưới ngân sách FIFO** (+2.259đ SIG) vì chiếm suất của kênh có
+   tác dụng ⇒ ĐA-07 giữ TẮT là đúng, với lý do mạnh hơn lý do ban đầu.
+
+⇒ Artifact được phép trích cho quyết định về **độ lớn tương tác**: **38** (không phải 34/37).
+
+## ✅ `39-da07-recheck-tran-n100.json` — phép đo ĐỘC LẬP xác nhận artifact 38 (thêm 2026-07-29)
+
+Cùng câu hỏi (`shift_plan` đáng bao nhiêu ở TRẦN, nhịp TẮT), **bộ seed khác**, ước lượng ghép cặp
+riêng, n=100:
+
+| Ước lượng | mean | CI95 | |
+| --- | --- | --- | --- |
+| **GIÁ TRỊ của `shift_plan`** (có − không, ở trần) | **−451đ** | [−1.499, +608] | **ns** |
+| Trần giá trị advisor, đủ kênh (`all` − A) | +7.666đ | [+6.615, +8.662] | **SIG** |
+| Trần giá trị advisor, bỏ `shift_plan` (`nosp` − A) | **+8.117đ** | [+7.022, +9.232] | **SIG** |
+
+`served_rate` +2,48đp → +2,67đp · `orders_completed` +29,8 → +32,0 · `expired_n` −32,5 → −34,3
+(tất cả SIG); riêng phần đóng góp của `shift_plan` trên MỌI chỉ tiêu đều **ns**.
+
+**Hai phép đo độc lập nay KHỚP NHAU** — đây là điều n=30 không cho được:
+
+| | artifact 38 (seed 4200–4299) | artifact 39 (seed khác) |
+| --- | --- | --- |
+| `shift_plan` đứng một mình | **+53đ ns** (bỏ nó) | **−451đ ns** (có nó) |
+| Kết luận | trung tính | trung tính |
+
+⇒ `D-ĐA07-recheck` **ĐÓNG**. Ô **−1.700đ** của lưới n=30 là **nhiễu**, đã bị hai phép đo n=100 độc
+lập bác. ĐA-07 (*"`shift_plan` không hiệu quả ⇒ giữ TẮT"*) **đúng**, và lý do mạnh hơn lý do ban
+đầu: kênh **trung tính khi đứng một mình** nhưng **độc hại dưới ngân sách FIFO** (+2.259đ SIG khi
+bỏ nó lúc nhịp bật). Và ở n=100 thì **bỏ nó còn hơi TỐT hơn** (+8.117 vs +7.666), ngược hẳn thứ tự
+của lưới n=30 (6.789 < 8.488).
+
 **Cái KHÔNG đổi qua mọi bước:** `gini_payout` −0,0051 SIG — kết luận *"nhịp mua công bằng bằng tiền"* vững; chỉ GIÁ là thứ bị báo cao hơn thực tế. Thêm `D-R08`: con số "2.670 lần bị nén" cũng phóng đại ~47% vì ba kênh đếm "bị nén" trước khi biết có nội dung khuyên hay không.
 

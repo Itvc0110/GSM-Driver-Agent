@@ -35,7 +35,8 @@ bằng ĐÚNG MỘT NỬA con số tôi đã báo (−3.048đ).** Chiều kết 
 sai gấp đôi**.
 
 Và lưới 2×2 đo lại đổi luôn câu trả lời: **không có `shift_plan`, nhịp gần như MIỄN PHÍ
-(+384đ)**; toàn bộ chi phí nằm ở **tương tác với `shift_plan` (+3.249đ)**. Tức **nhịp không
+(n=100: **−259đ, CI trùm 0** — artifact 38)**; toàn bộ chi phí nằm ở **tương tác với
+`shift_plan`: +2.207đ CI[1.077, 3.372] SIG**. Tức **nhịp không
 đắt — cách chia ngân sách FIFO mới đắt**. Ở **config ship** (chỉ `positioning`, kênh nằm ngoài
 hệ thống cadence) nhịp tốn **≈ 0đ**. Hệ quả: `D-ĐA04-03` mạnh lên chứ không yếu đi như tôi
 đoán ở PLAN draft.
@@ -399,7 +400,25 @@ hai phía):
 - ⇒ **Ở CONFIG SHIP, nhịp tốn ≈ 0đ**: chỉ `positioning` bật, mà kênh đó nằm ngoài hệ thống
   cadence hoàn toàn (`ON_pos_only` +4.469đ, không bị cổng nào chạm).
 
-⚠ **Giới hạn phải nói rõ:** các hiệu số trong bảng (+1.549 / −1.700 / +3.249 / +384) là hiệu
+### ✅ ĐÃ ĐÓNG giới hạn này — `38-e5-2x2-perseed-n100.json` (n=100, per-seed, CÓ CI)
+
+| Ước lượng | mean | CI95 | |
+| --- | --- | --- | --- |
+| **TƯƠNG TÁC ngân sách FIFO** | **+2.207đ** | [+1.077, +3.372] | **SIG** |
+| Giá của nhịp **khi CÓ** `shift_plan` | −2.466đ | [−3.420, −1.570] | **SIG** |
+| Giá của nhịp **khi KHÔNG có** `shift_plan` | **−259đ** | [−1.111, +589] | **ns** |
+| Bỏ `shift_plan` khi nhịp BẬT | +2.259đ | [+1.161, +3.323] | **SIG** |
+| Bỏ `shift_plan` ở TRẦN | **+53đ** | [−974, +1.102] | **ns** |
+
+- Luận điểm chính **giữ nguyên và mạnh hơn**: nhịp tự nó **không tốn tiền có ý nghĩa**
+  (−259đ, CI trùm 0 — không chỉ là điểm ước lượng dương nhẹ như +384đ ở n=30).
+- **Nhưng ô `OFF_nosp` −1.700đ bên trên là NHIỄU n=30 và bị bác:** n=100 cho **+53đ ns**.
+  ⇒ `shift_plan` **trung tính** khi đứng một mình (khớp ĐA-07), **độc hại** khi phải chia
+  ngân sách FIFO (+2.259đ SIG). `D-ĐA07-recheck` **giải quyết theo hướng ủng hộ ĐA-07**.
+- Đây là bằng chứng mạnh nhất tới nay cho `D-ĐA04-03`: **toàn bộ chi phí của nhịp là chi phí
+  của FIFO**, và nó SIG với CI không chứa 0.
+
+⚠ **Giới hạn (đã đóng, giữ lại để đối chiếu):** các hiệu số trong bảng (+1.549 / −1.700 / +3.249 / +384) là hiệu
 của các **điểm ước lượng**; tôi chỉ lưu khối tổng hợp cho 4 ô này nên **không có CI cho chúng**.
 Con số duy nhất có CI hợp lệ là ước lượng ghép cặp n=100: **−1.530đ CI[−2.401, −673]**. Muốn
 kết luận về ĐỘ LỚN của tương tác thì phải lưu per-seed cho cả 4 ô rồi bootstrap — chưa làm.

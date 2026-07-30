@@ -70,10 +70,9 @@ bằng `test_coin_is_keyed_even_when_cadence_off` và `test_one_decision_one_eff
 cách phát biểu đúng, và nó làm `D-ĐA04-03` (chia ngân sách) thành việc đáng làm nhất — vì phần
 lớn chỗ mất đó là do FIFO, không do bản thân việc nói ít.
 
-⚠ `OFF_nosp` **< `OFF_all`** (6.789 < 8.488) ⇒ ở trần, `shift_plan` **có giá trị** (+1.700đ).
-Điều này **ngược** với kết luận ĐA-07 ("shift_plan âm, giữ TẮT"). Không đủ để đảo ĐA-07 (khác
-kịch bản, khác n, và ĐA-07 dựa trên n=100), nhưng **phải ghi lại như một mâu thuẫn cần giải**
-— xem `D-ĐA07-recheck` ở §6.
+⚠ ~~`OFF_nosp` < `OFF_all` ⇒ ở trần `shift_plan` có giá trị +1.700đ, ngược ĐA-07~~ —
+**ĐÃ GIẢI, con số đó là nhiễu n=30.** E5 ở n=100 cho **+53đ ns** ⇒ `shift_plan` trung tính khi
+đứng một mình, KHỚP ĐA-07. Xem §4c.
 
 ## 4b. 🔬 BẪY PHẢN CHỨNG ĐÃ SẬP — và nó dạy một LUẬT ĐO mới
 
@@ -108,6 +107,59 @@ cycle này ta có hai cái tên mà không có luật chọn.
 Test khoá: `test_tat_nhip_khong_lam_washout_song_lai` — 5 seed, assert decision-level sát danh
 nghĩa ở **cả hai** arm (bất biến đúng), không assert hội tụ (bất biến sai).
 
+## 4c. ✅ E5 / artifact 38 — tương tác lần đầu CÓ CI, và nó ĐỔI HAI kết luận
+
+n=100 ghép cặp (seed 4200–4299), 4 world/seed, ghi per-seed rồi bootstrap:
+
+| Ước lượng | mean | CI95 | |
+| --- | --- | --- | --- |
+| **Tương tác ngân sách FIFO** | **+2.207đ** | [+1.077, +3.372] | **SIG** |
+| Giá của nhịp **khi CÓ** `shift_plan` | −2.466đ | [−3.420, −1.570] | **SIG** |
+| Giá của nhịp **khi KHÔNG có** `shift_plan` | **−259đ** | [−1.111, +589] | **ns** |
+| Bỏ `shift_plan` khi nhịp BẬT | +2.259đ | [+1.161, +3.323] | **SIG** |
+| Bỏ `shift_plan` ở TRẦN (nhịp tắt) | **+53đ** | [−974, +1.102] | **ns** |
+| Tương tác trên `gini_payout` · `served_rate` · `others_payout` | +0,0043 · +0,52đp · +196k | — | đều **SIG** |
+
+**Kết luận 1 — NHỊP TỰ NÓ GẦN NHƯ MIỄN PHÍ, và nay có bằng chứng thống kê.** Artifact 37 chỉ
+cho điểm ước lượng +384đ; n=100 cho **−259đ với CI trùm 0** ⇒ *không phân biệt được với 0*.
+Nói cách khác: **cái đắt không phải việc advisor nói ít — mà là cách chia ngân sách.**
+
+**Kết luận 2 — `D-ĐA07-recheck` được GIẢI, và nó ỦNG HỘ ĐA-07 chứ không bác.** Tôi vừa báo với
+Cường rằng *"ở trần, `shift_plan` đáng +1.700đ ⇒ ngược ĐA-07"*. **Con số đó là nhiễu n=30.**
+Ở n=100, bỏ `shift_plan` ở trần chỉ **+53đ, ns** ⇒ kênh này **trung tính khi chạy một mình**,
+khớp đúng kết luận ĐA-07 (*"không hiệu quả thì TẮT"*).
+
+Nhưng E5 cho ĐA-07 một lý do **mạnh hơn** lý do ban đầu: `shift_plan` không chỉ trung tính —
+**dưới ngân sách FIFO nó ĐỘC HẠI, gây hại +2.259đ SIG** vì chiếm suất của kênh có tác dụng.
+Tức: *kênh trung tính khi đứng một mình, nhưng đắt khi phải chia ngân sách chung.*
+
+⇒ Đây là **bằng chứng mạnh nhất tới nay cho `D-ĐA04-03`**: toàn bộ chi phí của nhịp là chi phí
+của FIFO, và nó SIG với CI không chứa 0.
+
+⚠ Sửa lại §4 và §6 của chính plan này theo E5 — bảng §4 dùng số n=30, đã lỗi thời về ĐỘ LỚN.
+
+## 4d. Artifact 39 + NULL-0 — hai điều đóng lại trong cùng ngày
+
+**Artifact 39** (`39-da07-recheck-tran-n100.json`, seed khác, ước lượng ghép cặp riêng, nhịp TẮT,
+n=100): giá trị của `shift_plan` = **−451đ CI[−1.499, +608] ns**. Khớp artifact 38 (+53đ ns khi bỏ
+nó) ⇒ **hai phép đo độc lập cùng kết luận `shift_plan` trung tính** ⇒ `D-ĐA07-recheck` **ĐÓNG**,
+ĐA-07 đúng. Trần giá trị advisor ở n=100: **+7.666đ** đủ kênh · **+8.117đ** bỏ `shift_plan`.
+
+**NULL-0 — tôi phải rút lại một câu của chính mình.** Tôi viết ở §4c rằng đây là *"bằng chứng mạnh
+nhất tới nay cho `D-ĐA04-03`"*. Đúng về **cơ chế**, nhưng tôi đã bỏ sót hệ quả **giá trị**:
+
+- giải thưởng mà một trọng tài khéo hơn có thể giành = tương tác = **+2.207đ SIG**;
+- nhưng **bỏ `shift_plan` khi nhịp bật = +2.259đ SIG** — ĐA-07 đã lấy gần hết bằng **một dòng YAML**;
+- và ở **đúng cấu hình sản phẩm** (nhịp ON, `shift_plan` OFF) giá của nhịp = **−259đ ns**.
+
+⇒ **Ngân sách chú ý hiện tại không tốn khoản tiền nào đo được ⇒ E1 có headroom ≈ 0đ.** E1 →
+`D-M3-07` `DEFERRED-CÓ-ĐIỀU-KIỆN`; spec thi công đầy đủ (7 agent) vẫn lưu ở
+`specs/simulation/e1-budget-arbitration-4-mechanisms.md` để mở lại khi bật một kênh ÂM.
+
+**Lever đáng đào thay vào đó — `E9`:** `shift_plan` trung tính nghĩa là lời khuyên tốt và tệ của nó
+**triệt tiêu nhau**. Cả bốn cơ chế của E1 đều *chia suất GIỮA các kênh*; **không** cơ chế nào **chọn
+lọc TRONG một kênh**. Artifact 38 và 39 đều không nói gì về lever này.
+
 ## 5. Rủi ro của chính plan này
 
 1. ✅ **Phản chứng ĐÃ CHẠY và đã sập — xem §4b.** Nó không bác bỏ plan (decision-level ổn
@@ -121,8 +173,9 @@ nghĩa ở **cả hai** arm (bất biến đúng), không assert hội tụ (b�
 
 ## 6. Sinh ra từ plan này
 
-- **`D-ĐA07-recheck`** (mới, sev TB): ở trần (không nhịp), `shift_plan` đáng **+1.700đ** —
-  ngược kết luận ĐA-07. Cần chạy `shift_plan` on/off ở n=100 **không nhịp** để biết ĐA-07 có
-  phải là kết luận về *kênh* hay chỉ là kết luận về *kênh dưới ràng buộc nhịp FIFO*. Nếu là cái
-  sau thì ĐA-07 phải mở lại — và đó là một quyết định sản phẩm của Cường.
+- ✅ **`D-ĐA07-recheck` — ĐÃ GIẢI ngay trong phiên bằng E5 (artifact 38).** Kết luận: ĐA-07
+  **đúng**, và có lý do mạnh hơn lý do ban đầu. `shift_plan` ở trần: **+53đ ns** (trung tính khi
+  đứng một mình); nhưng **dưới ngân sách FIFO nó gây hại +2.259đ SIG**. ⇒ Giữ TẮT là đúng, và
+  nếu bao giờ bật lại thì **phải sửa cách chia ngân sách trước**. Artifact 39 (đang chạy) là
+  phép đo độc lập cùng câu hỏi trên bộ seed khác — dùng để đối chứng, không phải để thay thế.
 - `Q-09` viết lại theo §3.5.

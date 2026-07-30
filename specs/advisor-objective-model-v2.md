@@ -43,10 +43,76 @@ V(s) = max_a [ R(s,a) − C(s,a) + γ·E[V(s')] ]
 | # | Số hạng | Công thức đề xuất | Nguồn/nhãn | Vì sao cần |
 |---|---|---|---|---|
 | **C1** | Chi phí vận hành | `c_km · km_kỳ_vọng(b)` — điện + hao mòn | **ASSUMPTION** (chờ GSM: chi phí điện/km, khấu hao). Fallback: suy từ `vehicle.pct_per_km` + giá điện công bố | Không có nó thì mọi km đều "miễn phí" ⇒ luôn chạy |
-| **C2** | Giá trị nghỉ | `−v_rest(fatigue)` — nghỉ có giá trị DƯƠNG khi mệt vượt ngưỡng | **ASSUMPTION** có lập luận: dùng chính `fatigue_threshold_min` của behavior model (sim đã có) | Sửa đúng lỗi "REST cộng 0.0" |
+| ~~**C2**~~ | ~~Giá trị nghỉ~~ **HUỶ 2026-07-30** | ~~`−v_rest(fatigue)`~~ | 🚫 **KHÔNG BAO GIỜ IMPLEMENT** | Xem §1.2b. Số hạng này định giá sức khoẻ bằng tiền — trái ranh giới đã chốt. **Nghỉ là RÀNG BUỘC, không phải số hạng của objective.** Thay thế: `C2′` |
+| **C2′** | Chi phí cơ hội của **THỜI ĐIỂM** nghỉ | `−(payout_kỳ_vọng(giờ_nghỉ) − payout_kỳ_vọng(giờ_vắng_nhất))` — chỉ định giá việc nghỉ **SAI GIỜ**, không định giá việc nghỉ | Tính từ `demand_by_hour` (belief cá nhân, đã có) — **0 tham số nhân quả mới** | Đây là đường DUY NHẤT làm lời khuyên nghỉ có Δ tiền đo được **mà không tạo tỷ giá sức-khoẻ↔tiền**: lượng nghỉ giữ nguyên (ràng buộc cứng `rest_min_per_4h`), chỉ thời điểm là biến |
 | **C3** | Rủi ro | Thay `E[payout]` bằng **CVaR_α** (α=0.2) hoặc `E − λ·σ` | Thiết kế; λ calibrate bằng sweep | Tài xế thật **ngại rủi ro**: thà chắc 300k hơn 50% cơ hội 500k. E[·] thuần bỏ qua điều này |
 | **C4** | Chi phí cơ hội vị trí | `−(V_pos(cell_sau) − V_pos(cell_trước))` — giá trị vị thế | Tính từ `demand_field` + supply (xem §2) | Đây là cơ chế đã đo được ở hồ sơ 06: nhận cuốc → trôi khỏi vùng cầu → mất vị thế |
 | **C5** | Chi phí SOC phi tuyến | phạt tăng nhanh khi `soc < soc_reserve` | Sim đã có `swap_soc_threshold_pct` | Giải thích trực tiếp "28 lần bỏ đi đổi pin" |
+
+### 1.2b 🚫 Vì sao C2 bị HUỶ, và C2′ thay nó (chốt 2026-07-30)
+
+Quyết định của Cường: *"okey, chấp nhận câu trả lời"* trên phán quyết
+[`tracking/PHAN-QUYET-2026-07-29-diem3-met-nghi.md`](../tracking/PHAN-QUYET-2026-07-29-diem3-met-nghi.md).
+Đây là **quyết định cuối**, không mở lại bằng dữ liệu mới — nó là quyết định nguyên tắc, không phải
+quyết định thực nghiệm.
+
+**Lập luận toán học, một dòng:** mọi cơ chế cho mệt một hậu quả năng lực đều tạo `payout = f(F)`,
+tức tồn tại `∂payout/∂F` — **một tỷ giá sức-khoẻ↔tiền**. Viết tỷ giá đó vào *world* (mệt làm chậm
+tài xế) thay vì vào *objective* (`−v_rest`) **không xoá tỷ giá; nó chỉ xoá NHÃN của tỷ giá.** Ranh
+giới đã chốt của dự án là *"sức khoẻ tài xế KHÔNG phải biến để tối ưu"* ⇒ cả hai cách đều bị cấm.
+
+**C2 cũng không cứu được thứ nó được viện dẫn để cứu.** Lời khuyên nghỉ duy nhất sản phẩm được phép
+nói là **HOÃN** (`rest_window` đổi *thời điểm*, không đổi *lượng*). Dưới đúng mô hình mệt-có-hậu-quả,
+hoãn nghỉ ⇒ lái dài hơn trước khi hồi phục ⇒ liều cao hơn ⇒ Δ của `rest_window` **âm hơn**, không
+dương hơn. Thứ C2 re-sign được là lời khuyên *"nghỉ THÊM"* — mà không kênh nào phát, và chính khung
+"nghỉ = ràng buộc" cấm định giá.
+
+**Không đủ khả năng làm đúng, kể cả nếu muốn:** 0 dữ liệu mệt, 0 dữ liệu tai nạn tài xế trong toàn
+repo. Proxy nhận dạng duy nhất từng được nêu — `driver_statistic_daily.count_cancel_not_relate_driver`
+— là `rng.randint(0, cancelled)` (`src/gsm_core/mockgen/realdata.py:168`): **nhiễu thuần theo
+construction**. Cần căn 5–11 tham số với 0 điểm dữ liệu ⇒ tiêu chí lựa chọn duy nhất còn lại là **dấu
+của Δ**, đúng thứ `CLAUDE.md` §4b cấm. Liều "có nguồn" 240′ (Điều 64) áp dụng **ô tô kinh doanh vận
+tải**; đoàn pilot là **bike 100%** ⇒ 240′ là ASSUMPTION, không phải nguồn.
+
+**Bằng chứng đóng đinh, đo được:** lời khuyên nghỉ bị chặn ở đâu, `scripts/probe_rest_window_blockers.py`
+(3 seed, `coverage=all`, `ladder=all`, 873 lần gọi):
+
+| Chặn ở đâu | % | |
+| --- | --- | --- |
+| `soc_low` | 44,1% | ← LAN CAN SỨC KHOẺ |
+| `fatigued` | 26,9% | ← LAN CAN SỨC KHOẺ |
+| `window_past` | 17,8% | `D-SIM-10` |
+| `no_window` | 10,3% | S7 cố ý không bịa vấn đề (idle median 16′ < ngưỡng 45′) |
+| **NÓI** | **0,00%** | |
+
+**Hai lan can sức khoẻ một mình chặn 71,0%** ⇒ trần trên của giá trị tiền mà kênh nghỉ có thể mang
+lại là **≤29,0% số cơ hội** — và trần đó do **chính ranh giới đạo đức** dựng nên, không phải do bug.
+Mô hình mệt chính xác đến đâu cũng không mở được 71% đó ra **mà không phá nguyên tắc**.
+
+### Thay thế: khung ba lớp (chốt, thay §5b)
+
+| Đại lượng | Vai trò trong objective | Cơ chế enforce | Có thật chưa? |
+| --- | --- | --- | --- |
+| **LƯỢNG nghỉ** | **RÀNG BUỘC CỨNG**, không phải số hạng | `rest_min_per_4h` trong `shift_dp` | ✅ **CÓ** (`src/gsm_core/solvers/shift_dp.py`) |
+| | | `POLICY_LOCKED_KEYS` khoá `rest_defer_max_min` không cho sweep | ❌ **CHƯA CÓ — phải viết** |
+| **THỜI ĐIỂM nghỉ** | **BIẾN** — định giá bằng `C2′` | `rest_window` = DEMAND-TIMING, trong bảng tiền, chịu cadence | ✅ CÓ (cadence) |
+| | | …và chịu `coin_follows` | ❌ **CHƯA CÓ — `D-M3-01`, sev CAO** |
+| **MỆT (`fatigue`)** | **LATENT** — không ai đọc để tính tiền | ba lan can trong `should_defer_rest` (`soc_low`/`fatigued`/`defer_cap`) | ✅ **CÓ** — đo được chặn 71,0% |
+| | | grep-test `test_no_fatigue_in_payout_path` | ❌ **CHƯA CÓ — phải viết** |
+| | | guardrail tầng 5: `rest_min_total`, `veto_fired_n`, `max_continuous_drive_min` | ❌ **CHƯA CÓ — `D-M3-05`** |
+
+> ⚠ **Đọc cột cuối trước khi tin bảng này.** Trong 6 cơ chế enforce, **chỉ 2 tồn tại hôm nay**
+> (`rest_min_per_4h`, ba lan can). Bốn cái còn lại là **việc phải làm**, không phải bảo đảm đang có.
+> Bảng này được viết với cột trạng thái tường minh vì repo đã trả giá cho đúng họ lỗi *"code/spec tự
+> quảng cáo một cơ chế không chạy"* (`D-R12`: nhánh `unsafe_while_moving` được quảng cáo trong khi
+> `is_driving` không có đường nuôi từ client; và `topic_cooldown` chết ở UI vì `last_decided_min`
+> không ai nuôi). ⇒ **`C2′` KHÔNG được đo trước khi 4 cơ chế còn lại có thật** — nếu đo trước, con
+> số Δ sẽ được sinh ra trong một hệ không có chốt chặn nào ngăn nó bị đọc thành *"hoãn nghỉ có lợi"*.
+
+**Bias phải khai báo trong mọi báo cáo dùng `C2′`:** sim **không có kênh tác hại nào** của việc hoãn
+nghỉ (không tai nạn, không giảm chất lượng, không mệt qua đêm — `D-SIM-16`) ⇒ **mọi Δ dương của lời
+khuyên hoãn nghỉ đều dương quá mức theo cấu trúc.** Lan can + guardrail, không con số, mới được quyết
+định việc có hoãn hay không.
 
 ### 1.3 Mục tiêu phi tuyến cho tân binh
 `tenure_days ≤ 90` có **bảo lãnh doanh thu sàn** (PROXY 350k/ngày). Hàm mục tiêu là **bậc thang**:
@@ -167,7 +233,13 @@ Một kênh advice chỉ được coi là "có giá trị" khi **đồng thời*
 Kênh nào vi phạm bất kỳ dòng nào ⇒ **không được bật**, kể cả khi số cá nhân đẹp.
 CI chạy bộ chỉ tiêu này ở job nightly (khung đã có trong `.github/workflows/ci.yml`).
 
-## 5b. ⚠ CHẶN TRƯỚC BƯỚC 2–3: thước đo hiện KHÔNG đo được giá trị của nghỉ
+## 5b. 🚫 ~~CHẶN TRƯỚC BƯỚC 2–3: thước đo hiện KHÔNG đo được giá trị của nghỉ~~ — **HUỶ 2026-07-30**
+
+> **ĐỌC TRƯỚC KHI HÀNH ĐỘNG THEO MỤC NÀY:** §5b **không còn chặn bước nào**. Điều kiện tiên quyết nó
+> đặt ra (*"sim phải có hậu quả của việc không nghỉ"*) là **KHÔNG BAO GIỜ được thực hiện** — quyết
+> định nguyên tắc, chốt 2026-07-30 (V-15). Phần mô tả bên dưới giữ lại vì **mô tả** vẫn đúng; phần
+> **kết luận** của nó bị đảo. Lý do đầy đủ: §1.2b. Thay thế: `C2′` + khung BA LỚP.
+> Quyết định gốc: `tracking/QUYET-DINH-2026-07-30-nam-diem.md`.
 
 **Phát hiện 2026-07-27** ([hồ sơ 11](../research/audit/2026-07-27-current-state/11-sim-khong-the-cham-diem-loi-khuyen-nghi.md)):
 trong sim, `fatigue` **chỉ khiến tài xế tự nghỉ** — nó **không** ảnh hưởng tới xác suất nhận, tốc
@@ -181,9 +253,27 @@ Hệ quả trực tiếp cho spec này:
   payout đi từ **−17.310đ xuống −24.960đ**.
 - ⇒ **Sửa solver trước khi sửa sim = tối ưu hoá vào một cái thước hỏng.**
 
-**Điều kiện tiên quyết mới**: sim phải có **hậu quả của việc không nghỉ** (mệt → giảm tỷ lệ nhận /
-tốc độ / tăng huỷ-rating / rủi ro), tắt được về baseline, có quét độ nhạy, và **không được chọn
-mức chỉ vì nó làm Δ dương**.
+~~**Điều kiện tiên quyết mới**: sim phải có **hậu quả của việc không nghỉ**...~~
+
+## 🚫 §5b BỊ HUỶ TOÀN BỘ — chốt 2026-07-30 (V-15)
+
+Điều kiện tiên quyết ở trên **KHÔNG BAO GIỜ được thực hiện**. Lý do đầy đủ ở **§1.2b**; rút gọn:
+mọi cơ chế "mệt có hậu quả" đều tạo `∂payout/∂F` — một tỷ giá sức-khoẻ↔tiền — và viết nó vào *world*
+thay vì *objective* chỉ xoá **nhãn**, không xoá tỷ giá.
+
+**Và lập luận định lượng của §5b ở trên là NON-SEQUITUR.** Bằng chứng nó viện dẫn — *"nghỉ bắt buộc
+30′→120′ làm payout đi từ −17.310đ xuống −24.960đ ⇒ thước đo hỏng"* — không phân biệt được giả
+thuyết nào: +90 phút nghỉ đổi −7.650đ ≈ **85đ/phút**, **thấp hơn** mọi giá phút-làm-việc đo được
+trong sim (284–910đ/phút, MOCK). Đó là **dấu kỳ vọng của bất kỳ mô hình có chi phí cơ hội**, không
+phải bằng chứng thước đo hỏng.
+
+Câu *"nghỉ mất tiền, không nghỉ không mất gì"* ở đầu §5b **đúng về mô tả** và **vẫn giữ** — nhưng
+kết luận rút ra từ nó phải đảo: đó **không** phải lỗi cần sửa bằng cách cho mệt hậu quả; đó là **hệ
+quả tất yếu** của việc từ chối định giá sức khoẻ. Cái phải sửa là **phạm vi của lời khuyên nghỉ**
+(chỉ hoãn *thời điểm*, không đổi *lượng*) và **cách định giá** (`C2′` = chi phí cơ hội của giờ), chứ
+không phải mô hình mệt.
+
+Thay thế chính thức: **khung ba lớp** ở §1.2b (LƯỢNG = ràng buộc · THỜI ĐIỂM = biến · MỆT = latent).
 
 ## 6. Thứ tự thực hiện đề nghị (sau khi duyệt)
 
@@ -193,16 +283,21 @@ mức chỉ vì nó làm Δ dương**.
 2. **C1 (chi phí vận hành/km) + C5 (SOC phi tuyến)** — hai số hạng dễ biện minh nhất, đo lại.
    *(Bản đầu của dòng này ghi nhầm "C2 (chi phí vận hành)"; theo bảng §1.2 thì **C1** mới là chi
    phí vận hành, **C2** là giá trị nghỉ. Sửa 2026-07-27 để không implement nhầm số hạng.)*
-2b. **[MỚI, CHẶN] Cơ chế mệt mỏi trong SIM** — mệt phải có hậu quả, nếu không thước đo không bao
-   giờ thưởng cho nghỉ đúng (§5b). Phải xong **trước** bước 3.
-3. **C2 (giá trị nghỉ)** — sửa đúng lỗi "REST cộng 0.0", đo lại. **Phụ thuộc bước 2b.**
+~~2b. [MỚI, CHẶN] Cơ chế mệt mỏi trong SIM~~ → 🚫 **HUỶ 2026-07-30** (§5b, §1.2b). Không còn là
+   điều kiện chặn của bất cứ bước nào.
+~~3. C2 (giá trị nghỉ)~~ → 🚫 **HUỶ 2026-07-30**. Thay bằng **`C2′` — chi phí cơ hội của THỜI ĐIỂM
+   nghỉ** (§1.2b): 0 tham số nhân quả mới, không phụ thuộc bước nào, dùng `demand_by_hour` đã có.
+   ⚠ Trước khi đo `C2′` phải xong **`D-M3-01`** (mẫu số adherence của `rest_window` hỏng —
+   `decision_adherence` cắm cứng 1,0 theo cấu trúc) và **`D-M3-04`** (`planned_rest_hour` chưa
+   TỪNG chạy trong A/B ⇒ kênh nói **0/873 lần** ⇒ chưa hề được đo lần nào). Đo `C2′` trước hai mục
+   đó là đo một kênh chết bằng một cái thước hỏng.
 4. C3 (rủi ro/CVaR) — đổi cách tổng hợp, đo lại.
 5. `MarketStateView` + C4 (chi phí cơ hội vị trí) — cần state cung.
 6. Capacity ledger + hồi sinh S4 → multi-agent equilibrium §2.2 (ĐA-09).
 
 > **⚠ Trạng thái từng bước 2026-07-29:** **1 ✅ DONE** (UPDATE-075) · 2 = **KẾ TIẾP**, theo
 > `tracking/PLAN-cycle-wx-2026-07-29.md` Phần B (C1 chi phí vận hành/km, thước đo đi TRƯỚC solver)
-> · 2b **chưa làm** · 3 (C2 giá trị nghỉ) **chưa làm** · 4 (C3 rủi ro/CVaR) **chưa làm** · 5 ✅
+> · 2b **🚫 HUỶ 2026-07-30** · 3 (C2 giá trị nghỉ) **🚫 HUỶ**, thay bằng `C2′` chờ `D-M3-01`+`D-M3-04` · 4 (C3 rủi ro/CVaR) **chưa làm** · 5 ✅
 > **DONE** (`MarketStateView` b1/b2) · 6 ✅ **DONE phần equilibrium** (capacity ledger + S4 hồi
 > sinh + ĐA-09 §2.2, UPDATE-083/084/088); veto km-rỗng vẫn treo (Q-10/Q-12).
 
