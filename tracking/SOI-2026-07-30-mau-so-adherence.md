@@ -1,6 +1,6 @@
-# SOI — mẫu số adherence (`D-M3-01`): 48 finding thô, 7 tự kiểm ĐÚNG, 0 được phản biện
+# SOI — mẫu số adherence (`D-M3-01`): 48 finding thô · 12 tôi tự kiểm ĐÚNG · 3 độ lớn tự đo · 0 qua phản biện tự động
 
-Ngày 2026-07-30 · Trạng thái: **`PARTIAL` — vòng phản biện KHÔNG chạy được**, xem §0.
+Ngày 2026-07-30 · Trạng thái: **`PARTIAL`** — vòng phản biện tự động KHÔNG chạy được (§0), nhưng **12 finding đã được tôi tự kiểm** (§1) và **3 độ lớn đã được tôi tự đo** (§2, §2b, §3).
 
 Workflow soi 5 tầng × 5 kênh (`wf_e65b275f-598`). Mục tiêu: tìm cạn kiệt mọi chỗ mẫu số adherence
 hỏng, phản biện đối kháng, rồi sinh spec thi công.
@@ -30,7 +30,7 @@ kết luận trông như dương tính**. Tôi đã viết chính lỗi đó và
 quyết ⇒ trạng thái thứ ba **`CHƯA_PHẢN_BIỆN`**, không được gộp vào `survived`.
 
 ⇒ **Không finding nào dưới đây đã qua phản biện đối kháng.** Nhãn duy nhất đáng tin là "tôi tự kiểm
-lại bằng cách đọc code" — và tôi làm việc đó cho 7 finding, ghi ở §1.
+lại bằng cách đọc code" hoặc "tôi tự đo" — tôi làm việc đó cho 12 finding (§1) và 3 độ lớn (§2/§2b/§3).
 
 ### 0.2 Tầng L2 (`world.py`) hoàn toàn KHÔNG được soi
 
@@ -39,7 +39,7 @@ lại bằng cách đọc code" — và tôi làm việc đó cho 7 finding, ghi
 
 ---
 
-## 1. ✅ BẢY finding tôi TỰ KIỂM bằng đọc code — đều ĐÚNG
+## 1. ✅ Finding tôi TỰ KIỂM bằng đọc code — đều ĐÚNG
 
 | # | Claim | Bằng chứng tôi tự đọc | Hậu quả |
 | --- | --- | --- | --- |
@@ -57,7 +57,49 @@ lại bằng cách đọc code" — và tôi làm việc đó cho 7 finding, ghi
 
 ---
 
-## 2. ⚠ Độ lớn: agent đưa HAI số ĐÁ NHAU — chưa ai đo
+## 2. ✅ ĐỘ LỚN — đã ĐO, và nó giải quyết cả ba số đá nhau
+
+`scripts/probe_adherence_truth.py` (mới): đo adherence từ **COIN**, tức ground truth **độc lập với
+event log**. Mỗi lần `coin_follows` được gọi = một lần advisor NÓI; giá trị trả về = tài xế có nghe
+theo. 3 seed (1000–1002), `coverage=all`, `ladder=all`.
+
+| Kênh | advisor NÓI | nghe theo | **adherence THẬT** | event ghi | **báo cáo trong artifact** | |
+| --- | --- | --- | --- | --- | --- | --- |
+| `shift_plan` | 3464 | 1851 | **0,534** | 3464 | 0,534 | ✅ mẫu số ĐÚNG |
+| `accept_lift` | 760 | 330 | **0,434** | 760 | 0,434 | ✅ mẫu số ĐÚNG |
+| **`shift_extend`** | **1051** | **327** | **0,311** | **97** | **1,000** | 🔴 **SAI 3,2×** |
+| `rest_window` | — | — | **không rút coin** | 0 | 1,000 | 🔴 không có khái niệm "không theo" |
+| `positioning` | 251 | 125 | **0,498** | — | — | (kênh dùng `standby_*`, probe chưa map — **giới hạn của probe**, không phải lỗi) |
+
+**Phân xử ba số đá nhau:**
+
+| Nguồn | Số | Kết quả |
+| --- | --- | --- |
+| `L1-03` (agent soi) | 0,26–0,38 | ✅ **ĐÚNG** — 0,311 nằm trong khoảng |
+| `L5-03` (agent soi) | ~50% | ❌ **SAI** |
+| Tôi trích "danh nghĩa 0,59–0,68" | — | ❌ **SAI, lỗi của tôi**: `DEFAULT_ADHERENCE` thật là **0,30–0,75** theo archetype (P3/P5 = 0,30 · P4 = 0,75). Số 0,59–0,68 là adherence **hiệu dụng đã đo** ở artifact cũ, tôi trích lại thành "danh nghĩa" |
+
+⇒ Con số **đã báo** *"`shift_extend` 43/43 = 100% · Ground truth 100% ✓"* thổi lên **3,2×** so với
+sự thật **31,1%**. Và nhãn *"Ground truth ✓"* của nó là vòng tròn — lấy ground truth từ chính event
+bị hỏng (`L5-04`).
+
+### 2b. 🔴 Phát hiện MỚI khi tách dedup vs mất: 28% quyết định của `shift_extend` biến mất
+
+| Kênh | nghe theo | claim lần đầu | claim bị chặn | event ghi | **HỤT** |
+| --- | --- | --- | --- | --- | --- |
+| `accept_lift` | 330 | 154 | 176 | 760 | — (kênh log VÔ ĐIỀU KIỆN nên không so được) |
+| **`shift_extend`** | **327** | **135** | **192** | **97** | **38 = 28% của 135** |
+
+`claim bị chặn` (192) là **đúng** — hỏi lại cùng quyết định trong cùng bucket phải bị chặn (`R-01`).
+Nhưng **HỤT = 135 − 97 = 38** là quyết định **đã tiêu token `_claim_effect`, đã tiêu suất ngân sách
+nhịp, đã rút coin — rồi bị clamp bất khả thi và biến mất không event, không tác động**. Đây là
+`L1-04` với độ lớn đo được: **28% lời khuyên `shift_extend` "được nghe theo" mất hẳn.** Và vì token
+đã cháy, mọi lần hỏi lại trong bucket đó cũng trả False ⇒ quyết định không có đường quay lại.
+
+⚠ Cột HỤT **chỉ có nghĩa cho kênh log-khi-đã-theo**. `accept_lift` log vô điều kiện (760 event = mọi
+lần hỏi, mang cờ `followed`) nên −606 là so lệch đơn vị, **không phải finding**.
+
+## 2c. (lịch sử) Ba số đá nhau trước khi đo
 
 Về adherence thật của `shift_extend`:
 
@@ -71,7 +113,27 @@ Về adherence thật của `shift_extend`:
 trong repo này (`DET-01` sai 5,7× · chẩn đoán `window_past` sai 5,4×). ⇒ **Không trích số nào trong
 ba số này** cho tới khi tôi tự đo. Cơ chế thì đã chắc (§1); độ lớn thì chưa.
 
-## 3. ⚠ `L1-02` — cơ chế của nó chỉ giải thích 71%, không phải 100%
+## 3. ✅ `L1-02` — ĐÃ CHỨNG MINH: bậc thang `rest_window` **BIT-IDENTICAL** với `s2_only`
+
+Đo bằng **fingerprint PER-ACTOR** (segments + payout + trips + rest_min), **KHÔNG** dùng
+`assert_crn` (nó chỉ so danh sách đơn sinh NGOÀI world ⇒ trả True dù actor lệch hết — `D-M3-02`):
+
+| seed | `s2_only` | `rest_window` | |
+| --- | --- | --- | --- |
+| 1000 | `e5561414ce8e748b` | `e5561414ce8e748b` | **IDENTICAL** |
+| 1001 | `6fe71f42eaba8052` | `6fe71f42eaba8052` | **IDENTICAL** |
+| 1002 | `06ad64bbe69f46d1` | `06ad64bbe69f46d1` | **IDENTICAL** |
+
+⇒ Trong **mọi artifact A/B**, arm mang nhãn `rest_window` đã đo **chính xác cùng một thế giới** với
+`s2_only`. Không phải "kênh yếu" — là **arm bị dán nhãn sai như một can thiệp khác**. Đây là bằng
+chứng cứng nhất cho `D-M3-04` (kênh chưa từng chạy), mạnh hơn con số 0/873 lần nói.
+
+⚠ **Nhưng cơ chế mà `L1-02` đưa ra thì chưa đúng.** Nó nói lan can trùng khít vị từ kích hoạt nên
+kênh *"KHÔNG THỂ"* bắn. Probe của tôi đo được **253/873 lời gọi ĐI QUA cả ba lan can** rồi mới chết ở
+`window_past` (17,8%) / `no_window` (10,3%) / `at_window` (0,9%). Lan can chặn **71,0%**, không phải
+100%. ⇒ **Kết cục đúng, cơ chế sai** — đúng bẫy mà chính lăng kính "độ lớn" được dựng ra để bắt.
+
+## 3b. (lịch sử) Nhận định trước khi đo
 
 `L1-02` nói `rest_window` **KHÔNG THỂ** bắn vì lan can trùng khít với vị từ kích hoạt, và bậc thang
 `rest_window` **bit-identical** với `s2_only`.
