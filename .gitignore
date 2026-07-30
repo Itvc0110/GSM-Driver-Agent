@@ -39,3 +39,6 @@ data/mock/**/*.csv
 # UX-CARDS (UPDATE-067): adherence log local — telemetry mock, không commit
 data/ui-telemetry/
 .superpowers/
+
+# output sinh boi scripts/build_doc_graph.py — tai sinh duoc, khong commit
+graph-out/

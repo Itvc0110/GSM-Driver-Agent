@@ -62,7 +62,7 @@ origin/main = 3943cb2   (16 commit từ c493d89, fast-forward, cây sạch)
 suite       = 860 passed / 5 skipped / 0 failed
               uv run pytest -q                  -> 804 + 5 skip   (809 thu thập)
               uv run pytest -q ui/backend/tests -> 56
-UPDATE       = 97 file, mới nhất UPDATE-103
+UPDATE       = 100 file, mới nhất UPDATE-106 (104 UIUX draft + 105 codex review là của remote)
 PENDING      = 17 mục V- đang chờ Cường:
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor)
@@ -134,6 +134,7 @@ cho luật positioning (sẽ đo ra ≈0 — xem §5 bẫy #7).
 | `specs/adherence-measurement.md` | Bản đồ chung hai đường đo. ⚠ **ĐỌC ĐÍNH CHÍNH 2026-07-30** — nó đảo một kết luận của spec: **hai đường hiện KHÔNG JOIN ĐƯỢC** (topic rời nhau · sản phẩm không emit `decided` · `followed` mang hai nghĩa · kênh không giao nhau) |
 | `research/audit/2026-07-27-current-state/README.md` | **TRƯỚC KHI TRÍCH BẤT KỲ SỐ NÀO.** Có cảnh báo chung: artifact 31–39 đo bằng thước chưa được kiểm, và 31–35 **BỊ TREO** |
 | `tracking/QUYET-DINH-2026-07-30-nam-diem.md` | 5 quyết định V-15 + **cổng TIỀN-ĐĂNG-KÝ** của `rest_window` (khoá, không sửa sau khi đo) |
+| `tracking/VISION-ALIGNMENT-2026-07-29.md` | **NEO của mọi plan mới** — đối chiếu từng vế tầm nhìn Cường ↔ cái đã có ↔ gap ↔ route. *Plan nào không trỏ được về một vế ở đây thì phải tự hỏi vì sao tồn tại.* ⚠ Doc-graph 2026-07-30 phát hiện file này MỒ CÔI (0 inbound link) dù tự tuyên bố là NEO — đã nối lại tại đây |
 
 ---
 

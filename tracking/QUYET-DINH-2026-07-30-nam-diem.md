@@ -17,7 +17,7 @@ cũng biết nó dựa trên cái gì và đảo nó cần bằng chứng gì.
 ## Điểm 1 — `rest_window` phân lớp thế nào → **DEMAND-TIMING**
 
 **Quyết định:** `rest_window` là kênh **DEMAND-TIMING**. Nó ở **TRONG** bảng tiền, **chịu cadence**,
-và **phải chịu `coin_follows`** (hiện đang thiếu — `D-M3-01`).
+và **phải chịu `coin_follows`** (~~hiện đang thiếu~~ ✅ **đã nối 2026-07-30**, UPDATE-102).
 
 **Vì sao không chọn SAFETY** (phương án còn lại, đưa kênh ra ngoài bảng tiền + bypass cadence):
 
@@ -86,7 +86,7 @@ làm mình thắng".
 ### 🔒 CỔNG TIỀN-ĐĂNG-KÝ cho `rest_window` (khoá, không sửa sau khi đã đo)
 
 **Điều kiện tiên quyết (làm xong hết mới được đo):**
-1. `D-M3-01` — kênh có `coin_follows`, và mẫu số adherence đo được ở cả 3 tầng.
+1. ✅ **XONG 2026-07-30 (UPDATE-102)** — ~~`D-M3-01`~~ kênh có `coin_follows`, mẫu số adherence đo được ở cả 3 tầng, và cổng BẤT KHẢ đã nối vào mọi artifact A/B (`D-M3-10`).
 2. `D-M3-04` — `planned_rest_hour` thực sự chạy trong A/B (bật multiday hoặc đường tương đương).
 3. `D-M3-05` — guardrail tầng 5 (`rest_min_total`, `veto_fired_n`, `max_continuous_drive_min`) có
    trước khi đo, không thêm sau.
@@ -135,13 +135,14 @@ Nên tôi viết **phần thay thế**, đã vào spec:
 | **LƯỢNG nghỉ** | **RÀNG BUỘC CỨNG**, không phải số hạng | `rest_min_per_4h` trong `shift_dp` | ✅ **CÓ** (`src/gsm_core/solvers/shift_dp.py`) |
 | | | `POLICY_LOCKED_KEYS` khoá `rest_defer_max_min` không cho sweep | ❌ **CHƯA CÓ — phải viết** |
 | **THỜI ĐIỂM nghỉ** | **BIẾN** — định giá bằng `C2′` | `rest_window` = DEMAND-TIMING, trong bảng tiền, chịu cadence | ✅ CÓ (cadence) |
-| | | …và chịu `coin_follows` | ❌ **CHƯA CÓ — `D-M3-01`, sev CAO** |
+| | | …và chịu `coin_follows` | ✅ **CÓ từ 2026-07-30** (UPDATE-102, `D-M3-01` DONE-CODE — coin nối ở `should_defer_rest`, behavior-neutral 15/15 fingerprint IDENTICAL) |
 | **MỆT (`fatigue`)** | **LATENT** — không ai đọc để tính tiền | ba lan can trong `should_defer_rest` (`soc_low`/`fatigued`/`defer_cap`) | ✅ **CÓ** — đo được chặn 71,0% |
 | | | grep-test `test_no_fatigue_in_payout_path` | ❌ **CHƯA CÓ — phải viết** |
 | | | guardrail tầng 5: `rest_min_total`, `veto_fired_n`, `max_continuous_drive_min` | ❌ **CHƯA CÓ — `D-M3-05`** |
 
-> ⚠ **Đọc cột cuối trước khi tin bảng này.** Trong 6 cơ chế enforce, **chỉ 2 tồn tại hôm nay**
-> (`rest_min_per_4h`, ba lan can). Bốn cái còn lại là **việc phải làm**, không phải bảo đảm đang có.
+> ⚠ **Đọc cột cuối trước khi tin bảng này.** Cập nhật 2026-07-30 (UPDATE-102): **3 tồn tại**
+> (`rest_min_per_4h`, ba lan can, và nay **coin cho `rest_window`**). **Ba** cái còn lại
+> (`POLICY_LOCKED_KEYS` · grep-test · guardrail tầng 5) là **việc phải làm**, không phải bảo đảm đang có.
 > Bảng này được viết với cột trạng thái tường minh vì repo đã trả giá cho đúng họ lỗi *"code/spec tự
 > quảng cáo một cơ chế không chạy"* (`D-R12`: nhánh `unsafe_while_moving` được quảng cáo trong khi
 > `is_driving` không có đường nuôi từ client; và `topic_cooldown` chết ở UI vì `last_decided_min`

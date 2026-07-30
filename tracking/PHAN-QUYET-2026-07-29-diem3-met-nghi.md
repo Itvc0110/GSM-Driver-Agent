@@ -160,7 +160,7 @@ Cường trả lời cả 5: mục 2 *"okey, chấp nhận"*; **bốn mục còn
 | 1 | `rest_window` = DEMAND-TIMING hay SAFETY? | **DEMAND-TIMING** — trong bảng tiền, chịu cadence **và** coin. Sức khoẻ bảo vệ bằng **lan can** (đo được: chặn 71,0%), không bằng nhãn |
 | 2 | Câu trả lời chính thức với GSM/hội đồng | **CHẤP NHẬN** — nợ docs đã trả ở `specs/advisor-objective-model-v2.md` §1.2/§1.2b/§5b/§6 |
 | 3 | ~~Gửi GSM xin bảng `trips` cấp đơn~~ | 🚫 **RÚT LẠI** — Cường nói rõ GSM **không cấp thêm gì**. Thay bằng **`T-047`**: hợp đồng dữ liệu **phản thực** + bản đồ MOCK↔THẬT + *"kết luận nào không sống nổi qua khoảng cách đó"* |
-| 4 | Nếu `rest_window` Δ≈0 thì tắt hay đầu tư? | **CHƯA ĐƯỢC QUYẾT** — kênh **chưa hề được đo**: thước hỏng (`D-M3-01`) + kênh chưa từng bật (`D-M3-04`, nói 0/873 lần). ⇒ Một phiên xử công bằng với **cổng TIỀN-ĐĂNG-KÝ** viết trước khi đo. FAIL ⇒ tắt + DEFERRED, **cấm hiệu chỉnh rồi đo lại** |
+| 4 | Nếu `rest_window` Δ≈0 thì tắt hay đầu tư? | **CHƯA ĐƯỢC QUYẾT** — kênh **chưa hề được đo**: ~~thước hỏng (`D-M3-01`)~~ *(✅ thước ĐÃ SỬA 2026-07-30, UPDATE-102 — tiên quyết 1/3 xong)* + kênh chưa từng bật (`D-M3-04`, nói 0/873 lần — **còn**). ⇒ Một phiên xử công bằng với **cổng TIỀN-ĐĂNG-KÝ** viết trước khi đo. FAIL ⇒ tắt + DEFERRED, **cấm hiệu chỉnh rồi đo lại** |
 | 5 | V-15 | **HUỶ** — và không chỉ gạch C2 mà viết **phần thay thế**: `C2′` (chi phí cơ hội của THỜI ĐIỂM nghỉ) + **khung BA LỚP** (LƯỢNG = ràng buộc · THỜI ĐIỂM = biến · MỆT = latent) |
 
 **Điều quan trọng nhất rút ra:** câu hỏi gốc của Cường — *"lời khuyên advisor ra action nghỉ để làm
