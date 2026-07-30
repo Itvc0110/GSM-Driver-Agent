@@ -1,7 +1,7 @@
 # KẾ HOẠCH — hàng đợi công việc còn lại, sắp theo thứ tự thi công
 
 Ngày 2026-07-30 · Trạng thái: `READY` — chờ Cường ra lệnh làm tiếp
-`origin/main` = **`34bfaaf`** · suite **860 passed / 5 skipped / 0 failed** · cây sạch
+`origin/main` = **`86d9abf`** · suite **860 passed / 5 skipped / 0 failed** · cây sạch
 
 Tài liệu này là **thứ tự thi công**, không phải danh sách ước. Mỗi mục có: **vì sao ở vị trí này**,
 **chặn cái gì**, **acceptance**, **chi phí**. Ai đọc cũng làm tiếp được mà không cần hỏi lại.
@@ -51,7 +51,7 @@ quyết định mất hẳn**, không có đường quay lại.
 
 ---
 
-## 2. Cổng THỐNG KÊ của `D-M3-10` — cần một quyết định về tolerance
+## 2. Cổng THỐNG KÊ của `D-M3-10` — ✅ ĐÃ CHỐT cơ chế, chờ thi công
 
 **Vị trí:** ngay sau `L1-04`, vì `L1-04` là phép đo đầu tiên chạy dưới cổng mới ⇒ nó cho ta dữ liệu
 thật để chọn tolerance thay vì đoán.
@@ -64,18 +64,71 @@ với ~250 quyết định/seed, SE lấy mẫu ≈ **0,03** ⇒ cổng 0,02 m�
 người sửa sẽ **nới ngưỡng thay vì sửa lỗi** (đúng mẫu `D-R20`). Nối một ngưỡng sai **tệ hơn** không
 nối, vì nó sẽ bị tắt.
 
-**Ba phương án, tôi đề xuất (c):**
+### ✅ ĐÃ CHỐT 2026-07-30 — Cường: *"Bạn chốt, tôi nghiêng về (c)"*
 
-| | Phương án | Đánh giá |
+**Chốt (c), nhưng SỬA CƠ CHẾ: dùng kiểm định z Poisson-binomial phân tích, KHÔNG bootstrap.**
+
+Ba phương án ban đầu:
+
+| | Phương án | Phán quyết |
 | --- | --- | --- |
-| (a) | Giữ 0,02, áp trên **TỔNG** n seed | Đơn giản, nhưng 0,02 vẫn là số tự đặt |
-| (b) | Tolerance = `k × SE(n)` với k=3 | Đúng thống kê, nhưng lỏng khi n nhỏ |
-| **(c)** | **CI bootstrap của `decision_adherence` phải CHỨA adherence danh nghĩa** | Không có hằng số tự đặt; tự co theo n; cùng công cụ bootstrap đã dùng cho mọi Δ ⇒ không thêm khái niệm mới |
+| (a) | Giữ 0,02, áp trên TỔNG n seed | ❌ **BÁC** — xem bảng dưới: 0,02 **không phải một ngưỡng**, nó là 0,40σ ở n=100 và 2,83σ ở n=5000 |
+| (b) | Tolerance = `k × SE(n)`, k=3 | ❌ **BÁC** — đúng hướng nhưng vẫn có hằng số tự đặt, và bỏ qua **hỗn hợp archetype** |
+| (c) | CI bootstrap phải chứa adherence danh nghĩa | ✅ **NHẬN nguyên tắc** (không hằng số tự đặt, tự co theo n) — nhưng **thay bootstrap bằng công thức chính xác** |
 
-**Acceptance:** test dựng một arm có adherence lệch danh nghĩa **0,10** ⇒ cổng phải TREO; và một arm
-lệch **0,01** ⇒ phải OK. Cả hai phải chứng minh được, không chỉ mô tả.
+**Vì sao sửa cơ chế của (c):** ta **biết chính xác** phân phối null, không cần resample. Mỗi quyết
+định `i` là `Bernoulli(p_i)` với `p_i` = adherence danh nghĩa của **archetype của chính tài xế đó**
+(`DEFAULT_ADHERENCE`: P1 0,55 · P2 0,50 · P3 0,30 · P4 0,75 · P5 0,30 · P6 0,50 · P7 0,50). Tổng của
+chúng là **Poisson-binomial**, có kỳ vọng và phương sai đóng:
 
-**Chi phí:** ~1 giờ. **Chặn:** không, nhưng để lâu thì mọi artifact mới chỉ có nửa cổng.
+```
+mu  = Σ p_i / n
+var = Σ p_i(1 − p_i) / n²
+z   = (adherence_đo − mu) / √var          ⇒  TREO khi |z| > 4
+```
+
+Bootstrap resample **các quyết định đã quan sát** ⇒ nó coi mọi quyết định là **trao đổi được**. Công
+thức trên **không** — nó dùng `p_i` thật của từng archetype, nên nó **tự xử lý hỗn hợp archetype**
+của tập quyết định mà kênh đó thực sự chạm tới. Với một kênh chỉ chạm P3/P5 (p = 0,30) thì null là
+0,30, không phải trung bình toàn đội. Bootstrap không phân biệt được điều đó.
+
+Coin là **keyed sha256** (`adherence_coin`), seed nằm trong khoá ⇒ độc lập giữa các khoá và giữa các
+seed ⇒ giả định Bernoulli độc lập **đứng vững**. Đây là lý do dùng được công thức đóng.
+
+**Ngưỡng |z| > 4 là DẪN XUẤT, không phải chọn bừa** (`uv run python` tính tại chỗ 2026-07-30):
+
+| Tình huống | z |
+| --- | --- |
+| 🔴 **Lỗi thật `D-M3-01`** (adherence báo 1,000 trên 101 quyết định, mu 0,500) | **10,0** |
+| "Lệch 0,02" ở n=100 | 0,40 |
+| "Lệch 0,02" ở n=250 | 0,63 |
+| "Lệch 0,02" ở n=1000 | 1,26 |
+| "Lệch 0,02" ở n=5000 | 2,83 |
+
+⇒ **Bảng này một mình bác phương án (a):** cùng một "lệch 0,02" là **nhiễu thuần** ở n=100 và **gần
+có ý nghĩa** ở n=5000. Một ngưỡng cố định trên hiệu tuyệt đối không thể đúng ở cả hai.
+
+Chọn 4 vì family-wise trên **28 ô** (4 kênh × 7 archetype):
+
+| ngưỡng | per-ô | family-wise 28 ô |
+| --- | --- | --- |
+| \|z\| > 3,0 | 2,7e-03 | **7,29%** — quá ồn, sẽ bị tắt |
+| \|z\| > 3,5 | 4,7e-04 | 1,29% |
+| **\|z\| > 4,0** | **6,3e-05** | **0,18%** ✅ |
+| \|z\| > 4,5 | 6,8e-06 | 0,02% — chặt hơn mức cần |
+
+**4,0 giữ được cả hai đầu:** bắt lỗi thật (z=10) với biên **2,5×**, và bắn oan **0,18%** mỗi lần chạy.
+Đó là điều kiện để cổng **không bị tắt vì nhiễu** — nguyên nhân đã giết ngưỡng 0,02.
+
+**Acceptance (phải chứng minh được, không chỉ mô tả):**
+1. Arm dựng adherence lệch danh nghĩa **0,10** ở n≥250 ⇒ **TREO**.
+2. Arm lệch **0,01** ở n≥250 ⇒ **OK** (không bắn oan).
+3. Dựng lại đúng trạng thái `D-M3-01` (adherence 1,000) ⇒ **TREO**, và z báo ra ≈10.
+4. Một kênh chỉ chạm **P3/P5** (p=0,30) với adherence đo 0,30 ⇒ **OK** — chứng minh null theo hỗn hợp
+   archetype, không theo trung bình toàn đội. Đây là test mà bootstrap **không** vượt được.
+
+**Chi phí sau khi đã chốt:** ~1 giờ (công thức đóng, không cần resample).
+**Chặn:** không, nhưng để lâu thì mọi artifact mới chỉ có nửa cổng.
 
 ---
 
@@ -184,7 +237,6 @@ về lever này.
 
 | # | Câu hỏi | Ở đâu |
 | --- | --- | --- |
-| 1 | **Tolerance của cổng thống kê** — hay để tôi tự chốt phương án (c)? | §2 trên |
 | 2 | **4 mục của `T-047`** ở phụ lục spec | `specs/real-data/data-contract-counterfactual.md` §9.2 |
 | 3 | **`V-18`** — nhịp nói advisor (UPDATE-099) | `tracking/PENDING-REVIEW.md` |
 | 4 | **`V-01`…`V-14`** — 14 mục visual/data | idem |
@@ -220,7 +272,7 @@ về lever này.
 ## 10. Trạng thái để bắt đầu lại
 
 ```
-origin/main = 34bfaaf   (13 commit từ c493d89)
+origin/main = 86d9abf   (14 commit từ c493d89)
 suite       = 860 passed / 5 skipped / 0 failed
               uv run pytest -q            -> 804 + 5 skip  (809 thu thập)
               uv run pytest -q ui/backend/tests -> 56
