@@ -508,3 +508,5 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 | D-M3-11 | Future-information leak in 6 L3-view fields (l1r derivers) | FIXED | UPDATE-115; 13 tests + 6/6 mutation; no published number affected (module unimported) |
 | D-M3-12 | Make the future-leak probe a standing gate for every `t_now` deriver + test the parse-failure path of `_observed_seconds` | TODO (sev TRUNG) | UPDATE-115; needs per-entity cut-key decision first (a false positive already occurred) |
 | D-M3-04 | Multiday A/B so `rest_window` stops being INERT | READY (3 design questions approved; acceptance revised per UPDATE-114) | `specs/simulation/d-m3-04-multiday-ab-brief.md`; wire `touched_actors` into the tier-5 gate as part of the cycle |
+| D-M3-13 | Tier-5 guardrail had an aggregator but no data source in the A/B path | FIXED | UPDATE-116; measured: `TREO — THIẾU DỮ LIỆU` on every real pair; 0 stored artifacts carried the key |
+

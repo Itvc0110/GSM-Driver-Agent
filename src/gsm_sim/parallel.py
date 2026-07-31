@@ -155,7 +155,7 @@ def _driver_metrics(result, actor_id: int) -> dict:
     )}
 
 
-def _system_metrics(result, exclude_actor: int) -> dict:
+def _system_metrics(result, exclude_actor: int, health_actor_ids: set[int] | None = None) -> dict:
     """Guardrail: advice KHÔNG được cải thiện 1 người bằng cách làm xấu hệ thống.
 
     ĐA-08 (UPDATE-075): mở rộng từ 5 trường lên đủ **4 tầng** của chỉ tiêu kép —
@@ -167,7 +167,7 @@ def _system_metrics(result, exclude_actor: int) -> dict:
     `coverage: all`). Lưu ý khi đọc: ở n=30 **mọi tầng hệ thống đều có CI chứa 0**; chỗ có ý
     nghĩa thống kê là tầng CÁ NHÂN (payout −17.310đ). Đừng trích số 10-seed của hồ sơ 07.
     """
-    from .sim_metrics import system_guardrail
+    from .sim_metrics import health_guardrail, system_guardrail
     s = summarize(result)
     others = [a for a in result.actors if a.actor_id != exclude_actor]
     swap_waits = [e.detail.get("wait_min", 0.0) for e in result.events
@@ -189,6 +189,16 @@ def _system_metrics(result, exclude_actor: int) -> dict:
         "station_hhi": g["station_hhi"],                 # dồn trạm
         "supply_cell_hhi": g["supply_cell_hhi"],         # dồn khu
         "starved_hours_n": g["starved_hours_n"],         # giờ đói cung
+        # --- TẦNG 5 sức khoẻ (D-M3-13) ---
+        # NGUỒN của `aggregate_health_guardrail`. Trước 2026-08-01 nó KHÔNG được nối: hàm gộp
+        # tồn tại, `health_guardrail` tồn tại, nhưng `system_a`/`system_b` không mang khoá nào
+        # ⇒ mọi `run_ladder` trả verdict TREO kèm flag "THIẾU DỮ LIỆU". Đo được (seed 5011):
+        # health_guardrail(ra) có rest_min_total=3689.0, veto_fired_n=175 — tức dữ liệu LUÔN
+        # có sẵn, chỉ thiếu đúng dòng merge này. Lần thứ BA cùng mẫu D-R12 trong hai ngày.
+        # `health_actor_ids` = nhóm BỊ CHẠM (UPDATE-114 lỗ (b)); None = toàn cohort.
+        # `compare()` đưa các khoá này vào nhánh MỘT CHIỀU (HEALTH_KEYS_ONE_WAY) nên chúng
+        # không bao giờ được gắn `significant` hai chiều.
+        **health_guardrail(result, actor_ids=health_actor_ids),
     }
 
 
@@ -204,11 +214,15 @@ def run_pair(cfg: Config, seed: int, channels: dict | None = None,
     aid = actor_id if actor_id is not None else pick_target(ra, archetype)
     rb = run_once(_cfg_with(cfg, enabled=True, actor_id=aid, channels=channels,
                             coverage=coverage), seed)
-    from .sim_metrics import adherence_audit
+    from .sim_metrics import adherence_audit, touched_actors
+    # Tập bị chạm lấy từ arm B (arm A không có event advice nên luôn rỗng) rồi áp cho CẢ HAI
+    # arm — nhờ CRN, cùng actor_id tồn tại hai bên, nên tầng 5 so đúng CÙNG một nhóm người.
+    touched = touched_actors(rb) or None
     return PairResult(seed=seed, actor_id=aid,
                       adherence_a=adherence_audit(ra), adherence_b=adherence_audit(rb),
                       a=_driver_metrics(ra, aid), b=_driver_metrics(rb, aid),
-                      system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid))
+                      system_a=_system_metrics(ra, aid, health_actor_ids=touched),
+                      system_b=_system_metrics(rb, aid, health_actor_ids=touched))
 
 
 def assert_crn(cfg: Config, seed: int, actor_id: int) -> bool:
@@ -267,6 +281,12 @@ HEALTH_KEYS_ONE_WAY = frozenset({
     "drive_min_p50", "drive_min_p90", "drive_min_max",
 })
 
+# MẪU SỐ, không phải kết quả. Tách riêng khỏi `HEALTH_KEYS_ONE_WAY` vì hai lý do khác nhau:
+# khoá một chiều bị chặn `significant` để "veto tăng" không đọc thành "hệ thống tốt lên"; khoá
+# phạm vi bị chặn vì gắn `significant` cho một MẪU SỐ là vô nghĩa về ngữ nghĩa (Δ của nó luôn 0
+# do hai arm dùng cùng tập actor — một "kết quả không đáng kể" hoàn toàn gây nhầm).
+SCOPE_KEYS = frozenset({"n_actors_scope"})
+
 
 def _sig(lo: float, hi: float, n: int, min_seeds: int = MIN_SEEDS_FOR_SIGNIFICANCE) -> bool:
     """CI không chứa 0 VÀ đủ seed. `min_seeds` mặc định 30 (chuẩn A/B: có-advice vs không).
@@ -308,7 +328,9 @@ def compare(pairs: list[PairResult], min_seeds: int | None = None) -> dict:
         diffs = [float(p.system_b[key] or 0) - float(p.system_a[key] or 0) for p in pairs]
         lo, hi = bootstrap_ci(diffs)
         row = {"delta_mean": round(st.mean(diffs), 4), "ci95": (round(lo, 4), round(hi, 4))}
-        if key in HEALTH_KEYS_ONE_WAY:
+        if key in SCOPE_KEYS:
+            row["role"] = "MẪU SỐ — số tài xế trong phạm vi chấm tầng 5, KHÔNG phải kết quả"
+        elif key in HEALTH_KEYS_ONE_WAY:
             # (e) tầng 5 KHÔNG có `significant` hai chiều — cổng của nó là
             # `sim_metrics.health_guardrail_flags` (một chiều, chỉ tố giác suy giảm).
             # Để `significant` ở đây làm "veto tăng" được in như hệ thống TỐT lên.
@@ -332,7 +354,7 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
     Hiệu năng: World A **chạy MỘT LẦN cho mỗi seed** rồi dùng lại cho mọi bậc — A không phụ
     thuộc cấu hình kênh. Ngây thơ chạy lại A ở từng bậc sẽ tốn gấp đôi mà kết quả y hệt.
     """
-    from .sim_metrics import adherence_audit
+    from .sim_metrics import adherence_audit, touched_actors
     cfg_a = _cfg_with(cfg, enabled=False, actor_id=None, channels=None)
     ra0 = run_once(cfg_a, seeds[0])
     aid = pick_target(ra0, archetype)
@@ -346,10 +368,12 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
             cache_a[s] = ra
             rb = run_once(_cfg_with(cfg, enabled=True, actor_id=aid,
                                     channels=CHANNEL_LADDER[name], coverage=coverage), s)
+            touched = touched_actors(rb) or None      # xem ghi chú ở run_pair
             pairs.append(PairResult(
                 seed=s, actor_id=aid,
                 a=_driver_metrics(ra, aid), b=_driver_metrics(rb, aid),
-                system_a=_system_metrics(ra, aid), system_b=_system_metrics(rb, aid),
+                system_a=_system_metrics(ra, aid, health_actor_ids=touched),
+                system_b=_system_metrics(rb, aid, health_actor_ids=touched),
                 adherence_a=adherence_audit(ra), adherence_b=adherence_audit(rb)))
         out[name] = compare(pairs)
         out[name]["adherence"] = aggregate_adherence(pairs, nominal=nominal_adherence(cfg))
@@ -368,7 +392,11 @@ def aggregate_health_guardrail(pairs: list[PairResult]) -> dict:
     keys = ("rest_min_total", "veto_calls_n", "veto_fired_n",
             "veto_soc_low_n", "veto_fatigued_n", "veto_defer_cap_n",
             "work_span_p50", "work_span_p90", "work_span_max",
-            "drive_min_p50", "drive_min_p90", "drive_min_max")
+            "drive_min_p50", "drive_min_p90", "drive_min_max",
+            # MẪU SỐ phải hiện trong artifact: cùng một verdict OK có nghĩa hoàn toàn khác
+            # khi chấm trên 90/90 tài xế (cổng nhạy) so với 9/90 (pha loãng ~10× ⇒ cổng canh
+            # nhiễu). Thiếu khoá này thì người đọc không phân biệt được hai ca đó.
+            "n_actors_scope")
 
     def _mean(side: str) -> dict:
         rows = [getattr(pr, side) for pr in pairs]

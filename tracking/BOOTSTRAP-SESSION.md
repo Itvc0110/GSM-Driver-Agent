@@ -58,11 +58,11 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 ## §2. STATE hiện tại (2026-07-30)
 
 ```
-local HEAD  = 1d98de6   (UPDATE-114 đã đẩy origin/main); UPDATE-115 đang chờ commit
-suite       = 982 passed / 4 skipped / 0 failed  (2026-08-01: 917 + 65 UI)
+local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
+suite       = 990 passed / 4 skipped / 0 failed  (2026-08-01: 925 + 65 UI)
               uv run pytest -q                  -> xem số trên
               uv run pytest -q ui/backend/tests -> 65
-UPDATE       = 109 file, mới nhất UPDATE-115 (104 UIUX + 105 codex review là của remote)
+UPDATE       = 110 file, mới nhất UPDATE-116 (104 UIUX + 105 codex review là của remote)
 PENDING      = 19 mục V- đang chờ Cường (KHÔNG phải 20 — V-15 và V-19 đã ĐÓNG):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
@@ -86,6 +86,11 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-116 `D-M3-13`** — **tầng 5 chưa từng đo được gì**: có hàm gộp, có
+  `health_guardrail`, nhưng `_system_metrics` không mang khoá sức khoẻ nào ⇒ `TREO — THIẾU DỮ
+  LIỆU` trên mọi pair. Lần thứ BA cùng mẫu `D-R12` trong hai ngày, và cả ba lần UPDATE của chính
+  tôi đã tuyên bố cơ chế hoạt động. Sau khi nối, đo đường thật: nghỉ **+352,8′**,
+  `work_span_p90` **−17,8′**, verdict OK, scope **90/90**.
 - **UPDATE-115 `D-M3-11`** — **6 rò rỉ thông tin tương lai** ở L3 view l1r. Vào từ MỘT test đỏ
   (idle 247,48′ > online 246′); hai giả thuyết rẻ (làm tròn · lệch hai bảng) bị **loại bằng đo**.
   Bài học tái dùng được: khi bắt được một lỗi *thuộc một họ*, **viết phép thử cho cả họ rồi quét**
@@ -149,7 +154,7 @@ cho luật positioning (sẽ đo ra ≈0 — xem §5 bẫy #7).
 
 ---
 
-## §5. 🔴 TÁM BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
+## §5. 🔴 MƯỜI BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
 
 Đây là phần giá trị nhất của file này. Mỗi bẫy dưới đây **đã làm một con số bị báo sai cho Cường**.
 
@@ -189,6 +194,22 @@ VẬT LÝ thì độ lớn không nói gì về mức nghiêm trọng** — 1,48
 Việc cứu tình huống chỉ là **dump dữ liệu ra xem**, một câu lệnh. Và: **4/6 chỗ tìm ra bằng probe,
 không bằng đọc code** — tôi đã đọc chính hàm đó khi sửa chỗ đầu mà vẫn không thấy hai field kia.
 ⇒ **Bắt được một lỗi thuộc một họ thì viết phép thử cho CẢ HỌ rồi quét, đừng soi bằng mắt.**
+
+**9. "Cơ chế TỰ QUẢNG CÁO trong docstring nhưng không ai nối nguồn" — sập 3 LẦN trong 2 ngày.**
+`D-R12` · UPDATE-114 lỗ (a) (`adherence_a` có field + comment *"arm đối chứng cũng phải được ĐO"*
+nhưng không cổng nào đọc) · UPDATE-116 `D-M3-13` (tầng 5 có hàm gộp + `health_guardrail` đầy đủ,
+nhưng `_system_metrics` **không mang khoá sức khoẻ nào** ⇒ verdict `TREO — THIẾU DỮ LIỆU` trên
+mọi pair, và `grep` cho thấy **0 artifact** từng mang tầng 5). Cả ba lần, **UPDATE của chính tôi
+đã tuyên bố cơ chế hoạt động**. ⇒ **Trước khi tin một cổng, ĐO đầu ra của nó trên một pair
+THẬT** — đừng đọc docstring, đừng tin UPDATE cũ, kể cả UPDATE của mình. Đối trọng duy nhất đã
+chứng minh hiệu quả: **test sever-restore** (ngắt cơ chế ⇒ phải đỏ) và `grep` artifact đã lưu.
+
+**10. Một giá trị `None` KHÔNG phải bằng chứng cơ chế mù.** Sau khi nối tầng 5, tôi đọc
+`a_mean['n_actors_scope']` ra `None` và kết luận *"`touched_actors` trả rỗng ⇒ cổng vẫn chấm toàn
+cohort"* — sắp ghi thành lỗi thứ tư. Thực tế: `_mean` chỉ gộp 12 khoá liệt kê nên khoá đó **vắng
+khỏi dict**, còn `touched_actors(rb)` trả đúng **90/90**. ⇒ Với `.get()` trả `None`, phân biệt
+*"giá trị là None"* với *"khoá không tồn tại"* trước khi kết luận. (Phát hiện sai vẫn dẫn tới một
+fix thật: mẫu số **phải** hiện trong artifact — `OK` trên 90/90 và trên 9/90 nghĩa khác hẳn.)
 
 ### Bẫy vận hành
 

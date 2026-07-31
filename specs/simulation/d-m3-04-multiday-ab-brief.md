@@ -102,7 +102,14 @@ trũng cầu rồi quay lại giờ vàng, tức `C2′`), không phải hiệu 
    `generate_realdata(continuous=True)` chạy qua `run_multiday`, fix này đổi realization mock và
    **phơi ra 6 rò rỉ thông tin tương lai** ở đường l1r (`D-M3-11`, UPDATE-115).
 2. ~~Plan mode: chốt 3 câu hỏi thiết kế~~ ✅ **XONG** — Cường duyệt cả 3 (2026-07-31).
-3. 🔴 **CÒN LẠI, phải làm TRONG cycle này**: nối `health_guardrail(actor_ids=…)` vào
-   `aggregate_health_guardrail`. Cơ chế đã có (UPDATE-114 lỗ (b)) nhưng **đường chạy thì chưa** —
-   đúng họ lỗi (a) của chính UPDATE đó. Nếu bỏ bước này thì cổng tầng 5 vẫn chấm trên tổng cohort
-   và vẫn canh nhiễu ở đúng cấu hình kênh thưa mà phép đo này dùng.
+3. ~~Nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`~~ ✅ **XONG
+   2026-08-01 (UPDATE-116)** — và khi mở code ra nối thì phát hiện **vấn đề lớn hơn hẳn**:
+   `_system_metrics` (nguồn DUY NHẤT của `system_a/b`) **không mang khoá sức khoẻ nào** ⇒ tầng 5
+   trả `TREO — THIẾU DỮ LIỆU` trên mọi pair, tức **chưa từng đo được gì** (`D-M3-13`; `grep` cho
+   thấy 0 artifact từng mang khoá này). Nay đã nối nguồn + `touched_actors(rb)` áp cho cả hai arm
+   + khai mẫu số `n_actors_scope`. Đo đường thật (seed 5011, `wait_only`, coverage all): nghỉ
+   **+352,8′**, `work_span_p90` **−17,8′**, `drive_min_p90` **−13,4′**, verdict OK, scope 90/90.
+   ⇒ **Tiên quyết tầng 5 của phép đo này đã sẵn sàng thật, không phải trên giấy.**
+4. 🔴 **CÒN LẠI**: `run_pair_multiday` — đường chạy A/B nhiều ngày. Đây là phần **MỞ RỘNG** (viết
+   hàm mới), khác với các bước trên là **fix lỗi**; theo chỉ đạo Cường 2026-07-31 (*"ưu tiên fix
+   lỗi thay vì mở rộng sim"*) nên nó **chờ Cường bật đèn** dù prereg đã khoá sẵn.
