@@ -1,0 +1,56 @@
+{
+ "locked_at": "2026-07-31",
+ "spec": "specs/simulation/e10-advisor-noisy.md §4 (E10b) — prereg RIÊNG cho dải ngưỡng THẤP",
+ "vi_sao_mo": "G-SENS đo lại bằng thước mới (UPDATE-113) cho thấy Δ của trigger chờ-lâu TĂNG ĐƠN ĐIỆU khi T giảm, song song với tần suất can thiệp (T=35: 0,9 lần/ngày → T=15: 36,7). Đo khám phá T=15 ở n=100: Δ=+2.159đ CI[+945,+3.314] DƯƠNG SIG, R≈55%. ⇒ E10b sụp ở headline T=30 vì QUÁ HIẾM, không phải vì tín hiệu sai. Cường duyệt mở prereg mới 2026-07-31.",
+ "bai_hoc_neo": "Neo T = 2× median chờ hoà-vốn (spec §4.2 chọn 30′ vì hoà vốn 14–18′) là QUÁ BẢO THỦ. Dải mới neo quanh 1× hoà vốn.",
+ "T_grid": [
+  10,
+  12,
+  15,
+  18
+ ],
+ "T_headline": 15,
+ "T_da_do_kham_pha": {
+  "15": {
+   "delta": 2159,
+   "ci": [
+    945,
+    3314
+   ],
+   "n": 100,
+   "nhan": "EXPLORATORY — KHÔNG dùng làm kết quả công bố"
+  }
+ },
+ "n_min_grid": [
+  1,
+  2,
+  3
+ ],
+ "n_min_headline": 2,
+ "seeds_measure": "5000-5099 (n=100, cùng bộ với E10 để ghép cặp World A dùng lại)",
+ "arms": [
+  "A (cache lại)",
+  "B_wait_lowT (realized k*, trigger wait)",
+  "B_oracle (cache lại)"
+ ],
+ "metric_chinh": "net_mean_all; Δ_X(s)=B_X(s)−A(s); phân lớp §6.3 như E10",
+ "thuoc": "coin-based followed (UPDATE-113) — KHÔNG dùng thước cũ",
+ "ky_vong_dang_ky_truoc": [
+  "T=15 tái lập DƯƠNG SIG ở lớp CÒN-MỘT-PHẦN (R 45–65%) — nếu KHÔNG tái lập thì đo khám phá là type-I và phải báo đúng như vậy",
+  "Δ tiếp tục tăng khi T giảm 15→12→10 CHO TỚI khi chạm trần: dưới ~10′ mọi ô đều fire ⇒ trigger mất tính chọn lọc, Δ phải QUAY ĐẦU giảm. Nếu KHÔNG quay đầu ⇒ nghi trigger chỉ đang mua Δ bằng khối lượng, phải soi lại",
+  "n_min=1 vẫn là luật per-driver lách cửa sau (spec §4.3) ⇒ báo nhưng KHÔNG làm headline",
+  "G-GUARD: T thấp ⇒ nhiều relocate ⇒ km rỗng tăng; nếu tầng hệ thống suy giảm SIG thì Δ cá nhân KHÔNG cứu được kết luận",
+  "TẦNG 5 sức khoẻ: T thấp kéo người đang nghỉ-ngơi-tại-chỗ đi nhiều hơn ⇒ theo dõi work_span p90"
+ ],
+ "stop": {
+  "STOP-A": "cổng adherence D-M3-10 TREO bất kỳ arm nào ⇒ dừng, không báo Δ",
+  "STOP-B": "T=15 KHÔNG tái lập dương SIG ⇒ báo 'đo khám phá là type-I', đóng nhánh",
+  "STOP-C": "G-GUARD có tầng suy giảm SIG ⇒ gắn nhãn 'đạt cá nhân, hại hệ thống', không báo Δ trần trụi"
+ },
+ "cam": [
+  "đổi T_headline sau khi nhìn Δ",
+  "trích số EXPLORATORY như kết quả công bố",
+  "gộp kết quả này với headline T=30 của E10 thành một bảng"
+ ],
+ "gioi_han_ke_thua": "L1 (thế giới rank-tĩnh) · L2 (λ̂ ngửi oracle) · L4 (trigger × execution-gate) · D-E10-07 (CI hẹp hơn thực tế do bất định coin ~409đ)"
+}
