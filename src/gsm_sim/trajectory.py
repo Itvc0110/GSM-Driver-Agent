@@ -4,6 +4,27 @@ và phát hiện flaw (hành vi chưa tối ưu — vd sạc vào khung điểm-
 
 Mọi số MOCK/illustrative — flaw là heuristic để minh hoạ dư địa advisor, KHÔNG phải phán
 quyết chính sách. Số tài chính (payout) lấy từ segment (policy đã tính), không bịa thêm.
+
+⚠⚠ **MODULE KHÔNG CÓ ĐƯỜNG CHẠY (`D-M3-15`, quét 2026-08-01).** `grep -rn trajectory src/
+scripts/ ui/ tests/` = **0 kết quả** ngoài chính file này (một dòng trong
+`tests/_health_boundary_manifest.py` chỉ khai `detect_flaws` là money-scope). `dashboard.py`
+(696 dòng) **không import gì từ đây** — nó dùng `dashboard_theme.ACTIVITY_COLORS` và tự dựng
+timeline. Nghĩa là:
+
+- `build_paths`, `build_customer_events` chưa từng chạy ngoài file này (**0 test**);
+- `detect_flaws` có 2 test nhưng **không đường chạy sản phẩm** — tức cơ chế "phát hiện hành
+  vi chưa tối ưu" đang không phát hiện gì cả;
+- 🔴 **`STATE_COLORS` dưới đây là BẢNG MÀU THỨ HAI** và nó **xung đột** với bảng dashboard
+  đang dùng: `enroute` ở đây là **cam** `(255,165,0)` còn `dashboard_theme` là **xanh dương**
+  `#3987e5`; `relocate` ở đây **vàng** `(255,205,86)` còn kia **hồng** `#d55181`.
+  ⇒ Nối module này vào UI mà không thống nhất màu trước sẽ tạo ra hai cách đọc cùng một
+  trạng thái — đúng loại lỗi mà `CLAUDE.md` §4b gọi là *"UI tự recompute khác engine"*.
+
+**Chưa xoá** vì đây là 300 dòng có thể dùng lại cho lớp visual (quyết định giữ/xoá thuộc
+Cường). Nhưng đừng đọc nó như tài liệu về hành vi hệ thống hiện hành: nó không mô tả gì đang
+chạy. Trước khi nối lại: (1) thống nhất `STATE_COLORS` với `dashboard_theme`, (2) kiểm
+`detect_flaws` không quy loss ra VND cho tài xế thấy (nó tính `loss_vnd` từ `rev_per_min` —
+hợp lệ vì có nhãn illustrative, nhưng KHÔNG được lên UI như số tài chính).
 """
 
 from __future__ import annotations

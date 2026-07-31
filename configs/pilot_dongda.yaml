@@ -23,7 +23,10 @@ time:
   end_min: 1440                    # 24:00
   warmup_min: 60                   # 05:00-06:00 không tính metrics
   dispatch_tick_s: 5               # T1
-  metrics_bucket_min: 15           # T2
+  # `metrics_bucket_min: 15` XOÁ 2026-08-01 (D-M3-15): không dòng code nào đọc nó, và sim gộp
+  # metrics theo GIỜ cứng (`int(t_min // 60)` ở sim_metrics.py:66/77/258/259). Giữ nó lại là
+  # nói với người đọc rằng metrics chia theo 15′ — sai. Muốn bucket 15′ thật thì phải sửa 4 chỗ
+  # hardcode kia và đo lại mọi số theo-giờ; đó là đổi hành vi, cần plan riêng (D-M3-16).
 
 demand:
   orders_per_day: 1200             # kỳ vọng TRONG window (renormalize hour-shape trên 05-24h)
@@ -259,10 +262,15 @@ policy:                            # sim-policy-bundle-v0.md
   bonus_min_completion: 0.85
 
 vehicle:                           # world-parameters.md §2
-  swap_range_km: 60                # pin swap ~55-70
-  swap_consume_pct_per_km: 1.6     # 1.4-1.8
-  charge_range_km: 110             # Feliz S dịch vụ 100-130
-  charge_consume_pct_per_km: 0.85
+  # Phạm vi pin là số DẪN XUẤT, không phải tham số: `behavior.soc_range_km` tính
+  # `soc_pct / consume_pct_per_km`, nên ở 100% SOC ta có swap = 100/1.6 = 62.5 km,
+  # charge = 100/0.85 = 117.6 km. D-M3-15 (2026-08-01): hai khoá `*_range_km` từng được chép
+  # cứng ở đây (60 và 110) và KHÔNG được đọc bởi bất kỳ dòng code nào — chúng đã lệch với giá
+  # trị hiệu dụng 4,2% và 6,9%, tức là tài liệu SAI nằm trong nguồn sự thật về cấu hình. Đã
+  # xoá thay vì sửa số: giữ một giá trị dẫn xuất trong config là mời gọi nó lệch lần nữa.
+  # Dải tham chiếu (world-parameters.md §2): pin swap ~55-70 km; Feliz S dịch vụ 100-130 km.
+  swap_consume_pct_per_km: 1.6     # 1.4-1.8  ⇒ phạm vi 62.5 km ở SOC 100%
+  charge_consume_pct_per_km: 0.85  #          ⇒ phạm vi 117.6 km ở SOC 100%
   swap_soc_threshold_pct: 20       # đi đổi pin khi SOC dưới ngưỡng
   home_charge_min: 210             # sạc cắm 3-4h (đội sạc)
   # T-045b (Cycle P, 2026-07-28): chi phí TIỀN MẶT — sổ riêng `actor.cost_vnd`, KHÔNG đụng

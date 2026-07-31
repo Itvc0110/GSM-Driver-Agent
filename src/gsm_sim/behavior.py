@@ -115,6 +115,17 @@ def accept_order(actor: Actor, gross_vnd: int, pickup_dist_km: float, forced: bo
 
 
 def soc_range_km(actor: Actor, cfg_vehicle: dict) -> float:
+    """Phạm vi còn lại (km) từ SOC — **NGUỒN CÔNG THỨC DUY NHẤT** cho "xe đi được bao xa".
+
+    `D-M3-15` (2026-08-01): `configs/pilot_dongda.yaml` từng chép cứng `swap_range_km: 60` và
+    `charge_range_km: 110`, không dòng code nào đọc chúng, và chúng đã lệch với giá trị hiệu
+    dụng ở đây (62,5 và 117,6 km) tới 4,2% / 6,9%. Hai khoá đó đã bị xoá; comment trong config
+    trỏ về đúng hàm này. Nếu đổi công thức, sửa comment kia theo.
+
+    Hàm hiện **chưa có caller** (quyết định swap dùng ngưỡng `soc_pct` trực tiếp). Giữ vì nó là
+    nơi duy nhất phát biểu quan hệ SOC↔km, và `test_config_flags_wired.py` canh không cho số
+    dẫn xuất quay lại config.
+    """
     if actor.fleet == FleetType.SWAP:
         return actor.soc_pct / max(1e-6, float(cfg_vehicle["swap_consume_pct_per_km"]))
     return actor.soc_pct / max(1e-6, float(cfg_vehicle["charge_consume_pct_per_km"]))
