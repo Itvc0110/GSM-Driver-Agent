@@ -1,0 +1,59 @@
+{
+ "locked_at": "2026-07-31",
+ "spec": "specs/simulation/e10-advisor-noisy.md",
+ "k_star": 6,
+ "k_criterion": "mae_one_step_realized_v1",
+ "k_grid": [
+  1,
+  2,
+  3,
+  4,
+  6
+ ],
+ "T_headline": 30.0,
+ "T_grid": [
+  15.0,
+  20.0,
+  25.0,
+  30.0,
+  35.0
+ ],
+ "T_excluded_structural": [
+  45.0,
+  60.0
+ ],
+ "n_min_headline": 2,
+ "n_min_grid": [
+  1,
+  2,
+  3
+ ],
+ "min_pickups": 5,
+ "min_pickups_grid": [
+  1,
+  3,
+  5,
+  10
+ ],
+ "block_fallback": {
+  "active": false,
+  "rule": "idle_share_ge2 < 0.20 => grid_disk r=1",
+  "measured_idle_share_ge2": 0.7753
+ },
+ "seeds_measure": "5000-5099",
+ "seeds_tuning": "5100-5129",
+ "preflight_z_positioning": -2.387,
+ "ruler_fix_applied": false,
+ "firing_rate_T30_nmin2": 0.057,
+ "stop3": {
+  "firing_rate": 0.057,
+  "verdict": "SỐNG"
+ },
+ "metric_chinh": "net_mean_all (mean payout MỌI actor); Δ_X(s)=B_X(s)−A(s); arm-vs-arm = hiệu-của-hiệu per seed; bootstrap CI 5000, seed 12345",
+ "expected_registered": "spec §6.5 — bảng kỳ vọng trung thực (in lại cạnh kết quả)",
+ "pingpong_rule": {
+  "threshold": 0.1,
+  "window_buckets": 2,
+  "action": "cooldown 1 bucket theo ô-nguồn rồi đo lại"
+ }
+}

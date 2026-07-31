@@ -65,7 +65,7 @@ riêng** như dự tính — n=100 đã dùng để BÁC giả thuyết, không 
 
 ---
 
-## 2. Cổng THỐNG KÊ của `D-M3-10` — ✅ ĐÃ CHỐT cơ chế, chờ thi công
+## 2. Cổng THỐNG KÊ của `D-M3-10` — ✅ XONG (UPDATE-107): đã thi công VÀ nối vào `run_ladder`
 
 **Vị trí:** ngay sau `L1-04`, vì `L1-04` là phép đo đầu tiên chạy dưới cổng mới ⇒ nó cho ta dữ liệu
 thật để chọn tolerance thay vì đoán.
@@ -151,6 +151,14 @@ n ≥ (2/0,10)² = **400** cho lệch 0,10 chạm z=4 ⇒ dùng n=500.
 ---
 
 ## 3. 🔴 `E10` — arm "ADVISOR CŨNG NHIỄU": việc quan trọng nhất còn lại
+
+> ✅ **SPEC XONG 2026-07-31** — `specs/simulation/e10-advisor-noisy.md` (UPDATE-108): 3 thiết kế độc
+> lập + 6 phản biện rò-rỉ-oracle + tổng hợp; claim code chịu-lực đã tự kiểm lại. **Chờ Cường duyệt
+> plan mode 3 điểm** (arm `B_hist`; mini-cycle sửa thước nếu tiền-flight bắn; ngân sách ~5–5,5h).
+> Hai ĐÍNH CHÍNH so với mục này: (1) §3b dưới đây ghi `idle_by_hour` — **sai nguồn**, biến đúng là
+> `idle_streak_min` (`entities.py:53`, có chiều thời-gian-liên-tục, reset khi được chào); (2)
+> "ba arm" ở acceptance — spec đề xuất **4 arm chính + 1 chẩn đoán** (thêm `B_hist` tách "mất λ"
+> khỏi "mất trí nhớ qua đêm", và `B_wait_oracle` n=30 tách trigger khỏi nguồn cầu).
 
 **Vị trí:** trên mọi thí nghiệm kênh khác. **Không phải vì mới — vì nó quyết định các Δ khác có
 nghĩa gì.**

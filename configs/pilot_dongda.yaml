@@ -335,6 +335,22 @@ advice:
   # là ĐỨNG CHỜ — không đụng go_swap/rest/end_shift (bài học REST). Equilibrium: hồ sơ
   # research/simulation/multi-agent-equilibrium.md (cân bằng tồn tại; phủ tăng không tự phá).
   positioning_overrides: wait_only
+  # --- E10 (specs/simulation/e10-advisor-noisy.md §2.1). Default GIỮ nguyên đường cũ ---
+  # Nguồn cầu của MarketStateProducer: oracle = λ config (đường hiện hành, bit-identical —
+  # fingerprint 5 seed × 2 config đã kiểm 2026-07-31) | realized = λ̂ từ cuốc ĐÃ ĐÓN
+  # (advisor mất λ — arm thí nghiệm). Giá trị lạ / trộn với market_demand_override ⇒ ValueError.
+  market_demand_source: oracle
+  realized_demand:
+    window_buckets: 3              # k — placeholder; GIÁ TRỊ HEADLINE = k* từ procedure §6.2
+                                   # (MAE one-step-ahead realized-only), đọc e10-prereg-locked.json
+    min_pickups: 5                 # min_n TOÀN CỤC (per-ô sẽ tái tạo lỗi mẫu số D-M3-01)
+  # Trigger của kênh vị trí: capacity (đường cũ — ứng viên = người ở ô cap_left==0, không đổi
+  # một ký tự) | wait (E10b — ứng viên theo THỜI GIAN CHỜ của ô + zone-veto). Neo T=30′ ≈ 2×
+  # median chờ hoà-vốn (14–18′), dưới trần cụt ~40–44′ của impatience 20′×2 (spec §4.2).
+  positioning_trigger: capacity
+  positioning_wait:
+    threshold_min: 30.0            # T — quét {15,20,25,30,35}; 45/60 LOẠI cấu trúc
+    min_idle: 2                    # n_min theo Ô — n=1 là luật per-driver lách cửa sau
   # Kênh accept_lift: nâng TẠM THỜI accept_base khi tỷ lệ nhận dưới `bonus_min_acceptance`.
   # Căn cứ: policy.day_bonus() trả 0 khi acceptance < ngưỡng (0.85), BẤT KỂ điểm — nên tài
   # xế accept_base 0.80 (P4 tân binh) mất TOÀN BỘ thưởng. Đây là sự thật policy, tác động ở
@@ -455,3 +471,8 @@ missions:
     - {mission_id: m-morning4,  name: "4 cuốc khung sáng 6-9h",   window: [6, 9],   target: 4,  reward_vnd: 20000}
     - {mission_id: m-evening6,  name: "6 cuốc khung tối 17-20h",  window: [17, 20], target: 6,  reward_vnd: 30000}
     - {mission_id: m-allday12,  name: "12 cuốc trong ngày",       window: null,     target: 12, reward_vnd: 40000}
+
+# E10b §4.7 — observer log-only cho control-run (World A): per-cell (n_idle, median streak)
+# + streak per-actor. 0 RNG, 0 ghi state; fingerprint bật/tắt phải IDENTICAL (test canh).
+probe:
+  wait_stats: false

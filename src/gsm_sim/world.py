@@ -265,11 +265,29 @@ class World:
         self.env.process(self._order_expiry_proc())
         if self.market is not None:
             self.env.process(self._standby_planner())
+        if bool(self.cfg.get("probe.wait_stats", False)):
+            self.env.process(self._wait_stats_probe())
         for a in self.actors.values():
             self.env.process(self._actor_proc(a))
         self.env.run(until=self.end_min)
         self._settle_end_of_run()
         return self.events
+
+    def _wait_stats_probe(self):
+        """E10b §4.7 — observer LOG-ONLY cho control-run: per-cell `(n_idle, median streak)`
+        + streak per-actor (biến này không nằm trong event nào — tái dựng từ timeline sẽ là
+        đường recompute thứ hai dễ sai). 0 RNG, 0 ghi state ⇒ fingerprint bật/tắt cờ phải
+        IDENTICAL (test T18). WAIT-share/precision tính hậu-kiểm từ event log, không ở đây."""
+        from .market_state import count_idle_wait
+        b = float(self.advice.bucket_min)
+        while self.env.now < self.end_min:
+            stats = count_idle_wait(self.actors.values())
+            self.log(-1, "probe_wait_stats", "",
+                     cells={c: [n, round(med, 3)] for c, (n, med) in sorted(stats.items())},
+                     streaks={str(a.actor_id): [a.cell, round(float(a.idle_streak_min), 1)]
+                              for a in self.actors.values()
+                              if a.state == ActorState.IDLE})
+            yield self.env.timeout(b)
 
     # --- T-045a b3: batch tick S4 — gán tài xế rỗi vào ô CÒN TRẦN, mỗi bucket một lần ---
 
@@ -298,13 +316,42 @@ class World:
             ranked = view["ranked_cells"]
             cap_left = {c: int(view["cells"][c]["capacity_left"] or 0) for c in ranked}
 
+            # E10b (spec e10-advisor-noisy §4): trigger `wait` — ứng viên theo THỜI GIAN CHỜ
+            # của Ô thay vì cap_left==0. Nhánh `capacity` (default) đi đúng đường cũ từng
+            # ký tự: fired rỗng, `ranked_eff` là CHÍNH `ranked` (test fingerprint canh).
+            wait_mode = self.advice.positioning_trigger == "wait"
+            if wait_mode:
+                from .market_state import count_idle_wait, wait_fired_cells
+                wait_T = self.advice.positioning_wait_threshold_min
+                fired = wait_fired_cells(count_idle_wait(self.actors.values()),
+                                         wait_T, self.advice.positioning_wait_min_idle)
+                # ZONE-VETO §4.4 — thuộc ĐỊNH NGHĨA trigger, không phải tuỳ chọn: ô fired bị
+                # loại khỏi tập ĐÍCH của batch. Vì ứng viên chỉ sinh từ ô fired, own-cell ∉
+                # zones ⇒ Hungarian KHÔNG THỂ stagger về chỗ đứng (capacity_alloc.py cost
+                # lệch target = pen+10, không phải LARGE — lỗ tự-gán là thật, test T14);
+                # và ô fired không nhận người vào (đóng nguồn-đích chồng nhau cùng batch).
+                ranked_eff = [c for c in ranked if c not in fired]
+                if not ranked_eff:
+                    # không còn đích hợp lệ ⇒ KHÔNG làm ứng viên: không rút coin, không
+                    # đếm decided (test T15)
+                    yield self.env.timeout(b)
+                    continue
+            else:
+                fired, ranked_eff = set(), ranked
+
             cands = []
             for a in self.actors.values():
                 if a.state != ActorState.IDLE or not self.advice.covers(a):
                     continue
                 if a.actor_id in self.standby_plan:
                     continue                     # đã có phân công còn hiệu lực
-                if cap_left.get(a.cell, 0) > 0:
+                if wait_mode:
+                    if a.cell not in fired:
+                        continue                 # nguồn = CHỈ ô đã fire (W > T ∧ n ≥ n_min)
+                    if a.idle_streak_min < wait_T:
+                        continue                 # cổng cá nhân §4.3: không kéo người vừa tới
+                                                 # (ô fire {50′,40′,5′} không được kéo người 5′)
+                elif cap_left.get(a.cell, 0) > 0:
                     continue                     # đang đứng ở ô CÒN TRẦN — kéo đi là churn
                 # ĐA-04: positioning nằm NGOÀI nhịp theo mặc định (kênh dương SIG duy nhất).
                 # Chỉ khi bật cờ đo `count_positioning_in_budget` nó mới chịu cooldown/ngân
@@ -315,7 +362,7 @@ class World:
                     continue
                 # preferred = ô còn trần GẦN NHẤT (đỡ km rỗng — veto b4); tie-break theo tên
                 # ô để deterministic. Hungarian tự stagger phần tranh chấp.
-                pref = min(ranked, key=lambda c: (cell_distance_km(self.grid, a.cell, c), c))
+                pref = min(ranked_eff, key=lambda c: (cell_distance_km(self.grid, a.cell, c), c))
                 # priority_soc của S4: giá trị THẤP được xếp trước. Đảo SOC để ưu tiên người
                 # NHIỀU pin (đi xa được); người ít pin không nên bị kéo chạy rỗng.
                 cands.append({"driver_id": f"d-{a.actor_id}", "advice_kind": "standby_zone",
@@ -324,10 +371,13 @@ class World:
                 yield self.env.timeout(b)
                 continue
 
-            zones = [{"zone": c, "capacity": cap_left[c]} for c in ranked]
+            zones = [{"zone": c, "capacity": cap_left[c]} for c in ranked_eff]
             ai = derive_allocation_input(_iso(now), cands, [], zones,
                                          bucket_min=int(b))
             sol = capacity_alloc.solve(ai)["solution"]
+            # E10b §4.4: bất biến zone-veto — không ai bị gán VÀO ô fired (kỳ vọng cấu trúc:
+            # fired ∉ zones ⇒ Hungarian không có slot ở đó; assert để thủng là nổ, không im)
+            assert all(al["assigned_target"] not in fired for al in sol["allocations"]),                 "zone-veto thủng: có người bị gán vào ô fired"
 
             n_follow = 0
             per_cell: dict[str, int] = {}
@@ -364,7 +414,12 @@ class World:
             self.log(-1, "standby_planner", "",
                      n_candidates=len(cands), n_assigned=sol["n_assigned"],
                      n_unassigned=len(sol["unassigned"]), n_follow=n_follow,
-                     herding_avoided=sol["herding_avoided"])
+                     herding_avoided=sol["herding_avoided"],
+                     # E10b: chỉ wait-mode mang thêm khoá (capacity mode giữ detail cũ
+                     # NGUYÊN VẸN — neutrality từng bit); fired ghi lại để diff/volume §5.4
+                     # và test tự kiểm "không gán vào ô fired" đọc được từ event log
+                     **({"n_fired_cells": len(fired), "fired_cells": sorted(fired)}
+                        if wait_mode else {}))
             yield self.env.timeout(b)
 
     def _settle_end_of_run(self):

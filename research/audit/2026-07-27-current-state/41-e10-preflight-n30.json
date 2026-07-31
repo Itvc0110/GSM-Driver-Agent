@@ -1,0 +1,2409 @@
+{
+ "what": "E10 preflight §5.5 — cổng z gộp trên arm B_oracle (positioning wait_only, coverage all), thước HIỆN HÀNH (followed = coin ∧ thi hành được)",
+ "mock": true,
+ "config": "configs/pilot_dongda.yaml",
+ "seeds": [
+  5100,
+  5101,
+  5102,
+  5103,
+  5104,
+  5105,
+  5106,
+  5107,
+  5108,
+  5109,
+  5110,
+  5111,
+  5112,
+  5113,
+  5114,
+  5115,
+  5116,
+  5117,
+  5118,
+  5119,
+  5120,
+  5121,
+  5122,
+  5123,
+  5124,
+  5125,
+  5126,
+  5127,
+  5128,
+  5129
+ ],
+ "prediction_preregistered": "SẼ bắn — z 1-seed ước ~13 (spec §5.5/§6.5#4; số ước, chính phép đo này là phép kiểm)",
+ "z_pooled_positioning": -2.387,
+ "null_mu": 0.4901,
+ "followed_total": 1061,
+ "decided_total": 2277,
+ "adherence_pooled": 0.466,
+ "gate_threshold": 4.0,
+ "gate_fired": false,
+ "verdict_pipeline": "OK",
+ "flags_pipeline": [],
+ "rows": [
+  {
+   "seed": 5100,
+   "decided": 81,
+   "followed": 37,
+   "decision_adherence": 0.4568,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 15,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 9,
+     "decision_adherence": 0.6,
+     "event_adherence": 0.6
+    },
+    "positioning|P4": {
+     "decided": 12,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 9,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P2": {
+     "decided": 14,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 4,
+     "decision_adherence": 0.2857142857142857,
+     "event_adherence": 0.2857142857142857
+    },
+    "positioning|P3": {
+     "decided": 7,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 1,
+     "decision_adherence": 0.14285714285714285,
+     "event_adherence": 0.14285714285714285
+    },
+    "positioning|P7": {
+     "decided": 15,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 7,
+     "decision_adherence": 0.4666666666666667,
+     "event_adherence": 0.4666666666666667
+    },
+    "positioning|P5": {
+     "decided": 9,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 3,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P1": {
+     "decided": 9,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 4,
+     "decision_adherence": 0.4444444444444444,
+     "event_adherence": 0.4444444444444444
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5101,
+   "decided": 79,
+   "followed": 35,
+   "decision_adherence": 0.443,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 10,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 6,
+     "decision_adherence": 0.6,
+     "event_adherence": 0.6
+    },
+    "positioning|P2": {
+     "decided": 16,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 16,
+     "event_followed": 10,
+     "decision_adherence": 0.625,
+     "event_adherence": 0.625
+    },
+    "positioning|P4": {
+     "decided": 9,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 6,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P3": {
+     "decided": 3,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    },
+    "positioning|P5": {
+     "decided": 18,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 18,
+     "event_followed": 2,
+     "decision_adherence": 0.1111111111111111,
+     "event_adherence": 0.1111111111111111
+    },
+    "positioning|P7": {
+     "decided": 16,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 16,
+     "event_followed": 9,
+     "decision_adherence": 0.5625,
+     "event_adherence": 0.5625
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 2,
+     "decision_adherence": 0.2857142857142857,
+     "event_adherence": 0.2857142857142857
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5102,
+   "decided": 78,
+   "followed": 42,
+   "decision_adherence": 0.5385,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 11,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 6,
+     "decision_adherence": 0.5454545454545454,
+     "event_adherence": 0.5454545454545454
+    },
+    "positioning|P4": {
+     "decided": 7,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 7,
+     "decision_adherence": 1.0,
+     "event_adherence": 1.0
+    },
+    "positioning|P2": {
+     "decided": 12,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 7,
+     "decision_adherence": 0.5833333333333334,
+     "event_adherence": 0.5833333333333334
+    },
+    "positioning|P3": {
+     "decided": 6,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 1,
+     "decision_adherence": 0.16666666666666666,
+     "event_adherence": 0.16666666666666666
+    },
+    "positioning|P5": {
+     "decided": 20,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 7,
+     "decision_adherence": 0.35,
+     "event_adherence": 0.35
+    },
+    "positioning|P7": {
+     "decided": 15,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 8,
+     "decision_adherence": 0.5333333333333333,
+     "event_adherence": 0.5333333333333333
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 6,
+     "decision_adherence": 0.8571428571428571,
+     "event_adherence": 0.8571428571428571
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5103,
+   "decided": 76,
+   "followed": 38,
+   "decision_adherence": 0.5,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 15,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 6,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P4": {
+     "decided": 9,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 8,
+     "decision_adherence": 0.8888888888888888,
+     "event_adherence": 0.8888888888888888
+    },
+    "positioning|P2": {
+     "decided": 11,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 4,
+     "decision_adherence": 0.36363636363636365,
+     "event_adherence": 0.36363636363636365
+    },
+    "positioning|P5": {
+     "decided": 11,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 5,
+     "decision_adherence": 0.45454545454545453,
+     "event_adherence": 0.45454545454545453
+    },
+    "positioning|P7": {
+     "decided": 17,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 8,
+     "decision_adherence": 0.47058823529411764,
+     "event_adherence": 0.47058823529411764
+    },
+    "positioning|P3": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 5,
+     "decision_adherence": 0.7142857142857143,
+     "event_adherence": 0.7142857142857143
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5104,
+   "decided": 89,
+   "followed": 44,
+   "decision_adherence": 0.4944,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 15,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 10,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P2": {
+     "decided": 20,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 7,
+     "decision_adherence": 0.35,
+     "event_adherence": 0.35
+    },
+    "positioning|P4": {
+     "decided": 8,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 6,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P3": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P7": {
+     "decided": 20,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 10,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P1": {
+     "decided": 8,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 6,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P5": {
+     "decided": 12,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 3,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5105,
+   "decided": 89,
+   "followed": 38,
+   "decision_adherence": 0.427,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 15,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 8,
+     "decision_adherence": 0.5333333333333333,
+     "event_adherence": 0.5333333333333333
+    },
+    "positioning|P2": {
+     "decided": 27,
+     "followed": 12,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 27,
+     "event_followed": 12,
+     "decision_adherence": 0.4444444444444444,
+     "event_adherence": 0.4444444444444444
+    },
+    "positioning|P4": {
+     "decided": 4,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 3,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P3": {
+     "decided": 6,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 1,
+     "decision_adherence": 0.16666666666666666,
+     "event_adherence": 0.16666666666666666
+    },
+    "positioning|P5": {
+     "decided": 10,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 4,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P7": {
+     "decided": 20,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 7,
+     "decision_adherence": 0.35,
+     "event_adherence": 0.35
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 3,
+     "decision_adherence": 0.42857142857142855,
+     "event_adherence": 0.42857142857142855
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5106,
+   "decided": 80,
+   "followed": 31,
+   "decision_adherence": 0.3875,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 10,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 3,
+     "decision_adherence": 0.3,
+     "event_adherence": 0.3
+    },
+    "positioning|P4": {
+     "decided": 10,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 8,
+     "decision_adherence": 0.8,
+     "event_adherence": 0.8
+    },
+    "positioning|P3": {
+     "decided": 9,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 3,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P2": {
+     "decided": 15,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 7,
+     "decision_adherence": 0.4666666666666667,
+     "event_adherence": 0.4666666666666667
+    },
+    "positioning|P7": {
+     "decided": 17,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 5,
+     "decision_adherence": 0.29411764705882354,
+     "event_adherence": 0.29411764705882354
+    },
+    "positioning|P1": {
+     "decided": 6,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 3,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P5": {
+     "decided": 13,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 2,
+     "decision_adherence": 0.15384615384615385,
+     "event_adherence": 0.15384615384615385
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5107,
+   "decided": 80,
+   "followed": 34,
+   "decision_adherence": 0.425,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 13,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 8,
+     "decision_adherence": 0.6153846153846154,
+     "event_adherence": 0.6153846153846154
+    },
+    "positioning|P2": {
+     "decided": 14,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 8,
+     "decision_adherence": 0.5714285714285714,
+     "event_adherence": 0.5714285714285714
+    },
+    "positioning|P4": {
+     "decided": 11,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 7,
+     "decision_adherence": 0.6363636363636364,
+     "event_adherence": 0.6363636363636364
+    },
+    "positioning|P3": {
+     "decided": 9,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 1,
+     "decision_adherence": 0.1111111111111111,
+     "event_adherence": 0.1111111111111111
+    },
+    "positioning|P5": {
+     "decided": 12,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 2,
+     "decision_adherence": 0.16666666666666666,
+     "event_adherence": 0.16666666666666666
+    },
+    "positioning|P7": {
+     "decided": 15,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 6,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P1": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5108,
+   "decided": 68,
+   "followed": 34,
+   "decision_adherence": 0.5,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 6,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 5,
+     "decision_adherence": 0.8333333333333334,
+     "event_adherence": 0.8333333333333334
+    },
+    "positioning|P4": {
+     "decided": 10,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 7,
+     "decision_adherence": 0.7,
+     "event_adherence": 0.7
+    },
+    "positioning|P2": {
+     "decided": 15,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 6,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P3": {
+     "decided": 5,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 1,
+     "decision_adherence": 0.2,
+     "event_adherence": 0.2
+    },
+    "positioning|P7": {
+     "decided": 18,
+     "followed": 11,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 18,
+     "event_followed": 11,
+     "decision_adherence": 0.6111111111111112,
+     "event_adherence": 0.6111111111111112
+    },
+    "positioning|P1": {
+     "decided": 6,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 4,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P5": {
+     "decided": 8,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5109,
+   "decided": 78,
+   "followed": 38,
+   "decision_adherence": 0.4872,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 10,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 5,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P4": {
+     "decided": 12,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 7,
+     "decision_adherence": 0.5833333333333334,
+     "event_adherence": 0.5833333333333334
+    },
+    "positioning|P2": {
+     "decided": 18,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 18,
+     "event_followed": 9,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P3": {
+     "decided": 4,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 3,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P5": {
+     "decided": 12,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 3,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    },
+    "positioning|P7": {
+     "decided": 15,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 8,
+     "decision_adherence": 0.5333333333333333,
+     "event_adherence": 0.5333333333333333
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 3,
+     "decision_adherence": 0.42857142857142855,
+     "event_adherence": 0.42857142857142855
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5110,
+   "decided": 85,
+   "followed": 43,
+   "decision_adherence": 0.5059,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 12,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 6,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P4": {
+     "decided": 9,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 6,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P2": {
+     "decided": 17,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 7,
+     "decision_adherence": 0.4117647058823529,
+     "event_adherence": 0.4117647058823529
+    },
+    "positioning|P3": {
+     "decided": 3,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 2,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P5": {
+     "decided": 15,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 4,
+     "decision_adherence": 0.26666666666666666,
+     "event_adherence": 0.26666666666666666
+    },
+    "positioning|P7": {
+     "decided": 20,
+     "followed": 13,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 13,
+     "decision_adherence": 0.65,
+     "event_adherence": 0.65
+    },
+    "positioning|P1": {
+     "decided": 9,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 5,
+     "decision_adherence": 0.5555555555555556,
+     "event_adherence": 0.5555555555555556
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5111,
+   "decided": 64,
+   "followed": 32,
+   "decision_adherence": 0.5,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 13,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 6,
+     "decision_adherence": 0.46153846153846156,
+     "event_adherence": 0.46153846153846156
+    },
+    "positioning|P2": {
+     "decided": 17,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 10,
+     "decision_adherence": 0.5882352941176471,
+     "event_adherence": 0.5882352941176471
+    },
+    "positioning|P4": {
+     "decided": 8,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 5,
+     "decision_adherence": 0.625,
+     "event_adherence": 0.625
+    },
+    "positioning|P7": {
+     "decided": 13,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 6,
+     "decision_adherence": 0.46153846153846156,
+     "event_adherence": 0.46153846153846156
+    },
+    "positioning|P5": {
+     "decided": 10,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 5,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P1": {
+     "decided": 3,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5112,
+   "decided": 85,
+   "followed": 44,
+   "decision_adherence": 0.5176,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 14,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 9,
+     "decision_adherence": 0.6428571428571429,
+     "event_adherence": 0.6428571428571429
+    },
+    "positioning|P2": {
+     "decided": 13,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 7,
+     "decision_adherence": 0.5384615384615384,
+     "event_adherence": 0.5384615384615384
+    },
+    "positioning|P4": {
+     "decided": 7,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 5,
+     "decision_adherence": 0.7142857142857143,
+     "event_adherence": 0.7142857142857143
+    },
+    "positioning|P5": {
+     "decided": 11,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 4,
+     "decision_adherence": 0.36363636363636365,
+     "event_adherence": 0.36363636363636365
+    },
+    "positioning|P7": {
+     "decided": 25,
+     "followed": 14,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 25,
+     "event_followed": 14,
+     "decision_adherence": 0.56,
+     "event_adherence": 0.56
+    },
+    "positioning|P3": {
+     "decided": 9,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 1,
+     "decision_adherence": 0.1111111111111111,
+     "event_adherence": 0.1111111111111111
+    },
+    "positioning|P1": {
+     "decided": 6,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 4,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5113,
+   "decided": 61,
+   "followed": 25,
+   "decision_adherence": 0.4098,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 4,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 3,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P4": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P2": {
+     "decided": 21,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 21,
+     "event_followed": 10,
+     "decision_adherence": 0.47619047619047616,
+     "event_adherence": 0.47619047619047616
+    },
+    "positioning|P3": {
+     "decided": 3,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 1,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P5": {
+     "decided": 12,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 4,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P7": {
+     "decided": 11,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 4,
+     "decision_adherence": 0.36363636363636365,
+     "event_adherence": 0.36363636363636365
+    },
+    "positioning|P1": {
+     "decided": 4,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 1,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5114,
+   "decided": 93,
+   "followed": 46,
+   "decision_adherence": 0.4946,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 8,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 4,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P4": {
+     "decided": 9,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 8,
+     "decision_adherence": 0.8888888888888888,
+     "event_adherence": 0.8888888888888888
+    },
+    "positioning|P2": {
+     "decided": 23,
+     "followed": 11,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 23,
+     "event_followed": 11,
+     "decision_adherence": 0.4782608695652174,
+     "event_adherence": 0.4782608695652174
+    },
+    "positioning|P3": {
+     "decided": 10,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 4,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P7": {
+     "decided": 23,
+     "followed": 11,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 23,
+     "event_followed": 11,
+     "decision_adherence": 0.4782608695652174,
+     "event_adherence": 0.4782608695652174
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 3,
+     "decision_adherence": 0.42857142857142855,
+     "event_adherence": 0.42857142857142855
+    },
+    "positioning|P5": {
+     "decided": 13,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 5,
+     "decision_adherence": 0.38461538461538464,
+     "event_adherence": 0.38461538461538464
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5115,
+   "decided": 70,
+   "followed": 36,
+   "decision_adherence": 0.5143,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 9,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 4,
+     "decision_adherence": 0.4444444444444444,
+     "event_adherence": 0.4444444444444444
+    },
+    "positioning|P2": {
+     "decided": 15,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 7,
+     "decision_adherence": 0.4666666666666667,
+     "event_adherence": 0.4666666666666667
+    },
+    "positioning|P4": {
+     "decided": 5,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 2,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P3": {
+     "decided": 4,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 2,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P7": {
+     "decided": 20,
+     "followed": 12,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 12,
+     "decision_adherence": 0.6,
+     "event_adherence": 0.6
+    },
+    "positioning|P1": {
+     "decided": 9,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 5,
+     "decision_adherence": 0.5555555555555556,
+     "event_adherence": 0.5555555555555556
+    },
+    "positioning|P5": {
+     "decided": 8,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 4,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5116,
+   "decided": 66,
+   "followed": 32,
+   "decision_adherence": 0.4848,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 11,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 3,
+     "decision_adherence": 0.2727272727272727,
+     "event_adherence": 0.2727272727272727
+    },
+    "positioning|P4": {
+     "decided": 5,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 5,
+     "decision_adherence": 1.0,
+     "event_adherence": 1.0
+    },
+    "positioning|P2": {
+     "decided": 21,
+     "followed": 12,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 21,
+     "event_followed": 12,
+     "decision_adherence": 0.5714285714285714,
+     "event_adherence": 0.5714285714285714
+    },
+    "positioning|P5": {
+     "decided": 13,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 3,
+     "decision_adherence": 0.23076923076923078,
+     "event_adherence": 0.23076923076923078
+    },
+    "positioning|P7": {
+     "decided": 9,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 5,
+     "decision_adherence": 0.5555555555555556,
+     "event_adherence": 0.5555555555555556
+    },
+    "positioning|P3": {
+     "decided": 2,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 2,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    },
+    "positioning|P1": {
+     "decided": 5,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 4,
+     "decision_adherence": 0.8,
+     "event_adherence": 0.8
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5117,
+   "decided": 84,
+   "followed": 35,
+   "decision_adherence": 0.4167,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 12,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 3,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    },
+    "positioning|P4": {
+     "decided": 12,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 9,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P2": {
+     "decided": 15,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 5,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P7": {
+     "decided": 19,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 19,
+     "event_followed": 8,
+     "decision_adherence": 0.42105263157894735,
+     "event_adherence": 0.42105263157894735
+    },
+    "positioning|P3": {
+     "decided": 3,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 2,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P5": {
+     "decided": 18,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 18,
+     "event_followed": 4,
+     "decision_adherence": 0.2222222222222222,
+     "event_adherence": 0.2222222222222222
+    },
+    "positioning|P1": {
+     "decided": 5,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 4,
+     "decision_adherence": 0.8,
+     "event_adherence": 0.8
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5118,
+   "decided": 72,
+   "followed": 25,
+   "decision_adherence": 0.3472,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 11,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 3,
+     "decision_adherence": 0.2727272727272727,
+     "event_adherence": 0.2727272727272727
+    },
+    "positioning|P4": {
+     "decided": 8,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 3,
+     "decision_adherence": 0.375,
+     "event_adherence": 0.375
+    },
+    "positioning|P2": {
+     "decided": 14,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 5,
+     "decision_adherence": 0.35714285714285715,
+     "event_adherence": 0.35714285714285715
+    },
+    "positioning|P5": {
+     "decided": 16,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 16,
+     "event_followed": 2,
+     "decision_adherence": 0.125,
+     "event_adherence": 0.125
+    },
+    "positioning|P7": {
+     "decided": 13,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 8,
+     "decision_adherence": 0.6153846153846154,
+     "event_adherence": 0.6153846153846154
+    },
+    "positioning|P3": {
+     "decided": 4,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 1,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    },
+    "positioning|P1": {
+     "decided": 6,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 3,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5119,
+   "decided": 51,
+   "followed": 25,
+   "decision_adherence": 0.4902,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 9,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 4,
+     "decision_adherence": 0.4444444444444444,
+     "event_adherence": 0.4444444444444444
+    },
+    "positioning|P4": {
+     "decided": 7,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 4,
+     "decision_adherence": 0.5714285714285714,
+     "event_adherence": 0.5714285714285714
+    },
+    "positioning|P2": {
+     "decided": 10,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 5,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P3": {
+     "decided": 4,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 3,
+     "decision_adherence": 0.75,
+     "event_adherence": 0.75
+    },
+    "positioning|P5": {
+     "decided": 4,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    },
+    "positioning|P7": {
+     "decided": 14,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 7,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P1": {
+     "decided": 3,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 2,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5120,
+   "decided": 70,
+   "followed": 34,
+   "decision_adherence": 0.4857,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 13,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 8,
+     "decision_adherence": 0.6153846153846154,
+     "event_adherence": 0.6153846153846154
+    },
+    "positioning|P4": {
+     "decided": 9,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 7,
+     "decision_adherence": 0.7777777777777778,
+     "event_adherence": 0.7777777777777778
+    },
+    "positioning|P2": {
+     "decided": 10,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 6,
+     "decision_adherence": 0.6,
+     "event_adherence": 0.6
+    },
+    "positioning|P3": {
+     "decided": 7,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 2,
+     "decision_adherence": 0.2857142857142857,
+     "event_adherence": 0.2857142857142857
+    },
+    "positioning|P7": {
+     "decided": 13,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 4,
+     "decision_adherence": 0.3076923076923077,
+     "event_adherence": 0.3076923076923077
+    },
+    "positioning|P5": {
+     "decided": 11,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 4,
+     "decision_adherence": 0.36363636363636365,
+     "event_adherence": 0.36363636363636365
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 3,
+     "decision_adherence": 0.42857142857142855,
+     "event_adherence": 0.42857142857142855
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5121,
+   "decided": 68,
+   "followed": 29,
+   "decision_adherence": 0.4265,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 18,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 18,
+     "event_followed": 6,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P4": {
+     "decided": 7,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 6,
+     "decision_adherence": 0.8571428571428571,
+     "event_adherence": 0.8571428571428571
+    },
+    "positioning|P2": {
+     "decided": 18,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 18,
+     "event_followed": 6,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P3": {
+     "decided": 2,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 2,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    },
+    "positioning|P5": {
+     "decided": 7,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 3,
+     "decision_adherence": 0.42857142857142855,
+     "event_adherence": 0.42857142857142855
+    },
+    "positioning|P7": {
+     "decided": 11,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 6,
+     "decision_adherence": 0.5454545454545454,
+     "event_adherence": 0.5454545454545454
+    },
+    "positioning|P1": {
+     "decided": 5,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 2,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5122,
+   "decided": 79,
+   "followed": 36,
+   "decision_adherence": 0.4557,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 15,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 6,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P4": {
+     "decided": 12,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 10,
+     "decision_adherence": 0.8333333333333334,
+     "event_adherence": 0.8333333333333334
+    },
+    "positioning|P2": {
+     "decided": 17,
+     "followed": 6,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 6,
+     "decision_adherence": 0.35294117647058826,
+     "event_adherence": 0.35294117647058826
+    },
+    "positioning|P3": {
+     "decided": 5,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 1,
+     "decision_adherence": 0.2,
+     "event_adherence": 0.2
+    },
+    "positioning|P7": {
+     "decided": 12,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 7,
+     "decision_adherence": 0.5833333333333334,
+     "event_adherence": 0.5833333333333334
+    },
+    "positioning|P5": {
+     "decided": 10,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 2,
+     "decision_adherence": 0.2,
+     "event_adherence": 0.2
+    },
+    "positioning|P1": {
+     "decided": 8,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 4,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5123,
+   "decided": 86,
+   "followed": 36,
+   "decision_adherence": 0.4186,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 20,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 8,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P4": {
+     "decided": 10,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 7,
+     "decision_adherence": 0.7,
+     "event_adherence": 0.7
+    },
+    "positioning|P2": {
+     "decided": 17,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 8,
+     "decision_adherence": 0.47058823529411764,
+     "event_adherence": 0.47058823529411764
+    },
+    "positioning|P3": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P5": {
+     "decided": 13,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 2,
+     "decision_adherence": 0.15384615384615385,
+     "event_adherence": 0.15384615384615385
+    },
+    "positioning|P7": {
+     "decided": 13,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 13,
+     "event_followed": 7,
+     "decision_adherence": 0.5384615384615384,
+     "event_adherence": 0.5384615384615384
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 2,
+     "decision_adherence": 0.2857142857142857,
+     "event_adherence": 0.2857142857142857
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5124,
+   "decided": 72,
+   "followed": 39,
+   "decision_adherence": 0.5417,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 12,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 5,
+     "decision_adherence": 0.4166666666666667,
+     "event_adherence": 0.4166666666666667
+    },
+    "positioning|P4": {
+     "decided": 5,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 5,
+     "decision_adherence": 1.0,
+     "event_adherence": 1.0
+    },
+    "positioning|P2": {
+     "decided": 20,
+     "followed": 13,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 13,
+     "decision_adherence": 0.65,
+     "event_adherence": 0.65
+    },
+    "positioning|P7": {
+     "decided": 15,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 10,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P3": {
+     "decided": 3,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 2,
+     "decision_adherence": 0.6666666666666666,
+     "event_adherence": 0.6666666666666666
+    },
+    "positioning|P5": {
+     "decided": 11,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 2,
+     "decision_adherence": 0.18181818181818182,
+     "event_adherence": 0.18181818181818182
+    },
+    "positioning|P1": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5125,
+   "decided": 80,
+   "followed": 41,
+   "decision_adherence": 0.5125,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 15,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 8,
+     "decision_adherence": 0.5333333333333333,
+     "event_adherence": 0.5333333333333333
+    },
+    "positioning|P4": {
+     "decided": 14,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 8,
+     "decision_adherence": 0.5714285714285714,
+     "event_adherence": 0.5714285714285714
+    },
+    "positioning|P2": {
+     "decided": 19,
+     "followed": 12,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 19,
+     "event_followed": 12,
+     "decision_adherence": 0.631578947368421,
+     "event_adherence": 0.631578947368421
+    },
+    "positioning|P3": {
+     "decided": 4,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 4,
+     "event_followed": 1,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    },
+    "positioning|P7": {
+     "decided": 14,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 7,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P5": {
+     "decided": 6,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 6,
+     "event_followed": 2,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P1": {
+     "decided": 8,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 3,
+     "decision_adherence": 0.375,
+     "event_adherence": 0.375
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5126,
+   "decided": 69,
+   "followed": 35,
+   "decision_adherence": 0.5072,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 7,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 4,
+     "decision_adherence": 0.5714285714285714,
+     "event_adherence": 0.5714285714285714
+    },
+    "positioning|P4": {
+     "decided": 17,
+     "followed": 11,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 11,
+     "decision_adherence": 0.6470588235294118,
+     "event_adherence": 0.6470588235294118
+    },
+    "positioning|P2": {
+     "decided": 15,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 15,
+     "event_followed": 8,
+     "decision_adherence": 0.5333333333333333,
+     "event_adherence": 0.5333333333333333
+    },
+    "positioning|P3": {
+     "decided": 3,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 1,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P7": {
+     "decided": 10,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 5,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P5": {
+     "decided": 12,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 2,
+     "decision_adherence": 0.16666666666666666,
+     "event_adherence": 0.16666666666666666
+    },
+    "positioning|P1": {
+     "decided": 5,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 4,
+     "decision_adherence": 0.8,
+     "event_adherence": 0.8
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5127,
+   "decided": 89,
+   "followed": 35,
+   "decision_adherence": 0.3933,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 10,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 10,
+     "event_followed": 4,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P2": {
+     "decided": 22,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 22,
+     "event_followed": 7,
+     "decision_adherence": 0.3181818181818182,
+     "event_adherence": 0.3181818181818182
+    },
+    "positioning|P4": {
+     "decided": 7,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 5,
+     "decision_adherence": 0.7142857142857143,
+     "event_adherence": 0.7142857142857143
+    },
+    "positioning|P3": {
+     "decided": 5,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 2,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P7": {
+     "decided": 20,
+     "followed": 8,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 20,
+     "event_followed": 8,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P5": {
+     "decided": 17,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 17,
+     "event_followed": 4,
+     "decision_adherence": 0.23529411764705882,
+     "event_adherence": 0.23529411764705882
+    },
+    "positioning|P1": {
+     "decided": 8,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 5,
+     "decision_adherence": 0.625,
+     "event_adherence": 0.625
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5128,
+   "decided": 63,
+   "followed": 34,
+   "decision_adherence": 0.5397,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 12,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 4,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P4": {
+     "decided": 9,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 7,
+     "decision_adherence": 0.7777777777777778,
+     "event_adherence": 0.7777777777777778
+    },
+    "positioning|P2": {
+     "decided": 7,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 3,
+     "decision_adherence": 0.42857142857142855,
+     "event_adherence": 0.42857142857142855
+    },
+    "positioning|P3": {
+     "decided": 5,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 5,
+     "event_followed": 2,
+     "decision_adherence": 0.4,
+     "event_adherence": 0.4
+    },
+    "positioning|P7": {
+     "decided": 14,
+     "followed": 10,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 10,
+     "decision_adherence": 0.7142857142857143,
+     "event_adherence": 0.7142857142857143
+    },
+    "positioning|P5": {
+     "decided": 9,
+     "followed": 3,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 9,
+     "event_followed": 3,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P1": {
+     "decided": 7,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 7,
+     "event_followed": 5,
+     "decision_adherence": 0.7142857142857143,
+     "event_adherence": 0.7142857142857143
+    }
+   },
+   "flags": []
+  },
+  {
+   "seed": 5129,
+   "decided": 72,
+   "followed": 28,
+   "decision_adherence": 0.3889,
+   "by_archetype": {
+    "positioning|P6": {
+     "decided": 11,
+     "followed": 5,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 11,
+     "event_followed": 5,
+     "decision_adherence": 0.45454545454545453,
+     "event_adherence": 0.45454545454545453
+    },
+    "positioning|P4": {
+     "decided": 14,
+     "followed": 7,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 14,
+     "event_followed": 7,
+     "decision_adherence": 0.5,
+     "event_adherence": 0.5
+    },
+    "positioning|P2": {
+     "decided": 12,
+     "followed": 4,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 12,
+     "event_followed": 4,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    },
+    "positioning|P3": {
+     "decided": 8,
+     "followed": 2,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 2,
+     "decision_adherence": 0.25,
+     "event_adherence": 0.25
+    },
+    "positioning|P5": {
+     "decided": 8,
+     "followed": 0,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 8,
+     "event_followed": 0,
+     "decision_adherence": 0.0,
+     "event_adherence": 0.0
+    },
+    "positioning|P7": {
+     "decided": 16,
+     "followed": 9,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 16,
+     "event_followed": 9,
+     "decision_adherence": 0.5625,
+     "event_adherence": 0.5625
+    },
+    "positioning|P1": {
+     "decided": 3,
+     "followed": 1,
+     "dismissed": 0,
+     "suppressed": 0,
+     "event_decided": 3,
+     "event_followed": 1,
+     "decision_adherence": 0.3333333333333333,
+     "event_adherence": 0.3333333333333333
+    }
+   },
+   "flags": []
+  }
+ ]
+}

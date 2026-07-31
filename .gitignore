@@ -42,3 +42,6 @@ data/ui-telemetry/
 
 # output sinh boi scripts/build_doc_graph.py — tai sinh duoc, khong commit
 graph-out/
+
+# cache trung gian cua measure_e10 (1.3MB, deterministic tu seed — tai tao duoc)
+research/audit/2026-07-27-current-state/41-e10-tuning-cache.json

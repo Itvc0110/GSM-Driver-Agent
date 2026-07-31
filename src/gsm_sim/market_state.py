@@ -62,6 +62,30 @@ def count_supply(actors, pending_targets: dict[int, str] | None = None
     return now, inc
 
 
+def count_idle_wait(actors) -> dict[str, tuple[int, float]]:
+    """E10b (spec e10-advisor-noisy §4.2): `(n_idle, median idle_streak_min)` theo Ô.
+
+    Mẫu = MỌI actor IDLE (platform quan sát mọi tài xế; `coverage` chỉ quyết định ai được
+    NHẬN lời khuyên — lọc ở tầng ứng viên, không phải ở đây). READ-ONLY tuyệt đối trên
+    `idle_streak_min` — biến này đang nuôi bản năng sốt ruột (`behavior.py`); mọi ý "sửa
+    semantics cho sạch" đổi hành vi và bị CẤM trong cycle E10.
+    """
+    from statistics import median
+    by_cell: dict[str, list[float]] = {}
+    for a in actors:
+        if a.state == ActorState.IDLE and a.cell:
+            by_cell.setdefault(a.cell, []).append(float(a.idle_streak_min))
+    return {c: (len(v), float(median(v))) for c, v in by_cell.items()}
+
+
+def wait_fired_cells(stats: dict[str, tuple[int, float]],
+                     threshold_min: float, min_idle: int) -> set[str]:
+    """Luật trigger E10b — pre-registered, ngưỡng TUYỆT ĐỐI (spec §4.2 giữ nguyên ba lý do
+    bác percentile): fire ⇔ `n_idle ≥ min_idle ∧ median > T`. `min_idle` chặn luật
+    per-driver lách cửa sau (n=1 ⇒ "median theo Ô" là chờ của đúng một người)."""
+    return {c for c, (n, med) in stats.items() if n >= min_idle and med > threshold_min}
+
+
 class MarketStateProducer:
     """Dựng view theo bucket, có cache.
 
@@ -88,10 +112,39 @@ class MarketStateProducer:
         self.demand_override: dict[int, dict[str, float]] | None = (
             {int(h): {str(c): float(v) for c, v in cells.items()}
              for h, cells in ov.items()} if ov else None)
+        # E10 (specs/simulation/e10-advisor-noisy.md §2): nguồn cầu là THAM SỐ của producer.
+        # `oracle` (default) = đường cũ nguyên trạng từng bit; `realized` = λ̂ từ cuốc ĐÃ ĐÓN
+        # (RealizedDemandEstimator — narrow reader, chỉ cầm list events + scalars, không cầm
+        # world). Giá trị lạ ⇒ nổ ngay: fail-loud thắng hidden fallback (họ lỗi D-R12).
+        src = str(adv.get("market_demand_source") or "oracle")
+        if src not in ("oracle", "realized"):
+            raise ValueError(f"advice.market_demand_source={src!r} — chỉ nhận oracle|realized")
+        self.demand_source = None
+        if src == "realized":
+            if self.demand_override is not None:
+                # hai belief THAY THẾ nhau (xem comment `_demand`) — trộn là vô nghĩa
+                raise ValueError("market_demand_source=realized không đi cùng "
+                                 "market_demand_override: hai belief thay thế nhau")
+            if self.bucket_min != 60:
+                # phạm vi đo E10 pin b=60 (spec §3.2 — mọi neo/độ lớn derive ở b này);
+                # muốn b khác phải re-derive rồi gỡ chốt, không âm thầm chạy tiếp
+                raise ValueError(f"market_demand_source=realized đòi bucket_min=60 "
+                                 f"(đang {self.bucket_min}) — spec e10 §3.2")
+            from .demand_estimator import RealizedDemandEstimator
+            rd = adv.get("realized_demand") or {}
+            self.demand_source = RealizedDemandEstimator(
+                world.events, start_min=int(world.cfg.get("time.start_min")),
+                bucket_min=self.bucket_min,
+                window_buckets=int(rd.get("window_buckets", 3)),
+                min_pickups=int(rd.get("min_pickups", 5)))
         self._cache: dict[int, dict] = {}
         self.pending_targets: dict[int, str] = {}
 
-    def _demand(self, hour: int) -> dict[str, float]:
+    def _demand(self, hour: int, idx: int) -> dict[str, float]:
+        if self.demand_source is not None:
+            # E10a: λ̂ realized theo bucket planner — COLD trả {} (advisor im lặng),
+            # tuyệt đối không rơi về demand_field/override.
+            return self.demand_source.estimate(idx)
         if self.demand_override is not None:
             # THAY THẾ (không merge): fictitious play cần kiểm soát trọn belief; merge nửa
             # vời sẽ trộn hai thế hệ belief và không hội tụ được về bất kỳ đâu.
@@ -112,14 +165,32 @@ class MarketStateProducer:
         else:
             now, inc = None, None
         start = idx * self.bucket_min
+        dem = self._demand(hour, idx)
         v = build_market_state(
             t_now=f"{_BASE_DATE}T{(start // 60) % 24:02d}:{start % 60:02d}:00+07:00",
             bucket_min=self.bucket_min,
-            demand_by_cell=self._demand(hour),
+            demand_by_cell=dem,
             supply_now_by_cell=now,
             supply_incoming_by_cell=inc,
             trips_per_driver_per_bucket=self.trips_per_hour_est * self.bucket_min / 60.0,
             source="MOCK",
         )
+        if self.demand_source is not None:
+            # E10 §3.3/§3.6: log MỘT lần/bucket (nhánh cache-miss này) — diag cho B1 và
+            # % bucket câm. Mode oracle tuyệt đối không log gì (neutrality, test T9 canh).
+            # Cache là hợp đồng "một ảnh mỗi bucket": ai xoá cache giữa bucket sẽ không đổi
+            # λ̂ (estimator chốt cửa sổ tại biên bucket) nhưng sẽ chụp lại CUNG.
+            est = self.demand_source
+            if dem:
+                self.world.log(-1, "demand_est", "", idx=idx,
+                               total=est.last_total, n_buckets=est.last_n_buckets,
+                               n_cells=len(dem),
+                               cells={c: [(int(now.get(c, 0)) + int(inc.get(c, 0))
+                                           if now is not None else None),
+                                          round(lam, 6)]
+                                      for c, lam in sorted(dem.items())})
+            else:
+                self.world.log(-1, "demand_est_cold", "", idx=idx,
+                               total=est.last_total, n_buckets=est.last_n_buckets)
         self._cache[idx] = v
         return v

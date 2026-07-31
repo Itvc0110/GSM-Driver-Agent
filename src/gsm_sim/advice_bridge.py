@@ -194,6 +194,17 @@ class AdviceActionBridge:
         #                          ghi đè hành động 'đắt' từng làm advisor tệ đi −14k → −32k);
         #   "wait_and_relocate" → đổi cả ĐÍCH của relocate bản năng.
         self.positioning_overrides = str(adv.get("positioning_overrides", "off") or "off")
+        # E10b (specs/simulation/e10-advisor-noisy.md §4): TRIGGER của kênh vị trí.
+        # `capacity` = đường cũ (ứng viên = người đứng ở ô cap_left==0), không đổi một ký tự;
+        # `wait` = ứng viên theo THỜI GIAN CHỜ của ô (median idle_streak > T, n ≥ min_idle)
+        # + zone-veto. Giá trị lạ ⇒ nổ ngay (fail-loud thắng hidden fallback — họ D-R12).
+        self.positioning_trigger = str(adv.get("positioning_trigger", "capacity") or "capacity")
+        if self.positioning_trigger not in ("capacity", "wait"):
+            raise ValueError(f"advice.positioning_trigger={self.positioning_trigger!r} "
+                             f"— chỉ nhận capacity|wait")
+        pw = adv.get("positioning_wait") or {}
+        self.positioning_wait_threshold_min = float(pw.get("threshold_min", 30.0))
+        self.positioning_wait_min_idle = int(pw.get("min_idle", 2))
         # Cờ dựng kịch bản ABSENT (data thật không có cung theo ô): solver phải chạy được ở cả
         # ba mức available/degraded/absent — thiếu cung ⇒ KHÔNG khuyên vị trí, không đoán.
         self.market_supply_available = bool(adv.get("market_supply_available", True))
@@ -586,8 +597,10 @@ class AdviceActionBridge:
 
         Vì sao quan trọng: rút ở vòng poll nghĩa là re-roll mỗi 2 phút tới khi "follow" — đúng
         lỗi D-SIM-14 mà ĐA-04 chốt phải sửa (*"một adherence draw cho (decision_id,
-        material_revision)"*). Dùng cùng dòng RNG `seed ^ 0xADD1CE` với mọi kênh advice ⇒ bật
-        kênh không dịch chuỗi ngẫu nhiên của actor (giữ CRN)."""
+        material_revision)"*). Coin là keyed sha256 (`adherence_coin(seed, key, revision)` qua
+        `coin_follows`) — KHÔNG tiêu draw nào từ RNG chung ⇒ bật kênh không dịch chuỗi ngẫu
+        nhiên của actor (giữ CRN). (Đính chính 2026-07-31: câu cũ "cùng dòng RNG seed^0xADD1CE"
+        là chữ từ đời trước keyed coin — stream đó nay chỉ còn cho `covers` share.)"""
         return self.coin_follows(actor, "positioning", now_min, f"cell{target_cell}",
                                  bucket_min=self.bucket_min)
 
