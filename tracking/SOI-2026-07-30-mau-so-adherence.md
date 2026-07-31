@@ -46,6 +46,74 @@ lại bằng cách đọc code" hoặc "tôi tự đo" — tôi làm việc đó
 | **L1-01** | `rest_window` là kênh **duy nhất** không rút coin | `advice_bridge.py` `should_defer_rest` không có `coin_follows` ở bất kỳ dòng nào; 4 kênh kia: `:505` `:527` `:577` `:823` | adherence cắm cứng 1,0 |
 | **L1-03** | `check_shift_extend` trả `0.0` khi coin=False **không để lại dấu vết** | `advice_bridge.py:823-824` `if not self.coin_follows(...): return 0.0` | mẫu số chỉ gồm người ĐÃ THEO |
 | **L3-01** | Sửa tầng 1+2 mà không sửa `_sim_steps` thì **VẪN 100%** | `projections.py` `if kind in _ALWAYS_FOLLOWED or detail.get("followed")` — với 2 kind đó, bước `followed` được thêm **bất kể** `detail["followed"]` | fix một nửa = không fix |
+> ## ✅ PHẢN BIỆN 2026-07-31 — bốn finding nặng nhất, tôi TỰ làm (agent phản biện chết quota 3 lần)
+>
+> Không dùng agent nữa — đọc code + **reproduce qua đường ống thật** (`decision_state`,
+> `adherence_view`, `evaluate`). Kết quả: **L3-03 ĐÚNG · L4-01 ĐÚNG (nặng hơn mô tả) ·
+> L4-03 ĐÚNG (cần Cường chốt cách sửa) · L4-07 ĐÚNG (nặng nhất)**.
+>
+> - **L3-03** reproduce: bấm "Làm theo" 14:00 → đổi ý "Bỏ qua" 15:00 ⇒ hệ thống ghi `followed`.
+>   Đối chứng `occurred_at` khác nhau ⇒ ghi đúng `dismissed` ⇒ nguyên nhân đúng là **thế hoà**.
+>   ✅ **ĐÃ SỬA**: tie-break thêm `observed_at` (thời điểm server nhận) trước `event_id`.
+> - **L4-01** nặng hơn mô tả: không chỉ `event_adherence = None` — đo được
+>   `event_followed=1 > event_decided=0`, tức **tử số vượt mẫu số**, trạng thái BẤT KHẢ mà
+>   không cổng nào bắt. ✅ **ĐÃ SỬA**: `displayed` (sản phẩm) tính vào mẫu số EVENT cùng
+>   `decided` (sim) — hai tên của cùng một sự kiện "advisor đã nói".
+> - **L4-03** reproduce: `decision_bucket(0)==decision_bucket(25)` nhưng `min_gap=20` ⇒ ở
+>   t=25′ cadence trả **PRESENT** (card tới tay tài xế) trong khi `event_id` displayed trùng
+>   khoá bucket ⇒ store dedupe ⇒ **không event, không tiêu ngân sách**. ⏳ **CHƯA SỬA** —
+>   sửa đúng là làm hai lưới nhất quán (`min_gap` ≥ `DECISION_BUCKET_MIN`), nhưng 20′ là
+>   baseline Cường duyệt (`D-ĐA04-02`) và đổi nó là ĐỔI CHÍNH SÁCH ⇒ **cần Cường chốt**
+>   (thêm vào PENDING-REVIEW).
+> - **L4-07** (nặng nhất) reproduce: `cards.js` dựng `advice_id` BỊA (`brief-{date}`/
+>   `recap-{date}`) cho card im lặng, `_render` vẫn vẽ nút ⇒ một cú bấm tạo decision+followed
+>   cho lời khuyên **advisor chưa từng đưa** ⇒ `decision_adherence = 100%` cho quyết định MA.
+>   ✅ **ĐÃ SỬA hai tầng**: client không vẽ nút trên card im lặng (nút "Đã hiểu" không ghi
+>   event); boundary từ chối `advice_id` ngoài namespace advisor (422, không ghi gì).
+>
+> **Vòng 2 (cùng ngày) — thêm 5 finding phản biện xong:**
+> - **L4-04 ĐÚNG** (`GET /advice` trả silent card mà KHÔNG ghi event nào ⇒ mẫu số "advisor
+>   ĐỊNH nói nhưng bị nén" mất hẳn ở sản phẩm, `adherence_view["suppressed"]` luôn 0 ⇒ hai
+>   đường không so được dù chung projection). ✅ **ĐÃ SỬA**: `_note_suppressed` ghi event
+>   `suppressed` với `decision_id` hậu tố `-sup` (đúng tiền lệ sim, KHÔNG vào mẫu số `decided`).
+> - **L4-09 ĐÚNG** (`topic` default `"bonus"` — client chỉ gửi brief/nudge/recap ⇒ namespace
+>   mồ côi có cooldown/dismiss riêng không ai nuôi). ✅ **ĐÃ SỬA**: `CLIENT_TOPICS` +
+>   `DEFAULT_TOPIC="brief"`, test canh default phải nằm trong tập topic client thật.
+> - **L4-07(SOI) ĐÚNG** (`SHIFT_START_MIN = 6*60` cứng cho MỌI tài xế trong khi
+>   `shift_end_min` đã là query param ⇒ bất đối xứng, pha ca của tài xế ca đêm sai hoàn
+>   toàn). ✅ **ĐÃ SỬA**: tham số hoá `shift_start_min`; hằng cũ còn là default demo.
+>   ⚠ **LỆCH MÃ đã phát hiện**: `PLAN` §5 gọi `L4-07` là "card im lặng vẽ nút advice_id bịa",
+>   `SOI` §4 gọi `L4-07` là "SHIFT_START_MIN cứng" — HAI finding khác nhau cùng mã. Cả hai
+>   đều ĐÚNG và cả hai đã sửa; đánh số lại khi có dịp.
+> - **L4-08 = TRÙNG `D-R21`** (client gửi `at_min` giả `KIND_HOURS`), không phải finding mới.
+>   `D-R21` đã phản biện hạ cấp và cố ý chưa sửa (cần cycle UI bỏ `KIND_HOURS` cả hai phía).
+>   Fix `L3-03` hôm nay đã giải quyết PHẦN hệ quả của nó (đổi-ý-không-ghi-nhận).
+> - **L4-05 ĐÚNG về ngữ nghĩa, sev hạ xuống TB**: `followed` ở sản phẩm là **cú bấm tự khai**,
+>   ở sim là **đổi hành vi thật** — cùng tên/field/projection. NHƯNG khoá `adherence_view` là
+>   `(run_id, driver_id, topic)` và UI luôn `run_id=None` ⇒ hai đường **đã tách sẵn**, không
+>   trộn số được bằng code. Rủi ro còn lại là **người đọc gộp hai bảng** ⇒ ghi `D-R22`.
+>
+> **Vòng 3 (cùng ngày) — 3 finding nữa, ĐỀU ĐÚNG, có số:**
+> - **L3-04 ĐÚNG — đo được**: `event_adherence` là estimator **LỆCH THEO CẤU TRÚC** ở kênh
+>   có HỎI LẠI (tần suất hỏi lại phụ thuộc chính kết cục: người KHÔNG theo bị hỏi lại mỗi
+>   tick, người ĐÃ theo thì thôi). Seed 5100 ladder=all: `accept_lift` decision **0,714**
+>   (n=63) vs event **0,524** (n=147) ⇒ **lệch −19,0đp**, tỷ lệ hỏi lại **2,33×**; ba kênh
+>   không-hỏi-lại lệch đúng **0,0đp** (1,00×). ✅ **ĐÃ GẮN NHÃN** (không "sửa" được vì nó đo
+>   thứ khác): `adherence_audit` nay trả `event_repeat_ratio` +
+>   `event_adherence_is_lower_bound` — với kênh hỏi lại, `event_adherence` là **chặn DƯỚI**,
+>   CẤM so giữa các kênh.
+> - **L4-02 ĐÚNG**: không gian topic sản phẩm `{brief, nudge, recap}` ∩ không gian kênh sim
+>   `{shift_plan, accept_lift, shift_extend, rest_window, positioning}` = **RỖNG**.
+> - **L4-06 ĐÚNG**: `ui/backend/app/adapters/advisor.py` chỉ gọi `bonus_feasibility` (S1) ⇒
+>   sản phẩm ship **1/5** kênh của sim.
+>
+> 🔴 **Kết luận gộp L4-02 + L4-05 + L4-06 — phải nói với hội đồng**: adherence của SẢN PHẨM
+> và của SIM **không so sánh được**, ở BA tầng độc lập: (1) đơn vị hành động (cú bấm tự khai
+> vs đổi hành vi thật), (2) không gian topic rời rạc hoàn toàn, (3) phạm vi kênh 1/5. Bất kỳ
+> câu nào dạng *"adherence hệ thống là X"* gộp hai đường đều SAI. → `D-R22` mở rộng.
+>
+> Còn lại chưa phản biện: `L5-03/04`, `L1-02`, `L3-02`, `L5-01/02` (sev CAO).
+
 | **L3-03** | 🔴 Ở SẢN PHẨM, `followed` **LUÔN thắng** `dismissed` bất kể tài xế bấm gì sau cùng | `projections.py:43` sort theo `(occurred_at, event_id)`; `advice.py:246` `occurred_at` dựng từ `body.at_min` — **hằng số theo loại card** (`cards.js` `KIND_HOURS`) ⇒ mọi hành động cùng ngày trên cùng card **bằng nhau** về `occurred_at` ⇒ phá thế hoà bằng `event_id` = `ui-{advice_id}-{action}-{giây}` ⇒ `"dismissed" < "followed"` ⇒ `followed` sort SAU ⇒ `decision_state` (`:79` `row["state"] = et`) lấy cái SAU cùng | **sản phẩm không thể ghi nhận tài xế đổi ý** từ "làm theo" sang "bỏ qua" |
 | **L4-01** | Sản phẩm ghi `displayed`, sim ghi `decided` ⇒ `event_adherence` ở sản phẩm **vĩnh viễn None** | `advice.py:203` `"event_type": "displayed"`; `projections.py` chỉ đếm `event_decided` khi `et in ("decided","followed")` | một nửa bộ đo im lặng chết ở sản phẩm |
 | **L4-03** | Cooldown 20′ nhưng khoá idempotency của `displayed` là bucket **30′** ⇒ có khe advisor **nói miễn phí** | `advice.py:194` `bucket = decision_bucket(float(now_min))` (30′) vs `min_gap_min_per_topic=20` | card tới tay tài xế mà **không có event và không tiêu ngân sách** — họ lỗi F-1 sống lại ở đường sản phẩm |

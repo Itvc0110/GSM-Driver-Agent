@@ -152,11 +152,19 @@ def test_decision_level_matches_ground_truth(run_b, view_b):
     # ⚠ Cổng trên là MỘT PHÍA: nó xanh trên một con số sai theo chiều THẤP. Cổng hai phía
     # nằm ở `test_shift_extend_adherence_matches_coin_truth` — pin vào ground truth ĐỘC LẬP.
 
-    # positioning: mẫu số = người ĐƯỢC GÁN (planner), không phải người đã theo
+    # positioning: mẫu số = người ĐƯỢC GÁN (planner), không phải người đã theo.
+    # ⚠ Tử số đổi nghĩa 2026-07-31 (UPDATE-113 SỬA THƯỚC): trước đây pin vào số lần THI
+    # HÀNH (`standby_followed`) — nhưng thi hành = coin-true ∧ *thi-hành-được*, nên nó đếm
+    # hụt các ca coin-true-không-thi-hành (pop im lặng / bận / bản năng ≠ WAIT). Bias ~2,4đp
+    # đó làm cổng z TREO arm oracle ở n=100 (z=−4,40). Tử số nay là kết cục COIN tại lúc gán
+    # (`coin_follow_ids`); tỷ lệ thi hành sống ở chỉ tiêu RIÊNG `execution_rate`.
     assigned = sum(e.detail.get("n_assigned", 0) for e in ev if e.kind == "standby_planner")
-    followed = sum(1 for e in ev if e.kind == "standby_followed")
+    coin_true = sum(len(e.detail.get("coin_follow_ids") or [])
+                    for e in ev if e.kind == "standby_alloc")
+    executed = sum(1 for e in ev if e.kind == "standby_followed")
     assert agg["positioning"]["decided"] == assigned, "mẫu số phải gồm người KHÔNG theo"
-    assert agg["positioning"]["followed"] == followed
+    assert agg["positioning"]["followed"] == coin_true, "tử số phải là kết cục COIN"
+    assert executed <= coin_true, "thi hành không thể vượt số người đã nghe"
 
 
 # ---------- A2: hai tên, không bao giờ gọi trống là 'adherence' (verdict Cường) ----------
@@ -230,10 +238,24 @@ def test_adherence_key_separates_runs():
 # ---------- F-5 regression: decision_id theo bucket của planner ----------
 
 def test_decision_id_bucket_follows_config():
-    """`bucket_min=15` từng làm 23 phân công dùng chung decision_id ⇒ event bị nuốt."""
+    """`bucket_min=15` từng làm 23 phân công dùng chung decision_id ⇒ event bị nuốt.
+
+    ⚠ Đổi 2026-07-31 (V-21, UPDATE-112): lưới định danh quyết định nay là MỘT SỐ DUY NHẤT
+    (`DECISION_BUCKET_MIN`) cho mọi kênh — `advice.bucket_min` chỉ còn là CHU KỲ CHẠY của
+    planner. Ràng buộc cũ (bucket không được rộng hơn nhịp planner) nay được canh bằng
+    guard FAIL-LOUD thay vì bằng một lưới riêng: `bucket_min=15` là cấu hình KHÔNG HỢP LỆ
+    và phải NỔ ngay, thay vì chạy tiếp rồi nuốt event im lặng."""
+    import pytest
+    from gsm_core.policy_locks import PolicyLockViolation  # noqa: F401  (khác loại, ghi rõ)
     c = _cfg_all()
     c.data["advice"]["bucket_min"] = 15
-    r = run_once(c, seed=1000)
+    with pytest.raises(ValueError, match="NGẮN HƠN lưới quyết định"):
+        run_once(c, seed=1000)
+
+    # Đường hợp lệ: planner thưa hơn lưới ⇒ chạy được, decision_id vẫn duy nhất per gán
+    c2 = _cfg_all()
+    c2.data["advice"]["bucket_min"] = 60
+    r = run_once(c2, seed=1000)
     ids = [e.detail["decision_id"] for e in r.events if e.kind == "standby_followed"]
     assert ids, "kịch bản phải sinh standby_followed — rỗng là test vacuous (F-S6)"
     assert len(set(ids)) == len(ids)

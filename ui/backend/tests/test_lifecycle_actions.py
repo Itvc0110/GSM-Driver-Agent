@@ -200,7 +200,12 @@ def test_polling_same_bucket_does_not_burn_budget(tmp_path, monkeypatch):
     dv = client.get("/api/v1/driver/default-view").json()
     for m in range(600, 630, 2):        # 15 lần trong CÙNG bucket 30′
         r = client.get(f"/api/v1/advice?topic=bonus&now_min={m}").json()
-    assert r["cadence"]["verdict"] == "PRESENT", "poll trong một bucket không được đốt ngân sách"
+    # ⚠ Kỳ vọng đổi PRESENT → SUPPRESS ngày 2026-07-31 (UPDATE-112, V-21). Bản cũ pin ĐÚNG
+    # LỖI `L4-03`: cooldown 20′ ngắn hơn bucket 30′ nên ở phút 620–628 verdict quay lại
+    # PRESENT — card hiện lại thật — trong khi `_note_shown` khoá theo bucket nên KHÔNG ghi
+    # event và KHÔNG đốt ngân sách. Tức "một lời khuyên miễn phí". Nay cooldown = bucket
+    # (`effective_gap_min`) ⇒ trong cùng bucket luôn SUPPRESS, nhất quán với việc không ghi.
+    assert r["cadence"]["verdict"] == "SUPPRESS", "trong cùng bucket phải im, không nói lại"
     mem = advice_router._cadence_memory(dv["driver_id"], dv["date"], "mid")
     assert mem.proactive_count == 1, f"15 lần poll = 1 lần nói, nhận {mem.proactive_count}"
 
@@ -264,11 +269,13 @@ def test_topic_cooldown_alive_in_product(tmp_path, monkeypatch):
                       "&now_min=610&topic=bonus").json()
     assert soon["cadence"]["verdict"] == "SUPPRESS"
     assert soon["silent"]["reason_code"] == "topic_cooldown"
-    assert soon["cadence"]["next_eligible_min"] == 620.0
+    # 620 → 630 (UPDATE-112, V-21): cooldown thực thi = max(20′ cấu hình, 30′ bucket quyết
+    # định). Nói lại TRONG cùng bucket là lặp lại chính mình và event bị store dedupe (L4-03).
+    assert soon["cadence"]["next_eligible_min"] == 630.0
 
     later = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                       "&now_min=625&topic=bonus").json()
-    assert later["cadence"]["verdict"] == "PRESENT", "quá 20′ phải được nói lại"
+                       "&now_min=630&topic=bonus").json()
+    assert later["cadence"]["verdict"] == "PRESENT", "sang bucket mới phải được nói lại"
 
 
 def test_shift_budget_exhausted_silences_ui(tmp_path, monkeypatch):

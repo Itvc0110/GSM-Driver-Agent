@@ -37,7 +37,11 @@ export const Cards = {
     } catch (e) { console.warn("log action fail", e); }
   },
 
-  _render(kind, adviceId, title, message, extraHtml, confidence) {
+  // L4-07 (2026-07-31): card IM LẶNG không có quyết định thật để hành động lên. Trước đây
+  // nó vẫn vẽ "Làm theo"/"Bỏ qua" với advice_id BỊA (`brief-{date}`) ⇒ một cú bấm tạo
+  // decision+followed cho lời khuyên advisor CHƯA TỪNG ĐƯA ⇒ adherence sản phẩm 100% giả.
+  // Backend nay cũng từ chối (422) — hai tầng, vì client cũ/curl vẫn gọi được.
+  _render(kind, adviceId, title, message, extraHtml, confidence, actionable = true) {
     const el = document.createElement("div");
     el.className = "adv-card enter";
     el.innerHTML = `
@@ -50,17 +54,26 @@ export const Cards = {
       ${confidence != null ? `<div class="confidence-track"><div class="confidence-fill" style="width:${confidence * 100}%"></div></div>` : ""}
       <div class="adv-why hidden">${extraHtml || ""}</div>
       <div class="adv-actions">
-        <button class="adv-btn follow">✅ Làm theo</button>
-        <button class="adv-btn dismiss">✖ Bỏ qua</button>
+        ${actionable ? `<button class="adv-btn follow">✅ Làm theo</button>
+        <button class="adv-btn dismiss">✖ Bỏ qua</button>` : ""}
         ${extraHtml ? `<button class="adv-btn why">？Vì sao</button>` : ""}
+        ${actionable ? "" : `<button class="adv-btn close">Đã hiểu</button>`}
       </div>`;
     const close = (cls, act) => {
       this.logAction(adviceId, act, kind);
       el.classList.add(cls);
       setTimeout(() => el.remove(), 650);
     };
-    el.querySelector(".follow").addEventListener("click", () => close("followed", "followed"));
-    el.querySelector(".dismiss").addEventListener("click", () => close("dismissed", "dismissed"));
+    if (actionable) {
+      el.querySelector(".follow").addEventListener("click", () => close("followed", "followed"));
+      el.querySelector(".dismiss").addEventListener("click", () => close("dismissed", "dismissed"));
+    } else {
+      // im lặng: đóng thẻ KHÔNG ghi event nào (không có quyết định để ghi nhận)
+      el.querySelector(".close").addEventListener("click", () => {
+        el.classList.add("dismissed");
+        setTimeout(() => el.remove(), 650);
+      });
+    }
     const whyBtn = el.querySelector(".why");
     if (whyBtn) whyBtn.addEventListener("click", () => {
       el.querySelector(".adv-why").classList.toggle("hidden");
@@ -90,7 +103,7 @@ export const Cards = {
     const a = await api.advice(driverId, date, KIND_HOURS.brief, KIND_TOPIC.brief);
     if (a.silent.is_silent) {
       return this._render("brief", `brief-${date}`, "Bạn đang đúng nhịp",
-        a.silent.message, null, null);
+        a.silent.message, null, null, false);   // L4-07: im lặng ⇒ không nút hành động
     }
     const it = a.items[0];
     return this._render("brief", it.advice_id, it.title, it.message,
@@ -138,6 +151,6 @@ export const Cards = {
     const it = a.items[0];
     return this._render("recap", it ? it.advice_id : `recap-${date}`,
       "Tổng kết ca hôm nay", msg, it ? this._whyHtml(it) : null,
-      it ? it.confidence : null);
+      it ? it.confidence : null, Boolean(it));   // L4-07: không item ⇒ id bịa ⇒ không nút
   },
 };

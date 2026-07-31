@@ -494,6 +494,32 @@ def adherence_audit(result, run_id: str | None = None) -> dict:
             row["event_adherence"] = (row["event_followed"] / row["event_decided"]
                                       if row["event_decided"] else None)
 
+    # L3-04 (phản biện 2026-07-31, ĐO ĐƯỢC): `event_adherence` là estimator **LỆCH THEO
+    # CẤU TRÚC** ở kênh có HỎI LẠI — tần suất hỏi lại phụ thuộc chính kết cục: người KHÔNG
+    # theo bị hỏi lại mỗi tick (mẫu số event phình), người ĐÃ theo thì thôi. Đo seed 5100
+    # ladder=all: `accept_lift` decision 0,714 (n=63) vs event 0,524 (n=147) ⇒ **lệch
+    # −19,0đp**; ba kênh không-hỏi-lại lệch đúng 0,0đp.
+    #
+    # Không "sửa" được vì nó đo một thứ khác — nhưng phải GẮN NHÃN, nếu không ai đó sẽ so
+    # event_adherence GIỮA các kênh (kênh hỏi lại luôn trông tệ hơn) hoặc trích nó như
+    # adherence thật. Với kênh hỏi lại, event_adherence là **chặn DƯỚI**.
+    for bucket in (by_ch, by_ch_ar):
+        for row in bucket.values():
+            row["event_repeat_ratio"] = (row["event_decided"] / row["decided"]
+                                         if row["decided"] else None)
+            row["event_adherence_is_lower_bound"] = bool(
+                row["event_decided"] > row["decided"])
+
+    # SỬA THƯỚC (UPDATE-113): "nghe lời" và "làm được" là HAI câu hỏi. `followed` nay là
+    # kết cục COIN tại lúc gán (`projections`); tỷ lệ THI HÀNH tách ra đây. Nó KHÔNG vào
+    # cổng adherence (cổng đo tính toàn vẹn của thước, không đo dynamics) — nhưng bản thân
+    # nó là một finding đáng báo: coin-true mà không thi hành được là lời khuyên rơi vãi.
+    exec_n = sum(1 for e in result.events if e.kind == "standby_followed")
+    coin_n = sum(len(e.detail.get("coin_follow_ids") or [])
+                 for e in result.events if e.kind == "standby_alloc")
+    execution = {"positioning": {"coin_true_n": coin_n, "executed_n": exec_n,
+                                 "execution_rate": (exec_n / coin_n) if coin_n else None}}
+
     # Rà 2026-07-30 (UPDATE-107): cổng BẤT KHẢ phải biết NOMINAL của run. Với arm
     # tuân-thủ-tuyệt-đối (`adherence_by_archetype: 1.0` — chính khái niệm "so thế giới
     # không advisor vs HOÀN TOÀN tuân thủ"), adherence đo được 1,0 là ĐÚNG chứ không
@@ -512,6 +538,7 @@ def adherence_audit(result, run_id: str | None = None) -> dict:
         bounds[ch] = (min(lo, float(p)), max(hi, float(p)))
 
     return {"by_channel": by_ch, "by_channel_archetype": by_ch_ar,
+            "execution": execution,
             "flags": adherence_flags(by_ch, channel_nominal_bounds=bounds)}
 
 

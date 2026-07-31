@@ -180,20 +180,24 @@ class World:
         self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail,
                                  self.run_id))
 
-    def _decision_id(self, actor_id: int, channel: str, now: float,
-                     bucket_min: float | None = None) -> str:
+    def _decision_id(self, actor_id: int, channel: str, now: float) -> str:
         """decision_id deterministic của sim (ĐA-05) — theo công thức spec
         `adherence-measurement.md` §"advice_id": (driver, channel, bucket).
 
         Cùng tick advice_given/followed/suppressed ⇒ cùng bucket ⇒ CÙNG decision (join
         được); re-check mỗi tick trong cùng bucket gộp thành MỘT quyết định logic.
 
-        Bucket KHÔNG hardcode 30': planner chạy theo `advice.bucket_min`, nên hạ nó
-        xuống 15 làm hai phân công KHÁC NHAU rơi vào cùng bucket 30' ⇒ chung
-        decision_id ⇒ event bị nuốt (review đối kháng đo được 23 event mất ở
-        `bucket_min=15`). Kênh vị trí vì thế dùng đúng bucket của planner."""
+        MỘT SỐ DUY NHẤT (Cường 2026-07-31: *"thống nhất là tất cả dùng chung 1 số, không
+        có mismatch"*): mọi kênh — kể cả vị trí — dùng `DECISION_BUCKET_MIN`. Trước đây kênh
+        vị trí dùng `advice.bucket_min` (60′) làm lưới riêng ⇒ ba lưới cho một khái niệm
+        (`D-R17`), và cooldown 20′ thì ngắn hơn cả hai ⇒ `L4-03`.
+
+        Ràng buộc CÒN LẠI phải giữ (lý do lưới riêng ra đời): bucket KHÔNG được rộng hơn
+        nhịp sinh quyết định của kênh, nếu không hai lần gán KHÁC NHAU gộp một decision_id
+        và event bị nuốt (đo được: 23 event mất khi `bucket_min=15`). Nay ràng buộc đó được
+        canh bằng guard fail-loud ở `advice_bridge` thay vì bằng một lưới thứ ba."""
         from gsm_core.lifecycle.cadence import decision_bucket
-        return f"slth-{self.run_id}-{actor_id}-{channel}-{decision_bucket(now, bucket_min)}"
+        return f"slth-{self.run_id}-{actor_id}-{channel}-{decision_bucket(now)}"
 
     def _order_transition(self, oid: int, state: str) -> None:
         """M0-5: ghi chuyển trạng thái đơn (terminal chỉ ghi 1 lần — không ghi đè)."""
@@ -394,12 +398,18 @@ class World:
             # event SẴN CÓ, không thêm kind mới ⇒ mọi consumer đếm theo kind giữ nguyên số.
             assigned_by_cell: dict[str, list] = {}
             dids_by_cell: dict[str, dict] = {}
+            # SỬA THƯỚC (UPDATE-113, Cường duyệt 2026-07-31): kết cục COIN phải quan sát
+            # được ĐỘC LẬP với việc thi hành. Trước đây `standby_followed` (= coin-true ∧
+            # thi hành được) là bằng chứng DUY NHẤT ⇒ mọi ca coin-true-không-thi-hành (pop
+            # im lặng khi đã ở đúng ô, bận tới hết ca, bản năng ≠ WAIT) đều bị đếm thành
+            # "không theo" ⇒ adherence đo lệch null ~2,4đp ⇒ cổng z TREO ở n=100.
+            coin_true_by_cell: dict[str, list] = {}
             for al in sol["allocations"]:
                 cell = al["assigned_target"]
                 per_cell[cell] = per_cell.get(cell, 0) + 1
                 flags_by_cell.setdefault(cell, al.get("safety_flags") or [])
                 aid = int(al["driver_id"][2:])
-                did = self._decision_id(aid, "positioning", now, bucket_min=b)
+                did = self._decision_id(aid, "positioning", now)
                 assigned_by_cell.setdefault(cell, []).append(aid)
                 dids_by_cell.setdefault(cell, {})[str(aid)] = did
                 # "Đã nói" = advisor đưa lời khuyên, KHÔNG phụ thuộc tài xế có theo hay không
@@ -407,6 +417,7 @@ class World:
                 if self.advice.cadence_counts_positioning:
                     self.advice.cadence_note_spoken(self.actors[aid], "positioning", now)
                 if self.advice.standby_follow_draw(self.actors[aid], now, cell):
+                    coin_true_by_cell.setdefault(cell, []).append(aid)
                     self.standby_plan[aid] = cell
                     # decision sinh tại lúc GÁN — follow (có thể ở bucket sau) dùng lại
                     self.standby_decision[aid] = did
@@ -416,6 +427,7 @@ class World:
                 self.log(-1, "standby_alloc", cell, n_assigned=per_cell[cell],
                          capacity_left=cap_left[cell], safety_flags=flags_by_cell[cell],
                          assigned_ids=sorted(assigned_by_cell.get(cell, [])),
+                         coin_follow_ids=sorted(coin_true_by_cell.get(cell, [])),
                          decision_ids=dids_by_cell.get(cell, {}))
             self.log(-1, "standby_planner", "",
                      n_candidates=len(cands), n_assigned=sol["n_assigned"],

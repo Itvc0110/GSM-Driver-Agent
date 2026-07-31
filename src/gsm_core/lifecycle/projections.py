@@ -38,9 +38,22 @@ def _ts(iso: str) -> datetime:
 
 
 def _ordered(events) -> list[dict]:
+    """Sắp theo (occurred_at, observed_at, event_id).
+
+    L3-03 (phản biện 2026-07-31, reproduce qua chính hàm này): `occurred_at` của đường SẢN
+    PHẨM dựng từ `at_min` mà client gửi — HẰNG SỐ theo loại card (`cards.js KIND_HOURS`) ⇒
+    mọi hành động cùng ngày trên cùng card **hoà** ⇒ thế hoà quyết định tất cả. Tie-break cũ
+    là `event_id` = `ui-{aid}-{action}-{giây}`, so chuỗi ⇒ `"…-dismissed-…" < "…-followed-…"`
+    ⇒ `followed` LUÔN sort sau ⇒ LUÔN thắng, bất kể tài xế bấm gì sau cùng: **sản phẩm không
+    ghi nhận được việc đổi ý**. `observed_at` là thời điểm SERVER nhận (`datetime.now(utc)`
+    lúc POST) — đúng thứ tự nhân quả thật, và nó có ở mọi event của cả hai đường (sim đặt
+    observed_at khi export). `event_id` giữ làm chốt cuối để thứ tự vẫn tất định.
+    """
     seen: set[str] = set()
     out = []
-    for e in sorted(events, key=lambda e: (_ts(e["occurred_at"]), e["event_id"])):
+    for e in sorted(events, key=lambda e: (_ts(e["occurred_at"]),
+                                           str(e.get("observed_at") or ""),
+                                           e["event_id"])):
         if e["event_id"] in seen:
             continue
         seen.add(e["event_id"])
@@ -127,13 +140,21 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
         agg["decided"] += 1
         if row["state"] in ("followed", "dismissed"):
             agg[row["state"]] += 1
+    # L4-01 (phản biện 2026-07-31): "advisor ĐÃ NÓI" có HAI TÊN — sim ghi `decided`, sản
+    # phẩm ghi `displayed` (`routers/advice.py`). Mẫu số cũ chỉ nhận `decided` ⇒ ở đường sản
+    # phẩm `event_decided` = 0 VĨNH VIỄN ⇒ `event_adherence` = None (một nửa bộ đo hai-tên
+    # chết im lặng), và tệ hơn: `event_followed` = 1 > `event_decided` = 0 là trạng thái BẤT
+    # KHẢ (tử số vượt mẫu số) mà không cổng nào bắt. Gộp `displayed` vào mẫu số event.
+    # ⚠ KHÔNG gộp vào `decided` (mẫu số DECISION) — đó là đơn vị khác, `decision_state` đã
+    # xử lý `displayed` riêng ở `_TERMINAL` logic.
+    _EVENT_SPOKEN = ("decided", "displayed")
     for e in _ordered(events):
         et = e["event_type"]
-        if et not in ("decided", "followed"):
+        if et not in (*_EVENT_SPOKEN, "followed"):
             continue
         agg = _row((e.get("run_id"), e["driver_id"],
                     (e.get("payload") or {}).get("topic")))
-        agg[f"event_{et}"] += 1
+        agg["event_decided" if et in _EVENT_SPOKEN else "event_followed"] += 1
     for agg in view.values():
         agg["decision_adherence"] = (agg["followed"] / agg["decided"]
                                      if agg["decided"] else None)
@@ -183,10 +204,23 @@ _DECIDED_KINDS = _ALWAYS_FOLLOWED | _FOLLOW_FLAG_KINDS
 # `followed=True` ⇒ map cả hai là đếm MỘT lần theo thành HAI (đo được: 655 thay vì
 # 631 ⇒ event_adherence 54,2% thay vì 52,2%). `standby_followed` thì PHẢI map — kênh
 # vị trí không có event decided mang cờ (mẫu số nằm ở standby_alloc.assigned_ids).
+# SỬA THƯỚC (UPDATE-113, Cường duyệt 2026-07-31 — spec e10-advisor-noisy §5.5 nhánh 3):
+# `standby_followed` KHÔNG còn map thành `followed`. Nó chỉ chứng minh việc THI HÀNH
+# (actor thật sự dời chỗ), mà thi hành = coin-true ∧ *thi-hành-được*. Các ca coin-true
+# nhưng không thi hành là code path THẬT (pop im lặng khi đã đứng đúng ô `world.py`;
+# bận tới hết ca; bản năng ≠ WAIT ở chế độ `wait_only`) — đếm chúng thành "không theo"
+# làm adherence đo lệch null ~2,4đp, và ở n=100 seed cổng z Poisson-binomial TREO
+# (đo được z=−4,40 arm oracle; dự đoán từ preflight n=30 chỉ −2,39 vì chưa đủ power).
+#
+# Nay `followed` sinh từ `coin_follow_ids` trong detail `standby_alloc` (kết cục COIN tại
+# đúng lúc gán — cùng nguồn sự thật với `adherence_coin`), còn tỷ lệ thi hành thành CHỈ
+# TIÊU RIÊNG `execution_rate` (`sim_metrics.adherence_audit`). Hai câu hỏi khác nhau:
+# "tài xế có NGHE không" vs "nghe rồi có LÀM ĐƯỢC không".
 _TERMINAL_ONLY = {
-    "standby_followed": ("followed", "driver"),
     "advice_suppressed": ("suppressed", "system"),
 }
+# Kind chứng minh THI HÀNH (không vào tử số adherence; đếm riêng cho execution_rate).
+EXECUTION_KINDS = {"standby_followed"}
 
 
 def _sim_steps(kind: str, detail: dict) -> list[tuple[str, str]]:
@@ -217,6 +251,7 @@ def _offer_events(e, run_id: str, epoch_iso: str) -> list[dict]:
     100% (đo được trước khi sửa: 36/36 trong khi sự thật 42/86)."""
     detail = e.detail or {}
     ids = detail.get("assigned_ids") or []
+    coin_true = set(detail.get("coin_follow_ids") or [])
     iso = _iso_from_t_min(e.t_min, epoch_iso)
     out = []
     for aid in ids:
@@ -239,6 +274,18 @@ def _offer_events(e, run_id: str, epoch_iso: str) -> list[dict]:
                         "sim_kind": "standby_alloc", "target_cell": e.cell},
             "schema_version": "1.0.0",
         })
+        if aid in coin_true:
+            # Kết cục COIN tại đúng lúc gán — độc lập với việc thi hành được hay không.
+            out.append({
+                "event_id": f"sim-{run_id}:{aid}:standby_coin:{e.t_min:g}",
+                "decision_id": did, "display_id": None, "driver_id": str(aid),
+                "run_id": run_id, "event_type": "followed", "reason_code": "coin",
+                "occurred_at": iso, "observed_at": iso, "actor": "driver",
+                "origin": "sim", "source": "MOCK", "context_revision": None,
+                "payload": {"topic": "positioning", "t_min": e.t_min,
+                            "sim_kind": "standby_alloc_coin", "target_cell": e.cell},
+                "schema_version": "1.0.0",
+            })
     return out
 
 

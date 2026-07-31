@@ -61,9 +61,9 @@ def _iso(minute: float) -> str:
     rem = m % _MIN_PER_DAY
     return f"{d.isoformat()}T{rem // 60:02d}:{rem % 60:02d}:00+07:00"
 
-from gsm_core.lifecycle.cadence import (PRESENT, SUPPRESS, CadenceConfig,
-                                        CadenceMemory, adherence_coin, decision_bucket,
-                                        evaluate, shift_phase)
+from gsm_core.lifecycle.cadence import (DECISION_BUCKET_MIN, PRESENT, SUPPRESS,
+                                        CadenceConfig, CadenceMemory, adherence_coin,
+                                        decision_bucket, evaluate, shift_phase)
 from gsm_core.solvers import bonus_feasibility, idle_reduction, shift_dp
 
 from .behavior import IdleAction
@@ -165,7 +165,20 @@ class AdviceActionBridge:
                 rec[k.replace("policy_", "")] = str(v)
         self.policy = CorePolicy.from_record(rec)
         self.policy_valid_today = self.policy.is_valid_at(_BASE_DATE.isoformat())
+        # ⚠ VAI TRÒ (làm rõ 2026-07-31): đây là CHU KỲ CHẠY của planner vị trí (S4 gán theo
+        # lô mỗi `bucket_min` phút), KHÔNG còn là lưới định danh quyết định. Lưới quyết định
+        # nay là MỘT SỐ DUY NHẤT `DECISION_BUCKET_MIN` cho mọi kênh (Cường 2026-07-31).
         self.bucket_min = int(adv.get("bucket_min", 60))
+        # Ràng buộc còn lại của lưới cũ: bucket quyết định KHÔNG được rộng hơn nhịp sinh
+        # quyết định, nếu không hai lần gán khác nhau gộp một decision_id và event bị nuốt
+        # (đo được 23 event mất khi planner chạy 15′ dưới lưới 30′). Guard fail-loud thay
+        # cho việc nuôi một lưới thứ ba.
+        if self.bucket_min < DECISION_BUCKET_MIN:
+            raise ValueError(
+                f"advice.bucket_min={self.bucket_min}′ NGẮN HƠN lưới quyết định "
+                f"{DECISION_BUCKET_MIN:.0f}′ ⇒ hai lần gán khác nhau sẽ gộp chung một "
+                f"decision_id và event bị nuốt. Hạ lưới quyết định (DECISION_BUCKET_MIN) "
+                f"hoặc giữ planner ≥ lưới — không chạy tiếp với mismatch.")
         # Biên thời gian của CHÍNH thế giới này. Advisor không được lập kế hoạch — cũng không
         # được hoãn ca — vượt quá lúc thế giới dừng (b0-A).
         self.world_end_min = float(cfg.get("time.end_min", 1440) or 1440)
@@ -323,7 +336,7 @@ class AdviceActionBridge:
             m.proactive_count += 1
 
     def _claim_effect(self, actor: Actor, topic: str, now_min: float,
-                      bucket_min: float | None = None) -> bool:
+                      ) -> bool:
         """Xin quyền ÁP TÁC ĐỘNG cho một quyết định — trả True đúng MỘT lần (R-01).
 
         Khoá TRÙNG khoá của `coin_follows`: cùng một quyết định thì cùng một coin **và**
@@ -332,7 +345,7 @@ class AdviceActionBridge:
         đo. Bất biến: **số lần áp tác động = số QUYẾT ĐỊNH được nghe theo**, không phải số
         lần event được ghi.
         """
-        key = f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+        key = f"{actor.actor_id}-{topic}-{decision_bucket(now_min)}"
         if key in self._effect_applied:
             return False
         self._effect_applied.add(key)
@@ -356,7 +369,7 @@ class AdviceActionBridge:
 
     def note_spoken_outcome(self, actor: Actor, topic: str, now_min: float,
                             material_revision: str, *, followed: bool, reason: str,
-                            bucket_min: float | None = None) -> None:
+                            ) -> None:
         """Advisor ĐÃ NÓI, và đây là kết cục — cho những nhánh KHÔNG tự log event.
 
         Hai nhánh cần nó, cả hai đều thuộc MẪU SỐ:
@@ -379,20 +392,20 @@ class AdviceActionBridge:
         hỏi lại cùng một quyết định cho ra cùng coin, nên chỉ được sinh MỘT event — không
         phải một event mỗi tick 2′. Đây chính là bài học Lỗi #2/`R-08`.
         """
-        key = self._outcome_key(actor, topic, now_min, material_revision, bucket_min)
+        key = self._outcome_key(actor, topic, now_min, material_revision)
         if key in self._spoken_outcome_seen:
             return
         self._spoken_outcome_seen.add(key)
         self._spoken_outcome_out.append((now_min, actor.actor_id, topic, followed, reason))
 
     def _outcome_key(self, actor: Actor, topic: str, now_min: float,
-                     material_revision: str, bucket_min: float | None = None) -> str:
+                     material_revision: str) -> str:
         """Khoá dedupe kết cục — TRÙNG khoá `coin_follows` (bucket + revision)."""
-        return (f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+        return (f"{actor.actor_id}-{topic}-{decision_bucket(now_min)}"
                 f"-{material_revision}")
 
     def mark_outcome_logged(self, actor: Actor, topic: str, now_min: float,
-                            material_revision: str, bucket_min: float | None = None) -> None:
+                            material_revision: str) -> None:
         """Quyết định này ĐÃ có kết cục được world log trực tiếp (nhánh áp thành công) —
         các lần hỏi lại trong cùng bucket không được sinh thêm outcome event.
 
@@ -404,7 +417,7 @@ class AdviceActionBridge:
         KHÔNG neutral về EVENT LOG; phép đo n=100 mù với điều này vì mọi chỉ tiêu của nó
         là decision-level."""
         self._spoken_outcome_seen.add(
-            self._outcome_key(actor, topic, now_min, material_revision, bucket_min))
+            self._outcome_key(actor, topic, now_min, material_revision))
 
     def drain_spoken_outcomes(self) -> list[tuple]:
         """World lấy các kết cục cần log để giữ MẪU SỐ adherence đúng.
@@ -438,7 +451,7 @@ class AdviceActionBridge:
         # kênh không xê dịch stream `covers` của kênh khác ⇒ hai arm ghép cặp thật.
         # Bucket PHẢI khớp `world._decision_id` (cùng hằng `DECISION_BUCKET_MIN`), nếu
         # không một quyết định trải trên hai coin ⇒ washout sống lại (test đã bắt).
-        key = f"{actor.actor_id}-{topic}-{decision_bucket(now_min, bucket_min)}"
+        key = f"{actor.actor_id}-{topic}-{decision_bucket(now_min)}"
         return adherence_coin(self.seed, key, material_revision) < p
 
     def due(self, actor: Actor, now_min: float) -> bool:
@@ -607,8 +620,7 @@ class AdviceActionBridge:
         `coin_follows`) — KHÔNG tiêu draw nào từ RNG chung ⇒ bật kênh không dịch chuỗi ngẫu
         nhiên của actor (giữ CRN). (Đính chính 2026-07-31: câu cũ "cùng dòng RNG seed^0xADD1CE"
         là chữ từ đời trước keyed coin — stream đó nay chỉ còn cho `covers` share.)"""
-        return self.coin_follows(actor, "positioning", now_min, f"cell{target_cell}",
-                                 bucket_min=self.bucket_min)
+        return self.coin_follows(actor, "positioning", now_min, f"cell{target_cell}")
 
     # ---------- SIM-4 kênh 2: cảnh báo tỷ lệ nhận dưới ngưỡng thưởng ----------
 

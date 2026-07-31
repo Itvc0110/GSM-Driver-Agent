@@ -44,12 +44,45 @@ def test_clean_path_presents():
 # ---------- cooldown 20′/topic ----------
 
 def test_topic_cooldown_blocks_then_releases():
+    """Cooldown THỰC THI = `effective_gap_min` = max(min_gap 20′, bucket quyết định 30′).
+
+    ⚠ Số kỳ vọng đổi 620 → 630 ngày 2026-07-31 (UPDATE-112): KHÔNG phải nới test cho xanh —
+    hành vi cũ (nói lại ở phút 21–29) chính là lỗi `L4-03` đã reproduce: card tới tay tài xế
+    nhưng `event_id` trùng bucket ⇒ không event, không tiêu ngân sách. Bất biến đúng nằm ở
+    test dưới (`test_mot_quyet_dinh_toi_da_mot_lan_noi`)."""
     mem = _mem(last_decided_min={"shift_plan": 600.0})
     early = evaluate("shift_plan", now_min=615.0, phase="mid", memory=mem, cfg=CFG)
     assert early.verdict == SUPPRESS and early.reason == "topic_cooldown"
-    assert early.next_eligible_min == 620.0
-    ok = evaluate("shift_plan", now_min=620.0, phase="mid", memory=mem, cfg=CFG)
+    assert early.next_eligible_min == 600.0 + CFG.effective_gap_min == 630.0
+    ok = evaluate("shift_plan", now_min=630.0, phase="mid", memory=mem, cfg=CFG)
     assert ok.verdict == PRESENT
+
+
+def test_mot_quyet_dinh_toi_da_mot_lan_noi():
+    """BẤT BIẾN `L4-03` — luật dẫn xuất, không phải hằng số: hai lần được phép nói KHÔNG BAO
+    GIỜ rơi vào cùng một bucket quyết định. Quét toàn dải phút của một ca.
+
+    Đỏ trước fix: cooldown 20′ < bucket 30′ ⇒ t=600 và t=620 cùng bucket 20 mà cả hai PRESENT.
+    """
+    from gsm_core.lifecycle.cadence import decision_bucket
+    for t0 in range(300, 1400, 7):
+        mem = _mem(last_decided_min={"shift_plan": float(t0)})
+        for dt in range(1, 61):
+            v = evaluate("shift_plan", now_min=float(t0 + dt), phase="mid", memory=mem, cfg=CFG)
+            if v.verdict != PRESENT:
+                continue
+            assert decision_bucket(float(t0)) != decision_bucket(float(t0 + dt)), (
+                f"nói lại ở t={t0 + dt} rơi CÙNG bucket quyết định với lần nói t={t0} — "
+                f"lặp lại chính mình, và event sẽ bị store dedupe (L4-03)")
+
+
+def test_effective_gap_theo_kenh_co_nhip_khac():
+    """Kênh có nhịp ra quyết định thưa hơn (positioning: planner tick 60′) ⇒ cooldown hiệu
+    dụng phải bằng nhịp đó, không phải 20′ chung."""
+    from dataclasses import replace
+    cfg60 = replace(CFG, decision_bucket_min=60.0)
+    assert cfg60.effective_gap_min == 60.0
+    assert CFG.effective_gap_min == 30.0
 
 
 def test_cooldown_is_per_topic_not_global():

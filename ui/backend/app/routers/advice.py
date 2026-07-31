@@ -52,10 +52,20 @@ def _lifecycle_db() -> Path:
     return TELEMETRY_DIR / "advice_lifecycle.db"
 
 
-SHIFT_START_MIN = 6 * 60          # ca demo bắt đầu 06:00 (dùng để tính PHA ca)
+# L4-07(SOI) — giờ BẮT ĐẦU ca: trước đây là HẰNG 06:00 cho MỌI tài xế trong khi
+# `shift_end_min` đã là query param ⇒ bất đối xứng, và pha ca (early/mid/late) của tài xế
+# ca đêm bị tính sai hoàn toàn. Nay tham số hoá; hằng này chỉ còn là DEFAULT của demo.
+DEFAULT_SHIFT_START_MIN = 6 * 60
+SHIFT_START_MIN = DEFAULT_SHIFT_START_MIN   # giữ tên cũ cho consumer khác, = default
+
+# L4-09 — `topic` là NAMESPACE của cooldown/dismiss. Client (`cards.js KIND_TOPIC`) chỉ gửi
+# ba giá trị này; default cũ `"bonus"` KHÔNG client nào gửi ⇒ namespace mồ côi có cooldown và
+# dismiss riêng mà không ai nuôi. Default nay là một topic THẬT.
+CLIENT_TOPICS = ("brief", "nudge", "recap")
+DEFAULT_TOPIC = "brief"
 
 
-def _norm_shift_end(shift_end_min: int) -> int:
+def _norm_shift_end(shift_end_min: int, start_min: int = DEFAULT_SHIFT_START_MIN) -> int:
     """R-11 (soi đối kháng vòng 2): ca vắt qua nửa đêm.
 
     Query cho phép `shift_end_min` nhỏ tuỳ ý (`ge=0`), nên ca 22:00→02:00 gửi 120 ⇒
@@ -65,7 +75,7 @@ def _norm_shift_end(shift_end_min: int) -> int:
     ⚠ Phần còn lại của R-11 (memory lọc theo `date` nên qua 00:00 ngân sách được cấp lại
     giữa ca) KHÔNG sửa ở đây — nó cần khái niệm `shift_id`, không phải một dòng. → `D-R11b`.
     """
-    return shift_end_min + 1440 if shift_end_min < SHIFT_START_MIN else shift_end_min
+    return shift_end_min + 1440 if shift_end_min < start_min else shift_end_min
 
 
 def _phase_of(at_min: float | None, shift_end_min: int) -> str | None:
@@ -140,7 +150,8 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
                now_min: int = Query(14 * 60, ge=0, le=24 * 60),
                shift_end_min: int = Query(advisor.DEFAULT_SHIFT_END_MIN, ge=0, le=24 * 60),
                is_driving: bool = Query(False),
-               topic: str = Query("bonus")):
+               topic: str = Query(DEFAULT_TOPIC),
+               shift_start_min: int = Query(DEFAULT_SHIFT_START_MIN, ge=0, le=1439)):
     """ĐA-04: nhịp do LUẬT CHUNG quyết định, không phải wall-clock của client.
 
     Trước đây `cards.js` tự chọn giờ 09:00/14:00/21:30 và backend luôn trả card ⇒ nút
@@ -150,12 +161,13 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
     dv = mockdata.default_view()
     did = driver_id or dv["driver_id"]
     d = date or dv["date"]
-    phase = shift_phase(now_min - SHIFT_START_MIN,
-                        _norm_shift_end(shift_end_min) - SHIFT_START_MIN)
+    phase = shift_phase(now_min - shift_start_min,
+                        _norm_shift_end(shift_end_min, shift_start_min) - shift_start_min)
     verdict = evaluate(topic, float(now_min), phase,
                        _cadence_memory(did, d, phase, shift_end_min),
                        is_driving=is_driving)
     if verdict.verdict != PRESENT:
+        _note_suppressed(did, d, topic, now_min, verdict.reason)
         return {"is_mock": True, "driver_id": did, "date": d, "items": [],
                 "silent": {"is_silent": True, "reason_code": verdict.reason,
                            "message": _SILENT_MSG.get(
@@ -166,6 +178,36 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
     out = advisor.advice(did, d, now_min, shift_end_min)
     _note_shown(did, d, topic, now_min, out.get("items") or [])
     return {**out, "cadence": {"verdict": PRESENT, "phase": phase}}
+
+
+def _note_suppressed(driver_id: str, date: str, topic: str, now_min: int,
+                     reason: str) -> None:
+    """Ghi lại việc advisor ĐỊNH NÓI nhưng bị NHỊP CHẶN — L4-04 (phản biện 2026-07-31).
+
+    Sim ghi `advice_suppressed` mỗi lần nhịp chặn (`world.py` drain_suppressed); sản phẩm
+    trước đây chỉ trả silent card và KHÔNG ghi gì ⇒ `adherence_view["suppressed"]` của đường
+    sản phẩm luôn 0, và hai đường không so được dù dùng chung projection.
+
+    `decision_id` mang hậu tố `-sup` đúng tiền lệ sim: cái bị nén là một CANDIDATE, không
+    phải quyết định đã đưa ⇒ KHÔNG được vào mẫu số `decided` (`decision_state` đã tách
+    `suppressed` khỏi `decided`).
+    """
+    bucket = decision_bucket(float(now_min))
+    did_key = f"sup-{driver_id}-{date}-{topic}-{bucket}"
+    occurred = f"{date}T{now_min // 60:02d}:{now_min % 60:02d}:00+07:00"
+    now_iso = datetime.now(timezone.utc).isoformat()
+    TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
+    with AdviceEventLog(_lifecycle_db()) as log:
+        log.append({
+            "event_id": f"ui-sup-{driver_id}-{date}-{topic}-{bucket}",
+            "decision_id": did_key, "display_id": None, "driver_id": driver_id,
+            "run_id": None, "event_type": "suppressed", "reason_code": reason or None,
+            "occurred_at": occurred, "observed_at": now_iso,
+            "actor": "advisor", "origin": "ui", "source": "MOCK", "context_revision": None,
+            "payload": {"action": "suppressed", "date": date, "at_min": now_min,
+                        "topic": topic},
+            "schema_version": "1.0.0",
+        })
 
 
 def _note_shown(driver_id: str, date: str, topic: str, now_min: int,
@@ -210,6 +252,22 @@ def _note_shown(driver_id: str, date: str, topic: str, now_min: int,
             })
 
 
+# L4-07 (phản biện 2026-07-31, reproduce được): card IM LẶNG vẫn vẽ nút "Làm theo"/"Bỏ qua"
+# với `advice_id` do CLIENT BỊA (`cards.js` dùng `brief-{date}` / `recap-{date}` khi advisor
+# không có item nào). Một cú bấm ⇒ POST /action ⇒ event log ghi decision+followed cho một lời
+# khuyên **advisor CHƯA TỪNG ĐƯA** ⇒ `adherence_view` đếm decided=1/followed=1 ⇒
+# `decision_adherence` = 100% cho quyết định MA, đúng lúc advisor im lặng.
+#
+# Chặn HAI TẦNG: client thôi vẽ nút trên card im lặng (`cards.js`), và boundary này từ chối —
+# một tầng thôi thì tầng kia vẫn thủng (client cũ, curl, app khác).
+_REAL_ADVICE_ID_PREFIXES = ("s1-", "s2-", "s4-", "s7-")   # namespace của adapter/solver
+
+
+def is_fabricated_advice_id(advice_id: str) -> bool:
+    """True nếu id KHÔNG thuộc namespace advisor thật (client tự chế cho card im lặng)."""
+    return not str(advice_id).startswith(_REAL_ADVICE_ID_PREFIXES)
+
+
 class AdviceAction(BaseModel):
     # X-6 (review batch 2): ID rỗng từng đi xuyên tới store rồi nổ HTTP 500 —
     # boundary validate phải đối xứng với date/at_min (422 tại pydantic).
@@ -227,6 +285,17 @@ class AdviceAction(BaseModel):
     # ĐA-04: chủ đề của thẻ — cooldown/dismiss là THEO CHỦ ĐỀ, không phải toàn cục
     # (bỏ qua nhắc đổi pin không được khoá miệng cảnh báo mất thưởng).
     topic: str = Field(default="bonus", min_length=1)
+
+    @field_validator("advice_id")
+    @classmethod
+    def _advice_id_must_be_real(cls, v: str) -> str:
+        """L4-07: từ chối id client bịa cho card im lặng — 422 tại boundary, không ghi gì."""
+        if is_fabricated_advice_id(v):
+            raise ValueError(
+                f"advice_id {v!r} không thuộc namespace advisor (s1-/s2-/s4-/s7-): "
+                f"card IM LẶNG không có quyết định để hành động lên. Hành động trên nó sẽ "
+                f"tạo decision+followed MA và bơm adherence lên 100% (L4-07).")
+        return v
 
     @field_validator("date")
     @classmethod

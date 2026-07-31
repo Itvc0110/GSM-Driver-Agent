@@ -72,10 +72,36 @@ class CadenceConfig:
     ⇒ ĐỪNG chỉnh mấy số này bằng trực giác; cadence chặt hơn phải là experiment ARM."""
     min_gap_min_per_topic: float = 20.0
     max_proactive_per_shift: int = 6
+    # Độ rộng bucket định danh quyết định mà kênh này dùng (mặc định = hằng chung).
+    # Kênh có nhịp ra quyết định khác (positioning: planner tick 60′) truyền giá trị của nó.
+    decision_bucket_min: float = DECISION_BUCKET_MIN
     # Ranh giới pha ca theo TỈ LỆ thời lượng (hằng cấu trúc, không phải số kinh tế):
     # ca nào cũng có đầu/giữa/cuối, ca 6h và ca 12h được đối xử tương xứng.
     phase_early_frac: float = 0.25
     phase_late_frac: float = 0.75
+
+    @property
+    def effective_gap_min(self) -> float:
+        """Cooldown THỰC THI = max(cooldown cấu hình, độ rộng bucket quyết định).
+
+        L4-03 (phản biện 2026-07-31, reproduce được ở đường sản phẩm): cooldown 20′ NGẮN HƠN
+        bucket quyết định 30′ ⇒ ở phút 21–29 cadence cho phép nói lại **về cùng một quyết
+        định** — card tới tay tài xế thật, nhưng `event_id` trùng khoá bucket nên store
+        dedupe: không event, không tiêu ngân sách 6 thẻ/ca. Tức trần ngân sách mất hiệu lực
+        ở 33% thời gian, và mẫu số event hụt (họ lỗi `F-1`).
+
+        Sửa bằng LUẬT DẪN XUẤT, không bằng hằng số mới (Cường 2026-07-31: *"mọi thứ phải
+        được thống nhất"*): nói lại **trong cùng một bucket quyết định** là lặp lại chính
+        mình, không phải lời khuyên mới. `gap ≥ bucket_width` ⇒ hai lần nói luôn rơi vào hai
+        bucket khác nhau (chứng minh: `floor(t/b)` và `floor((t+b)/b)` luôn lệch 1) ⇒ bất
+        biến **"một quyết định = tối đa một lần nói"** thành sự thật, không còn là lời hứa.
+
+        `min_gap_min_per_topic = 20′` giữ nguyên là baseline Cường duyệt (`D-ĐA04-02`) —
+        nó là SÀN, không phải giá trị cuối; trần do nhịp sinh quyết định của kênh áp đặt.
+        Repo đã sập đúng họ lỗi này một lần ở phía coin (xem comment `DECISION_BUCKET_MIN`);
+        đây là nửa còn lại.
+        """
+        return max(float(self.min_gap_min_per_topic), float(self.decision_bucket_min))
 
 
 @dataclass
@@ -137,7 +163,7 @@ def evaluate(topic: str, now_min: float, phase: str, memory: CadenceMemory,
         return CadenceVerdict(SUPPRESS, "shift_budget_exhausted")
     last = memory.last_decided_min.get(topic)
     if last is not None:
-        eligible = float(last) + c.min_gap_min_per_topic
+        eligible = float(last) + c.effective_gap_min
         if now_min < eligible:
             return CadenceVerdict(SUPPRESS, "topic_cooldown", eligible)
     return CadenceVerdict(PRESENT)
