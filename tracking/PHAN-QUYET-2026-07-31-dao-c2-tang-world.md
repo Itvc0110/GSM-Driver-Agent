@@ -1,8 +1,13 @@
 # PHÁN QUYẾT 2026-07-31 — đảo C2 ở TẦNG WORLD, giữ nguyên ở tầng advisor/báo cáo
 
-Trạng thái: `WAITING-VERDICT` (Cường giao agent phán quyết — *"kiểm tra lại độ chính xác của
-C2, đặt giả thuyết xem liệu đảo ngược C2 liệu có đem lại giá trị. Bạn đưa ra phán quyết xem
-có nên làm hay không"* — nhưng thay đổi ranh giới đạo đức thì verdict cuối vẫn là của Cường).
+Trạng thái: **THỬ NGHIỆM — Cường định hướng 2026-07-31**: *"Việc đảo C2 nên được coi như 1
+thử nghiệm - xem có thể khai thác nếu có ích không - do đã có phán quyết từ trước."*
+⇒ HỆ QUẢ THI HÀNH: (1) phán quyết 2026-07-29 **GIỮ HIỆU LỰC MẶC ĐỊNH** — văn bản này KHÔNG
+thay thế nó, chỉ mở một nhánh thí nghiệm; (2) E11 là EXPERIMENT — không phải chương trình
+chính, **không ưu tiên** (chỉ đạo cùng ngày: *"tập trung hoàn thành kế hoạch dang dở, fix
+lỗi thay vì mở rộng sim"*); (3) mọi kết quả E11 nếu chạy sau này mang nhãn THỬ NGHIỆM, không
+tự động đổi ranh giới sản phẩm. Khung BA RANH GIỚI + 6 điều kiện dưới đây là điều kiện của
+NHÁNH THỬ NGHIỆM đó.
 Thay thế MỘT PHẦN: `PHAN-QUYET-2026-07-29-diem3-met-nghi.md` + spec `advisor-objective-model-v2`
 §1.2b. Bối cảnh: chỉ đạo Cường 2026-07-31 *"thiết kế nghỉ phải đi kèm thiết kế mệt → giảm hiệu
 suất → việc khuyên nghỉ phải đem lại giá trị (trong sim, và thực tế). Thực tế khi triển khai

@@ -1,7 +1,9 @@
 # E11 BRIEF — thế giới có mệt + kênh gợi ý nghỉ (ĐẦU VÀO cho spec, chưa phải spec)
 
-Ngày: 2026-07-31 · Trạng thái: **DRAFT — CHỜ verdict Cường trên
-`tracking/PHAN-QUYET-2026-07-31-dao-c2-tang-world.md`**. Không code gì từ file này.
+Ngày: 2026-07-31 · Trạng thái: **DRAFT — nhánh THỬ NGHIỆM, KHÔNG ƯU TIÊN** (Cường
+2026-07-31: đảo C2 = thử nghiệm, phán quyết cũ giữ mặc định; ưu tiên hoàn thành dang dở +
+fix lỗi thay vì mở rộng sim). Không code gì từ file này; chỉ mở khi hàng đợi fix/hoàn-thành
+cạn và Cường gọi tên.
 File này gom mọi điều đã học để workflow thiết kế spec (kiểu E10: N thiết kế độc lập +
 phản biện rò-rỉ + tổng hợp) không phải khai quật lại.
 

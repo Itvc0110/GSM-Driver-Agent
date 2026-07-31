@@ -8,6 +8,15 @@ Tài liệu này là **thứ tự thi công**, không phải danh sách ước. 
 
 ---
 
+## 0-bis. ⚠ CHỈ ĐẠO CƯỜNG 2026-07-31 (mới nhất, đè lên mọi thứ tự dưới)
+
+> *"Tập trung làm những thứ thực sự có đóng góp cho simulation, ưu tiên HOÀN THÀNH kế hoạch
+> dang dở, FIX LỖI thay vì MỞ RỘNG sim."*
+
+⇒ Thứ tự hiệu dụng: (1) vòng soi/fix số đã báo (E10 + 13 finding sản phẩm); (2) `D-M3-04`
+(kênh nghỉ inert — kế hoạch dang dở); (3) các mục queue cũ dạng fix. **XUỐNG CUỐI**: E9,
+E11 (mở rộng — E11 thêm nhãn THỬ NGHIỆM theo định hướng đảo-C2-là-experiment).
+
 ## 0. Nguyên tắc sắp thứ tự (đọc trước, vì nó giải thích mọi vị trí bên dưới)
 
 Ba tiêu chí, áp theo đúng thứ tự này:
