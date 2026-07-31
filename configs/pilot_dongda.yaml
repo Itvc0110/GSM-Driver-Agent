@@ -360,6 +360,8 @@ advice:
   min_offers_before_lift: 5        # đủ mẫu rồi mới kết luận tỷ lệ
   # D-SIM-03: trần HOÃN nghỉ. Lan can bắt buộc — không được đẩy nghỉ đi vô hạn; ngoài ra
   # còn 2 lan can cứng trong code: SOC thấp và MỆT thật thì luôn cho nghỉ/đổi pin.
+  # ⛔ POLICY_LOCKED (D-M3-08 §1.2b): đổi phải qua src/gsm_core/policy_locks.py + duyệt —
+  # sweep/override sẽ NỔ PolicyLockViolation ngay khi dựng world. Cả khoá dưới cũng vậy.
   rest_defer_max_min: 120
   shift_extend_max_min: 60         # trần hoãn kết ca (không "chạy vô hạn")
   # D-SIM-05 — CHỈ khuyên khi lời khuyên thực sự có ích. SIM-4 chứng minh hiệu ứng VÁCH ĐÁ:

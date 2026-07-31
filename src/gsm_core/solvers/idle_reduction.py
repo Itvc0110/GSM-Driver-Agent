@@ -18,6 +18,8 @@ from __future__ import annotations
 SOLVER = "idle_reduction"
 
 # ngưỡng: chờ >45 phút/ca hoặc 1 khoảng >25 phút mới coi là đáng lưu ý (tránh bịa vấn đề)
+# ⛔ POLICY_LOCKED cả BA hằng dưới (gate là phép OR — khoá một cái là bypass được): đổi phải
+# qua src/gsm_core/policy_locks.py, monkeypatch sẽ nổ ở world kế tiếp (test T8).
 IDLE_TOTAL_ALERT_MIN = 45.0
 IDLE_LONGEST_ALERT_MIN = 25.0
 LOW_DEMAND_MAX = 0.5  # demand proxy ≤ ngưỡng này = khung "thấp điểm"

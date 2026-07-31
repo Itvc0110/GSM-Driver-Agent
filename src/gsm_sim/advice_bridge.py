@@ -141,6 +141,12 @@ class AdviceActionBridge:
 
     def __init__(self, cfg, policy, seed: int):
         adv = cfg.get("advice", {}) or {}
+        # D-M3-08 cơ chế 1 (spec §1.2b): khoá chính sách sức khoẻ — nổ NGAY tại đây nếu ai
+        # sweep/override trần hoãn. Chokepoint là bridge chứ KHÔNG phải run_once: multiday
+        # dựng World TRỰC TIẾP (multiday.py, comment ĐA-05) mà multiday là đường duy nhất
+        # nuôi `planned_rest_hour` — guard ở run_once sẽ mù đúng trên đường đo C2′.
+        from gsm_core.policy_locks import assert_policy_locks
+        assert_policy_locks(cfg.get, where="AdviceActionBridge")
         self.enabled = bool(adv.get("enabled", False))
         self.coverage = str(adv.get("coverage", "single"))
         self.single_actor_id = adv.get("single_actor_id")
