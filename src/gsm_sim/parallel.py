@@ -254,6 +254,20 @@ MIN_SEEDS_FOR_SIGNIFICANCE = 30
 MIN_SEEDS_FOR_VARIANT_COMPARISON = 100
 
 
+# (e) 2026-07-31: tầng 5 sức khoẻ (D-M3-05) là cổng MỘT CHIỀU — nó chỉ tố giác SUY GIẢM,
+# cố ý KHÔNG có chiều khen (chống Goodhart: tối ưu cho `veto_fired_n` CAO = ép tài xế chạm
+# mệt/cạn pin nhiều hơn để "qua cổng"). Đưa các khoá này vào bảng significance HAI CHIỀU của
+# `compare()['system']` làm "veto tăng" bị in ra như *"ĐỘNG TỚI HỆ THỐNG"* — tức đọc thành
+# advice làm hệ thống TỐT lên, đúng hướng Goodhart mà tầng 5 sinh ra để chặn. Chúng đi qua
+# `health_guardrail_flags`, không qua `_sig`.
+HEALTH_KEYS_ONE_WAY = frozenset({
+    "rest_min_total", "veto_calls_n", "veto_fired_n",
+    "veto_soc_low_n", "veto_fatigued_n", "veto_defer_cap_n",
+    "work_span_p50", "work_span_p90", "work_span_max",
+    "drive_min_p50", "drive_min_p90", "drive_min_max",
+})
+
+
 def _sig(lo: float, hi: float, n: int) -> bool:
     return bool(n >= MIN_SEEDS_FOR_SIGNIFICANCE and (lo > 0 or hi < 0))
 
@@ -282,9 +296,15 @@ def compare(pairs: list[PairResult]) -> dict:
     for key in pairs[0].system_a:
         diffs = [float(p.system_b[key] or 0) - float(p.system_a[key] or 0) for p in pairs]
         lo, hi = bootstrap_ci(diffs)
-        out["system"][key] = {"delta_mean": round(st.mean(diffs), 4),
-                              "ci95": (round(lo, 4), round(hi, 4)),
-                              "significant": _sig(lo, hi, n)}
+        row = {"delta_mean": round(st.mean(diffs), 4), "ci95": (round(lo, 4), round(hi, 4))}
+        if key in HEALTH_KEYS_ONE_WAY:
+            # (e) tầng 5 KHÔNG có `significant` hai chiều — cổng của nó là
+            # `sim_metrics.health_guardrail_flags` (một chiều, chỉ tố giác suy giảm).
+            # Để `significant` ở đây làm "veto tăng" được in như hệ thống TỐT lên.
+            row["one_way_gate"] = "sim_metrics.health_guardrail_flags (D-M3-05)"
+        else:
+            row["significant"] = _sig(lo, hi, n)
+        out["system"][key] = row
     return out
 
 
@@ -391,7 +411,11 @@ def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | Non
     flags: list[str] = []
     for pr in pairs:
         for ch, r in (pr.adherence_b.get("by_channel") or {}).items():
-            row = tot.setdefault(ch, {"decided": 0, "followed": 0,
+            # (c) 2026-07-31: `dismissed`/`suppressed` từng bị BỎ SÓT ⇒ không bao giờ tới
+            # artifact ⇒ mất đường phân biệt "tài xế TỪ CHỐI" với "advisor bị NHỊP CHẶN"
+            # (hai kết cục khác nhau của ĐA-04). Vi phạm bằng bỏ sót, không bằng tính sai.
+            row = tot.setdefault(ch, {"decided": 0, "followed": 0, "dismissed": 0,
+                                      "suppressed": 0,
                                       "event_decided": 0, "event_followed": 0})
             for k in row:
                 row[k] += int(r.get(k) or 0)
@@ -403,6 +427,26 @@ def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | Non
             msg = f"seed {pr.seed}: {f}"
             if msg not in flags:
                 flags.append(msg)
+    # (a) 2026-07-31 — DET-01 có CỔNG THẬT: `adherence_a` tồn tại kèm comment "arm đối chứng
+    # cũng phải được ĐO, không giả định sạch" nhưng KHÔNG cổng nào đọc nó ⇒ đúng họ lỗi
+    # `D-R12` (cơ chế sống ở comment + field, không có đường chạy). Arm A có `advice.enabled
+    # = false` ⇒ KHÔNG kênh nào được phép có quyết định; có là arm đối chứng bị nhiễm và mọi
+    # Δ thành rác (DET-01 đã báo một con số sai cho Cường vì đúng chỗ này).
+    for pr in pairs:
+        # `getattr` vì một số test dựng stub pair chỉ có `adherence_b` (chúng kiểm cổng THỐNG
+        # KÊ, không kiểm cổng đối chứng). `PairResult` thật luôn có cả hai (field có
+        # default_factory) ⇒ đường production không lọt. Đánh đổi khai rõ: stub thiếu
+        # `adherence_a` sẽ không được cổng này kiểm.
+        adh_a = getattr(pr, "adherence_a", None) or {}
+        dirty = {ch: int(r.get("decided") or 0)
+                 for ch, r in (adh_a.get("by_channel") or {}).items()
+                 if int(r.get("decided") or 0) > 0}
+        if dirty:
+            msg = (f"seed {pr.seed}: arm ĐỐI CHỨNG (advice off) có quyết định {dirty} — "
+                   f"arm A KHÔNG SẠCH, mọi Δ của seed này là rác (DET-01)")
+            if msg not in flags:
+                flags.append(msg)
+
     for r in tot.values():
         r["decision_adherence"] = (r["followed"] / r["decided"]) if r["decided"] else None
         r["event_adherence"] = ((r["event_followed"] / r["event_decided"])

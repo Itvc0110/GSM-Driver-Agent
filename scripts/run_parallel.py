@@ -55,11 +55,24 @@ def main() -> None:
             mark = " *" if d["significant"] else "  "
             print(f"{k:20s}{d['mean_a']:>12,.2f}{d['mean_b']:>12,.2f}"
                   f"{d['delta_mean']:>+12,.2f}{ci:>26s}{d['n_positive']:>5d}/{r['n_seeds']}{mark}")
-        print("  -- guardrail hệ thống --")
+        print("  -- guardrail hệ thống (tầng 1-4, cổng HAI CHIỀU) --")
         for k, d in r["system"].items():
+            if "one_way_gate" in d:
+                continue          # tầng 5 in riêng ở dưới
             mark = "  <-- ĐỘNG TỚI HỆ THỐNG" if d["significant"] else ""
             print(f"  {k:24s} Δ={d['delta_mean']:>+12,.4f} "
                   f"CI=[{d['ci95'][0]:,.4f}, {d['ci95'][1]:,.4f}]{mark}")
+        health = {k: d for k, d in r["system"].items() if "one_way_gate" in d}
+        if health:
+            # Tầng 5 (D-M3-05) là cổng MỘT CHIỀU: chỉ tố giác SUY GIẢM sức khoẻ, cố ý KHÔNG
+            # có chiều khen. In riêng, KHÔNG gắn nhãn "ĐỘNG TỚI HỆ THỐNG" — veto tăng nghĩa
+            # là tài xế chạm mệt/cạn pin NHIỀU HƠN, đọc thành "tốt lên" là đúng hướng
+            # Goodhart mà tầng 5 sinh ra để chặn.
+            print("  -- tầng 5 SỨC KHOẺ (quan sát, cổng MỘT CHIỀU — không có dấu * ) --")
+            for k, d in health.items():
+                print(f"  {k:24s} Δ={d['delta_mean']:>+12,.4f} "
+                      f"CI=[{d['ci95'][0]:,.4f}, {d['ci95'][1]:,.4f}]")
+            print("     ↳ verdict một chiều đọc từ `sim_metrics.health_guardrail_flags`")
 
     print("\n(*) = CI 95% không chứa 0. MOCK — không phải số thật của GSM.")
     if args.json:
