@@ -129,7 +129,15 @@ class Actor:
                         "ratings_n", "ratings_sum", "ratings_5",
                         "newbie_topup_vnd", "mission_reward_vnd", "cost_vnd")
     _DAILY_RESET_FLOAT = ("online_min", "empty_min", "occupied_min", "idle_min", "rest_min",
-                          "charge_min", "accept_lift", "rest_deferred_min", "shift_extended_min", "km_driven")
+                          "charge_min", "accept_lift", "rest_deferred_min", "shift_extended_min",
+                          "km_driven",
+                          # D-E10-01 (thêm 2026-07-31): chuỗi rỗi LIÊN TỤC là trạng thái
+                          # NGÀY. Thiếu nó, ngày 2 của run multiday mở màn với streak tồn dư
+                          # cuối ngày 1 ⇒ bản năng sốt ruột (`behavior.py`) và trigger E10b
+                          # đọc một tài xế vừa ngủ dậy như thể đã đứng chờ 40 phút liên tục —
+                          # sai theo hướng "sốt ruột hơn thực tế". Vô hại ở sim một-ngày
+                          # (mọi artifact tới nay) nhưng là điều kiện tiên quyết của `D-M3-04`.
+                          "idle_streak_min")
 
     def reset_for_new_day(self, soc_pct: float, shift_start_min: float,
                           shift_end_min: float) -> None:
