@@ -511,4 +511,6 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 | D-M3-13 | Tier-5 guardrail had an aggregator but no data source in the A/B path | FIXED | UPDATE-116; measured: `TREO — THIẾU DỮ LIỆU` on every real pair; 0 stored artifacts carried the key |
 | D-M3-15 | Orphan-mechanism sweep: 5 unread config flags (3 of them documenting WRONG behaviour) + 14 uncalled public functions incl. a dead module with a conflicting colour table | FIXED | UPDATE-117; standing gate `test_config_flags_wired.py`; behaviour-neutral verified 5/5 seeds |
 | D-M3-16 | Gate for `STATE_COLORS` vs `ACTIVITY_COLORS`; decide delete-or-keep `trajectory.py` (V-22); real 15-min metrics bucket needs behaviour change + fresh measurement | TODO (sev TRUNG) | UPDATE-117; same family as D-M3-12 — architectural debt, not isolated accidents |
+| D-M3-12 | Future-leak probe promoted to a standing gate (7 derivers, sever-restore + empty-green counter-check) | FIXED | UPDATE-118; 7/7 clean = independent evidence UPDATE-115 closed the family |
+| D-M3-16a | Single-source gate for activity-state colours (conditional on whether `trajectory` is imported) | FIXED | UPDATE-118; de-risks V-22 so the delete-or-keep call is no longer urgent |
 

@@ -59,10 +59,10 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ```
 local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
-suite       = 994 passed / 4 skipped / 0 failed  (2026-08-01: 929 + 65 UI)
+suite       = 1000 passed / 4 skipped / 0 failed  (2026-08-01: 935 + 65 UI)
               uv run pytest -q                  -> xem số trên
               uv run pytest -q ui/backend/tests -> 65
-UPDATE       = 111 file, mới nhất UPDATE-117 (104 UIUX + 105 codex review là của remote)
+UPDATE       = 112 file, mới nhất UPDATE-118 (104 UIUX + 105 codex review là của remote)
 PENDING      = 20 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
@@ -87,6 +87,11 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-118** — **BA cổng thường trực** nay canh ba bảo đảm mà `CLAUDE.md` §4b đòi nhưng
+  trước đây không ai thi hành: cờ config phải có người đọc · không L3 view nào đọc record chưa
+  tồn tại (7/7 deriver sạch, **có test sever-restore tự chứng minh cổng bắn được**) · chỉ MỘT
+  bảng màu trạng thái. Nhận ra 14 bug của 115/116/117 đều thuộc **hai họ**, và nợ thật là
+  **thiếu cổng**, không phải 14 bug rời.
 - **UPDATE-117 `D-M3-15`** — **quét cơ chế mồ côi** thay vì chờ lỗ thứ tư. 5 cờ config không ai
   đọc (3 cờ **mô tả SAI hành vi**: phạm vi pin 60/110 vs thật 62,5/117,6 km; bucket metrics 15′
   vs thật 60′) + 14 hàm public không caller, gồm `trajectory.py` module CHẾT mang **bảng màu thứ
