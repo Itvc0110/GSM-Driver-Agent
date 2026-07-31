@@ -62,7 +62,7 @@ local HEAD  = f634af6   (22 commit từ c493d89; AHEAD origin — chưa đẩy t
 suite       = 873 passed / 5 skipped / 0 failed  (2026-07-31)
               uv run pytest -q                  -> 817 + 5 skip
               uv run pytest -q ui/backend/tests -> 56
-UPDATE       = 104 file, mới nhất UPDATE-110 (104 UIUX + 105 codex review là của remote)
+UPDATE       = 105 file, mới nhất UPDATE-111 (104 UIUX + 105 codex review là của remote)
 PENDING      = 17 mục V- đang chờ Cường:
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor)

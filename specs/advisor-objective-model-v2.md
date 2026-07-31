@@ -94,16 +94,20 @@ Mô hình mệt chính xác đến đâu cũng không mở được 71% đó ra 
 | Đại lượng | Vai trò trong objective | Cơ chế enforce | Có thật chưa? |
 | --- | --- | --- | --- |
 | **LƯỢNG nghỉ** | **RÀNG BUỘC CỨNG**, không phải số hạng | `rest_min_per_4h` trong `shift_dp` | ✅ **CÓ** (`src/gsm_core/solvers/shift_dp.py`) |
-| | | `POLICY_LOCKED_KEYS` khoá `rest_defer_max_min` không cho sweep | ❌ **CHƯA CÓ — phải viết** |
+| | | `POLICY_LOCKED_KEYS` khoá `rest_defer_max_min` không cho sweep | ✅ **CÓ từ 2026-07-31** (`src/gsm_core/policy_locks.py` + chokepoint bridge; sweep ⇒ `PolicyLockViolation` — 8 test, sever chokepoint ⇒ 3 đỏ đúng chỗ) |
 | **THỜI ĐIỂM nghỉ** | **BIẾN** — định giá bằng `C2′` | `rest_window` = DEMAND-TIMING, trong bảng tiền, chịu cadence | ✅ CÓ (cadence) |
 | | | …và chịu `coin_follows` | ✅ **CÓ từ 2026-07-30** (UPDATE-102, `D-M3-01` DONE-CODE — coin nối ở `should_defer_rest`, behavior-neutral 15/15 fingerprint IDENTICAL) |
 | **MỆT (`fatigue`)** | **LATENT** — không ai đọc để tính tiền | ba lan can trong `should_defer_rest` (`soc_low`/`fatigued`/`defer_cap`) | ✅ **CÓ** — đo được chặn 71,0% |
-| | | grep-test `test_no_fatigue_in_payout_path` | ❌ **CHƯA CÓ — phải viết** |
-| | | guardrail tầng 5: `rest_min_total`, `veto_fired_n`, `max_continuous_drive_min` | ❌ **CHƯA CÓ — `D-M3-05`** |
+| | | grep-test `test_no_fatigue_in_payout_path` | ✅ **CÓ từ 2026-07-31** (`tests/test_health_boundary.py` — scanner AST 2 lớp + manifest 108 scope pin cứng; 4 mũi tiêm mutation vào file thật đều bắn; class `WORLD_PHYSIOLOGY` rỗng chờ E11) |
+| | | guardrail tầng 5: `rest_min_total` · `veto_*_n` per-rail · quá-sức CẢ HAI định nghĩa (`work_span`/`drive_min` p90+max — Cường chốt 2026-07-31) | ✅ **CÓ từ 2026-07-31** (`sim_metrics.health_guardrail` + `aggregate_health_guardrail` nối `run_ladder`; cổng MỘT CHIỀU chống Goodhart. ⚠ VÙNG MÙ khai tường minh: chừng nào `D-M3-04` còn mở, `rest_min_total`/quá-sức MÙ với đòn xoá-lan-can — `veto_fired_n` là chỉ tiêu chịu tải, đọc kèm `veto_calls_n`; `defer_cap` TRƠ 0/run) |
 
-> ⚠ **Đọc cột cuối trước khi tin bảng này.** Cập nhật 2026-07-30 (UPDATE-102): **3 tồn tại**
-> (`rest_min_per_4h`, ba lan can, và nay **coin cho `rest_window`**). **Ba** cái còn lại
-> (`POLICY_LOCKED_KEYS` · grep-test · guardrail tầng 5) là **việc phải làm**, không phải bảo đảm đang có.
+> ✅ **Cập nhật 2026-07-31 (UPDATE-111): CẢ SÁU cơ chế enforce ĐÃ TỒN TẠI** — ba cái cuối
+> (`POLICY_LOCKED_KEYS` · grep-test · guardrail tầng 5) thi công cùng ngày, mỗi cái có bằng
+> chứng đỏ bằng mutation thật (KHÔNG tick ✅ trước khi cơ chế chạy — đúng bài học D-M3-08).
+> ⚠ Chỉ đạo Cường 2026-07-31 mở lại câu hỏi mệt→hiệu-suất ở TẦNG WORLD — xem
+> `tracking/PHAN-QUYET-2026-07-31-dao-c2-tang-world.md` (WAITING-VERDICT): đảo trụ (a) ở
+> world, GIỮ advisor-mù + không-quy-tiền + trụ (b). Văn bản đó thay phần "HUỶ VĨNH VIỄN ở
+> mọi tầng" của mục này KHI Cường xác nhận.
 > Bảng này được viết với cột trạng thái tường minh vì repo đã trả giá cho đúng họ lỗi *"code/spec tự
 > quảng cáo một cơ chế không chạy"* (`D-R12`: nhánh `unsafe_while_moving` được quảng cáo trong khi
 > `is_driving` không có đường nuôi từ client; và `topic_cooldown` chết ở UI vì `last_decided_min`
