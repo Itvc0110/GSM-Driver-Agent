@@ -1,6 +1,6 @@
 # UPDATE-110 — E10 KẾT QUẢ: mất λ thì +6.016đ còn **57–65%**; trigger chờ-lâu SỤP
 
-Ngày: 2026-07-31 · Trạng thái: `WAITING-VERDICT` (visual gate ĐÃ publish, chờ Cường xem + phán quyết)
+Ngày: 2026-07-31 · Trạng thái: `DONE` (visual gate REVIEWED, Cường verdict OK 2026-07-31)
 
 ## Câu trả lời cho câu hỏi trung tâm
 
@@ -98,7 +98,7 @@ sau khi nhìn Δ ⇒ **giữ nguyên headline**, ghi thành giả thuyết cho c
 
 ## Visual gate
 
-`REVIEWED-PENDING` — bản đồ cung 3 arm + hiệu, seed 5000, publish cho Cường:
+✅ **REVIEWED — Cường verdict OK 2026-07-31**. Bản đồ cung 3 arm + hiệu, seed 5000:
 **https://claude.ai/code/artifact/d8c58414-81fd-4257-a8df-aafb99f6cda8**
 (nguồn tái sinh: `scripts/e10_visual.py` + `scripts/e10_visual_render.py`, artifact HTML
 `41-e10-visual-map.html`). Số nổi bật trên bản đồ: **HHI cung oracle 0,1696 → real 0,1451** —
