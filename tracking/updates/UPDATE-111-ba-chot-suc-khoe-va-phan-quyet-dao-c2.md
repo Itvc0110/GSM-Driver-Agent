@@ -59,9 +59,12 @@ riêng, nếu không sẽ đo ra "số 0 giả".
 - Regression: 48 test bridge + 20 test guardrail/fairness xanh. Full suite CẢ HAI lệnh: đang
   chạy tại thời điểm viết — kết quả chốt ghi vào commit docs (nếu ≠ 0 fail sẽ sửa trước khi
   gọi DONE-CODE).
-- **Chưa kiểm chứng**: hiệu lực tầng 5 trên một cuộc tấn công xoá-lan-can THẬT end-to-end
-  (T4 mô phỏng bằng dict — đủ cho cổng, nhưng chưa có run sabotage thật vì nó đòi sửa
-  should_defer_rest tạm thời; ghi nợ nhẹ); phán quyết C2 chờ verdict Cường.
+- ✅ **Sabotage end-to-end ĐÃ chạy** (`scripts/probe_rest_rails.py`, 5 seed × 3 thế giới,
+  artifact `42-rest-rails-sabotage-probe.json`): vô hiệu lan can `fatigued` thật (nâng ngưỡng
+  ∞ chỉ trong lời gọi bridge) ⇒ arm B bình thường **0 flag** (không báo oan, veto 72/run);
+  arm sabotage ⇒ flag đúng **"lan can `fatigued` SỤP VỀ 0 (A=51, B=0)"** — VERDICT: TẦNG 5
+  TỐ GIÁC ĐÚNG. Kịch bản "guardrail 4 tầng câm" nay có còi.
+- **Chưa kiểm chứng**: phán quyết C2 chờ verdict Cường.
 
 ## Nhãn evidence
 

@@ -1,0 +1,54 @@
+{
+ "what": "Tầng 5 sabotage end-to-end — lan can fatigued bị vô hiệu ở B_sab",
+ "mock": true,
+ "seeds": [
+  5100,
+  5101,
+  5102,
+  5103,
+  5104
+ ],
+ "mean": {
+  "A": {
+   "rest_min_total": 3772.6,
+   "veto_calls_n": 239.0,
+   "veto_fired_n": 173.4,
+   "veto_soc_low_n": 122.0,
+   "veto_fatigued_n": 51.4,
+   "veto_defer_cap_n": 0.0,
+   "work_span_p90": 452.86,
+   "work_span_max": 681.06,
+   "drive_min_p90": 308.14,
+   "drive_min_max": 444.36
+  },
+  "B": {
+   "rest_min_total": 4774.2,
+   "veto_calls_n": 282.4,
+   "veto_fired_n": 196.2,
+   "veto_soc_low_n": 124.6,
+   "veto_fatigued_n": 71.6,
+   "veto_defer_cap_n": 0.0,
+   "work_span_p90": 435.56,
+   "work_span_max": 661.58,
+   "drive_min_p90": 329.4,
+   "drive_min_max": 435.38
+  },
+  "B_sab": {
+   "rest_min_total": 4774.2,
+   "veto_calls_n": 282.4,
+   "veto_fired_n": 124.6,
+   "veto_soc_low_n": 124.6,
+   "veto_fatigued_n": 0.0,
+   "veto_defer_cap_n": 0.0,
+   "work_span_p90": 435.56,
+   "work_span_max": 661.58,
+   "drive_min_p90": 329.4,
+   "drive_min_max": 435.38
+  }
+ },
+ "flags_B_vs_A": [],
+ "flags_B_sab_vs_A": [
+  "lan can `fatigued` SỤP VỀ 0 (A=51, B=0) — nghi xoá lan can, TREO mọi Δ cho tới khi giải thích được"
+ ],
+ "verdict": "TẦNG 5 TỐ GIÁC ĐÚNG"
+}
