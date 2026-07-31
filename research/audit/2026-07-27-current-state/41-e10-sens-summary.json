@@ -1,160 +1,160 @@
 {
- "what": "E10 G-SENS §6.4 — biến thể n=30 (seeds 5000-5029). CHỈ đọc CHIỀU.",
+ "what": "E10 G-SENS §6.4 — ĐO LẠI bằng THƯỚC MỚI (UPDATE-113). n=30, CHỈ đọc CHIỀU.",
  "mock": true,
  "n_insufficient": true,
- "warning": "n=30 < MIN_SEEDS_FOR_VARIANT_COMPARISON=100 ⇒ CẤM trích độ lớn và CẤM so biến thể với nhau; chỉ đọc lớp kết luận có GIỮ CHIỀU không.",
- "headline_reference_n100": {
-  "real_k6": {
+ "ruler": "coin-based followed (UPDATE-113)",
+ "headline_n100": {
+  "real": {
    "n": 100,
-   "mean": 3604.1,
+   "mean": 3126.5,
    "ci": [
-    2541.8,
-    4709.5
+    2079.9,
+    4167.1
    ],
    "sign": "duong",
-   "decided_per_seed": 70.5
+   "decided_per_seed": 68.3
   },
-  "wait_T30_nmin2": {
+  "wait": {
    "n": 100,
-   "mean": 533.4,
+   "mean": 174.0,
    "ci": [
-    -227.9,
-    1276.9
+    -602.9,
+    916.3
    ],
    "sign": "khong_pb_voi_0",
-   "decided_per_seed": 3.1
+   "decided_per_seed": 3.0
   }
  },
  "variants": {
   "real-k1": {
    "n": 30,
-   "mean": 4617.6,
+   "mean": 4836.7,
    "ci": [
-    2727.7,
-    6623.1
+    3249.7,
+    6439.2
    ],
    "sign": "duong",
-   "decided_per_seed": 134.2
+   "decided_per_seed": 134.4
   },
   "real-k2": {
    "n": 30,
-   "mean": 4827.8,
+   "mean": 4686.5,
    "ci": [
-    3109.6,
-    6445.3
+    3013.3,
+    6372.9
    ],
    "sign": "duong",
-   "decided_per_seed": 124.4
+   "decided_per_seed": 123.2
   },
   "real-k3": {
    "n": 30,
-   "mean": 3324.8,
+   "mean": 4894.5,
    "ci": [
-    1382.9,
-    5221.2
+    3340.9,
+    6546.8
    ],
    "sign": "duong",
-   "decided_per_seed": 81.2
+   "decided_per_seed": 82.8
   },
   "real-k4": {
    "n": 30,
-   "mean": 4196.7,
+   "mean": 4201.3,
    "ci": [
-    2070.9,
-    6438.6
+    2679.2,
+    5860.6
    ],
    "sign": "duong",
-   "decided_per_seed": 83.5
+   "decided_per_seed": 84.9
   },
   "real-minn1": {
    "n": 30,
-   "mean": 3045.9,
+   "mean": 2982.3,
    "ci": [
-    842.5,
-    5368.1
+    1069.4,
+    4849.9
    ],
    "sign": "duong",
-   "decided_per_seed": 70.9
+   "decided_per_seed": 70.6
   },
   "real-minn10": {
    "n": 30,
-   "mean": 3045.9,
+   "mean": 2982.3,
    "ci": [
-    842.5,
-    5368.1
+    1069.4,
+    4849.9
    ],
    "sign": "duong",
-   "decided_per_seed": 70.9
+   "decided_per_seed": 70.6
   },
   "real-minn3": {
    "n": 30,
-   "mean": 3045.9,
+   "mean": 2982.3,
    "ci": [
-    842.5,
-    5368.1
+    1069.4,
+    4849.9
    ],
    "sign": "duong",
-   "decided_per_seed": 70.9
+   "decided_per_seed": 70.6
   },
   "wait-T15": {
    "n": 30,
-   "mean": 1612.0,
+   "mean": 2866.8,
    "ci": [
-    -405.4,
-    3606.7
+    922.7,
+    4890.4
    ],
-   "sign": "khong_pb_voi_0",
-   "decided_per_seed": 36.8
+   "sign": "duong",
+   "decided_per_seed": 36.7
   },
   "wait-T20": {
    "n": 30,
-   "mean": 985.8,
+   "mean": 1173.6,
    "ci": [
-    -586.8,
-    2630.5
+    -332.5,
+    2790.7
    ],
    "sign": "khong_pb_voi_0",
-   "decided_per_seed": 22.1
+   "decided_per_seed": 23.9
   },
   "wait-T25": {
    "n": 30,
-   "mean": 877.7,
+   "mean": 580.0,
    "ci": [
-    -841.9,
-    2542.8
+    -1180.2,
+    2383.2
    ],
    "sign": "khong_pb_voi_0",
-   "decided_per_seed": 12.5
+   "decided_per_seed": 11.1
   },
   "wait-T35": {
    "n": 30,
-   "mean": 177.2,
+   "mean": 382.9,
    "ci": [
-    -358.4,
-    790.2
+    -166.4,
+    1013.7
    ],
    "sign": "khong_pb_voi_0",
-   "decided_per_seed": 0.8
+   "decided_per_seed": 0.9
   },
   "wait-nmin1": {
    "n": 30,
-   "mean": 103.9,
+   "mean": -357.6,
    "ci": [
-    -1293.0,
-    1449.1
+    -1934.3,
+    1127.6
    ],
    "sign": "khong_pb_voi_0",
-   "decided_per_seed": 3.5
+   "decided_per_seed": 4.7
   },
   "wait-nmin3": {
    "n": 30,
-   "mean": 947.6,
+   "mean": 1192.5,
    "ci": [
-    -91.7,
-    1939.2
+    177.2,
+    2278.6
    ],
-   "sign": "khong_pb_voi_0",
-   "decided_per_seed": 2.5
+   "sign": "duong",
+   "decided_per_seed": 3.2
   }
  },
  "g_sens_verdict": {
@@ -166,24 +166,18 @@
     "duong",
     "duong"
    ],
-   "giu_chieu": "5/5",
-   "ket_luan": "Lớp CÒN-MỘT-PHẦN GIỮ CHIỀU trên TOÀN lưới k {1,2,3,4,6} — vượt tiêu chí ≥2/3. Kết luận 'mất λ vẫn còn giá trị' KHÔNG nhạy với k.",
-   "canh_bao_trung_thuc": "k=1 (+4.618) và k=2 (+4.828) cho điểm ước lượng CAO HƠN k*=6 headline (+3.604). Ở n=30 KHÔNG so được độ lớn, nhưng chiều gợi ý tiêu chí chọn k* (MAE dự báo) tối ưu cho ĐỘ CHÍNH XÁC DỰ BÁO chứ không nhất thiết cho GIÁ TRỊ TIỀN. Prereg CẤM đổi k* sau khi nhìn Δ ⇒ ghi lại làm giả thuyết cho cycle sau, KHÔNG sửa headline."
+   "giu_chieu": "5/5"
   },
   "wait_theo_T": {
    "signs": [
-    "khong_pb_voi_0",
+    "duong",
     "khong_pb_voi_0",
     "khong_pb_voi_0",
     "khong_pb_voi_0",
     "khong_pb_voi_0"
    ],
-   "ket_luan": "KQ-SỤP GIỮ trên TOÀN lưới T {15,20,25,30,35} và n_min {1,2,3}: KHÔNG có giá trị nào phân biệt được với 0. E10b sụp KHÔNG PHẢI vì chọn T tồi.",
-   "chieu_don_dieu": "Δ giảm đơn điệu theo T (T15 +1.612 · T20 +986 · T25 +878 · T30 +533 · T35 +177) song song với decided/seed (36,8 → 22,1 → 12,5 → 3,1 → 0,8) ⇒ nới trigger thì can thiệp nhiều hơn và giá trị nhích lên, nhưng không đủ để vượt nhiễu ở bất kỳ mức nào đã quét."
+   "n_sig": 1
   },
-  "min_pickups": {
-   "identical_across_grid": true,
-   "ket_luan": "XÁC NHẬN dự đoán đăng ký trước §6.5#1: min_pickups {1,3,10} cho kết quả IDENTICAL TỪNG BIT (mean, CI, decided/seed đều y hệt) ⇒ 'THAM SỐ TRƠ tại config hiện hành'. CẤM đọc thành 'robust' — chiều này thực tế KHÔNG được kiểm (giới hạn L10). Cơ chế: giờ thấp nhất ~14 pickup > max sweep 10."
-  }
+  "min_pickups_identical": true
  }
 }

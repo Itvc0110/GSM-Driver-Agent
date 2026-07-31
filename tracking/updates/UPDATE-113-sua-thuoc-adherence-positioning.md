@@ -111,6 +111,40 @@ Và **MDE_dd ≈ 1.000–1.200đ**: ta chỉ loại trừ được suy giảm L�
 - **G-GUARD 0/9 tầng xấu** ở mọi arm · **G-HERD**: HHI real 0,01235 vs oracle 0,01214 —
   vẫn không có dấu hiệu dồn cục.
 
+## 🔴 G-SENS đo lại bằng thước mới — ĐỔI kết luận về E10b
+
+| Trục | Kết quả (n=30, CHỈ CHIỀU) |
+| --- | --- |
+| `real` theo **k** {1,2,3,4,6} | **5/5 DƯƠNG** — kết luận "mất λ vẫn còn giá trị" giữ chiều toàn lưới |
+| `real` theo **min_pickups** {1,3,10} | **IDENTICAL từng bit** — xác nhận lại "tham số TRƠ" (§6.5#1) |
+| `wait` theo **T** | Δ **tăng đơn điệu khi T giảm**, song song với tần suất can thiệp |
+
+| T | Δ (n=30) | can thiệp/ngày |
+| --- | --- | --- |
+| **15′** | **+2.867đ** [923, 4.890] 🟢 DƯƠNG SIG | 36,7 |
+| 20′ | +1.174đ | 23,9 |
+| 25′ | +580đ | 11,1 |
+| **30′ (headline, n=100)** | +174đ — SỤP | **3,0** |
+| 35′ | +383đ | 0,9 |
+
+⇒ **E10b sụp vì QUÁ HIẾM, không phải vì tín hiệu sai.** Câu tôi đã báo trước đó (*"chờ-lâu
+sụp trên TOÀN dải"*) — với thước cũ đúng, với thước mới **SAI**: nó sụp ở cấu hình headline,
+không phải ở mọi cấu hình.
+
+### Kiểm ở n=100 (biến thể KHÁM PHÁ, ngoài prereg — gắn nhãn bắt buộc)
+
+`41-e10-wait-T15-n100-EXPLORATORY.json` · lệnh `measure_e10.py armvar wait T=15`:
+
+- Δ = **+2.159đ** CI [+945, +3.314] — **DƯƠNG SIG**, cổng OK (z=−1,56), 36,0 can thiệp/ngày
+- Δ vs oracle = **−1.780đ** CI [−3.174, −417] — **ÂM SIG** ⇒ lớp **KQ-CÒN-MỘT-PHẦN**, R≈55%
+
+**KHÔNG đổi headline**: prereg khoá T=30, và đổi sau khi nhìn Δ đúng là thứ prereg sinh ra để
+cấm. Đây là căn cứ để **mở prereg mới** cho dải T thấp, không phải để sửa số cũ.
+
+**Bài học thiết kế** (cho prereg sau): neo T = *2× median chờ hoà vốn* (spec §4.2 chọn 30′ vì
+median hoà vốn 14–18′) là **quá bảo thủ** — nó làm trigger gần như không bao giờ bắn. Neo ở
+**≈1× hoà vốn** (15′) cho tần suất đủ để tín hiệu thành tiền.
+
 ## Nhãn evidence
 
 Mọi số MOCK. **Số Δ của E10 trong UPDATE-110 đo bằng THƯỚC CŨ** — chưa bị chứng minh sai,

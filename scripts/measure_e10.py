@@ -592,6 +592,63 @@ def cmd_arm() -> None:
     _run_arm(arm, seeds, locked, tag)
 
 
+def cmd_armvar() -> None:
+    """Đo MỘT biến thể ở n=100 (khám phá, ngoài prereg — phải gắn nhãn khi báo).
+
+        uv run python scripts/measure_e10.py armvar wait T=15
+
+    Sinh ra vì G-SENS đo lại bằng thước mới (UPDATE-113) cho `wait-T15` **DƯƠNG SIG ở n=30**
+    trong khi headline T=30 vẫn SỤP ⇒ giả thuyết "E10b sụp vì QUÁ HIẾM, không phải vì tín
+    hiệu sai" cần n=100 để kiểm. Headline KHÔNG đổi (prereg khoá T=30).
+    """
+    if len(sys.argv) < 4:
+        raise SystemExit("usage: measure_e10.py armvar <arm> <KEY=VAL> (vd: wait T=15)")
+    arm, kv = sys.argv[2], sys.argv[3]
+    key, _, val = kv.partition("=")
+    locked = _prereg()
+    over = _arm_overrides(arm, locked)
+    if key == "T":
+        over["positioning_wait"] = {"threshold_min": float(val),
+                                    "min_idle": locked["n_min_headline"]}
+    elif key == "k":
+        over["realized_demand"] = {"window_buckets": int(val),
+                                   "min_pickups": locked["min_pickups"]}
+    else:
+        raise SystemExit(f"key la: {key}")
+    _run_arm_with_over(arm, over, MEASURE_SEEDS, f"{arm}-{key}{val}-n100-EXPLORATORY")
+
+
+def _run_arm_with_over(arm, over, seeds, tag):
+    """Như `_run_arm` nhưng nhận override dựng sẵn (dùng cho biến thể khám phá)."""
+    import numpy as np
+    cfg = _cfg_for(over)
+    nominal = nominal_adherence(Config.load(CONFIG))
+    audits, rows = [], []
+    for i, s in enumerate(seeds):
+        r = run_once(cfg, s)
+        au = adherence_audit(r)
+        pos = (au.get("by_channel") or {}).get("positioning") or {}
+        rows.append({"seed": s, **_row_common(r),
+                     "decided": int(pos.get("decided") or 0),
+                     "followed": int(pos.get("followed") or 0),
+                     "by_archetype": {k: v for k, v in
+                                      (au.get("by_channel_archetype") or {}).items()
+                                      if k.startswith("positioning|")},
+                     "volume": _volume(r), "flags": au.get("flags") or []})
+        audits.append(au)
+        if (i + 1) % 20 == 0:
+            print(f"  {tag}: {i + 1}/{len(seeds)}", flush=True)
+    agg = arm_verdict(audits, nominal, seeds)
+    z, mu, fol, n = pooled_channel_z(audits, nominal, "positioning")
+    art = {"what": f"E10 biến thể KHÁM PHÁ {tag} — NGOÀI prereg, gắn nhãn khi báo",
+           "mock": True, "exploratory": True, "overrides": over, "seeds": seeds,
+           "verdict": agg["verdict"], "flags": agg["flags_per_seed"],
+           "z_pooled_positioning": round(z, 3), "decided_total": n, "rows": rows}
+    out = OUT / f"41-e10-{tag}.json"
+    out.write_text(json.dumps(art, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"{tag} -> {out} · verdict: {agg['verdict']} · z={z:+.2f}")
+
+
 def cmd_sens() -> None:
     """G-SENS §6.4 — biến thể n=30 (5000–5029, World A đã có trong worldA file): CHỈ đọc
     CHIỀU, nhãn n_insufficient, cấm trích độ lớn (variant-vs-variant cần n≈105)."""
@@ -951,6 +1008,7 @@ def cmd_bias() -> None:
 
 
 COMMANDS = {"preflight": cmd_preflight, "probe": cmd_probe, "tune": cmd_tune,
+            "armvar": cmd_armvar,
             "histprior": cmd_histprior, "prereg": cmd_prereg,
             "worldA": cmd_worldA, "arm": cmd_arm, "sens": cmd_sens, "diff": cmd_diff,
             "bias": cmd_bias}
