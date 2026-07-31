@@ -56,9 +56,9 @@ riêng, nếu không sẽ đo ra "số 0 giả".
 - 32 test mới (8+12+12) xanh; bằng chứng đỏ như bảng trên (mutation thật, sever-restore).
 - Fingerprint per-actor: **10/10 IDENTICAL** (5 seed × 2 config) so baseline TRƯỚC cycle —
   cơ chế 3 chạm world nhưng log-only, 0 RNG, 0 state.
-- Regression: 48 test bridge + 20 test guardrail/fairness xanh. Full suite CẢ HAI lệnh: đang
-  chạy tại thời điểm viết — kết quả chốt ghi vào commit docs (nếu ≠ 0 fail sẽ sửa trước khi
-  gọi DONE-CODE).
+- Regression: 48 test bridge + 20 test guardrail/fairness xanh. Full suite CẢ HAI lệnh CHỐT:
+  **883 passed + 5 skipped (`pytest -q`) + 56 (`ui/backend/tests`) = 939 / 0 fail**
+  (2026-07-31, sau toàn bộ Phase A + probe sabotage).
 - ✅ **Sabotage end-to-end ĐÃ chạy** (`scripts/probe_rest_rails.py`, 5 seed × 3 thế giới,
   artifact `42-rest-rails-sabotage-probe.json`): vô hiệu lan can `fatigued` thật (nâng ngưỡng
   ∞ chỉ trong lời gọi bridge) ⇒ arm B bình thường **0 flag** (không báo oan, veto 72/run);
