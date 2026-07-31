@@ -82,13 +82,22 @@ def main() -> None:
                 "n_am": int(sum(1 for x in dd if x < 0)), "n_duong": int(sum(1 for x in dd if x > 0)),
                 "sig": bool(lo2 > 0 or hi2 < 0)}
     shifts = [v["mean"] for v in art["paired_vs_salt0"].values()]
+    # ⚠ CỐ Ý KHÔNG kết luận (a)/(b) tự động nữa. Bản đầu dùng ngưỡng 700đ đặt trước khi đo
+    # rồi tuyên bố "nhất quán với (b)" — nhưng CỠ DỊCH một mình KHÔNG phân biệt được hai giả
+    # thuyết: đo thật cho salt dịch 665–744đ **không SIG, dấu ~50/50** trong khi lưới dịch
+    # −1.590đ **SIG, dấu 62/38**. Ngưỡng-trên-một-đại-lượng là đúng họ lỗi "cơ chế đúng, độ
+    # lớn sai". Script nay chỉ TRẢ SỐ; kết luận là việc của người đọc artifact.
+    sds = float(np.std([np.mean(d) for d in rows.values()], ddof=1)) if len(rows) > 1 else 0.0
+    art["sd_realization"] = round(sds, 1)
     art["ket_luan"] = (
-        f"Đổi salt (KHÔNG đổi luật nào) làm Δ dịch {min(shifts):+.0f}..{max(shifts):+.0f}đ. "
-        + ("Cỡ dịch SO SÁNH ĐƯỢC với −1.590đ của đổi lưới ⇒ nhất quán với giả thuyết (b) "
-           "BẤT ĐỊNH COIN-REALIZATION, không phải cơ chế của lưới."
-           if max(abs(s) for s in shifts) >= 700 else
-           "Cỡ dịch NHỎ HƠN HẲN −1.590đ ⇒ nghiêng về giả thuyết (a): đổi lưới có cơ chế thật.")
-        + " ⚠ Hệ quả chung: CI per-seed KHÔNG bao gồm bất định realization coin.")
+        f"Đổi salt (KHÔNG đổi luật nào) làm Δ dịch {min(shifts):+.0f}..{max(shifts):+.0f}đ; "
+        f"SD giữa {len(rows)} realization = {sds:.0f}đ. So sánh với đổi lưới (−1.590đ, SIG, "
+        f"dấu 62/38) cần đọc CẢ cỡ dịch, tính SIG và tỷ lệ dấu — KHÔNG kết luận bằng riêng "
+        f"cỡ dịch. Với n={len(rows)} realization thường CHƯA đủ; cần n ≥ 10.")
+    art["ket_luan_chac_chan"] = (
+        f"Độc lập với việc phân biệt (a)/(b): bất định coin-realization có SD ≈ {sds:.0f}đ "
+        f"trên Δ, mà CI per-seed KHÔNG bao gồm nó (mỗi seed một realization) ⇒ mọi CI đã báo "
+        f"của kênh vị trí HẸP HƠN thực tế (D-E10-07).")
     out = OUT / "43-coin-realization-probe.json"
     out.write_text(json.dumps(art, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"-> {out}")
