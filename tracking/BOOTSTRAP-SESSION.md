@@ -62,7 +62,7 @@ local HEAD  = f634af6   (22 commit từ c493d89; AHEAD origin — chưa đẩy t
 suite       = 873 passed / 5 skipped / 0 failed  (2026-07-31)
               uv run pytest -q                  -> 817 + 5 skip
               uv run pytest -q ui/backend/tests -> 56
-UPDATE       = 103 file, mới nhất UPDATE-109 (104 UIUX + 105 codex review là của remote)
+UPDATE       = 104 file, mới nhất UPDATE-110 (104 UIUX + 105 codex review là của remote)
 PENDING      = 17 mục V- đang chờ Cường:
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor)
@@ -99,7 +99,7 @@ test của **đường sản phẩm** (`D-M3-09`).
 | --- | --- | --- | --- |
 | 1 | ~~**`L1-04`**~~ | — | ✅ **XONG (UPDATE-107)** — n=100 BÁC giả thuyết "28% mất hẳn": Δ=0 tuyệt đối; đó là gap LOGGING đã đóng bởi `D-M3-01`. Fix giữ (đúng `R-01`). ⚠ Kèm flaw #6 SUITE bắt: event MA sau khi áp — đã sửa (`mark_outcome_logged`) |
 | 2 | ~~**Cổng THỐNG KÊ**~~ | — | ✅ **XONG (UPDATE-107)** — z Poisson-binomial `\|z\| > 4` NỐI vào `run_ladder` thật; null đọc từ **nominal của run** (không hardcode); không treo oan arm tuân-thủ-tuyệt-đối |
-| 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | **ĐANG ĐO** — plan duyệt 2026-07-31 (B_hist ✓ / thước giữ nguyên vì z=−2,39 / 5,5h máy ✓); thi công xong Bước 1–5 (UPDATE-109, prereg ĐÃ KHOÁ `specs/simulation/e10-prereg-locked.json`); đang chạy 4+1 arm seeds 5000–5099 |
+| 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG (UPDATE-110)** — **mất λ thì +6.016đ còn 57–65%**; trigger chờ-lâu SỤP; không thấy herding; 9 lỗi script đo bị vòng soi bắt đã sửa. Chờ Cường: visual gate (artifact d8c58414) + phán quyết |
 | 4 | 3 tiên quyết cổng `rest_window` (`D-M3-04/05/08`) | ~4–6 giờ | chờ |
 | 5 | Cycle **đường SẢN PHẨM** — 13 finding sev CAO | ~1–2 ngày | chưa phản biện |
 | 6 | **`E9`** chọn lọc TRONG kênh | ~1 ngày | chờ |

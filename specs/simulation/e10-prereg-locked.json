@@ -55,5 +55,15 @@
   "threshold": 0.1,
   "window_buckets": 2,
   "action": "cooldown 1 bucket theo ô-nguồn rồi đo lại"
- }
+ },
+ "corrections_after_lock": [
+  {
+   "date": "2026-07-31",
+   "field": "firing_rate_T30_nmin2",
+   "old": 0.057,
+   "new": 0.072,
+   "why": "Số MÔ TẢ (không phải tham số quyết định) — mẫu số cũ đếm cả 5 tick probe TRƯỚC giờ mở cửa (probe tick từ t=0, actor còn OFFLINE ⇒ stats rỗng) làm loãng ~21%. Cùng họ lỗi '% câm thổi bởi bucket cấu trúc' mà spec §3.3 đã vá cho estimator. Bắt bởi vòng soi độc lập 2026-07-31, reproduce từ 41-e10-tuning-cache.json: 41/720 tick = 0,0569 vs 41/570 tick vận hành = 0,0719.",
+   "impact": "KHÔNG đổi tham số nào: T_headline=30, T_grid, n_min=2, k*, min_pickups giữ nguyên; verdict STOP-3 vẫn SỐNG (fire > 0). Đây là ĐÍNH CHÍNH MINH BẠCH của một con số mô tả, KHÔNG phải sửa prereg sau khi nhìn Δ."
+  }
+ ]
 }

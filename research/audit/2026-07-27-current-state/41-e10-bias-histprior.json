@@ -1,0 +1,9 @@
+{
+ "what": "E10 — bias của PRIOR LỊCH SỬ (arm B_hist) so λ; arm này không chạy estimator nên không có event demand_est ⇒ B2/B3/B4 phải tính trực tiếp từ prior",
+ "mock": true,
+ "n_hours": 19,
+ "b2_level_ratio_mean": 0.809,
+ "b3_tv_vs_lambda_mean": 0.1016,
+ "b4_rank_overlap10_mean": 0.7526,
+ "doc": "So trực tiếp với B_real (41-e10-bias-real.json): R_b 0,8505 · TV 0,249 · overlap 0,5722 — hai arm mất λ theo cùng cơ chế hay khác nhau?"
+}

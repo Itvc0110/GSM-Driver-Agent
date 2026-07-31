@@ -1,0 +1,53 @@
+{
+ "what": "E10 bias §3.6 — arm wait vs null A/B_oracle, 3 seed 5000–5002",
+ "mock": true,
+ "seeds": [
+  5000,
+  5001,
+  5002
+ ],
+ "arm": "wait",
+ "b1_corr_residual_supply": {
+  "A": {
+   "pearson": 0.0185,
+   "spearman": -0.0207,
+   "n_pairs": 4590
+  },
+  "oracle": {
+   "pearson": -0.0036,
+   "spearman": 0.0058,
+   "n_pairs": 4590
+  },
+  "wait": {
+   "pearson": 0.0145,
+   "spearman": -0.0236,
+   "n_pairs": 4590
+  }
+ },
+ "b1_wording": "chỉ được nói 'nhất quán với censoring' — CẤM 'xác nhận herding'",
+ "b2_level_ratio_Rb": {
+  "mean": 0.8438,
+  "p10": 0.4067,
+  "p90": 1.294
+ },
+ "b3_lag_tv": {
+  "tv_vs_lambda_now": 0.2482,
+  "tv_vs_lambda_lagged_window": 0.2482,
+  "doc": "tv_lag < tv_now ⇒ λ̂ giống quá khứ hơn hiện tại = trailing lag"
+ },
+ "b4_rank_overlap10": {
+  "vs_lambda_mean": 0.5519,
+  "self_stability_mean": 0.7549
+ },
+ "b1_supply_crosscheck": "OK — supply_eff(demand_est) ≥ idle-only(probe) mọi ô",
+ "b5_pickup_delay_min": {
+  "50": 5.24,
+  "75": 7.96,
+  "90": 10.12,
+  "99": 14.2
+ },
+ "l2_spearman_pickupA_vs_lambda_per_hour": {
+  "mean": 0.4137,
+  "n_hours": 57
+ }
+}

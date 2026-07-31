@@ -26,7 +26,8 @@ MEASURE_SEEDS = list(range(5000, 5100))      # đo chính (n=100, tươi)
 TUNING_SEEDS = list(range(5100, 5130))       # probe / preflight / tune k* (disjoint)
 
 
-def arm_verdict(audits: list[dict], nominal: dict[str, float]) -> dict:
+def arm_verdict(audits: list[dict], nominal: dict[str, float],
+                seeds: list[int] | None = None) -> dict:
     """Verdict adherence cho MỘT arm — đi qua đường ống THẬT (`aggregate_adherence`).
 
     KHÔNG recompute cổng ở đây (T-046: hai đường tính là hai cơ hội lệch nhau). PairResult
@@ -36,7 +37,10 @@ def arm_verdict(audits: list[dict], nominal: dict[str, float]) -> dict:
     ⚠ `by_channel_archetype` PHẢI đi xuyên qua nguyên vẹn — cổng thống kê sống bằng nó;
     rơi khoá này là cổng im lặng vĩnh viễn (bẫy BOOTSTRAP §5#4, test T1 canh).
     """
-    pairs = [PairResult(seed=i, actor_id=-1, a={}, b={}, system_a={}, system_b={},
+    # seed THẬT, không phải index: `aggregate_adherence` gắn "seed {pr.seed}" vào từng flag —
+    # dùng index thì artifact chỉ ra sai seed và người đọc đi tìm nhầm run (soi 2026-07-31).
+    sd = list(seeds) if seeds is not None else list(range(len(audits)))
+    pairs = [PairResult(seed=sd[i], actor_id=-1, a={}, b={}, system_a={}, system_b={},
                         adherence_b=au)
              for i, au in enumerate(audits)]
     return aggregate_adherence(pairs, nominal=nominal)
@@ -72,6 +76,7 @@ def cmd_preflight() -> None:
     ở đây trước khi trích (bẫy "cơ chế đúng độ lớn sai").
     """
     base = Config.load(CONFIG)
+    _assert_env_neutral(base)
     cfg = _cfg_with(base, enabled=True, actor_id=None,
                     channels=CHANNEL_LADDER["positioning"], coverage="all")
     nominal = nominal_adherence(base)
@@ -95,7 +100,7 @@ def cmd_preflight() -> None:
         if (i + 1) % 10 == 0:
             print(f"  preflight: {i + 1}/{len(TUNING_SEEDS)}", flush=True)
 
-    agg = arm_verdict(audits, nominal)
+    agg = arm_verdict(audits, nominal, TUNING_SEEDS)
     z, mu, fol, n = pooled_channel_z(audits, nominal, "positioning")
     fired = abs(z) > ADHERENCE_Z_MAX
     artifact = {
@@ -138,6 +143,7 @@ def _tuning_cache() -> dict:
     if TUNING_CACHE.exists():
         return json.loads(TUNING_CACHE.read_text(encoding="utf-8"))
     base = Config.load(CONFIG)
+    _assert_env_neutral(base)
     cfg_a = _cfg_with(base, enabled=False, actor_id=None, channels=None)
     cfg_a.data["probe"] = {"wait_stats": True}   # observer log-only — fingerprint-checked (T18)
     per_seed, demand_field = {}, None
@@ -196,6 +202,12 @@ def cmd_probe() -> None:
         probes = row["probe"]
         for j, pr in enumerate(probes):
             stats = {c: (int(v[0]), float(v[1])) for c, v in pr["cells"].items()}
+            # CHỈ đếm tick VẬN HÀNH: probe tick từ t=0 mỗi 60′ nên 5 tick đầu (trước
+            # start_min=300) mọi actor còn OFFLINE ⇒ stats rỗng. Đưa chúng vào mẫu số làm
+            # firing-rate loãng ~21% — đúng họ lỗi "% câm thổi bởi bucket cấu trúc" mà spec
+            # §3.3 đã vá cho estimator (soi 2026-07-31).
+            if int(pr["t"]) < start:
+                continue
             n_ticks += 1
             for c, (n, med) in stats.items():
                 med_all.append(med)
@@ -374,6 +386,23 @@ SENS_SEEDS = list(range(5000, 5030))     # n=30 — CHỈ đọc CHIỀU, nhãn 
 OP_BUCKETS = list(range(6, 24))          # bucket vận hành sau bucket-5 (cold cấu trúc)
 
 
+def _assert_env_neutral(cfg: "Config") -> None:
+    """Spec §5.2 pre-register: mọi run E10 phải ở env NEUTRAL.
+
+    Vì sao fail-loud chứ không ghi chú: `expected_demand_field` KHÔNG nhân `env.demand_factor`
+    (`demand.py:86`) trong khi `generate_orders` CÓ (`:135-137`) ⇒ chạy trên mưa/event thì
+    "oracle" của B_oracle hết là λ của generator, và mọi diag bias so λ̂ với λ đổi nghĩa ÂM
+    THẦM. Các lệnh đo là invocation CLI rời nhau nên ai đổi config giữa chừng sẽ trộn hai thế
+    giới mà không cổng nào bắn (soi 2026-07-31).
+    """
+    env = (cfg.data.get("environment") or {})
+    scen = str(env.get("scenario", "dry_weekday"))
+    fac = float(env.get("demand_factor", 1.0) or 1.0)
+    if scen != "dry_weekday" or abs(fac - 1.0) > 1e-9:
+        raise SystemExit(f"env KHÔNG neutral (scenario={scen!r}, demand_factor={fac}) — "
+                         f"E10 đòi dry_weekday/1.0 (spec §5.2), DỪNG")
+
+
 def _prereg() -> dict:
     if not PREREG.exists():
         raise SystemExit("CHƯA có e10-prereg-locked.json — chạy probe/tune/histprior/prereg "
@@ -418,6 +447,7 @@ def _cfg_for(over: dict) -> "Config":
     base = Config.load(CONFIG)
     c = Config(copy.deepcopy(base.data), base.root_dir)
     c.data.setdefault("advice", {}).update(copy.deepcopy(over))
+    _assert_env_neutral(c)
     return _cfg_with(c, enabled=True, actor_id=None,
                      channels=CHANNEL_LADDER["positioning"], coverage="all")
 
@@ -445,6 +475,7 @@ def cmd_worldA() -> None:
     DET-01: arm đối chứng cũng bị audit adherence (assert by_channel RỖNG, không giả định)."""
     _prereg()                                       # khoá phải tồn tại trước khi đo
     base = Config.load(CONFIG)
+    _assert_env_neutral(base)
     cfg = _cfg_with(base, enabled=False, actor_id=None, channels=None)
     rows = []
     for i, s in enumerate(MEASURE_SEEDS):
@@ -467,25 +498,37 @@ def _volume(r) -> dict:
     """Decomposition VOLUME §5.4 — B2 làm arm realized ít đích/nhiều ứng viên cơ học;
     thiếu bảng này thì "tin kém" và "khối lượng khác" bị kể thành một chuyện."""
     n_cand = n_asg = n_coin = n_exec = n_fired = n_into_fired = 0
-    cold = 0
-    fired_now: set = set()
+    cold = cold_b5 = 0
+    # ⚠ THỨ TỰ EVENT: planner log `standby_alloc` TRƯỚC `standby_planner` trong CÙNG tick
+    # ⇒ phải buffer alloc rồi so với fired của ĐÚNG tick đó. Bản đầu so với fired của tick
+    # TRƯỚC ⇒ false positive "veto thủng" ở seed 5019 (0 vi phạm thật khi ghép đúng — ô fired
+    # bucket N−1 được làm đích ở bucket N là dynamics hợp lệ, không phải lỗ).
+    pending_alloc: list = []
     for e in r.events:
-        if e.kind == "standby_planner":
+        if e.kind == "standby_alloc":
+            pending_alloc.append(e)
+        elif e.kind == "standby_planner":
             n_cand += int(e.detail.get("n_candidates") or 0)
             n_asg += int(e.detail.get("n_assigned") or 0)
             n_coin += int(e.detail.get("n_follow") or 0)
             fired_now = set(e.detail.get("fired_cells") or [])
             n_fired += len(fired_now)
-        elif e.kind == "standby_alloc" and e.cell in fired_now:
-            n_into_fired += int(e.detail.get("n_assigned") or 0)
+            n_into_fired += sum(int(al.detail.get("n_assigned") or 0)
+                                for al in pending_alloc if al.cell in fired_now)
+            pending_alloc = []
         elif e.kind == "standby_followed":
             n_exec += 1
-        elif e.kind == "demand_est_cold" and int(e.detail.get("idx", -1)) in OP_BUCKETS:
-            cold += 1
+        elif e.kind == "demand_est_cold":
+            idx = int(e.detail.get("idx", -1))
+            if idx in OP_BUCKETS:
+                cold += 1
+            elif idx == OP_BUCKETS[0] - 1:
+                cold_b5 += 1        # bucket 5: cold CẤU TRÚC (n_buckets=0) — báo riêng §3.3
     return {"n_candidates": n_cand, "n_assigned": n_asg, "n_coin_true": n_coin,
             "n_executed": n_exec, "n_fired_cells": n_fired,
             "n_assigned_into_fired_cells": n_into_fired,   # kỳ vọng 0 (zone-veto)
-            "cold_buckets_op": cold, "pct_cold_op": round(cold / len(OP_BUCKETS), 4)}
+            "cold_buckets_op": cold, "pct_cold_op": round(cold / len(OP_BUCKETS), 4),
+            "cold_bucket5_structural": cold_b5}   # §3.3: KHÔNG tính vào %, báo riêng
 
 
 def _run_arm(arm: str, seeds: list[int], locked: dict, tag: str) -> None:
@@ -514,9 +557,16 @@ def _run_arm(arm: str, seeds: list[int], locked: dict, tag: str) -> None:
                      "volume": vol, "flags": au.get("flags") or []})
         if (i + 1) % 10 == 0:
             print(f"  arm {arm}: {i + 1}/{len(seeds)}", flush=True)
-    agg = arm_verdict(audits, nominal)
-    if arm == "wait" and not sum(row["decided"] for row in rows):
-        print("⚠ arm wait: decided=0 POOLED — trigger câm; báo verdict, không báo Δ")
+    agg = arm_verdict(audits, nominal, seeds)
+    n_zero = sum(1 for row in rows if row["decided"] == 0)
+    if arm in ("wait", "waitoracle") and not sum(row["decided"] for row in rows):
+        # Spec §5.2 + STOP-3: trigger câm HOÀN TOÀN ⇒ world B bit-identical A ⇒ Δ=0 mọi seed
+        # ⇒ cmd_diff sẽ phân lớp "KQ-SỤP (MDE=0)" — báo "mất λ hết giá trị" trong khi sự thật
+        # là "advisor không nói câu nào". Fail-loud tại đây, không để lọt xuống diff.
+        raise SystemExit(f"arm {arm}: decided=0 POOLED trên {len(seeds)} seed — trigger CÂM "
+                         f"cấu trúc (STOP-3), KHÔNG được báo Δ. Dừng.")
+    if arm in ("wait", "waitoracle"):
+        print(f"  arm {arm}: {n_zero}/{len(seeds)} seed có decided=0 (fire thưa là dự kiến)")
     z, mu, fol, n = pooled_channel_z(audits, nominal, "positioning")
     art = {"what": f"E10 arm B_{arm} (§5.1)", "mock": True, "config": CONFIG,
            "overrides": {k: (f"<hist prior {sum(len(v) for v in over[k].values())} ô-giờ>"
@@ -526,7 +576,7 @@ def _run_arm(arm: str, seeds: list[int], locked: dict, tag: str) -> None:
            "ruler_fix_applied": False,
            "verdict": agg["verdict"], "flags": agg["flags_per_seed"],
            "z_pooled_positioning": round(z, 3), "adherence_pooled": (round(fol / n, 4) if n else None),
-           "decided_total": n, "rows": rows}
+           "decided_total": n, "n_seeds_decided_zero": n_zero, "rows": rows}
     out = OUT / f"41-e10-arm-{tag}.json"
     out.write_text(json.dumps(art, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"arm {arm} -> {out} · verdict: {agg['verdict']} · z={z:+.2f}")
@@ -631,14 +681,24 @@ def cmd_diff() -> None:
     out["stop1_delta_oracle"] = {"mean": round(float(np.mean(d_oracle)), 1),
                                  "ci": [round(lo, 1), round(hi, 1)], "n": len(d_oracle),
                                  "mde": round(mde, 1), "ref_update087": 6016}
-    if lo <= 0 <= hi:
-        verdict = ("tái lập UNDERPOWERED (CI chứa cả 0 lẫn +6.016, MDE>6.016)"
-                   if (lo <= 6016 <= hi and mde > 6016) else "KHÔNG TÁI LẬP TRẦN")
-        out["STOP"] = f"STOP-1: CI(Δ_oracle) ∋ 0 — {verdict}; chạy lại bộ seed UPDATE-087 để tách drift"
+    if lo <= 0 <= hi or hi < 0:
+        # DỪNG THẬT, không chỉ ghi chú: mọi lớp §6.3 và mọi R đo TƯƠNG ĐỐI so với trần
+        # Δ_oracle. Trần sụp ⇒ "còn R% của trần" vô nghĩa và "KQ-GIỮ" vô nghĩa. Phân lớp tiếp
+        # trên trần đã sụp là sinh nhãn sai đúng lúc người đọc dễ tin nhất (soi 2026-07-31).
+        if hi < 0:
+            out["STOP"] = ("STOP-1: Δ_oracle ÂM — kết quả ĐẢO CHIỀU (báo đúng tên, KHÔNG gộp "
+                           "vào 'không tái lập'). Dừng phân lớp.")
+        else:
+            verdict = ("tái lập UNDERPOWERED (CI chứa cả 0 lẫn +6.016, MDE>6.016)"
+                       if (lo <= 6016 <= hi and mde > 6016) else "KHÔNG TÁI LẬP TRẦN")
+            out["STOP"] = (f"STOP-1: CI(Δ_oracle) ∋ 0 — {verdict}; chạy lại bộ seed UPDATE-087 "
+                           f"để tách 'seed tươi' khỏi 'code/config drift'. Dừng phân lớp.")
+        out["arms_raw_no_classification"] = {a_: {"verdict": arms[a_]["verdict"], "z": arms[a_]["z"]}
+                                             for a_ in arms}
         print(out["STOP"])
-    elif hi < 0:
-        out["STOP"] = "STOP-1: Δ_oracle ÂM — kết quả ĐẢO CHIỀU (báo đúng tên, không phải 'không tái lập')"
-        print(out["STOP"])
+        (OUT / "41-e10-diff.json").write_text(json.dumps(out, ensure_ascii=False, indent=1),
+                                              encoding="utf-8")
+        return
 
     for arm in ("hist", "real", "wait", "waitoracle"):
         if arm not in arms:
@@ -651,17 +711,41 @@ def cmd_diff() -> None:
             continue
         d = paired(arms[arm]["rows"])
         lo_x, hi_x = bootstrap_ci(d)
-        dd = [d[i] - d_oracle[i] for i in range(min(len(d), len(d_oracle)))] \
-            if arm != "waitoracle" else None
+        # Hiệu-của-hiệu ghép THEO SEED, không theo index: hai arm có thể khác bộ seed
+        # (waitoracle n=30, hoặc arm chạy thiếu). Ghép index + min(len) sẽ trừ seed 5000 của
+        # arm này cho seed 5031 của arm kia rồi truncate IM LẶNG (soi 2026-07-31).
+        common = sorted(set(arms[arm]["rows"]) & set(arms["oracle"]["rows"]) & set(a_rows))
+        dd = ([(arms[arm]["rows"][s]["net_mean_all"] - a_rows[s]["net_mean_all"])
+               - (arms["oracle"]["rows"][s]["net_mean_all"] - a_rows[s]["net_mean_all"])
+               for s in common] if arm != "waitoracle" else None)
+        if arm == "waitoracle":
+            # n=30 < MIN_SEEDS_FOR_VARIANT_COMPARISON=100. Spec §6.4: CHỈ đọc CHIỀU. Ghi
+            # mean/CI vào artifact là mời người đọc trích độ lớn (soi 2026-07-31).
+            sign = "dương" if lo_x > 0 else ("âm" if hi_x < 0 else "không phân biệt được với 0")
+            rec["direction_only_n30"] = {"sign": sign, "n": len(d),
+                                         "warning": "n_insufficient — CẤM trích độ lớn"}
+            out["arms"][arm] = rec
+            continue
         rec["delta_vs_A"] = {"mean": round(float(np.mean(d)), 1),
                              "ci": [round(lo_x, 1), round(hi_x, 1)], "n": len(d),
                              "mde": round(1.96 * float(np.std(d, ddof=1) / np.sqrt(len(d))), 1)}
         if dd is not None:
             lo_d, hi_d = bootstrap_ci(dd)
+            # MDE của HIỆU-CỦA-HIỆU: thiếu nó thì KQ-GIỮ không tách được "không suy giảm"
+            # khỏi "không đủ mạnh để phát hiện suy giảm" (spec §5.3 đòi MDE cho mọi CI ∋ 0).
+            mde_d = 1.96 * float(np.std(dd, ddof=1) / np.sqrt(len(dd)))
             rec["delta_vs_oracle"] = {"mean": round(float(np.mean(dd)), 1),
-                                      "ci": [round(lo_d, 1), round(hi_d, 1)]}
-            if lo_x > 0 and lo_d <= 0 <= hi_d:
-                rec["lop"] = "KQ-GIỮ (kèm caveat L1+L2 nguyên văn — phát biểu YẾU về ngoài đời)"
+                                      "ci": [round(lo_d, 1), round(hi_d, 1)],
+                                      "n_paired_seeds": len(dd), "mde": round(mde_d, 1)}
+            if lo_x > 0 and lo_d > 0:
+                # Lớp thứ 5 — spec §6.3 tự nhận "4 lớp loại trừ nhau" nhưng KHÔNG vét cạn:
+                # arm mất λ mà THẮNG oracle SIG rơi xuyên bảng. Đây là kết quả đáng soi nhất
+                # (dấu hiệu thước hỏng / L2 leak) — không được để nó thành nhãn None.
+                rec["lop"] = (f"KQ-VƯỢT-ORACLE (dd=+{np.mean(dd):.0f}, CI trọn dương) — KHÔNG "
+                              f"có trong bảng §6.3; soi thước/L2 TRƯỚC khi báo")
+            elif lo_x > 0 and lo_d <= 0 <= hi_d:
+                rec["lop"] = (f"KQ-GIỮ (MDE_dd={round(mde_d, 1)}) — kèm caveat L1+L2 nguyên "
+                              f"văn, phát biểu YẾU về ngoài đời")
             elif lo_x > 0 and hi_d < 0:
                 r_ratio = float(np.mean(d)) / float(np.mean(d_oracle)) if np.mean(d_oracle) else None
                 rec["lop"] = f"KQ-CÒN-MỘT-PHẦN (R≈{r_ratio:.0%} — mô tả phụ)" if r_ratio else "KQ-CÒN-MỘT-PHẦN"
@@ -704,13 +788,172 @@ def cmd_diff() -> None:
                                           encoding="utf-8")
     print(f"diff -> {OUT / '41-e10-diff.json'}")
     for arm, rec in out["arms"].items():
-        print(f"  {arm}: {rec.get('lop') or rec.get('note') or rec.get('note_n30')} · "
-              f"Δ={rec.get('delta_vs_A', {}).get('mean')} CI={rec.get('delta_vs_A', {}).get('ci')}")
+        lab = (rec.get("lop") or rec.get("note")
+               or (f"CHIỀU {rec['direction_only_n30']['sign']} (n=30, cấm trích độ lớn)"
+                   if "direction_only_n30" in rec else "KHÔNG PHÂN LỚP ĐƯỢC — đọc artifact"))
+        print(f"  {arm}: {lab} · Δ={rec.get('delta_vs_A', {}).get('mean')} "
+              f"CI={rec.get('delta_vs_A', {}).get('ci')}")
+
+
+def cmd_bias() -> None:
+    """§3.6 — B1..B5 + diagnostic L2, trên 3 seed đo đầu (5000–5002), 3 thế giới (A /
+    B_oracle / arm đích). λ CHỈ làm thước chấm hậu-kiểm — đặc quyền của sim, sống ở script.
+
+    Lệch khai báo so spec (ghi cả vào artifact): s_c của B1 dùng **n_idle per-cell từ probe
+    log-only** cho CẢ BA thế giới (một định nghĩa — null baseline so được), thay vì
+    supply_eff của demand_est (chỉ arm realized có). supply_eff vẫn được đối chiếu ở arm
+    realized (`b1_supply_crosscheck`)."""
+    import math
+    import numpy as np
+    from scipy.stats import pearsonr, spearmanr
+
+    arm = sys.argv[2] if len(sys.argv) > 2 else "real"
+    locked = _prereg()
+    seeds = MEASURE_SEEDS[:3]
+    b = 60
+    base = Config.load(CONFIG)
+    from gsm_sim.demand import expected_demand_field
+
+    def _run_with_probe(over: dict | None, enabled: bool, s: int):
+        import copy as _copy
+        c = Config(_copy.deepcopy(base.data), base.root_dir)
+        if over:
+            c.data.setdefault("advice", {}).update(_copy.deepcopy(over))
+        c.data["probe"] = {"wait_stats": True}
+        cfg = _cfg_with(c, enabled=enabled, actor_id=None,
+                        channels=CHANNEL_LADDER["positioning"] if enabled else None,
+                        coverage="all")
+        return run_once(cfg, s)
+
+    lam_field = None
+    worlds = {"A": (None, False), "oracle": ({}, True),
+              arm: (_arm_overrides(arm, locked), True)}
+    ev: dict[str, list] = {}
+    orders0 = None
+    for name, (over, en) in worlds.items():
+        ev[name] = []
+        for s in seeds:
+            r = _run_with_probe(over, en, s)
+            ev[name].append(r.events)
+            if lam_field is None:
+                lam_field = expected_demand_field(r.grid, r.config)
+            if name == "A" and orders0 is None:
+                orders0 = {o.order_id: float(o.t_min) for o in r.orders}
+    core = sorted({c for cells in lam_field.values() for c in cells})
+
+    def _shares(d: dict[str, float]) -> dict[str, float]:
+        t = sum(d.values()) or 1.0
+        return {c: d.get(c, 0.0) / t for c in core}
+
+    def _b1_pairs(events_list):
+        pairs = []
+        for events in events_list:
+            pick: dict[int, dict[str, int]] = {}
+            idle: dict[int, dict[str, int]] = {}
+            for e in events:
+                if e.kind == "pickup":
+                    pick.setdefault(int(e.t_min // b), {}).setdefault(e.cell, 0)
+                    pick[int(e.t_min // b)][e.cell] += 1
+                elif e.kind == "probe_wait_stats":
+                    idle[int(e.t_min // b)] = {c: int(v[0])
+                                               for c, v in e.detail["cells"].items()}
+            for idx in OP_BUCKETS:
+                if idx not in pick or idx not in idle:
+                    continue
+                hour = (idx * b // 60) % 24
+                pn = _shares({c: float(n) for c, n in pick[idx].items()})
+                pl = _shares(lam_field.get(hour, {}))
+                sc = _shares({c: float(n) for c, n in idle[idx].items()})
+                for c in core:
+                    pairs.append((pn[c] - pl[c], sc[c]))
+        e_, s_ = zip(*pairs)
+        return {"pearson": round(float(pearsonr(e_, s_)[0]), 4),
+                "spearman": round(float(spearmanr(e_, s_)[0]), 4), "n_pairs": len(pairs)}
+
+    art: dict = {"what": f"E10 bias §3.6 — arm {arm} vs null A/B_oracle, 3 seed 5000–5002",
+                 "mock": True, "seeds": seeds, "arm": arm,
+                 "b1_corr_residual_supply": {name: _b1_pairs(ev[name]) for name in ev},
+                 "b1_wording": "chỉ được nói 'nhất quán với censoring' — CẤM 'xác nhận herding'"}
+
+    # B2/B3/B4 — cần λ̂ per bucket: đọc từ event demand_est của arm realized
+    if any(e.kind == "demand_est" for events in ev[arm] for e in events):
+        r2, tv_now, tv_lag, ov_lam, ov_self = [], [], [], [], []
+        crosscheck_ok = True
+        k = locked["k_star"]
+        for events in ev[arm]:
+            idle = {int(e.t_min // b): {c: int(v[0]) for c, v in e.detail["cells"].items()}
+                    for e in events if e.kind == "probe_wait_stats"}
+            prev_lam = None
+            for e in events:
+                if e.kind != "demand_est":
+                    continue
+                idx = int(e.detail["idx"])
+                hour = (idx * b // 60) % 24
+                lam_hat = {c: float(v[1]) for c, v in e.detail["cells"].items()}
+                sup_logged = {c: v[0] for c, v in e.detail["cells"].items()}
+                idle_b = idle.get(idx, {})
+                for c, s_log in sup_logged.items():
+                    if s_log is not None and idle_b and c in idle_b and s_log < idle_b[c]:
+                        crosscheck_ok = False     # supply_eff ≥ idle-only phải đúng
+                lam_h = lam_field.get(hour, {})
+                r2.append(sum(lam_hat.values()) / (sum(lam_h.values()) or 1.0))
+                ph, pl = _shares(lam_hat), _shares(lam_h)
+                tv_now.append(0.5 * sum(abs(ph[c] - pl[c]) for c in core))
+                lag_h = {}
+                for hh in range(max(hour - k, 5), hour):
+                    for c, v in lam_field.get(hh, {}).items():
+                        lag_h[c] = lag_h.get(c, 0.0) + v / k
+                plag = _shares(lag_h)
+                tv_lag.append(0.5 * sum(abs(ph[c] - plag[c]) for c in core))
+                top = lambda d: set(sorted(d, key=lambda c: (-d.get(c, 0.0), c))[:10])
+                ov_lam.append(len(top(lam_hat) & top(lam_h)) / 10.0)
+                if prev_lam is not None:
+                    ov_self.append(len(top(lam_hat) & top(prev_lam)) / 10.0)
+                prev_lam = lam_hat
+        art["b2_level_ratio_Rb"] = {"mean": round(float(np.mean(r2)), 4),
+                                    "p10": round(float(np.percentile(r2, 10)), 4),
+                                    "p90": round(float(np.percentile(r2, 90)), 4)}
+        art["b3_lag_tv"] = {"tv_vs_lambda_now": round(float(np.mean(tv_now)), 4),
+                            "tv_vs_lambda_lagged_window": round(float(np.mean(tv_lag)), 4),
+                            "doc": "tv_lag < tv_now ⇒ λ̂ giống quá khứ hơn hiện tại = trailing lag"}
+        art["b4_rank_overlap10"] = {"vs_lambda_mean": round(float(np.mean(ov_lam)), 4),
+                                    "self_stability_mean": (round(float(np.mean(ov_self)), 4)
+                                                            if ov_self else None)}
+        art["b1_supply_crosscheck"] = ("OK — supply_eff(demand_est) ≥ idle-only(probe) mọi ô"
+                                       if crosscheck_ok else "🔴 LỆCH — xem lại đường log")
+
+    # B5 — attribution thời điểm ĐÓN (1 seed World A): t_pickup − t_order
+    delays = [e.t_min - orders0[e.detail["order_id"]]
+              for e in ev["A"][0] if e.kind == "pickup" and e.detail.get("order_id") in orders0]
+    art["b5_pickup_delay_min"] = {p: round(float(np.percentile(delays, p)), 2)
+                                  for p in (50, 75, 90, 99)}
+    # Diagnostic L2 (kèm mọi KQ-GIỮ): đội xe World A đã "giải mã" λ tới đâu
+    sp = []
+    for events in ev["A"]:
+        byh: dict[int, dict[str, int]] = {}
+        for e in events:
+            if e.kind == "pickup":
+                byh.setdefault((int(e.t_min) // 60) % 24, {}).setdefault(e.cell, 0)
+                byh[(int(e.t_min) // 60) % 24][e.cell] += 1
+        for hour, cnt in byh.items():
+            lam_h = lam_field.get(hour, {})
+            if len(cnt) < 5:
+                continue
+            a = [_shares({c: float(n) for c, n in cnt.items()})[c] for c in core]
+            l = [_shares(lam_h)[c] for c in core]
+            sp.append(float(spearmanr(a, l)[0]))
+    art["l2_spearman_pickupA_vs_lambda_per_hour"] = {"mean": round(float(np.mean(sp)), 4),
+                                                     "n_hours": len(sp)}
+    out = OUT / f"41-e10-bias-{arm}.json"
+    out.write_text(json.dumps(art, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"bias {arm} -> {out}")
+    print("B1 corr:", art["b1_corr_residual_supply"])
 
 
 COMMANDS = {"preflight": cmd_preflight, "probe": cmd_probe, "tune": cmd_tune,
             "histprior": cmd_histprior, "prereg": cmd_prereg,
-            "worldA": cmd_worldA, "arm": cmd_arm, "sens": cmd_sens, "diff": cmd_diff}
+            "worldA": cmd_worldA, "arm": cmd_arm, "sens": cmd_sens, "diff": cmd_diff,
+            "bias": cmd_bias}
 
 
 if __name__ == "__main__":

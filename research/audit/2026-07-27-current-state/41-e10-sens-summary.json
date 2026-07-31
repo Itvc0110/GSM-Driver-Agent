@@ -1,0 +1,189 @@
+{
+ "what": "E10 G-SENS §6.4 — biến thể n=30 (seeds 5000-5029). CHỈ đọc CHIỀU.",
+ "mock": true,
+ "n_insufficient": true,
+ "warning": "n=30 < MIN_SEEDS_FOR_VARIANT_COMPARISON=100 ⇒ CẤM trích độ lớn và CẤM so biến thể với nhau; chỉ đọc lớp kết luận có GIỮ CHIỀU không.",
+ "headline_reference_n100": {
+  "real_k6": {
+   "n": 100,
+   "mean": 3604.1,
+   "ci": [
+    2541.8,
+    4709.5
+   ],
+   "sign": "duong",
+   "decided_per_seed": 70.5
+  },
+  "wait_T30_nmin2": {
+   "n": 100,
+   "mean": 533.4,
+   "ci": [
+    -227.9,
+    1276.9
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 3.1
+  }
+ },
+ "variants": {
+  "real-k1": {
+   "n": 30,
+   "mean": 4617.6,
+   "ci": [
+    2727.7,
+    6623.1
+   ],
+   "sign": "duong",
+   "decided_per_seed": 134.2
+  },
+  "real-k2": {
+   "n": 30,
+   "mean": 4827.8,
+   "ci": [
+    3109.6,
+    6445.3
+   ],
+   "sign": "duong",
+   "decided_per_seed": 124.4
+  },
+  "real-k3": {
+   "n": 30,
+   "mean": 3324.8,
+   "ci": [
+    1382.9,
+    5221.2
+   ],
+   "sign": "duong",
+   "decided_per_seed": 81.2
+  },
+  "real-k4": {
+   "n": 30,
+   "mean": 4196.7,
+   "ci": [
+    2070.9,
+    6438.6
+   ],
+   "sign": "duong",
+   "decided_per_seed": 83.5
+  },
+  "real-minn1": {
+   "n": 30,
+   "mean": 3045.9,
+   "ci": [
+    842.5,
+    5368.1
+   ],
+   "sign": "duong",
+   "decided_per_seed": 70.9
+  },
+  "real-minn10": {
+   "n": 30,
+   "mean": 3045.9,
+   "ci": [
+    842.5,
+    5368.1
+   ],
+   "sign": "duong",
+   "decided_per_seed": 70.9
+  },
+  "real-minn3": {
+   "n": 30,
+   "mean": 3045.9,
+   "ci": [
+    842.5,
+    5368.1
+   ],
+   "sign": "duong",
+   "decided_per_seed": 70.9
+  },
+  "wait-T15": {
+   "n": 30,
+   "mean": 1612.0,
+   "ci": [
+    -405.4,
+    3606.7
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 36.8
+  },
+  "wait-T20": {
+   "n": 30,
+   "mean": 985.8,
+   "ci": [
+    -586.8,
+    2630.5
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 22.1
+  },
+  "wait-T25": {
+   "n": 30,
+   "mean": 877.7,
+   "ci": [
+    -841.9,
+    2542.8
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 12.5
+  },
+  "wait-T35": {
+   "n": 30,
+   "mean": 177.2,
+   "ci": [
+    -358.4,
+    790.2
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 0.8
+  },
+  "wait-nmin1": {
+   "n": 30,
+   "mean": 103.9,
+   "ci": [
+    -1293.0,
+    1449.1
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 3.5
+  },
+  "wait-nmin3": {
+   "n": 30,
+   "mean": 947.6,
+   "ci": [
+    -91.7,
+    1939.2
+   ],
+   "sign": "khong_pb_voi_0",
+   "decided_per_seed": 2.5
+  }
+ },
+ "g_sens_verdict": {
+  "real_theo_k": {
+   "signs": [
+    "duong",
+    "duong",
+    "duong",
+    "duong",
+    "duong"
+   ],
+   "giu_chieu": "5/5",
+   "ket_luan": "Lớp CÒN-MỘT-PHẦN GIỮ CHIỀU trên TOÀN lưới k {1,2,3,4,6} — vượt tiêu chí ≥2/3. Kết luận 'mất λ vẫn còn giá trị' KHÔNG nhạy với k.",
+   "canh_bao_trung_thuc": "k=1 (+4.618) và k=2 (+4.828) cho điểm ước lượng CAO HƠN k*=6 headline (+3.604). Ở n=30 KHÔNG so được độ lớn, nhưng chiều gợi ý tiêu chí chọn k* (MAE dự báo) tối ưu cho ĐỘ CHÍNH XÁC DỰ BÁO chứ không nhất thiết cho GIÁ TRỊ TIỀN. Prereg CẤM đổi k* sau khi nhìn Δ ⇒ ghi lại làm giả thuyết cho cycle sau, KHÔNG sửa headline."
+  },
+  "wait_theo_T": {
+   "signs": [
+    "khong_pb_voi_0",
+    "khong_pb_voi_0",
+    "khong_pb_voi_0",
+    "khong_pb_voi_0",
+    "khong_pb_voi_0"
+   ],
+   "ket_luan": "KQ-SỤP GIỮ trên TOÀN lưới T {15,20,25,30,35} và n_min {1,2,3}: KHÔNG có giá trị nào phân biệt được với 0. E10b sụp KHÔNG PHẢI vì chọn T tồi.",
+   "chieu_don_dieu": "Δ giảm đơn điệu theo T (T15 +1.612 · T20 +986 · T25 +878 · T30 +533 · T35 +177) song song với decided/seed (36,8 → 22,1 → 12,5 → 3,1 → 0,8) ⇒ nới trigger thì can thiệp nhiều hơn và giá trị nhích lên, nhưng không đủ để vượt nhiễu ở bất kỳ mức nào đã quét."
+  },
+  "min_pickups": {
+   "identical_across_grid": true,
+   "ket_luan": "XÁC NHẬN dự đoán đăng ký trước §6.5#1: min_pickups {1,3,10} cho kết quả IDENTICAL TỪNG BIT (mean, CI, decided/seed đều y hệt) ⇒ 'THAM SỐ TRƠ tại config hiện hành'. CẤM đọc thành 'robust' — chiều này thực tế KHÔNG được kiểm (giới hạn L10). Cơ chế: giờ thấp nhất ~14 pickup > max sweep 10."
+  }
+ }
+}

@@ -1,0 +1,195 @@
+{
+ "what": "E10 diff — STOP chain + phân lớp §6.3",
+ "mock": true,
+ "prereg": {
+  "locked_at": "2026-07-31",
+  "spec": "specs/simulation/e10-advisor-noisy.md",
+  "k_star": 6,
+  "k_criterion": "mae_one_step_realized_v1",
+  "k_grid": [
+   1,
+   2,
+   3,
+   4,
+   6
+  ],
+  "T_headline": 30.0,
+  "T_grid": [
+   15.0,
+   20.0,
+   25.0,
+   30.0,
+   35.0
+  ],
+  "T_excluded_structural": [
+   45.0,
+   60.0
+  ],
+  "n_min_headline": 2,
+  "n_min_grid": [
+   1,
+   2,
+   3
+  ],
+  "min_pickups": 5,
+  "min_pickups_grid": [
+   1,
+   3,
+   5,
+   10
+  ],
+  "block_fallback": {
+   "active": false,
+   "rule": "idle_share_ge2 < 0.20 => grid_disk r=1",
+   "measured_idle_share_ge2": 0.7753
+  },
+  "seeds_measure": "5000-5099",
+  "seeds_tuning": "5100-5129",
+  "preflight_z_positioning": -2.387,
+  "ruler_fix_applied": false,
+  "firing_rate_T30_nmin2": 0.057,
+  "stop3": {
+   "firing_rate": 0.057,
+   "verdict": "SỐNG"
+  },
+  "metric_chinh": "net_mean_all (mean payout MỌI actor); Δ_X(s)=B_X(s)−A(s); arm-vs-arm = hiệu-của-hiệu per seed; bootstrap CI 5000, seed 12345",
+  "expected_registered": "spec §6.5 — bảng kỳ vọng trung thực (in lại cạnh kết quả)",
+  "pingpong_rule": {
+   "threshold": 0.1,
+   "window_buckets": 2,
+   "action": "cooldown 1 bucket theo ô-nguồn rồi đo lại"
+  }
+ },
+ "arms": {
+  "hist": {
+   "verdict": "OK",
+   "z": -3.31,
+   "flags": [],
+   "delta_vs_A": {
+    "mean": 3146.4,
+    "ci": [
+     2250.8,
+     4046.2
+    ],
+    "n": 100,
+    "mde": 912.6
+   },
+   "delta_vs_oracle": {
+    "mean": -2382.7,
+    "ci": [
+     -3458.4,
+     -1278.1
+    ],
+    "n_paired_seeds": 100,
+    "mde": 1086.1
+   },
+   "lop": "KQ-CÒN-MỘT-PHẦN (R≈57% — mô tả phụ)",
+   "volume_mean": {
+    "n_candidates": 191.4,
+    "n_assigned": 51.28,
+    "n_coin_true": 25.41,
+    "n_executed": 24.18,
+    "n_fired_cells": 0.0,
+    "n_assigned_into_fired_cells": 0.0,
+    "cold_buckets_op": 0.0,
+    "pct_cold_op": 0.0
+   },
+   "g_guard_sig_worse": []
+  },
+  "real": {
+   "verdict": "OK",
+   "z": -2.974,
+   "flags": [],
+   "delta_vs_A": {
+    "mean": 3604.1,
+    "ci": [
+     2541.8,
+     4709.5
+    ],
+    "n": 100,
+    "mde": 1063.1
+   },
+   "delta_vs_oracle": {
+    "mean": -1925.0,
+    "ci": [
+     -3050.0,
+     -758.6
+    ],
+    "n_paired_seeds": 100,
+    "mde": 1141.8
+   },
+   "lop": "KQ-CÒN-MỘT-PHẦN (R≈65% — mô tả phụ)",
+   "volume_mean": {
+    "n_candidates": 247.66,
+    "n_assigned": 70.47,
+    "n_coin_true": 36.18,
+    "n_executed": 34.81,
+    "n_fired_cells": 0.0,
+    "n_assigned_into_fired_cells": 0.0,
+    "cold_buckets_op": 0.0,
+    "pct_cold_op": 0.0
+   },
+   "g_guard_sig_worse": []
+  },
+  "wait": {
+   "verdict": "OK",
+   "z": -0.25,
+   "flags": [],
+   "delta_vs_A": {
+    "mean": 533.4,
+    "ci": [
+     -227.9,
+     1276.9
+    ],
+    "n": 100,
+    "mde": 727.0
+   },
+   "delta_vs_oracle": {
+    "mean": -4995.8,
+    "ci": [
+     -6049.6,
+     -3921.6
+    ],
+    "n_paired_seeds": 100,
+    "mde": 1092.1
+   },
+   "lop": "KQ-SỤP (MDE=727.0)",
+   "volume_mean": {
+    "n_candidates": 3.64,
+    "n_assigned": 3.07,
+    "n_coin_true": 1.67,
+    "n_executed": 1.62,
+    "n_fired_cells": 1.31,
+    "n_assigned_into_fired_cells": 0.0,
+    "cold_buckets_op": 0.0,
+    "pct_cold_op": 0.0
+   },
+   "g_guard_sig_worse": []
+  },
+  "waitoracle": {
+   "verdict": "OK",
+   "z": -0.322,
+   "flags": [],
+   "direction_only_n30": {
+    "sign": "không phân biệt được với 0",
+    "n": 30,
+    "warning": "n_insufficient — CẤM trích độ lớn"
+   }
+  }
+ },
+ "stop1_delta_oracle": {
+  "mean": 5529.2,
+  "ci": [
+   4577.6,
+   6413.5
+  ],
+  "n": 100,
+  "mde": 927.8,
+  "ref_update087": 6016
+ },
+ "g_herd_hhi": {
+  "real_mean": 0.01233,
+  "oracle_mean": 0.01237,
+  "note": "corr B1 đọc từ lệnh bias; chỉ được nói 'nhất quán với censoring', CẤM 'xác nhận herding'"
+ }
+}
