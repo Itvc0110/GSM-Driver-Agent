@@ -140,10 +140,21 @@ def test_derivation_from_real_tables(reg, tables):
     d = (hx[0].get("last_seen_at") or "")[:10]
     v = derive_idle_reduction_input_l1r(drv, f"{d}T18:00:00+07:00", tables, session_date=d)
     assert reg.validate("idle_reduction_input", v) == [], v
-    # tổng phút idle == tổng stay_duration đo được (chỉ segment ≥5 phút)
-    expect = sum(h["stay_duration_seconds"] for h in tables["public_driver_hex_tracking"]
-                 if h["driver_id"] == drv and (h.get("last_seen_at") or "")[:10] == d
-                 and h.get("tracking_status") == "idle" and h["stay_duration_seconds"] >= 300)
+    # tổng phút idle == tổng stay_duration ĐÃ QUAN SÁT ĐƯỢC tại t_now (chỉ segment ≥5 phút).
+    # SỬA 2026-08-01 (D-M3-11): bản cũ cộng dwell TOÀN NGÀY rồi so với view hỏi lúc 18:00 ⇒
+    # nó PIN đúng lỗi rò rỉ tương lai (view thấy dwell 21:00 lúc 18:00). Mẫu số đúng phải cắt
+    # tại t_now — cùng luật mà `derive_bonus_gap_input_l1r` đã áp từ AUDIT A3 LAYEROUT-4.
+    from datetime import datetime as _dtm
+    tn = _dtm.fromisoformat(f"{d}T18:00:00+07:00")
+    expect = 0
+    for h in tables["public_driver_hex_tracking"]:
+        if (h["driver_id"] != drv or (h.get("last_seen_at") or "")[:10] != d
+                or h.get("tracking_status") != "idle"):
+            continue
+        st = _dtm.fromisoformat(h.get("entered_current_hex_at") or h["last_seen_at"])
+        quan_sat = int(min(h["stay_duration_seconds"], max(0.0, (tn - st).total_seconds())))
+        if quan_sat >= 300:
+            expect += quan_sat
     assert v["total_idle_min"] == pytest.approx(expect / 60, abs=0.02)
     assert reg.validate("solver_report", solve(v)) == []
 

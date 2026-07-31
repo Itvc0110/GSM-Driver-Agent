@@ -104,5 +104,5 @@ xe) + **`D-E10-07`** (CI hẹp hơn thực tế ~409đ) ⇒ phát biểu **YẾU
 - Plan mode `D-M3-04` (3 điểm Cường đã chốt: TB ngày 2..N bootstrap theo seed · days=3 n=100)
   — acceptance phải gồm: nối `touched_actors` vào cổng tầng 5, dùng nền A=wait_only thay
   ladder, `min_seeds=100` cho contrast biến thể.
-- ⏳ **PENDING-REVIEW 20 mục chờ Cường**: V-01..V-14, V-16, V-17, V-18 (kèm card im lặng mới),
+- ⏳ **PENDING-REVIEW 19 mục chờ Cường**: V-01..V-14, V-16, V-17, V-18 (kèm card im lặng mới),
   V-20, V-21.

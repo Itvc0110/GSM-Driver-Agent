@@ -16,7 +16,7 @@ thiếu station/battery capacity.
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date as _dt_date, timedelta
+from datetime import date as _dt_date, datetime as _dt_datetime, timedelta
 
 from gsm_core.policy import PolicyBundle
 from gsm_core.features._common import date as _date, hour as _hour, min_of_day
@@ -26,6 +26,34 @@ VIEW_VERSION = "1.0.0"
 
 def _rows(l1r: dict, entity: str) -> list[dict]:
     return l1r.get(entity) or []
+
+
+def _parsable_ts(ts) -> bool:
+    try:
+        _dt_datetime.fromisoformat(str(ts))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _observed_seconds(start: str, dur_s: int, t_now: str) -> int:
+    """Phần dwell ĐÃ QUAN SÁT ĐƯỢC tại `t_now` (D-M3-11).
+
+    Trả 0 nếu dwell bắt đầu sau `t_now` (chưa xảy ra); cắt về `t_now - start` nếu còn đang
+    diễn ra; giữ nguyên nếu đã kết thúc. Chuỗi không parse được ⇒ giữ nguyên `dur_s` (thà
+    giữ số cũ hơn là im lặng làm rỗng view khi gặp định dạng lạ).
+    """
+    try:
+        st = _dt_datetime.fromisoformat(start)
+        tn = _dt_datetime.fromisoformat(t_now)
+    except (TypeError, ValueError):
+        return dur_s
+    if st.tzinfo is None or tn.tzinfo is None:  # so aware với naive là TypeError
+        return dur_s
+    elapsed = (tn - st).total_seconds()
+    if elapsed <= 0:
+        return 0
+    return int(min(dur_s, elapsed))
 
 
 def _provenance(*records) -> str:
@@ -114,7 +142,12 @@ def derive_bonus_gap_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: Po
 
     # historical điểm/giờ theo khung (ngày trước today)
     per_bucket: dict[str, list[float]] = defaultdict(list)
-    hist_days = sorted({_date(t["complete_time"]) for t in _driver_trips(l1r, driver_id)} - {today})
+    # D-M3-11: `- {today}` bỏ ĐÚNG hôm nay nhưng KHÔNG bỏ ngày SAU hôm nay ⇒ "tốc độ điểm
+    # lịch sử" gộp cả ngày chưa tới (bảng 6 ngày, hỏi ngày 3: lịch sử gồm ngày 4/5/6). Đo được
+    # ở seed 900: có số {peak 3.846, offpeak 5.769} khi thấy tương lai, và {} khi không —
+    # tức chính ngày tương lai làm đủ ngưỡng ≥3 ngày. S1 dùng số này để nói "đạt mốc được".
+    hist_days = sorted(d for d in {_date(t["complete_time"]) for t in _driver_trips(l1r, driver_id)}
+                       if d < today)
     for d in hist_days:
         o = _online_row(l1r, driver_id, d)
         oh = float(o["online_time"]) if o else 0.0
@@ -304,20 +337,50 @@ def derive_idle_reduction_input_l1r(driver_id: str, t_now: str, l1r: dict,
         if seen[:10] != d:
             continue
         dur = int(r.get("stay_duration_seconds") or 0)
-        if r.get("tracking_status") == "idle" and dur >= idle_min_seconds:
+        if r.get("tracking_status") == "idle":
             start = r.get("entered_current_hex_at") or seen
-            segs.append({"hex": r.get("current_hex"), "start": start,
-                         "duration_seconds": dur, "hour": _hour(start)})
+            # `_hour(start)` làm `int(iso[11:13])` ⇒ timestamp RÁC gây ValueError, tức view NỔ
+            # thay vì degrade. Lỗi này có TRƯỚC D-M3-11 (`or seen` chỉ đỡ field RỖNG, không đỡ
+            # field rác). Lùi về `last_seen_at`; nếu nó cũng không parse được thì record không
+            # định vị được trong thời gian ⇒ BỎ, vì mọi con số của nó đều vô nghĩa.
+            if not _parsable_ts(start):
+                start = seen
+                if not _parsable_ts(start):
+                    continue
+            # D-M3-11: chỉ phần ĐÃ quan sát được tại t_now. Lọc theo ngày là KHÔNG đủ — dwell
+            # bắt đầu 23:03 vẫn lọt vào view hỏi lúc 23:00, làm `total_idle_min` vượt cả
+            # `online_time` (bất khả) và làm S7 khuyên trên thời gian chờ của TƯƠNG LAI.
+            # Ngưỡng `idle_min_seconds` áp SAU khi cắt: dwell vừa dài 2′ chưa phải "chờ lâu".
+            dur = _observed_seconds(start, dur, t_now)
+            if dur >= idle_min_seconds:
+                segs.append({"hex": r.get("current_hex"), "start": start,
+                             "duration_seconds": dur, "hour": _hour(start)})
         if repo is None and r.get("campaign_id"):  # nhiệm vụ reposition của GSM
-            repo = {"campaign_id": r.get("campaign_id"), "target_hex": r.get("target_hex"),
-                    "reached": r.get("reached_target")}
+            # D-M3-11: nhiệm vụ chưa BẮT ĐẦU thì không tồn tại với người hỏi lúc t_now; và
+            # `reached_target` là kết cục TỔNG KẾT của segment (`reached_target_at` rỗng trong
+            # cả mock lẫn 13 bảng thật) ⇒ segment còn đang diễn ra thì kết cục CHƯA CHỐT, khai
+            # `None` = "chưa biết" thay vì chép sẵn True/False của tương lai.
+            r_start = r.get("entered_current_hex_at") or seen
+            if r_start <= t_now:
+                reached_at = r.get("reached_target_at")
+                if reached_at:
+                    reached = r.get("reached_target") if reached_at <= t_now else None
+                else:
+                    reached = r.get("reached_target") if seen <= t_now else None
+                repo = {"campaign_id": r.get("campaign_id"), "target_hex": r.get("target_hex"),
+                        "reached": reached}
 
     total_s = sum(s["duration_seconds"] for s in segs)
     longest_s = max((s["duration_seconds"] for s in segs), default=0)
 
     # demand PROXY theo giờ (chỉ đơn ĐÃ phục vụ) — chuẩn hoá [0,1]
+    # D-M3-11: cắt tại t_now. Prior này gộp mọi ngày trong bảng nên KHÔNG cắt sẽ để lọt cầu
+    # của chính buổi chiều chưa diễn ra ⇒ hình dạng cầu "biết trước" đúng thứ S7 định khuyên.
+    # Đo được ở seed 900: chuẩn hoá đỉnh dịch từ giờ 7 (1.0) xuống 0.859 khi thấy cả tương lai.
     by_hour: dict[int, int] = defaultdict(int)
     for t in _rows(l1r, "trips"):
+        if str(t.get("request_time") or "") > t_now:
+            continue
         by_hour[_hour(t["request_time"])] += 1
     peak = max(by_hour.values()) if by_hour else 0
     demand = {str(h): round(n / peak, 3) for h, n in sorted(by_hour.items())} if peak else {}
@@ -422,10 +485,14 @@ def derive_shift_plan_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: P
     """
     today = _date(t_now)
     now_min = min_of_day(t_now)
-    trips_today = _driver_trips(l1r, driver_id, today)
+    # D-M3-11: cắt tại t_now — CÙNG luật `derive_bonus_gap_input_l1r` đã áp từ AUDIT A3
+    # LAYEROUT-4, deriver này bỏ sót. Đo được ở seed 900 lúc 08:00: points_now=35 (điểm của
+    # cuốc chạy CHIỀU) thay vì 0 ⇒ S2 lập kế hoạch ca trên điểm chưa kiếm được.
+    trips_today = [t for t in _driver_trips(l1r, driver_id, today) if t["complete_time"] <= t_now]
     points_now = _points_from_trips(trips_today, policy)
 
-    all_trips = _rows(l1r, "trips")
+    # Dự báo NÓI về tương lai là đúng; DỮ LIỆU nuôi nó thì không được lấy từ tương lai.
+    all_trips = [t for t in _rows(l1r, "trips") if str(t.get("request_time") or "") <= t_now]
     n_days = len({_date(t["request_time"]) for t in all_trips}) or 1
     by_hour_cell: dict[tuple[int, str], int] = defaultdict(int)
     for t in all_trips:

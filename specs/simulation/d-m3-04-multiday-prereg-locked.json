@@ -1,0 +1,54 @@
+{
+  "prereg_id": "D-M3-04-multiday-rest-window",
+  "locked_at": "2026-08-01",
+  "status": "LOCKED — khoá TRƯỚC khi chạy phép đo; sửa sau khi đo là vi phạm",
+  "cau_hoi": "Khi bật multiday (nên `planned_rest_hour` sống từ ngày 2), kênh `rest_window` — kênh DUY NHẤT chạm ranh giới sức khoẻ — có Δ driver_payout khác 0 không, và nó làm gì với các chỉ tiêu sức khoẻ tầng 5?",
+
+  "thiet_ke": {
+    "arm_A": "positioning_overrides = wait_only (nền)",
+    "arm_B": "arm_A + rest_window = true",
+    "KHONG_dung": "CHANNEL_LADDER['rest_window'] — nó bật kèm shift_plan=True, mà shift_plan đã bị ĐA-07/UPDATE-087 TẮT vì có hại ⇒ đo trên đó là đo hai can thiệp trộn nhau",
+    "days": 3,
+    "n_seeds": 100,
+    "ghep_cap": "cùng seed cho A và B (CRN). Đo được: ngày 0 hai arm BIT-IDENTICAL, fingerprint per-actor a092e1f242905001",
+    "metric": "trung bình driver_payout của ngày 1..2 (0-indexed; tức 'ngày 2..N' theo cách nói của brief). Ngày 0 BỎ — chưa có DriverMemory nên planned_rest_hour vẫn None, gộp vào là pha loãng chính thứ cần đo",
+    "bootstrap": "resample theo SEED, không theo ngày — các ngày KHÔNG độc lập (cùng actor mang memory sang)",
+    "min_seeds_for_sig": 100
+  },
+
+  "ky_vong_dang_ky_TRUOC_khi_do": {
+    "delta_payout": "NHỎ, và có thể ÂM. Lý do cấu trúc, không phải bi quan: world hiện tại KHÔNG mô hình hoá hậu quả của mệt (phán quyết 2026-07-29, spec §1.2b) — tức nó là world β=0. Trong world β=0, mọi can thiệp TĂNG nghỉ chỉ tốn thời gian kiếm tiền và KHÔNG hoàn lại gì ⇒ Δ ≤ 0 là kỳ vọng ĐÚNG của mô hình, không phải dấu hiệu kênh vô dụng.",
+    "he_qua_phai_ghi_kem": "Nếu Δ ≤ 0, KẾT LUẬN ĐƯỢC PHÉP là 'trong world không có hậu quả mệt, kênh nghỉ là chi phí thuần' — KHÔNG được kết luận 'gợi ý nghỉ vô giá trị ngoài đời'. Đó là hai câu khác nhau và sự khác nhau nằm ở β, thứ ta chưa có dữ liệu để đặt.",
+    "tang_5": "rest_min_total TĂNG ở arm B (kênh làm tài xế nghỉ nhiều hơn) — và đó là hiệu ứng MONG MUỐN, phải báo ở cột sức khoẻ RIÊNG, không quy ra tiền.",
+    "so_lan_noi": "> 0 ở ngày ≥ 1. Đã đo trước khi khoá: decided 0/12/11 theo ngày 0/1/2 ⇒ kênh thôi INERT từ ngày thứ hai.",
+    "du_doan_co_the_SAI": "Tôi dự đoán Δ nằm trong [−1.500, +500] đ. Nếu Δ dương SIG > +1.000 thì dự đoán này SAI và phải điều tra vì sao nghỉ lại SINH tiền trong world β=0 — ứng viên đầu tiên: nghỉ đúng trũng cầu rồi quay lại đúng giờ vàng (hiệu ứng THỜI ĐIỂM, tức C2′), không phải hiệu ứng sức khoẻ."
+  },
+
+  "STOP_conditions": [
+    "STOP-A: cổng adherence D-M3-10 verdict TREO ở BẤT KỲ arm nào (|z| > 4) ⇒ dừng, không báo Δ",
+    "STOP-B: cổng arm đối chứng DET-01 — arm A (advice off) có quyết định ⇒ dừng, arm đối chứng không sạch thì mọi Δ là rác",
+    "STOP-C: tầng 5 chấm trên touched_actors cho thấy chỉ tiêu sức khoẻ SUY GIẢM (rest_min_total giảm hoặc work_span p90 tăng vượt tolerance) ⇒ dừng và báo, KHÔNG nới tolerance",
+    "STOP-D: fingerprint ngày 0 arm A giữa hai lần chạy KHÁC nhau ⇒ multiday không tất định, mọi Δ vô nghĩa"
+  ],
+
+  "cam_vinh_vien": [
+    "Nới REST_TOTAL_DROP_TOL / SPAN_P90_RISE_TOL để verdict đẹp (mẫu D-R20)",
+    "Nới rest_defer_max_min / shift_extend_max_min — đã bị POLICY_LOCKED_KEYS khoá cứng",
+    "Đọc Δ của tầng 5 như chỉ tiêu HAI CHIỀU (HEALTH_KEYS_ONE_WAY chặn; xem UPDATE-114 lỗ (e))",
+    "Chấm tầng 5 trên TỔNG cohort thay vì touched_actors (pha loãng ~10× ⇒ cổng canh nhiễu; UPDATE-114 lỗ (b))",
+    "Quy đổi bất kỳ chỉ tiêu sức khoẻ nào ra VND"
+  ],
+
+  "vung_mu_khai_truoc": [
+    "Trần 71,0% lan can là số MỘT NGÀY — KHÔNG trích cho chế độ multiday (trong multiday kênh chỉ hiện thực 2–5,7% cơ hội, và chặn chính là at_window/window_past, không phải lan can sức khoẻ)",
+    "veto_fired_n chịu tải chẩn đoán cho 2 chỉ tiêu còn mù với đòn xoá-lan-can",
+    "world β=0 là một LỰA CHỌN hiệu chuẩn, không phải trung lập — nó thiên vị CHỐNG nghỉ (xem plan E11, nhánh THỬ NGHIỆM không ưu tiên theo chỉ đạo Cường 2026-07-31)"
+  ],
+
+  "nguon": [
+    "specs/simulation/d-m3-04-multiday-ab-brief.md",
+    "tracking/updates/UPDATE-114-nam-lo-duong-ong-ab-va-e10b-low.md",
+    "tracking/QUYET-DINH-2026-07-30-nam-diem.md",
+    "specs/advisor-objective-model-v2.md §1.2b"
+  ]
+}

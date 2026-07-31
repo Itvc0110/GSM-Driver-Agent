@@ -217,7 +217,7 @@ oracle-λ có cùng vấn đề ở §3.
 
 | Mã | Việc | Ghi chú |
 | --- | --- | --- |
-| `D-M3-04` | `planned_rest_hour` **chưa từng chạy trong A/B** (chỉ có ở `multiday.py:166/232`) ⇒ kênh nói **0/873 lần**, và bậc thang `rest_window` **bit-identical với `s2_only`** cả 5 seed | Hoặc bật multiday trong A/B, hoặc gắn nhãn "arm trùng" vào mọi artifact |
+| `D-M3-04` | `planned_rest_hour` **chưa từng chạy trong A/B** (chỉ có ở `multiday.py:166/232`) ⇒ kênh nói **0/873 lần**, và bậc thang `rest_window` **bit-identical với `s2_only`** cả 5 seed | Hoặc bật multiday trong A/B, hoặc gắn nhãn "arm trùng" vào mọi artifact. 🟢 **2026-08-01: READY** — brief `specs/simulation/d-m3-04-multiday-ab-brief.md` đã chốt 3 câu hỏi thiết kế (Cường duyệt) + acceptance sửa theo 5 lỗ UPDATE-114. Vòng thiết kế cũng ĐO ĐƯỢC rằng cơ chế **có chạy**: arm B decided **0/12/11** theo ngày 0/1/2 ⇒ kênh thôi INERT từ ngày thứ hai |
 | `D-M3-05` | Guardrail tầng 5: `rest_min_total` · `veto_fired_n` · `max_continuous_drive_min` | Phải có **TRƯỚC** khi đo, không thêm sau |
 | `D-M3-08` | **4/6 cơ chế enforce của khung BA LỚP không tồn tại**: `POLICY_LOCKED_KEYS`, `test_no_fatigue_in_payout_path`, và 3 chỉ tiêu tầng 5 | `C2′` **không được đo** trước khi cả 4 có thật |
 

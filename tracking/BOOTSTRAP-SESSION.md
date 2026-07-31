@@ -1,6 +1,6 @@
 # BOOTSTRAP SESSION — prompt để nạp một AI coding agent mới vào dự án này
 
-Cập nhật: **2026-07-31** · local HEAD = **`f634af6`** (⚠ ahead origin — chưa đẩy theo lệnh Cường)
+Cập nhật: **2026-08-01** · local HEAD = **`1d98de6`** (đã đẩy origin/main; Cường đã cho phép đẩy)
 
 **Cách dùng:** mở session mới, paste đoạn trong khung §0 dưới đây. Không cần paste cả file này —
 đoạn đó trỏ agent tới đúng các file phải đọc, theo đúng thứ tự.
@@ -58,14 +58,16 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 ## §2. STATE hiện tại (2026-07-30)
 
 ```
-local HEAD  = f634af6   (22 commit từ c493d89; AHEAD origin — chưa đẩy theo lệnh Cường)
-suite       = 959 passed / 5 skipped / 0 failed  (2026-07-31 tối: 889 + 65 UI)
-              uv run pytest -q                  -> 817 + 5 skip
-              uv run pytest -q ui/backend/tests -> 56
-UPDATE       = 107 file, mới nhất UPDATE-113 (104 UIUX + 105 codex review là của remote)
-PENDING      = 17 mục V- đang chờ Cường:
+local HEAD  = 1d98de6   (UPDATE-114 đã đẩy origin/main); UPDATE-115 đang chờ commit
+suite       = 982 passed / 4 skipped / 0 failed  (2026-08-01: 917 + 65 UI)
+              uv run pytest -q                  -> xem số trên
+              uv run pytest -q ui/backend/tests -> 65
+UPDATE       = 109 file, mới nhất UPDATE-115 (104 UIUX + 105 codex review là của remote)
+PENDING      = 19 mục V- đang chờ Cường (KHÔNG phải 20 — V-15 và V-19 đã ĐÓNG):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
-              V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor)
+              V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
+              V-20 (PHAN-QUYET đảo C2 — Cường đã hạ xuống THỬ NGHIỆM, chờ chốt văn bản)
+              V-21 (L4-03 khe advisor nói MIỄN PHÍ — 3 lựa chọn, (a)/(b) đổi CHÍNH SÁCH)
               ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
 ```
 
@@ -82,7 +84,16 @@ test của **đường sản phẩm** (`D-M3-09`).
 | `positioning_overrides` | **`wait_only`** | Kênh **duy nhất** được duyệt bật. Chỉ ghi đè khi bản năng là ĐỨNG CHỜ |
 | `advice.cadence.enabled` | **false** | Nhịp thuộc SẢN PHẨM (xem §1) |
 
-### Vừa xong (2 cycle cuối)
+### Vừa xong (3 cycle cuối)
+
+- **UPDATE-115 `D-M3-11`** — **6 rò rỉ thông tin tương lai** ở L3 view l1r. Vào từ MỘT test đỏ
+  (idle 247,48′ > online 246′); hai giả thuyết rẻ (làm tròn · lệch hai bảng) bị **loại bằng đo**.
+  Bài học tái dùng được: khi bắt được một lỗi *thuộc một họ*, **viết phép thử cho cả họ rồi quét**
+  — 4/6 chỗ tìm ra bằng probe, không bằng đọc code (tôi đã đọc chính hàm đó mà vẫn không thấy).
+- **UPDATE-114** — 5 lỗ đường ống A/B do vòng thiết kế `D-M3-04` bắt, trong đó **lỗ (b) là do
+  chính tôi tạo ra hôm trước** (cổng tầng 5 trên TỔNG cohort ⇒ kênh thưa pha loãng ~10× ⇒ cổng
+  canh nhiễu). Vòng soi cũng **bác 2 chỗ sai trong brief của tôi** bằng đo.
+
 
 - **`D-M3-01`** — mẫu số adherence hỏng ở 3 tầng. `shift_extend` báo **1,000** trong khi sự thật
   **0,473** (thổi **2,1×**). Đã sửa → **0,475**. Behavior-neutral: fingerprint per-actor 15/15 IDENTICAL.
@@ -100,7 +111,7 @@ test của **đường sản phẩm** (`D-M3-09`).
 | 1 | ~~**`L1-04`**~~ | — | ✅ **XONG (UPDATE-107)** — n=100 BÁC giả thuyết "28% mất hẳn": Δ=0 tuyệt đối; đó là gap LOGGING đã đóng bởi `D-M3-01`. Fix giữ (đúng `R-01`). ⚠ Kèm flaw #6 SUITE bắt: event MA sau khi áp — đã sửa (`mark_outcome_logged`) |
 | 2 | ~~**Cổng THỐNG KÊ**~~ | — | ✅ **XONG (UPDATE-107)** — z Poisson-binomial `\|z\| > 4` NỐI vào `run_ladder` thật; null đọc từ **nominal của run** (không hardcode); không treo oan arm tuân-thủ-tuyệt-đối |
 | 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG (UPDATE-110)** — **mất λ thì +6.016đ còn 57–65%**; trigger chờ-lâu SỤP; không thấy herding; 9 lỗi script đo bị vòng soi bắt đã sửa. Chờ Cường: visual gate (artifact d8c58414) + phán quyết |
-| 4 | 3 tiên quyết cổng `rest_window` (`D-M3-04/05/08`) | ~4–6 giờ | chờ |
+| 4 | **`D-M3-04`** multiday A/B cho `rest_window` | ~4–6 giờ | 🟢 **READY** — 3 câu hỏi thiết kế Cường đã duyệt (TB ngày 2..N bootstrap theo SEED · days=3 n=100 · prereg mới cho dải T thấp); acceptance đã sửa theo 5 lỗ UPDATE-114. ⚠ Trong cycle phải **nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`** — cơ chế có, đường chạy chưa (đúng họ lỗi (a), đừng lặp) |
 | 5 | Cycle **đường SẢN PHẨM** — 13 finding sev CAO | ~1–2 ngày | chưa phản biện |
 | 6 | **`E9`** chọn lọc TRONG kênh | ~1 ngày | chờ |
 
@@ -138,7 +149,7 @@ cho luật positioning (sẽ đo ra ≈0 — xem §5 bẫy #7).
 
 ---
 
-## §5. 🔴 BẢY BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
+## §5. 🔴 TÁM BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
 
 Đây là phần giá trị nhất của file này. Mỗi bẫy dưới đây **đã làm một con số bị báo sai cho Cường**.
 
@@ -169,6 +180,15 @@ world ⇒ trả `True` dù mọi quỹ đạo actor đã lệch. ⇒ **Dùng fin
 **7. "Cơ chế đúng, ĐỘ LỚN sai" — sập 3 lần.** `DET-01` sai 5,7× · chẩn đoán `window_past` sai 5,4× ·
 mức thổi 3,2× vs 2,1×. ⇒ **Soi độc lập bắt được cơ chế nhưng thường sai độ lớn. Tự đo lại độ lớn
 trước khi trích.** (~1/4 finding của soi độc lập là sai hoặc phóng đại.)
+
+**8. "Test đỏ lệch tí xíu ⇒ chắc là lệch ĐO."** `test_bug01_idle_never_exceeds_online_time` đỏ với
+idle **247,48′** vs online **246,00′** — vượt **1,48′**. Phản xạ đầu tiên của tôi: lệch hai bảng, ghi
+nợ, đi tiếp. Thực tế là **rò rỉ thông tin tương lai**: view hỏi lúc 23:00 nhận dwell bắt đầu **23:03
+và 23:27**, và probe sau đó tìm thêm **5 chỗ nữa** ở 3 deriver (UPDATE-115). ⇒ **Vượt một bất biến
+VẬT LÝ thì độ lớn không nói gì về mức nghiêm trọng** — 1,48′ và 1.054′ cùng nghĩa là "sai cơ chế".
+Việc cứu tình huống chỉ là **dump dữ liệu ra xem**, một câu lệnh. Và: **4/6 chỗ tìm ra bằng probe,
+không bằng đọc code** — tôi đã đọc chính hàm đó khi sửa chỗ đầu mà vẫn không thấy hai field kia.
+⇒ **Bắt được một lỗi thuộc một họ thì viết phép thử cho CẢ HỌ rồi quét, đừng soi bằng mắt.**
 
 ### Bẫy vận hành
 

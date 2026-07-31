@@ -1,6 +1,7 @@
 # D-M3-04 BRIEF — bật multiday trong A/B để kênh `rest_window` thôi INERT
 
-Ngày: 2026-07-31 · Trạng thái: **BRIEF — chưa implement** (soạn trong lúc hai phép đo chạy;
+Ngày: 2026-07-31 (chốt acceptance 2026-08-01) · Trạng thái: **READY — 3 câu hỏi thiết kế đã
+được Cường duyệt; acceptance đã sửa theo 5 lỗ UPDATE-114** (soạn trong lúc hai phép đo chạy;
 implement chạm `parallel.py`/config nên phải đợi đo xong). Hướng: *"hoàn thành kế hoạch dang
 dở"* (chỉ đạo Cường 2026-07-31).
 
@@ -27,10 +28,9 @@ có memory nên `planned_rest_hour` vẫn None; gộp nó vào là pha loãng ch
 
 ### Ba câu hỏi thiết kế phải chốt trong plan mode
 
-1. **Metric gộp theo ngày nào?** (a) chỉ ngày cuối — sạch nhất về memory nhưng n giảm 7×;
-   (b) trung bình ngày 2..N — nhiều dữ liệu hơn nhưng các ngày không độc lập (cùng actor);
-   (c) tổng 7 ngày trừ ngày 1. **Nghiêng (b)** + bootstrap theo SEED (không theo ngày) để
-   không giả định độc lập sai.
+1. ✅ **CHỐT (Cường duyệt 2026-07-31): (b) trung bình ngày 2..N, bootstrap theo SEED.**
+   Bootstrap theo seed (không theo ngày) vì các ngày **không độc lập** — cùng actor mang
+   `DriverMemory` sang. Lấy đơn vị resample là seed thì giả định độc lập mới đúng.
 2. ~~**CRN còn giữ được tới đâu?**~~ ✅ **ĐÍNH CHÍNH 2026-07-31 — tôi lo SAI, vòng soi đo bác**:
    CRN **KHÔNG phân rã theo ngày**. Đo được: ngày 0 của hai arm **BIT-IDENTICAL** (fingerprint
    per-actor `a092e1f242905001` ở cả A và B), và `reset_for_new_day` **xoá sạch mọi carrier
@@ -38,9 +38,9 @@ có memory nên `planned_rest_hour` vẫn None; gộp nó vào là pha loãng ch
    từ `base_shift`, `cell` về `home_cell` ⇒ **hỗn loạn không tích luỹ xuyên ngày**. Thứ duy
    nhất truyền qua là `DriverMemory` — tức **chính can thiệp cần đo**. ⇒ Bỏ mục "đo mức phân
    rã CRN"; multiday A/B sạch hơn tôi tưởng.
-3. **Chi phí máy**: 7 ngày × 2 arm × n seed. Với n=30 là 420 run-ngày ≈ 3,5×
-   chi phí một arm single-day n=100. Cần chốt n và số ngày (đề xuất: **days=3, n=100** —
-   đủ để `planned_rest_hour` sống từ ngày 2, rẻ hơn 7 ngày, và giữ chuẩn n=100).
+3. ✅ **CHỐT (Cường duyệt 2026-07-31): `days=3`, `n=100`.** Đủ để `planned_rest_hour` sống từ
+   ngày 2 (đo được: decided 0/12/11 theo ngày 0/1/2), rẻ hơn 7 ngày, và giữ chuẩn n=100 —
+   cùng cỡ mẫu với E10/E10b nên Δ so được với nhau.
 
 ### Bẫy đã biết (từ chính repo, không phải suy đoán)
 
@@ -62,16 +62,47 @@ có memory nên `planned_rest_hour` vẫn None; gộp nó vào là pha loãng ch
 - Guardrail **TẦNG 5** (UPDATE-111) phải bật trong artifact: `veto_fired_n` per-rail +
   quá-sức hai định nghĩa. Đây là phép đo đầu tiên mà tầng 5 thực sự có việc để canh.
 
-### Acceptance đề xuất
+### Acceptance — bản CHỐT 2026-08-01 (đã sửa theo 5 lỗ UPDATE-114 tìm ra)
 
-- Kênh `rest_window` nói **> 0 lần** ở ngày ≥ 2 (nếu vẫn 0 ⇒ chẩn đoán tiếp, KHÔNG kết luận
-  "kênh vô dụng" — có thể còn chặn khác);
-- cổng adherence D-M3-10 verdict OK cho mọi arm; tầng 5 không flag;
-- Δ báo kèm **mức phân rã CRN theo ngày** và trần ≤29% nói ở trên;
+- Kênh `rest_window` nói **> 0 lần** ở ngày ≥ 2 ✅ (đã đo trước: decided 0/12/11) — nếu về 0
+  thì chẩn đoán tiếp, **KHÔNG** kết luận "kênh vô dụng";
+- **nền A = positioning `wait_only`**, B = A + `rest_window`. 🔴 **KHÔNG dùng
+  `CHANNEL_LADDER["rest_window"]`** — nó bật kèm `shift_plan: True` mà `shift_plan` đã bị
+  ĐA-07/UPDATE-087 TẮT vì có hại ⇒ đo trên đó là đo hai can thiệp trộn nhau;
+- **cổng arm đối chứng (DET-01)**: arm A có quyết định ⇒ TREO. Nay đã có đường chạy thật
+  (UPDATE-114 lỗ (a)) — trước đó cổng này chỉ sống ở comment;
+- cổng adherence `D-M3-10` verdict OK cho **cả hai** arm;
+- **tầng 5 phải chấm trên `touched_actors`, không trên tổng cohort** (UPDATE-114 lỗ (b)):
+  kênh này chạm ~10% tài xế ⇒ chấm trên tổng pha loãng ~10× xuống dưới nhiễu seed ⇒ cổng canh
+  nhiễu. Việc **nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`** thuộc
+  cycle này — cơ chế đã có nhưng **đường chạy thì chưa** (đúng họ lỗi (a), đừng lặp lại);
+- **`min_seeds=100`** cho mọi contrast biến thể qua `compare()` (UPDATE-114 lỗ (d));
+- ~~Δ báo kèm mức phân rã CRN~~ — **BỎ**: CRN không phân rã (đo được, xem câu 2);
+- trần ≤29% **KHÔNG trích cho chế độ multiday** (số một ngày — xem đính chính bên trên);
 - fingerprint ngày 1 arm A giữa hai lần chạy: IDENTICAL (nếu không, multiday không tất định
   và mọi Δ vô nghĩa).
 
+### Prereg đã KHOÁ
+
+`specs/simulation/d-m3-04-multiday-prereg-locked.json` (khoá 2026-08-01, **trước** khi đo).
+
+Điểm quan trọng nhất trong đó — **kỳ vọng đăng ký trước là Δ ≤ 0**, và đó không phải bi quan mà
+là kỳ vọng ĐÚNG của mô hình: world hiện tại không có hậu quả mệt, tức **world β=0**, nên mọi can
+thiệp tăng nghỉ chỉ tốn thời gian kiếm tiền và không hoàn lại gì. Kèm ranh giới phát biểu: Δ ≤ 0
+cho phép nói *"trong world không có hậu quả mệt, kênh nghỉ là chi phí thuần"* và **không** cho
+phép nói *"gợi ý nghỉ vô giá trị ngoài đời"* — khác nhau đúng ở β, thứ ta chưa có dữ liệu để đặt.
+
+Prereg cũng khoá một **dự đoán có thể sai**: Δ ∈ [−1.500, +500] đ. Nếu Δ dương SIG > +1.000 thì
+dự đoán của tôi sai và phải điều tra — ứng viên đầu tiên là hiệu ứng **THỜI ĐIỂM** (nghỉ đúng
+trũng cầu rồi quay lại giờ vàng, tức `C2′`), không phải hiệu ứng sức khoẻ.
+
 ## Việc phải làm TRƯỚC
 
-1. `D-E10-01` — thêm `idle_streak_min` vào `_DAILY_RESET_FLOAT` + test multiday (nhỏ, rẻ).
-2. Plan mode: chốt 3 câu hỏi thiết kế trên với Cường.
+1. ~~`D-E10-01`~~ ✅ **XONG** (UPDATE-113) — và nó đã trả cổ tức ngoài dự tính: vì
+   `generate_realdata(continuous=True)` chạy qua `run_multiday`, fix này đổi realization mock và
+   **phơi ra 6 rò rỉ thông tin tương lai** ở đường l1r (`D-M3-11`, UPDATE-115).
+2. ~~Plan mode: chốt 3 câu hỏi thiết kế~~ ✅ **XONG** — Cường duyệt cả 3 (2026-07-31).
+3. 🔴 **CÒN LẠI, phải làm TRONG cycle này**: nối `health_guardrail(actor_ids=…)` vào
+   `aggregate_health_guardrail`. Cơ chế đã có (UPDATE-114 lỗ (b)) nhưng **đường chạy thì chưa** —
+   đúng họ lỗi (a) của chính UPDATE đó. Nếu bỏ bước này thì cổng tầng 5 vẫn chấm trên tổng cohort
+   và vẫn canh nhiễu ở đúng cấu hình kênh thưa mà phép đo này dùng.
