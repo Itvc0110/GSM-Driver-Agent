@@ -34,6 +34,12 @@ _SPOKEN_OUTCOME_KIND = {
 }
 
 
+# D-M3-05: phân phối nghỉ ngắn của bản năng — literal cũ `uniform(20, 45)` nâng thành hằng
+# để guardrail tầng 5 DẪN XUẤT ngưỡng break từ cùng nguồn sự thật (đổi phân phối nghỉ mà
+# không căn lại ngưỡng ⇒ test T7 đỏ, không đổi nghĩa im lặng).
+REST_MIN_MINUTES, REST_MAX_MINUTES = 20.0, 45.0
+
+
 @dataclass
 class Event:
     t_min: float
@@ -874,6 +880,15 @@ class World:
                              decision_id=self._decision_id(actor.actor_id, "rest_window", now),
                              channel="rest_window")
                     action, target = IdleAction.WAIT, None
+                else:
+                    # D-M3-05 guardrail tầng 5: kết cục KHÔNG-defer cũng phải quan sát được —
+                    # veto lan can (soc_low/fatigued/defer_cap) là bằng chứng "lan can còn
+                    # sống"; ai xoá lan can thì veto SỤP VỀ 0 và tầng 5 tố giác (kịch bản
+                    # guardrail 4 tầng từng mù). Log-only: KHÔNG decision_id/followed (không
+                    # được lọt mẫu số adherence — test T8), 0 RNG, 0 đổi state/action.
+                    self.log(actor.actor_id, "advice_rest_veto", actor.cell,
+                             reason=why or "cadence_suppressed", from_action=action.value,
+                             channel="rest_window")
 
             # D-M3-01: kết cục của quyết định ĐÃ NÓI mà nhánh đó không tự log. Drain SAU cả hai
             # chỗ gọi (`check_shift_extend` ở trên, `should_defer_rest` ngay trên) — drain
@@ -909,7 +924,7 @@ class World:
                 actor.state = ActorState.REST
                 self.log(actor.actor_id, "rest", actor.cell)
                 t0 = now
-                rest_min = self.rng.uniform(20, 45)
+                rest_min = self.rng.uniform(REST_MIN_MINUTES, REST_MAX_MINUTES)
                 actor.rest_min += rest_min
                 yield self.env.timeout(rest_min)
                 actor.state = ActorState.IDLE

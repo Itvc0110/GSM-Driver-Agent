@@ -87,11 +87,13 @@ def test_customer_impact_includes_expired(result):
 
 # ---------- Gói guardrail dùng cho A/B ----------
 
-def test_system_guardrail_bundle_has_all_four_layers(result):
-    """Chỉ tiêu kép cần đủ 4 tầng: hệ thống · khách hàng · công bằng · tập trung."""
+def test_system_guardrail_bundle_has_all_five_layers(result):
+    """Chỉ tiêu kép cần đủ NĂM tầng: hệ thống · khách hàng · công bằng · tập trung ·
+    SỨC KHOẺ (D-M3-05, 2026-07-31 — tầng 5 tố giác đòn xoá-lan-can mà 4 tầng cũ mù)."""
     g = SM.system_guardrail(result)
     for key in ("served_rate", "total_payout_vnd", "expired_n", "wait_median_min",
-                "gini_payout", "station_hhi", "supply_cell_hhi", "starved_hours_n"):
+                "gini_payout", "station_hhi", "supply_cell_hhi", "starved_hours_n",
+                "rest_min_total", "veto_fired_n", "work_span_p90", "drive_min_p90"):
         assert key in g, f"guardrail thiếu {key}"
 
 

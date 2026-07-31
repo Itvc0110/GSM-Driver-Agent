@@ -294,7 +294,8 @@ def customer_impact(result) -> dict:
 
 
 def system_guardrail(result) -> dict:
-    """Gói 4 tầng cho chỉ tiêu kép: hệ thống · khách hàng · công bằng · tập trung."""
+    """Gói NĂM tầng cho chỉ tiêu kép: hệ thống · khách hàng · công bằng · tập trung ·
+    SỨC KHOẺ (D-M3-05 — lan can còn nguyên không)."""
     s = summarize(result)
     out = {"served_rate": s["served_rate"], "orders_completed": s["orders_completed"]}
     out.update(fairness_metrics(result))
@@ -303,7 +304,132 @@ def system_guardrail(result) -> dict:
     # `supply_demand_density()` có từ SIM-5 nhưng chưa consumer nào gọi. Rút một SCALAR so được
     # A/B: số giờ "đói cung" (>40% đơn hết hạn trong giờ đó). Không định nghĩa lại — gọi hàm gốc.
     out["starved_hours_n"] = len(supply_demand_density(result)["starved_hours"])
+    out.update(health_guardrail(result))
     return out
+
+
+# ---------------------------------------------------------------------------
+# D-M3-05 — GUARDRAIL TẦNG 5: "lan can sức khoẻ còn nguyên không"
+#
+# Vì sao tồn tại: phản biện chéo từng đo được (5 seed) rằng xoá lan can `fatigued` làm
+# veto đi 54/90 → 0/90 mà test vẫn xanh, `net_mean_all` TĂNG, và guardrail 4 tầng không
+# tầng nào tố giác — đúng kịch bản "mua Δ bằng cách xoá lan can".
+#
+# KỶ LUẬT (spec §1.2b + PHÁN QUYẾT 2026-07-31): tầng 5 chỉ phát ĐẾM (lần) và PHÚT.
+# Không hệ số, không `*_vnd`, không vào công thức chấp nhận — bất kỳ hằng nào nhân các số
+# này với tiền chính là ∂payout/∂F. Cổng MỘT CHIỀU (chỉ tố giác suy giảm) — chống Goodhart:
+# không ai được thưởng vì veto CAO (ép tài xế chạm mệt nhiều hơn để "qua cổng").
+#
+# HAI định nghĩa quá-sức đo SONG SONG (Cường chốt 2026-07-31 — 62/90 vs 25/90 vượt 240′
+# tuỳ định nghĩa, chọn một là mù nửa bức tranh):
+#   work_span  = khoảng nghỉ→nghỉ, GỒM đứng chờ khách (làm việc liên tục không nghỉ);
+#   drive_min  = tổng phút LÁI THẬT (enroute/on_trip/relocate) trong khoảng đó.
+# ---------------------------------------------------------------------------
+
+REST_RAILS = ("soc_low", "fatigued", "defer_cap")
+_DRIVE_KINDS = frozenset({"enroute", "on_trip", "relocate"})
+_RECOVERY_KINDS = frozenset({"rest", "charge"})
+# Ngưỡng break DẪN XUẤT từ phân phối nghỉ của world (uniform[REST_MIN, REST_MAX]) —
+# mọi lần nghỉ thật đều reset chuỗi; swap pin 1–2′ thì KHÔNG (không phải hồi phục).
+# Đổi phân phối nghỉ ở world mà không căn lại ⇒ test T7 đỏ.
+DRIVE_BREAK_MIN = 20.0
+RAIL_ALIVE_MIN_N = 20           # dưới mức này rail "sống/chết" không phân biệt được với nhiễu
+REST_TOTAL_DROP_TOL = 0.02      # rest_min_total giảm >2% giữa hai arm ⇒ tố giác
+SPAN_P90_RISE_TOL = 0.10        # p90 quá-sức tăng >10% ⇒ tố giác (p90, KHÔNG max — nhiễu ±36%)
+
+
+def rest_rails_audit(result) -> dict:
+    """Đếm veto lan can từ event `advice_rest_veto` (log-only, world ghi mọi kết cục
+    không-defer). `veto_calls_n` đi kèm BẮT BUỘC: advice làm tài xế online lâu hơn ⇒ mẫu
+    số veto đổi theo arm — đọc count trần mà không đọc calls là đọc sai."""
+    out = {f"veto_{r}_n": 0 for r in REST_RAILS}
+    calls = 0
+    for e in result.events:
+        if e.kind != "advice_rest_veto":
+            continue
+        calls += 1
+        r = e.detail.get("reason")
+        if r in REST_RAILS:
+            out[f"veto_{r}_n"] += 1
+    out["veto_calls_n"] = calls
+    out["veto_fired_n"] = sum(out[f"veto_{r}_n"] for r in REST_RAILS)
+    return out
+
+
+def continuous_work(result, break_min: float = DRIVE_BREAK_MIN) -> dict:
+    """Per-actor rồi tổng hợp: work_span (nghỉ→nghỉ) và drive_min (phút lái thật) —
+    chuỗi reset khi gặp segment rest/charge dài ≥ `break_min`; khoảng trống idle (đứng
+    chờ khách) KHÔNG reset span và không cộng vào drive."""
+    import collections
+    by_actor: dict[int, list] = collections.defaultdict(list)
+    for s in result.segments:
+        by_actor[s["actor_id"]].append(s)
+    spans, drives = [], []
+    for segs in by_actor.values():
+        segs.sort(key=lambda s: (s["t0"], s["t1"]))
+        span0 = span1 = None
+        drive = 0.0
+        best_span = best_drive = 0.0
+        for s in segs:
+            if s["kind"] in _RECOVERY_KINDS and (s["t1"] - s["t0"]) >= break_min:
+                if span0 is not None:
+                    best_span = max(best_span, span1 - span0)
+                    best_drive = max(best_drive, drive)
+                span0, drive = None, 0.0
+                continue
+            if s["kind"] not in _DRIVE_KINDS:
+                continue
+            if span0 is None:
+                span0 = s["t0"]
+            span1 = s["t1"] if span1 is None else max(span1, s["t1"])
+            drive += s["t1"] - s["t0"]
+        if span0 is not None:
+            best_span = max(best_span, span1 - span0)
+            best_drive = max(best_drive, drive)
+        spans.append(best_span)
+        drives.append(best_drive)
+    import numpy as np
+    sp, dr = np.asarray(spans or [0.0]), np.asarray(drives or [0.0])
+    return {"work_span_p50": round(float(np.percentile(sp, 50)), 1),
+            "work_span_p90": round(float(np.percentile(sp, 90)), 1),
+            "work_span_max": round(float(sp.max()), 1),
+            "drive_min_p50": round(float(np.percentile(dr, 50)), 1),
+            "drive_min_p90": round(float(np.percentile(dr, 90)), 1),
+            "drive_min_max": round(float(dr.max()), 1)}
+
+
+def health_guardrail(result) -> dict:
+    """Tầng 5 — chỉ ĐẾM và PHÚT, không bao giờ VND."""
+    out = {"rest_min_total": round(sum(a.rest_min for a in result.actors), 1)}
+    out.update(rest_rails_audit(result))
+    out.update(continuous_work(result))
+    return out
+
+
+def health_guardrail_flags(a: dict, b: dict) -> list[str]:
+    """Cổng MỘT CHIỀU giữa arm đối chứng `a` và arm advice `b` — tố giác SUY GIẢM sức khoẻ.
+
+    (i) lan can SỤP VỀ 0 (sống ở A với mẫu đủ, chết ở B) — kịch bản xoá-lan-can;
+    (ii) tổng phút nghỉ giảm quá tolerance;
+    (iii) p90 của MỘT TRONG HAI định nghĩa quá-sức tăng quá tolerance.
+    Không có chiều khen — veto cao hơn/nghỉ nhiều hơn KHÔNG cộng điểm (chống Goodhart).
+    """
+    flags: list[str] = []
+    for r in REST_RAILS:
+        va, vb = int(a.get(f"veto_{r}_n") or 0), int(b.get(f"veto_{r}_n") or 0)
+        if va >= RAIL_ALIVE_MIN_N and vb == 0:
+            flags.append(f"lan can `{r}` SỤP VỀ 0 (A={va}, B=0) — nghi xoá lan can, "
+                         f"TREO mọi Δ cho tới khi giải thích được")
+    ra, rb = float(a.get("rest_min_total") or 0), float(b.get("rest_min_total") or 0)
+    if ra > 0 and (ra - rb) / ra > REST_TOTAL_DROP_TOL:
+        flags.append(f"rest_min_total giảm {(ra - rb) / ra:.1%} (A={ra:.0f}′ → B={rb:.0f}′) "
+                     f"— advice đang ăn vào nghỉ")
+    for k in ("work_span_p90", "drive_min_p90"):
+        ka, kb = float(a.get(k) or 0), float(b.get(k) or 0)
+        if ka > 0 and (kb - ka) / ka > SPAN_P90_RISE_TOL:
+            flags.append(f"{k} tăng {(kb - ka) / ka:.1%} (A={ka:.0f}′ → B={kb:.0f}′) "
+                         f"— advice kéo dài chuỗi làm việc liên tục")
+    return flags
 
 
 # ---------------------------------------------------------------------------

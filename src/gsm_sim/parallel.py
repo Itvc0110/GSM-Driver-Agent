@@ -322,7 +322,35 @@ def run_ladder(cfg: Config, seeds: list[int], archetype: str = "P4",
                 adherence_a=adherence_audit(ra), adherence_b=adherence_audit(rb)))
         out[name] = compare(pairs)
         out[name]["adherence"] = aggregate_adherence(pairs, nominal=nominal_adherence(cfg))
+        out[name]["health_guardrail"] = aggregate_health_guardrail(pairs)
     return out
+
+
+def aggregate_health_guardrail(pairs: list[PairResult]) -> dict:
+    """D-M3-05 tầng 5 GỘP qua seeds: mean per khoá (A và B) + cổng một chiều trên MEAN.
+
+    Không có bước này thì tầng 5 "sống trên giấy" đúng mẫu D-R12 — hàm có trong
+    sim_metrics nhưng không artifact A/B nào mang nó (test T10 canh).
+    """
+    from .sim_metrics import health_guardrail_flags
+
+    keys = ("rest_min_total", "veto_calls_n", "veto_fired_n",
+            "veto_soc_low_n", "veto_fatigued_n", "veto_defer_cap_n",
+            "work_span_p50", "work_span_p90", "work_span_max",
+            "drive_min_p50", "drive_min_p90", "drive_min_max")
+
+    def _mean(side: str) -> dict:
+        rows = [getattr(pr, side) for pr in pairs]
+        rows = [r for r in rows if r and "rest_min_total" in r]
+        if not rows:
+            return {}
+        return {k: round(float(st.mean([float(r.get(k) or 0) for r in rows])), 2)
+                for k in keys}
+
+    a, b = _mean("system_a"), _mean("system_b")
+    flags = health_guardrail_flags(a, b) if a and b else         ["tầng 5 THIẾU DỮ LIỆU (system_a/b không mang khoá sức khoẻ) — không được coi là sạch"]
+    return {"a_mean": a, "b_mean": b, "flags": flags,
+            "verdict": "TREO — sức khoẻ suy giảm" if flags else "OK"}
 
 
 def nominal_adherence(cfg: Config) -> dict[str, float]:
