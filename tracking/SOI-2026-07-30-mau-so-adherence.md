@@ -275,7 +275,25 @@ kênh *"KHÔNG THỂ"* bắn. Probe của tôi đo được **253/873 lời gọ
 
 ---
 
-## 4. Chưa phản biện, chưa kiểm (danh sách để không ai tưởng là đã xong)
+## 4. ~~Chưa phản biện~~ → ✅ ĐÃ ĐÓNG TOÀN BỘ 2026-07-31
+
+> **Cập nhật 2026-07-31**: danh sách bên dưới nay **STALE** — mọi mục đã có phán quyết.
+> Bảng tổng kết (chi tiết ở các khối "PHẢN BIỆN vòng 1/2/3" phía trên và UPDATE-112/113):
+>
+> | Mã | Phán quyết cuối | Ở đâu |
+> | --- | --- | --- |
+> | `L3-03` `L4-01` `L4-03` `L4-04` `L4-09` `L4-07`×2 | **ĐÚNG — ĐÃ SỬA** | UPDATE-112 |
+> | `L3-04` | **ĐÚNG** (accept_lift lệch −19,0đp, hỏi lại 2,33×) — gắn nhãn chặn-dưới | UPDATE-113 |
+> | `L4-02` `L4-06` | **ĐÚNG** (topic giao nhau RỖNG · ship 1/5 kênh) | → `D-R22` |
+> | `L4-05` | ĐÚNG ngữ nghĩa, sev hạ TB (khoá projection đã tách sẵn) | → `D-R22` |
+> | `L4-08` | **TRÙNG `D-R21`**, không phải finding mới | — |
+> | `L1-02` | ✅ **ĐÃ CHỨNG MINH** bit-identical bằng fingerprint per-actor | §3 CHÍNH FILE NÀY |
+> | `L3-02` | Phần *"báo 100% cứng"* ✅ **ĐÃ SỬA** (`_ALWAYS_FOLLOWED` nay RỖNG, `advice_rest_window` đọc cờ `followed` thật — D-M3-01/UPDATE-102). Phần *"kênh nói thật trong multiday"* = `D-M3-04`, chưa làm | UPDATE-102 + `D-M3-04` |
+> | `L5-01` | **STALE** — claim *"decision 68,1% ≈ event 67,6%"* nay sai: đo 2026-07-31 cho accept_lift decision 0,714 vs event 0,524 (lệch 19,0đp). Nguyên nhân là `L3-04`, không phải "hai đơn vị xấp xỉ nhau" | UPDATE-113 |
+> | `L5-02` | **ĐÚNG một phần**: "washout đã CHẾT" đúng (coin keyed, 3/4 kênh repeat=1,00×) nhưng KHÔNG có nghĩa `event_adherence = decision_adherence` — đó là `L3-04` | UPDATE-113 |
+> | `L5-03` `L5-04` | Đã có phán quyết trong chính file này (§bảng chấm: L5-03 SAI, L5-04 là finding giá trị nhất) | §5 |
+
+### (lịch sử) Danh sách gốc — giữ nguyên để đối chiếu
 
 **Sev CAO, chưa tôi kiểm:** `L1-02` (bit-identical — cần đo) · `L3-02` (multiday: kênh NÓI THẬT và
 báo 100% cứng) · `L3-04` (`event_adherence` là estimator **lệch theo cấu trúc** vì tần suất hỏi lại
