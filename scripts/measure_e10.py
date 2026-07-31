@@ -649,6 +649,24 @@ def _run_arm_with_over(arm, over, seeds, tag):
     print(f"{tag} -> {out} · verdict: {agg['verdict']} · z={z:+.2f}")
 
 
+def cmd_e10blow() -> None:
+    """Đo dải ngưỡng THẤP của E10b theo prereg RIÊNG đã khoá
+    (`specs/simulation/e10b-low-threshold-prereg-locked.json`, Cường duyệt 2026-07-31).
+
+    Khác `armvar` (khám phá): đây là CONFIRMATORY — lưới T khoá TRƯỚC khi nhìn Δ nào của
+    T∈{10,12,18}. T=15 chạy lại để mang nhãn confirmatory (deterministic ⇒ số trùng bản
+    khám phá; điểm khác là nó nay ĐƯỢC ĐĂNG KÝ TRƯỚC, không phải nhìn-rồi-mới-đặt-giả-thuyết).
+    """
+    prereg_low = json.loads(
+        Path("specs/simulation/e10b-low-threshold-prereg-locked.json").read_text(encoding="utf-8"))
+    locked = _prereg()
+    for t in prereg_low["T_grid"]:
+        over = _arm_overrides("wait", locked)
+        over["positioning_wait"] = {"threshold_min": float(t),
+                                    "min_idle": prereg_low["n_min_headline"]}
+        _run_arm_with_over("wait", over, MEASURE_SEEDS, f"e10blow-T{t}-n100")
+
+
 def cmd_sens() -> None:
     """G-SENS §6.4 — biến thể n=30 (5000–5029, World A đã có trong worldA file): CHỈ đọc
     CHIỀU, nhãn n_insufficient, cấm trích độ lớn (variant-vs-variant cần n≈105)."""
@@ -1008,7 +1026,7 @@ def cmd_bias() -> None:
 
 
 COMMANDS = {"preflight": cmd_preflight, "probe": cmd_probe, "tune": cmd_tune,
-            "armvar": cmd_armvar,
+            "armvar": cmd_armvar, "e10blow": cmd_e10blow,
             "histprior": cmd_histprior, "prereg": cmd_prereg,
             "worldA": cmd_worldA, "arm": cmd_arm, "sens": cmd_sens, "diff": cmd_diff,
             "bias": cmd_bias}

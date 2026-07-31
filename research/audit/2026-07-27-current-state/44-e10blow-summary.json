@@ -1,0 +1,112 @@
+{
+ "what": "E10b dải ngưỡng THẤP — CONFIRMATORY theo prereg khoá 2026-07-31",
+ "mock": true,
+ "prereg": "specs/simulation/e10b-low-threshold-prereg-locked.json",
+ "thuoc": "coin-based (UPDATE-113)",
+ "seeds": "5000-5099",
+ "n": 100,
+ "ket_qua": {
+  "10": {
+   "delta_vs_A": {
+    "mean": 2589.3,
+    "ci": [
+     1687.5,
+     3464.4
+    ]
+   },
+   "delta_vs_oracle": {
+    "mean": -1349.6,
+    "ci": [
+     -2504.2,
+     -226.4
+    ],
+    "mde": 1154.2
+   },
+   "can_thiep_moi_ngay": 46.3,
+   "lop": "KQ-CÒN-MỘT-PHẦN",
+   "verdict_cong": "OK",
+   "z": 0.153,
+   "g_guard_xau_sig": [],
+   "R_vs_oracle": "66%"
+  },
+  "12": {
+   "delta_vs_A": {
+    "mean": 2960.8,
+    "ci": [
+     2057.8,
+     3830.4
+    ]
+   },
+   "delta_vs_oracle": {
+    "mean": -978.1,
+    "ci": [
+     -2133.9,
+     70.4
+    ],
+    "mde": 1128.4
+   },
+   "can_thiep_moi_ngay": 42.1,
+   "lop": "KQ-GIỮ",
+   "verdict_cong": "OK",
+   "z": 0.408,
+   "g_guard_xau_sig": [],
+   "R_vs_oracle": "75%"
+  },
+  "15": {
+   "delta_vs_A": {
+    "mean": 2159.1,
+    "ci": [
+     945.4,
+     3313.8
+    ]
+   },
+   "delta_vs_oracle": {
+    "mean": -1779.8,
+    "ci": [
+     -3173.9,
+     -416.8
+    ],
+    "mde": 1389.0
+   },
+   "can_thiep_moi_ngay": 36.0,
+   "lop": "KQ-CÒN-MỘT-PHẦN",
+   "verdict_cong": "OK",
+   "z": -1.564,
+   "g_guard_xau_sig": [],
+   "R_vs_oracle": "55%"
+  },
+  "18": {
+   "delta_vs_A": {
+    "mean": 1777.6,
+    "ci": [
+     788.3,
+     2759.1
+    ]
+   },
+   "delta_vs_oracle": {
+    "mean": -2161.4,
+    "ci": [
+     -3320.3,
+     -1048.6
+    ],
+    "mde": 1153.7
+   },
+   "can_thiep_moi_ngay": 27.4,
+   "lop": "KQ-CÒN-MỘT-PHẦN",
+   "verdict_cong": "OK",
+   "z": -0.407,
+   "g_guard_xau_sig": [],
+   "R_vs_oracle": "45%"
+  }
+ },
+ "T_dinh": 12,
+ "kiem_ky_vong_dang_ky_truoc": {
+  "STOP-A cổng adherence": "KHÔNG bắn — cả 4 T verdict OK (z từ −1,56 tới +0,41)",
+  "STOP-B T=15 tái lập dương SIG": "TÁI LẬP — +2.159đ CI[945,3.314] ⇒ đo khám phá KHÔNG phải type-I",
+  "STOP-C G-GUARD": "KHÔNG bắn — 0/12 tầng suy giảm SIG ở cả 4 T (gồm tầng 5 sức khoẻ: rest_min_total, work_span_p90, drive_min_p90)",
+  "kỳ vọng QUAY ĐẦU dưới ~10′": "XÁC NHẬN — Δ đỉnh ở T=12 (+2961đ), T=10 giảm về +2589đ dù can thiệp NHIỀU HƠN (46,3 vs 42.1/ngày) ⇒ trigger CÓ tính chọn lọc, không phải mua Δ bằng khối lượng",
+  "n_min=1 không làm headline": "giữ n_min=2 theo prereg"
+ },
+ "phat_bieu_duoc_phep": "Trigger chờ-lâu (QUAN SÁT ĐƯỢC, không cần λ) ở T=12′ cho Δ=+2961đ CI[2057.8, 3830.4] — lớp KQ-GIỮ so với advisor-biết-λ (dd=-978, MDE=1128). KÈM BẮT BUỘC caveat L1 (thế giới rank-tĩnh) + L2 (λ̂ ngửi oracle) + D-E10-07 (CI hẹp hơn thực tế ~409đ) ⇒ phát biểu YẾU về ngoài đời.",
+ "gioi_han": "L1 · L2 · L4 (trigger × execution-gate) · D-E10-07 · headline E10 gốc VẪN là T=30 (prereg cũ)"
+}
