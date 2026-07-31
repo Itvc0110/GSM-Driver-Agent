@@ -268,18 +268,29 @@ HEALTH_KEYS_ONE_WAY = frozenset({
 })
 
 
-def _sig(lo: float, hi: float, n: int) -> bool:
-    return bool(n >= MIN_SEEDS_FOR_SIGNIFICANCE and (lo > 0 or hi < 0))
+def _sig(lo: float, hi: float, n: int, min_seeds: int = MIN_SEEDS_FOR_SIGNIFICANCE) -> bool:
+    """CI không chứa 0 VÀ đủ seed. `min_seeds` mặc định 30 (chuẩn A/B: có-advice vs không).
+
+    (d) 2026-07-31 — vòng soi D-M3-04: so **HAI BIẾN THỂ advice** với nhau là bài toán KHÁC và
+    cần `MIN_SEEDS_FOR_VARIANT_COMPARISON = 100` (xem comment của hằng đó: đo thật cho SD ~40k
+    theo seed ⇒ n ≈ 105). Trước đây `_sig` kẹp cứng 30 nên mọi contrast biến-thể-vs-biến-thể
+    đi qua `compare()` được gắn `significant` ở n=30 — dưới chuẩn. Caller nay truyền
+    `min_seeds=MIN_SEEDS_FOR_VARIANT_COMPARISON` khi contrast là biến-thể.
+    """
+    return bool(n >= min_seeds and (lo > 0 or hi < 0))
 
 
-def compare(pairs: list[PairResult]) -> dict:
+def compare(pairs: list[PairResult], min_seeds: int | None = None) -> dict:
     """Tổng hợp: hiệu theo cặp cho từng metric + CI bootstrap + guardrail hệ thống.
 
     `significant` chỉ được bật khi n ≥ MIN_SEEDS_FOR_SIGNIFICANCE — dưới đó flag luôn
     False và `n_insufficient`=True để consumer không đọc nhầm nhiễu thành hiệu ứng."""
     n = len(pairs)
     out: dict = {"n_seeds": n, "n_insufficient": n < MIN_SEEDS_FOR_SIGNIFICANCE,
-                 "driver": {}, "system": {}}
+                 "driver": {}, "system": {},
+           "min_seeds_for_sig": (min_seeds if min_seeds is not None
+                                 else MIN_SEEDS_FOR_SIGNIFICANCE)}
+    ms = out["min_seeds_for_sig"]
     if not pairs:
         return out
     for key in pairs[0].a:
@@ -290,7 +301,7 @@ def compare(pairs: list[PairResult]) -> dict:
             "mean_b": round(st.mean(float(p.b[key] or 0) for p in pairs), 2),
             "delta_mean": round(st.mean(diffs), 2),
             "ci95": (round(lo, 2), round(hi, 2)),
-            "significant": _sig(lo, hi, n),
+            "significant": _sig(lo, hi, n, ms),
             "n_positive": sum(1 for d in diffs if d > 0),
         }
     for key in pairs[0].system_a:
@@ -303,7 +314,7 @@ def compare(pairs: list[PairResult]) -> dict:
             # Để `significant` ở đây làm "veto tăng" được in như hệ thống TỐT lên.
             row["one_way_gate"] = "sim_metrics.health_guardrail_flags (D-M3-05)"
         else:
-            row["significant"] = _sig(lo, hi, n)
+            row["significant"] = _sig(lo, hi, n, ms)
         out["system"][key] = row
     return out
 

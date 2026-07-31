@@ -398,9 +398,36 @@ def continuous_work(result, break_min: float = DRIVE_BREAK_MIN) -> dict:
             "drive_min_max": round(float(dr.max()), 1)}
 
 
-def health_guardrail(result) -> dict:
-    """Tầng 5 — chỉ ĐẾM và PHÚT, không bao giờ VND."""
-    out = {"rest_min_total": round(sum(a.rest_min for a in result.actors), 1)}
+def touched_actors(result, channel: str | None = None) -> set[int]:
+    """Tập actor THỰC SỰ nhận lời khuyên (bị can thiệp chạm tới).
+
+    Vì sao cần (vòng soi D-M3-04, 2026-07-31): cổng tầng 5 đặt trên TỔNG cohort chỉ đủ nhạy
+    khi can thiệp chạm gần hết đội. Đo được: ladder `all` + coverage `all` chạm **100%** tài
+    xế (`rest_min_total` +15% ≫ tolerance 2%) — cổng ổn. NHƯNG kênh THƯA như `rest_window`
+    trong multiday chỉ nói ~11 lần/ngày cho 90 tài xế ⇒ chạm ~10% ⇒ hiệu ứng bị **pha loãng
+    ~10×** xuống dưới nhiễu seed ⇒ cổng canh NHIỄU, verdict thành tuỳ seed, và người sửa sẽ
+    nới tolerance thay vì sửa mẫu số (mẫu `D-R20`).
+    """
+    ids: set[int] = set()
+    for e in result.events:
+        if not str(e.kind).startswith("advice_") or int(e.actor_id) < 0:
+            continue
+        if channel is not None and (e.detail or {}).get("channel") != channel:
+            continue
+        ids.add(int(e.actor_id))
+    return ids
+
+
+def health_guardrail(result, actor_ids: set[int] | None = None) -> dict:
+    """Tầng 5 — chỉ ĐẾM và PHÚT, không bao giờ VND.
+
+    `actor_ids`: giới hạn `rest_min_total` về NHÓM BỊ CHẠM (xem `touched_actors`). None =
+    toàn cohort (hành vi cũ, giữ nguyên cho mọi consumer hiện có).
+    """
+    acts = (result.actors if actor_ids is None
+            else [a for a in result.actors if int(a.actor_id) in actor_ids])
+    out = {"rest_min_total": round(sum(a.rest_min for a in acts), 1),
+           "n_actors_scope": len(acts)}
     out.update(rest_rails_audit(result))
     out.update(continuous_work(result))
     return out
