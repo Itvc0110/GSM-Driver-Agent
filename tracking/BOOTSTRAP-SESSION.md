@@ -164,7 +164,7 @@ cho luật positioning (sẽ đo ra ≈0 — xem §5 bẫy #7).
 
 ---
 
-## §5. 🔴 MƯỜI BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
+## §5. 🔴 MƯỜI MỘT BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
 
 Đây là phần giá trị nhất của file này. Mỗi bẫy dưới đây **đã làm một con số bị báo sai cho Cường**.
 
@@ -220,6 +220,14 @@ cohort"* — sắp ghi thành lỗi thứ tư. Thực tế: `_mean` chỉ gộp 
 khỏi dict**, còn `touched_actors(rb)` trả đúng **90/90**. ⇒ Với `.get()` trả `None`, phân biệt
 *"giá trị là None"* với *"khoá không tồn tại"* trước khi kết luận. (Phát hiện sai vẫn dẫn tới một
 fix thật: mẫu số **phải** hiện trong artifact — `OK` trên 90/90 và trên 9/90 nghĩa khác hẳn.)
+
+**11. "Suite xanh + 5 cycle fix" KHÔNG có nghĩa luồng sản phẩm đã kín.** Sau 5 UPDATE liền và
+suite 1.000/0 đỏ, một **smoke end-to-end 10 phút** (gọi thật 4 endpoint qua `TestClient`) tìm ra
+`D-M3-17`: UI tự tính phạm vi pin `soc*1.1` cho MỌI tài xế trong khi engine cho 62,5 km (swap) và
+117,6 km (charge) ⇒ tài xế swap thấy số **thổi 1,76×**; endpoint legacy còn dùng `soc*3.2` = **5,1×**.
+Không test nào bắt được vì **không có test nào so UI với engine**. ⇒ **Chạy thật đường mà người
+dùng đi, đừng chỉ chạy test.** Và lưu ý prefix API là `/api/v1/...` (tôi gọi `/api/...` trước và
+nhận 404 — đừng kết luận "endpoint chết" từ một 404).
 
 ### Bẫy vận hành
 
