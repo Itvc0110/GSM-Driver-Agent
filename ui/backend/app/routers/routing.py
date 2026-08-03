@@ -55,17 +55,67 @@ def build_route_response(coords, total_dist_km, total_duration_min, turn_instruc
     )
 
 
+DEFAULT_OSRM_BASE_URL = "https://router.project-osrm.org"
+# Mirror thứ nhất: FOSSGIS routed-car. KHÔNG cấu hình được qua env vì nó có đường dẫn khác
+# (`/routed-car/route/v1/...`), không phải một base URL thả vào là chạy.
+OSRM_DE_BASE_URL = "http://routing.openstreetmap.de/routed-car"
+
+
+def osrm_endpoints(wp_str: str) -> List[str]:
+    """Danh sách mirror OSRM sẽ thử, theo thứ tự.
+
+    Hai thứ được sửa ở đây (kiểm bằng gọi thật 2026-08-03, UPDATE-128):
+
+    1. **`OSRM_BASE_URL` trước đây KHÔNG ai đọc ở đường runtime.** `.env`/`.env.example` mô tả nó
+       như tầng 1 của routing, nhưng file này viết cứng host ⇒ Cường sửa biến thì hành vi endpoint
+       không đổi. Đúng họ *"cấu hình khai báo nhưng không có đường chạy"* mà repo đã trả giá 4 lần
+       (`D-R12` · UPDATE-114 lỗ (a) · `D-M3-13` · `D-M3-15`). Nay biến có người đọc thật.
+    2. **Mirror thứ hai viết SAI tên miền**: `router.project.osrm.org` (dấu chấm) thay vì
+       `router.project-osrm.org` (gạch ngang). Nó phân giải được sang một IP khác nên trông như
+       host thật, nhưng TLS trả `CERTIFICATE_VERIFY_FAILED: Hostname mismatch` ⇒ mirror này
+       **chưa từng chạy được lần nào**. Suite cũ không bắt vì test monkeypatch `urlopen`, nên tên
+       miền không bao giờ bị phân giải thật.
+
+    ⚠ Điều đáng biết khi rate limit: `router.project-osrm.org` và `routing.openstreetmap.de`
+    **cùng phân giải về `5.148.170.168`** (cùng hạ tầng FOSSGIS) ⇒ hai mirror này KHÔNG cho thêm
+    hạn mức. Thứ thật sự đỡ rate limit là tầng 2 (GraphHopper) và cache, không phải đổi mirror.
+    """
+    base = os.environ.get("OSRM_BASE_URL", "").strip().rstrip("/") or DEFAULT_OSRM_BASE_URL
+    qs = "overview=full&geometries=geojson&steps=true"
+    urls = [f"{OSRM_DE_BASE_URL}/route/v1/driving/{wp_str}?{qs}",
+            f"{base}/route/v1/driving/{wp_str}?{qs}"]
+    # cùng một base cấu hình trùng mirror mặc định ⇒ đừng gọi hai lần cho một server
+    return list(dict.fromkeys(urls))
+
+
+_OSRM_HOST_SOURCE = {
+    "routing.openstreetmap.de": "openstreetmap_de_osrm_real",
+    "router.project-osrm.org": "project_osrm_real",
+}
+
+
+def _osrm_source(url: str) -> str:
+    """Nhãn nguồn suy từ **HOST thật** của URL đã trả lời, không từ so chuỗi.
+
+    Bản đầu của UPDATE-128 làm `"openstreetmap_de_osrm_real" if OSRM_DE_BASE_URL in osrm_url else
+    "project_osrm_real"` — so CHUỖI CÓ SCHEME. Soi độc lập 2026-08-03 tái lập được: đặt
+    `OSRM_BASE_URL=https://routing.openstreetmap.de/routed-car` (https, mirror A viết cứng là
+    http) ⇒ dữ liệu đến TỪ openstreetmap.de mà nhãn nói `project_osrm_real`. Và self-host
+    (`http://localhost:5000`) bị khẳng định là project-OSRM.
+
+    Nhãn là **dữ liệu**, không phải chú thích — nói sai xuất xứ chính là họ lỗi
+    `hanoi_street_graph_engine` mà `UPDATE-120` vừa dọn ở tầng 3. Nên host lạ trả
+    `osrm_custom_real`: vẫn khai **đây là OSRM thật**, nhưng KHÔNG khẳng định của ai.
+    """
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    return _OSRM_HOST_SOURCE.get(host, "osrm_custom_real")
+
+
 def try_osrm(req: RouteCalculateRequest) -> Optional[RouteCalculateResponse]:
     # Build OSRM waypoints string: lng1,lat1;lng2,lat2...
     wp_str = ";".join([f"{w.lng},{w.lat}" for w in req.waypoints])
 
-    # Endpoints list (Primary: OpenStreetMap.de OSRM, Secondary: OSRM Project)
-    endpoints = [
-        f"http://routing.openstreetmap.de/routed-car/route/v1/driving/{wp_str}?overview=full&geometries=geojson&steps=true",
-        f"https://router.project.osrm.org/route/v1/driving/{wp_str}?overview=full&geometries=geojson&steps=true&ch=1"
-    ]
-
-    for osrm_url in endpoints:
+    for osrm_url in osrm_endpoints(wp_str):
         try:
             req_osrm = urllib.request.Request(osrm_url, headers=_HTTP_HEADERS)
             with urllib.request.urlopen(req_osrm, timeout=5) as response:
@@ -85,7 +135,8 @@ def try_osrm(req: RouteCalculateRequest) -> Optional[RouteCalculateResponse]:
                                 turn_instruction = steps[1].get("maneuver", {}).get("instruction") or steps[1].get("name") or turn_instruction
 
                         return build_route_response(coords, total_dist_km, total_duration_min,
-                                                     turn_instruction, "openstreetmap_de_osrm_real", True)
+                                                     turn_instruction, _osrm_source(osrm_url),
+                                                     True)
         except Exception as e:
             print(f"OSRM endpoint {osrm_url} warning: {e}")
             continue

@@ -1,9 +1,35 @@
 # D-M3-04 BRIEF — bật multiday trong A/B để kênh `rest_window` thôi INERT
 
-Ngày: 2026-07-31 (chốt acceptance 2026-08-01) · Trạng thái: **READY — 3 câu hỏi thiết kế đã
-được Cường duyệt; acceptance đã sửa theo 5 lỗ UPDATE-114** (soạn trong lúc hai phép đo chạy;
-implement chạm `parallel.py`/config nên phải đợi đo xong). Hướng: *"hoàn thành kế hoạch dang
-dở"* (chỉ đạo Cường 2026-07-31).
+Ngày: 2026-07-31 (chốt acceptance 2026-08-01) · Trạng thái: **🟢 PHÉP THỬ CÓ ĐIỀU KIỆN — Cường bật
+đèn 2026-08-03, luật quyết định đã KHOÁ trước khi đo** (xem khung ngay dưới). 3 câu hỏi thiết kế đã
+được Cường duyệt 2026-07-31; acceptance đã sửa theo 5 lỗ UPDATE-114. Thi công còn lại =
+`run_pair_multiday`, thuộc **Cycle B** riêng theo `CLAUDE.md` §4b.
+
+> ## 🟢 CƯỜNG BẬT ĐÈN 2026-08-03 — nhưng nó thành PHÉP THỬ CÓ ĐIỀU KIỆN
+>
+> Chỉ thị: *"tôi duyệt D-M3-04, việc khuyên nghỉ nên defer thành khuyên mềm, không cho vào để đo
+> hiệu quả trong sim"*. Hai vế này chỉ hai hướng ngược nhau, nên agent hỏi lại và Cường chốt:
+>
+> > *"**thử D-M3-04 trước, nếu có ý nghĩa thì giữ, không thì revert và khuyên mềm**"*
+>
+> ⇒ Phép đo **VẪN CHẠY**, nhưng kết quả của nó nay **quyết định** kênh `rest_window` ở lại bảng tiền
+> hay chuyển thành **khuyên mềm** (nói vì đúng cho tài xế, 0 claim tiền, 0 đo mức nghe lời).
+>
+> 🔴 **Vì thế "có ý nghĩa" đã được định nghĩa TRƯỚC khi đo**, ở
+> `d-m3-04-multiday-prereg-locked.json` → khoá **`luat_quyet_dinh`** (thêm 2026-08-03, chưa có số
+> nào). Không làm thế thì đây đúng là họ lỗi `BUG-EVAL-ARGMAX`: đọc số rồi mới chọn cách diễn giải.
+>
+> | Kết quả | Hành động |
+> | --- | --- |
+> | Δ ngày 1..2 **dương SIG** + tầng 5 không suy giảm + không STOP nào bắn | **GIỮ** — kênh ở lại `MEASURED_TOPICS` |
+> | Δ ≤ 0, hoặc ns, hoặc STOP bắn | **REVERT** — chuyển sang `SOFT_TOPICS`, bỏ mọi claim tiền |
+>
+> ⚠ Kỳ vọng đã khoá **2026-08-01** là **Δ ≤ 0** (world β=0) ⇒ **nhánh REVERT là nhánh dự đoán
+> trước**. Nếu nó xảy ra thì phép đo **thành công** (mô hình dự đoán đúng), không phải kênh thất bại.
+>
+> Ranh giới **vô điều kiện** đã có hiệu lực ngay (không chờ phép đo này): **UI không có trace đồng
+> ý/không đồng ý cho khuyên mềm** — xem `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` và
+> `specs/advisor-objective-model-v2.md` §1.2c. Đã thi hành bằng cổng (UPDATE-128).
 
 ## Vấn đề — đã xác nhận bằng grep, không phải claim
 
@@ -113,3 +139,9 @@ trũng cầu rồi quay lại giờ vàng, tức `C2′`), không phải hiệu 
 4. 🔴 **CÒN LẠI**: `run_pair_multiday` — đường chạy A/B nhiều ngày. Đây là phần **MỞ RỘNG** (viết
    hàm mới), khác với các bước trên là **fix lỗi**; theo chỉ đạo Cường 2026-07-31 (*"ưu tiên fix
    lỗi thay vì mở rộng sim"*) nên nó **chờ Cường bật đèn** dù prereg đã khoá sẵn.
+   ✅ **ĐÈN ĐÃ BẬT 2026-08-03** (xem khung đầu file) — nhưng là **Cycle B riêng**: nó đổi hành vi
+   sim và thêm một đường đo, nên theo `CLAUDE.md` §4b cần plan riêng, không trộn vào cycle docs
+   (UPDATE-128). Ước: ~1,5h người + ~4,2h máy.
+5. ✅ **XONG 2026-08-03 (UPDATE-128)**: `luat_quyet_dinh` đã đăng ký vào prereg **trước khi đo**.
+   Đây là tiên quyết mới do chỉ thị 2026-08-03 sinh ra — không có nó thì kết quả đo dù đúng vẫn
+   không dùng được để quyết định gì, vì tiêu chí sẽ được chọn sau khi thấy số.

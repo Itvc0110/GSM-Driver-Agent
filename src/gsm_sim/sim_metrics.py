@@ -497,8 +497,14 @@ def adherence_audit(result, run_id: str | None = None) -> dict:
     """
     from gsm_core.lifecycle import projections as P
 
-    view = P.adherence_view(P.sim_events_to_lifecycle(result.events, run_id)
-                            if run_id else P.sim_events_to_lifecycle(result.events))
+    lifecycle = (P.sim_events_to_lifecycle(result.events, run_id) if run_id
+                 else P.sim_events_to_lifecycle(result.events))
+    view = P.adherence_view(lifecycle)
+    # `N5` (UPDATE-129): `adherence_view` loại quyết định bằng `continue` ⇒ cú loại KHÔNG để lại dấu
+    # vết, và cổng dưới đây chỉ kiểm `event_decided == 0 and decided > 0` nên **không thể thấy một
+    # khoá VẮNG MẶT**. Nếu producer sinh topic lạ hoặc trộn topic thì mẫu số tụt mà không ai biết —
+    # đúng hình dạng `D-M3-01` (số sai sống qua 39 artifact vì không cơ chế nào kêu).
+    drops = P.adherence_drops(lifecycle)
     arche = {str(a.actor_id): a.archetype for a in result.actors}
 
     by_ch: dict[str, dict] = {}
@@ -565,13 +571,13 @@ def adherence_audit(result, run_id: str | None = None) -> dict:
         bounds[ch] = (min(lo, float(p)), max(hi, float(p)))
 
     return {"by_channel": by_ch, "by_channel_archetype": by_ch_ar,
-            "execution": execution,
-            "flags": adherence_flags(by_ch, channel_nominal_bounds=bounds)}
+            "execution": execution, "drops": drops,
+            "flags": adherence_flags(by_ch, channel_nominal_bounds=bounds, drops=drops)}
 
 
 def adherence_flags(by_channel: dict,
-                    channel_nominal_bounds: dict[str, tuple[float, float]] | None = None
-                    ) -> list[str]:
+                    channel_nominal_bounds: dict[str, tuple[float, float]] | None = None,
+                    drops: dict | None = None) -> list[str]:
     """Cổng BẤT KHẢ (loại 1): trạng thái không thể đúng dù nhiễu thế nào.
 
     Mỗi flag là một câu nói rõ **cái gì** sai và **vì sao nó bất khả** — để người đọc
@@ -604,6 +610,33 @@ def adherence_flags(by_channel: dict,
         if r["event_decided"] == 0 and r["decided"] > 0:
             out.append(f"{ch}: event_decided=0 trong khi decided={d} — một nửa bộ đo "
                        f"hai-đơn-vị chết im lặng (event_adherence sẽ là None)")
+
+    # `N5` (UPDATE-129) — cổng cho thứ KHÔNG có mặt trong `by_channel`.
+    #
+    # Mọi kiểm ở trên soi các khoá ĐANG CÓ. Nhưng `adherence_view` **loại** quyết định có topic
+    # chưa khai / trộn topic, nên chúng **vắng mặt** — và một khoá vắng thì không vòng lặp nào ở
+    # trên chạm tới được. Đó đúng là hình dạng `D-M3-01`: mẫu số thiếu, mọi số còn lại trông vẫn
+    # bình thường. Vì vậy cổng này đọc `adherence_drops()` thay vì đọc `by_channel`.
+    #
+    # Cường chốt 2026-08-03: topic chưa khai ⇒ **TREO**, không phải chỉ cờ đỏ. Lý do: repo có lịch
+    # sử **cảnh báo bị bỏ qua** — `D-M3-01` sống qua 39 artifact vì không ai chặn. Cùng nguyên tắc
+    # `D-M3-10`: mẫu số không đầy đủ thì mọi Δ đều đáng ngờ.
+    if drops:
+        if drops.get("unknown"):
+            out.append(
+                f"TREO: {drops['unknown']} quyết định bị loại khỏi mẫu số vì topic CHƯA PHÂN LOẠI "
+                f"{drops.get('topics_unknown') or ''} — mẫu số KHÔNG đầy đủ nên mọi Δ tính trên nó "
+                f"đều đáng ngờ. Khai topic vào `gsm_core.lifecycle.advice_topics` "
+                f"(MEASURED_TOPICS nếu là lời khuyên kinh tế, SOFT_TOPICS nếu là khuyên mềm) rồi "
+                f"đo lại. ĐỪNG đọc Δ này.")
+        if drops.get("mixed"):
+            out.append(
+                f"TREO: {drops['mixed']} quyết định mang CẢ topic được-đo lẫn topic bị-loại trên "
+                f"cùng một `decision_id` — đây là LỖI PRODUCER (không đường ghi nào hôm nay tạo "
+                f"được). Cả cụm bị loại (đánh đổi khai ở `projections.adherence_view`), nên mẫu số "
+                f"tụt. Tìm producer đang trộn topic trước khi tin bất kỳ số nào.")
+        # `drops["soft"]` KHÔNG gắn cờ: đó là ranh giới KHUYÊN MỀM đang chạy ĐÚNG, không phải bất
+        # thường. Gắn cờ nó sẽ dạy người đọc bỏ qua cờ — cách nhanh nhất giết một cổng.
     return out
 
 

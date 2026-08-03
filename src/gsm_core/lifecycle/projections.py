@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from gsm_core.lifecycle.advice_topics import classify
+
 # Trạng thái KẾT (không bị non-terminal về sau hạ cấp; terminal đến sau — theo thứ tự
 # thời gian — được phép thay terminal trước, vd followed rồi superseded).
 _TERMINAL = {"followed", "dismissed", "expired", "superseded", "suppressed"}
@@ -117,6 +119,17 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
     - `event_decided/event_followed`: đếm theo EVENT (mỗi lần advisor nói / mỗi lần theo).
     - `decision_adherence` = followed/decided · `event_adherence` =
       event_followed/event_decided; denominator 0 ⇒ **None** (không bịa 0%).
+
+    ## KHUYÊN MỀM KHÔNG CÓ MẶT Ở ĐÂY (quyết định Cường 2026-08-03)
+
+    Topic trong `advice_topics.SOFT_TOPICS` (thời tiết, gợi ý nghỉ, giao thông) bị **loại hoàn
+    toàn** khỏi view — không phải trả `None`, mà **vắng khoá**. Đo mức nghe lời của lời khuyên
+    sức khoẻ là biến sức khoẻ thành chỉ tiêu tối ưu, trái §1.2b; xem
+    `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`.
+
+    Vì sao *vắng khoá* chứ không phải *`None`*: `None` là tín hiệu **"mẫu số 0 — có thể có bug"**
+    (đúng thứ `D-M3-01`/`L4-01` đã dùng để tìm ra thước hỏng). Nếu khuyên mềm trả `None` thì nó
+    lẫn vào đúng tín hiệu báo lỗi ấy, và người sau sẽ đi "sửa" một ranh giới đang hoạt động đúng.
     """
     # X-3 (review batch 2): hàm lặp `events` HAI lần (decision_state + vòng event) —
     # generator bị tiêu ở lần đầu ⇒ event-count = 0 IM LẶNG (event_adherence=None đọc
@@ -130,7 +143,53 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
             "event_decided": 0, "event_followed": 0,
         })
 
-    for row in decision_state(events).values():
+    states = decision_state(events)
+    # Quyết định nào bị coi là KHUYÊN MỀM — dùng cho CẢ HAI vòng bên dưới.
+    #
+    # Vì sao không dựa vào `payload["topic"]` của từng event: `sim_events_to_lifecycle` chỉ đặt
+    # `topic` **khi** `detail` có `channel` (`:344`), nên một event của cùng quyết định vẫn có thể
+    # thiếu `topic` ⇒ `is_soft(None)` = False ⇒ lọt. Neo vào quyết định thì ranh giới không phụ
+    # thuộc việc mọi producer có nhớ điền field hay không — bài học `D-M3-15`.
+    #
+    # 🔴 Quét CẢ event, không chỉ topic đã giải của `decision_state` (soi độc lập 2026-08-03).
+    # `decision_state` giải `row["topic"]` = topic của event ĐẦU TIÊN có topic khác None, còn
+    # `row["state"]` = kết cục của event CUỐI. Nên ca `decided[nudge]` rồi `followed[rest_nudge]`
+    # trên cùng `decision_id` cho `row["topic"] = "nudge"` ⇒ bản đầu chỉ kiểm `is_soft(row[...])`
+    # ở vòng decision ⇒ một `followed` MỀM vào **tử số** của topic ĐƯỢC ĐO (đo được:
+    # `decision_adherence = 1.0`). Vòng event đã kiểm cả hai hướng, vòng decision thì chưa — tức
+    # tuyên bố "adherence_view là TẦNG THỨ HAI độc lập" của chính cycle này chưa đúng ở hướng đó.
+    #
+    # ⚠ ĐÁNH ĐỔI KHAI TƯỜNG MINH: một `decision_id` mang CẢ topic mềm lẫn topic được đo là **lỗi
+    # producer** (không đường nào hôm nay tạo được: UI trả 422, sim chỉ có 5 kênh — đều được đo).
+    # Khi nó xảy ra, ta chọn **loại cả quyết định** thay vì giữ phần được đo. Tức có thể mất một
+    # `decided` hợp lệ. Chọn vậy vì hai sai không cùng hạng: mất một mẫu số là **mất độ chính xác
+    # của phép đo**, còn để `followed` mềm vào tử số là **phá một ranh giới đã chốt**.
+    # 🔴 UPDATE-129 (`N9`): tiêu chí loại đổi từ `is_soft` sang `classify(...) != "measured"`.
+    #
+    # Bản UPDATE-128 chỉ loại topic MỀM, nên topic **CHƯA KHAI** (`classify` → `"unknown"`) đi thẳng
+    # vào nhóm ĐƯỢC ĐO — `is_soft("unknown")` trả `False`. Đo được trên store dev bẩn: 52 event mềm
+    # bị loại đúng, nhưng khoá `khong_khai_bao` **vẫn lọt vào view**. Tức tầng đọc **fail-OPEN**
+    # trong khi UPDATE-128 đã khai nó là fail-closed. Boundary 422 của router chỉ chặn topic lạ MỚI
+    # qua đường UI — không chặn bản ghi cũ, đường sim, và đường pipeline (`episode_store`).
+    #
+    # Vì sao fail-closed là đúng hướng: một topic lạ **có thể là khuyên mềm ai đó quên khai**. Đo nó
+    # là tạo đúng thước nghe-lời mà ranh giới cấm. Bỏ sót một mẫu số thì mất độ chính xác; đo nhầm
+    # một lời khuyên sức khoẻ thì phá một ranh giới đã chốt — hai sai không cùng hạng.
+    #
+    # ⚠ `None` vẫn được ĐO, và đó KHÔNG phải sơ suất. `None` = *"producer cũ không có khái niệm
+    # topic"* (đường sim không đặt `channel`); `unknown` = *"producer CÓ đặt tên, nhưng chưa ai phân
+    # loại cái tên đó"* — cái sau là tín hiệu ai đó vừa thêm gì. Gộp hai cái sẽ vứt dữ liệu sim hợp lệ.
+    #
+    # Cú loại này KHÔNG được im lặng: `adherence_drops()` bên dưới đếm nó, và
+    # `sim_metrics.adherence_flags` TREO khi có `unknown` (Cường chốt 2026-08-03, cùng nguyên tắc
+    # `D-M3-10`: mẫu số không đầy đủ thì mọi Δ đều đáng ngờ).
+    _soft_dids = {did for did, r in states.items() if classify(r["topic"]) != "measured"}
+    _soft_dids |= {e["decision_id"] for e in events
+                   if classify((e.get("payload") or {}).get("topic")) != "measured"}
+
+    for did, row in states.items():
+        if did in _soft_dids:
+            continue          # khuyên mềm: KHÔNG có mẫu số, theo thiết kế (xem docstring)
         agg = _row((row["run_id"], row["driver_id"], row["topic"]))
         if row["state"] == "suppressed":
             # ĐA-04: bị NÉN nghĩa là advisor KHÔNG NÓI — không thuộc mẫu số "đã nói bao
@@ -152,8 +211,13 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
         et = e["event_type"]
         if et not in (*_EVENT_SPOKEN, "followed"):
             continue
-        agg = _row((e.get("run_id"), e["driver_id"],
-                    (e.get("payload") or {}).get("topic")))
+        topic = (e.get("payload") or {}).get("topic")
+        # Phải lọc ở CẢ HAI vòng — vòng decision và vòng event là hai đường vào view khác nhau;
+        # lọc một vòng để hở vòng kia là đúng họ lỗi `L4-01` (hai tên cho "advisor đã nói", sửa
+        # một nửa rồi tưởng xong). Kiểm theo topic của event HOẶC của quyết định mà nó thuộc về.
+        if classify(topic) != "measured" or e["decision_id"] in _soft_dids:
+            continue
+        agg = _row((e.get("run_id"), e["driver_id"], topic))
         agg["event_decided" if et in _EVENT_SPOKEN else "event_followed"] += 1
     for agg in view.values():
         agg["decision_adherence"] = (agg["followed"] / agg["decided"]
@@ -161,6 +225,57 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
         agg["event_adherence"] = (agg["event_followed"] / agg["event_decided"]
                                   if agg["event_decided"] else None)
     return view
+
+
+def adherence_drops(events) -> dict:
+    """Đếm những QUYẾT ĐỊNH bị `adherence_view` loại — và VÌ SAO.
+
+    🔴 Vì sao cần (`N5`, người phản biện tìm ra khi **hạ** một finding khác): `adherence_view` loại
+    quyết định bằng `continue`, nên cú loại **không để lại dấu vết nào**. Và cổng canh nó —
+    `sim_metrics.adherence_flags` — chỉ kiểm `event_decided == 0 and decided > 0`, tức nó **không
+    thể thấy một khoá VẮNG MẶT**. Hệ quả: nếu tương lai có producer sinh topic lạ hoặc trộn topic
+    thì **mẫu số tụt mà không ai biết**, và mọi Δ tính trên đó trông vẫn bình thường.
+
+    Đó đúng là hình dạng của `D-M3-01` — con số sai sống qua **39 artifact** vì không cơ chế nào
+    kêu. Nên hàm này tồn tại để cú loại **nói ra được**.
+
+    Trả về (thêm khoá về sau được, đừng phá khoá cũ):
+      `soft`            số quyết định bị loại vì topic KHUYÊN MỀM — **bình thường**, ranh giới đang chạy
+      `unknown`         số quyết định bị loại vì topic CHƯA KHAI — **bất thường**, phải TREO
+      `mixed`           số quyết định mang CẢ topic được-đo lẫn topic bị-loại — **lỗi producer**
+      `topics_unknown`  danh sách tên topic chưa khai (để người sửa biết khai cái gì)
+
+    ⚠ Hàm RIÊNG chứ không nhét vào `adherence_view`: view đó có hai consumer thật
+    (`sim_metrics.adherence_audit`, `scripts/probe_adherence_truth.py`) và đổi hình dạng trả về của
+    nó là phá hợp đồng đang chạy. Thêm hàm thì cộng thêm, không phá gì.
+    """
+    events = list(events)
+    states = decision_state(events)
+
+    # topic THEO QUYẾT ĐỊNH — gom mọi topic mà các event của cùng `decision_id` mang.
+    topics_theo_did: dict[str, set] = {}
+    for e in events:
+        topics_theo_did.setdefault(e["decision_id"], set()).add(
+            (e.get("payload") or {}).get("topic"))
+    for did, r in states.items():
+        topics_theo_did.setdefault(did, set()).add(r["topic"])
+
+    dem = {"soft": 0, "unknown": 0, "mixed": 0}
+    ten_unknown: set[str] = set()
+    for did in states:
+        cls = {classify(t) for t in topics_theo_did.get(did, {None})}
+        if cls <= {"measured"}:
+            continue
+        if "measured" in cls:
+            dem["mixed"] += 1          # trộn: quyết định hợp lệ bị loại CẢ CỤM (đánh đổi đã khai)
+        elif "unknown" in cls:
+            dem["unknown"] += 1
+        else:
+            dem["soft"] += 1
+        ten_unknown |= {str(t) for t in topics_theo_did.get(did, set())
+                        if classify(t) == "unknown"}
+    dem["topics_unknown"] = sorted(ten_unknown)
+    return dem
 
 
 # ---------- sim adapter: events RAM → lifecycle envelope ----------

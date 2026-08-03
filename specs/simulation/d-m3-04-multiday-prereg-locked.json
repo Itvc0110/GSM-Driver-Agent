@@ -24,6 +24,30 @@
     "du_doan_co_the_SAI": "Tôi dự đoán Δ nằm trong [−1.500, +500] đ. Nếu Δ dương SIG > +1.000 thì dự đoán này SAI và phải điều tra vì sao nghỉ lại SINH tiền trong world β=0 — ứng viên đầu tiên: nghỉ đúng trũng cầu rồi quay lại đúng giờ vàng (hiệu ứng THỜI ĐIỂM, tức C2′), không phải hiệu ứng sức khoẻ."
   },
 
+  "luat_quyet_dinh": {
+    "them_vao": "2026-08-03 — TRƯỚC khi chạy phép đo (chưa có số nào). Prereg cấm sửa SAU khi đo; thêm luật quyết định TRƯỚC khi đo là bắt buộc. Block này KHÔNG đụng tới bất kỳ metric/thiết kế/STOP nào đã khoá 2026-08-01 — nó chỉ nói kết quả sẽ được DÙNG để làm gì.",
+    "xac_nhan_boi_Cuong": "2026-08-03, TRƯỚC khi đo — Cường: 'giữ nguyên bản dịch'. Agent đã nêu tường minh BỐN chỗ bản dịch tự quyết và Cường chọn giữ cả bốn: (1) 'có ý nghĩa' = có ý nghĩa THỐNG KÊ (không phải ngưỡng tiền tuyệt đối); (2) thêm hai điều kiện AND mà chỉ thị gốc không nói — tầng 5 không suy giảm + 0 STOP bắn — làm nhánh GIỮ KHÓ HƠN câu nói gốc; (3) 'ns' xếp vào REVERT, KHÔNG xếp vào 'thiếu power, chạy thêm seed'; (4) chấp nhận MDE ~1.000đ ở n=100, tức một Δ thật khoảng +400đ sẽ ra ns ⇒ REVERT dù hiệu ứng thật là dương. ⇒ TỪ ĐÂY block này ĐÓNG: mọi sửa đổi sau khi đo là vi phạm, kể cả sửa 'cho đúng ý ban đầu'.",
+    "Cuong_da_duoc_bao_truoc": "Agent nêu rõ TRƯỚC khi Cường chốt: theo luật này, REVERT là nhánh gần như chắc chắn xảy ra, vì world β=0 không thể sinh ra Δ dương cho can thiệp tăng nghỉ. Giá trị thật của việc chạy KHÔNG phải 'biết đâu nghỉ kiếm được tiền' mà là ba thứ khác: (a) xác nhận dự đoán bằng ĐO thay vì bằng giả định (repo đã 3 lần sai độ lớn khi tin lập luận — bẫy #7); (b) số sức khoẻ tầng 5 cho kênh nghỉ, thứ CHƯA AI TỪNG ĐO; (c) không đóng một kênh bằng suy luận. Cường chọn chạy với hiểu biết đó.",
+    "vi_sao_can": "Cường 2026-08-03 chọn 'thử D-M3-04 trước, nếu có ý nghĩa thì giữ, không thì revert và khuyên mềm'. Câu 'có ý nghĩa' phải được định nghĩa TRƯỚC khi thấy số — nếu không thì đây đúng là họ lỗi BUG-EVAL-ARGMAX (đọc số rồi mới chọn cách diễn giải), bẫy #1 của BOOTSTRAP-SESSION §5.",
+
+    "GIU": {
+      "dieu_kien": "Δ payout trung bình ngày 1..2 DƯƠNG và SIG (CI95 bootstrap-theo-seed KHÔNG chứa 0) VÀ tầng 5 không suy giảm VÀ không STOP-A..D nào bắn",
+      "hanh_dong": "`rest_window` ở lại MEASURED_TOPICS (src/gsm_core/lifecycle/advice_topics.py); kênh tiếp tục nằm trong bảng tiền; C2′ giữ nguyên vai trò ở spec §1.2b",
+      "kem_theo": "Δ dương SIG > +1.000đ là NGOÀI dự đoán đã khoá ([−1.500, +500]) ⇒ PHẢI điều tra trước khi trích. Ứng viên đầu tiên: hiệu ứng THỜI ĐIỂM (nghỉ đúng trũng cầu rồi quay lại giờ vàng, tức chính C2′), KHÔNG phải hiệu ứng sức khoẻ — world này β=0 nên không có kênh sức khoẻ nào để sinh tiền."
+    },
+
+    "REVERT": {
+      "dieu_kien": "Δ ≤ 0, HOẶC ns (CI95 chứa 0), HOẶC bất kỳ STOP-A..D bắn",
+      "hanh_dong": "chuyển `rest_window` từ MEASURED_TOPICS sang SOFT_TOPICS; kênh thành KHUYÊN MỀM — nói vì đúng cho tài xế, 0 claim tiền, 0 phép đo mức nghe lời (QĐ-1/QĐ-3 của tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md); cập nhật spec §1.2b + adherence-measurement + cổng test",
+      "day_la_nhanh_DU_DOAN_TRUOC": "Kỳ vọng đã khoá 2026-08-01 là Δ ≤ 0 vì world β=0 (không mô hình hoá hậu quả mệt) ⇒ mọi can thiệp TĂNG nghỉ chỉ tốn thời gian kiếm tiền và không hoàn lại gì. Nếu REVERT xảy ra thì phép đo THÀNH CÔNG (mô hình dự đoán đúng), KHÔNG phải kênh thất bại."
+    },
+
+    "cau_DUOC_phep_noi_khi_REVERT": "'trong world không có hậu quả mệt, kênh nghỉ là chi phí thuần'",
+    "cau_KHONG_duoc_phep_noi_khi_REVERT": "'gợi ý nghỉ vô giá trị ngoài đời' — hai câu khác nhau đúng ở β, thứ ta có 0 dữ liệu để đặt (0 dữ liệu mệt, 0 dữ liệu tai nạn; xem spec §1.2b trụ (b))",
+
+    "cam_them": "Chấm 'có ý nghĩa' bằng bất kỳ tiêu chí nào KHÁC block này sau khi đã thấy số. Nếu muốn đổi tiêu chí thì phải đổi TRƯỚC lượt đo kế và ghi lý do, không phải đổi cho vừa số vừa đo được."
+  },
+
   "STOP_conditions": [
     "STOP-A: cổng adherence D-M3-10 verdict TREO ở BẤT KỲ arm nào (|z| > 4) ⇒ dừng, không báo Δ",
     "STOP-B: cổng arm đối chứng DET-01 — arm A (advice off) có quyết định ⇒ dừng, arm đối chứng không sạch thì mọi Δ là rác",

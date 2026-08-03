@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 from gsm_core.advisor.composer import ComposerOutput
@@ -35,8 +36,47 @@ class LLMUnavailable(RuntimeError):
     """Hết 4 tầng fallback — pipeline sẽ hạ template."""
 
 
+def _strip_inline_comment(v: str) -> str:
+    """Cắt chú thích `# …` ở CUỐI giá trị, tôn trọng dấu nháy.
+
+    🔴 Vì sao cần (soi độc lập 2026-08-03, UPDATE-128 — lỗi do chính cycle đó tạo ra):
+    `.env.example` viết chú thích **cùng dòng** với biến. Ai làm đúng lời dặn dòng 1 của file đó
+    (*"copy thành .env và điền giá trị thật"*) sẽ nhận:
+
+        OSRM_BASE_URL       = 'https://router.project-osrm.org   # KHÔNG cần key. Có cổng: …'
+        GRAPHHOPPER_API_KEY = '# graphhopper.com Directions API, tier 2 — ⚠ ĐỔI TÊN …'
+
+    Hậu quả đo được: URL mang khoảng trắng + chữ ⇒ `urllib` nổ `InvalidURL` và bị
+    `except Exception` **nuốt** ⇒ mirror B mất **lặng lẽ**. Tệ hơn ở tầng 2: chuỗi chú thích là
+    **truthy** nên nó **vượt qua** guard `if not api_key` ⇒ gọi GraphHopper thật với khoá rác ⇒
+    401 sau ~5 s ⇒ tầng 2 *trông như đã cấu hình* mà chết.
+
+    Và biến thể **thường gặp nhất**: người dùng gõ khoá ngay sau `=`, giữ chú thích lại —
+    `GRAPHHOPPER_API_KEY=abc123   # graphhopper.com …` ⇒ khoá gửi đi là `'abc123   # graphhopper…'`.
+
+    ⚠ Cắt chú thích **không được** làm hỏng giá trị chứa `#` hợp lệ (mật khẩu, fragment URL). Nên:
+    chỉ cắt khi `#` đứng sau khoảng trắng (quy ước dotenv), và bỏ qua hoàn toàn nếu giá trị được
+    đặt trong dấu nháy.
+    """
+    v = v.strip()
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
+        return v[1:-1]                      # giá trị trong nháy: giữ nguyên, kể cả dấu #
+    if v.startswith("#"):
+        # `KEY=            # ghi chú` ⇒ biến để TRỐNG chờ điền. Đây là dạng phổ biến nhất và là
+        # dạng nguy hiểm nhất: chuỗi chú thích truthy vượt qua mọi guard `if not key`. Ba khoá
+        # (`WEATHER`/`JINA`/`STADIA`) đã mang dạng này TRƯỚC UPDATE-128 — tức bug có sẵn, chỉ chưa
+        # ai copy `.env.example` nên chưa nổ.
+        return ""
+    m = re.search(r"\s#", v)
+    return v[:m.start()].strip() if m else v
+
+
 def load_env(path: Path | None = None) -> None:
-    """Nạp .env vào os.environ (setdefault — không đè biến đã set)."""
+    """Nạp .env vào os.environ (setdefault — không đè biến đã set).
+
+    Cắt chú thích inline: xem `_strip_inline_comment` — thiếu bước này thì một `.env` copy từ
+    `.env.example` cho ra giá trị RÁC mà mọi guard `if not x` đều cho đi qua.
+    """
     env_path = path or (ROOT / ".env")
     if not env_path.exists():
         return
@@ -45,7 +85,7 @@ def load_env(path: Path | None = None) -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         k, v = line.split("=", 1)
-        os.environ.setdefault(k.strip(), v.strip())
+        os.environ.setdefault(k.strip(), _strip_inline_comment(v))
 
 
 class LLMComposerClient:

@@ -9,12 +9,20 @@
     "data_mode": { "type": "string", "enum": ["synthetic", "mock-realdata"] },
     "is_mock": { "type": "boolean", "const": true },
     "generated_at_min": { "type": "integer", "description": "phút trong ngày sim tại thời điểm tư vấn" },
+    "topic": {
+      "type": "string",
+      "description": "Chủ đề của lượt hỏi, VỌNG LẠI từ query param — để client không phải tự nhớ mình đã gửi gì."
+    },
+    "is_soft_advice": {
+      "type": "boolean",
+      "description": "SERVER trả lời: thẻ này có phải KHUYÊN MỀM không (thời tiết · gợi ý nghỉ · giao thông). true ⇒ client render chế độ `soft`: nút **Ẩn** + *Vì sao*, KHÔNG có 'Làm theo'; và không topic nào như vậy vào mẫu số adherence. Nguồn DUY NHẤT của phân loại: `src/gsm_core/lifecycle/advice_topics.py` (SOFT_TOPICS) — client KHÔNG được chép danh sách sang JS (nguồn sự thật thứ hai = họ lỗi D-M3-17). Lý do ranh giới: đo mức nghe lời của lời khuyên sức khoẻ = biến sức khoẻ thành chỉ tiêu tối ưu, trái specs/advisor-objective-model-v2.md §1.2c. Quyết định Cường 2026-08-03."
+    },
     "silent": {
       "type": "object",
       "description": "khi không có advice — nêu LÝ DO có cấu trúc, UI hiển thị tử tế thay vì trống",
       "properties": {
         "is_silent": { "type": "boolean" },
-        "reason_code": { "type": "string", "enum": ["already_on_track", "insufficient_budget_hours", "insufficient_history", "no_active_channel", "verify_failed", "unsafe_while_moving", "topic_cooldown", "shift_budget_exhausted", "dismissed_for_window"], "description": "verify_failed = R5-A (UPDATE-071): card không qua verifier tầng 1 → fail-closed thành im lặng, KHÔNG trả nội dung sai" },
+        "reason_code": { "type": "string", "enum": ["already_on_track", "insufficient_budget_hours", "insufficient_history", "no_active_channel", "verify_failed", "dismissed_for_window", "shift_budget_exhausted", "topic_cooldown", "unsafe_while_moving"], "description": "verify_failed = R5-A (UPDATE-071): card không qua verifier tầng 1 → fail-closed thành im lặng, KHÔNG trả nội dung sai. ⚠ 2026-08-03 (UPDATE-128): enum này TỪNG chỉ có 5 mã của ADAPTER (`adapters/advisor.py`) và thiếu TOÀN BỘ 5 mã mà ROUTER phát ra — 4 mã nhịp nói của ĐA-04 (`dismissed_for_window`/`shift_budget_exhausted`/`topic_cooldown`/`unsafe_while_moving`, có từ UPDATE-099) chưa từng được khai, ⚠ `no_soft_producer` (mã tôi thêm ở bản đầu) ĐÃ BỎ khi hợp nhất PR #4: bề mặt GET hẹp của Khánh chặn topic mềm ở pydantic nên nhánh phát mã đó thành CODE CHẾT — giữ một mã không đường phát chính là mẫu 'khai mà không có đường chạy' mà cycle này đi bịt. Tức mọi response im lặng của đường sản phẩm đã vi phạm contract này im lặng nhiều tháng, và KHÔNG cổng nào phủ. Phát hiện bởi cổng mới `ui/backend/tests/test_soft_advice_no_trace.py::test_MOI_nhanh_cua_GET_advice_deu_KHOP_contract` — nó validate MỌI nhánh bằng chính schema này. Thêm mã mới thì phải khai vào đây, nếu không cổng ĐỎ." },
         "message": { "type": "string" }
       },
       "required": ["is_silent"]

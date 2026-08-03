@@ -65,6 +65,25 @@ class EpisodeStore:
                    ("feature", "state_digest", "solver_report_refs", "advice_spec",
                     "message", "confidence", "route", "fallback_used", "residual_path",
                     "verify") if k in ep}
+        # `N1` (UPDATE-129): nâng `advice_spec.action_type` lên `payload["topic"]`.
+        #
+        # Đây là đường ghi THỨ BA vào event log (UI · sim · pipeline). UPDATE-128 chỉ bịt đường UI
+        # (validator 422 ở `routers/advice.py`), nên **mọi quyết định pipeline có `topic=None`** ⇒
+        # `classify(None)` = `"measured"` ⇒ chúng mặc định vào bảng ĐO. Nếu pipeline sinh một lời
+        # khuyên KHUYÊN MỀM thì nó bị đo im lặng — đúng ranh giới §1.2c cấm.
+        #
+        # Không bịa tên mới: `advice_spec.action_type` ĐÃ tồn tại và `templates.py:240` gọi nó
+        # nguyên văn là *"adherence taxonomy"*. Từ vựng thật đo bằng grep: `online` (mặc định của
+        # `_advice_spec`) · `rest_window` · `shift_plan`.
+        #
+        # ⚠ Đây KHÔNG phải hợp nhất taxonomy. `action_type` (pipeline) và `MEASURED_TOPICS`
+        # (registry) vẫn là hai từ vựng; việc thống nhất chúng là điều kiện để hai đường đo join
+        # được (`specs/adherence-measurement.md` §(c)#2) và là một cycle riêng. Ở đây ta chỉ NỐI
+        # chúng, và để tầng đọc fail-closed + TREO bắt mọi giá trị chưa khai — tức một `action_type`
+        # lạ sẽ **kêu to**, không lặng lẽ vào mẫu số.
+        act = (ep.get("advice_spec") or {}).get("action_type")
+        if act:
+            payload["topic"] = act
         self.log.append({
             "event_id": f"ep-{ep['episode_id']}",
             "decision_id": ep["episode_id"],

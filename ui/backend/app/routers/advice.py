@@ -22,12 +22,15 @@ from datetime import date as _date
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.adapters import advisor, mockdata
+from gsm_core.lifecycle.advice_topics import SOFT_TOPICS, classify, is_soft
+
 from gsm_core.lifecycle.cadence import (PRESENT, CadenceMemory, decision_bucket,
                                         evaluate, shift_phase)
 from gsm_core.lifecycle.event_log import AdviceEventLog
+
 
 # Lời im lặng nói với tài xế — tôn trọng, không đổ lỗi, không hứa (DIRECTIVES §12.4).
 _SILENT_MSG = {
@@ -64,6 +67,33 @@ SHIFT_START_MIN = DEFAULT_SHIFT_START_MIN   # giữ tên cũ cho consumer khác,
 # dismiss riêng mà không ai nuôi. Default nay là một topic THẬT.
 CLIENT_TOPICS = ("brief", "nudge", "recap")
 DEFAULT_TOPIC = "brief"
+
+# HỢP NHẤT PR #4 (Cường chốt 2026-08-03) — LỚP HAI TẦNG.
+#
+# Khánh siết `topic` thành `Literal["brief","nudge","recap"]` ở tầng pydantic. Ý định ĐÚNG: chặn rác
+# sớm, trả 422 trước khi bất cứ gì được ghi. Nhưng ba giá trị viết cứng làm **đường ray KHUYÊN MỀM
+# không thể chạm tới** — `?topic=weather` bị 422 ở pydantic nên cờ `is_soft_advice`, nhánh
+# `no_soft_producer`, và toàn bộ ranh giới Cường duyệt cùng ngày **không bao giờ đi tới được**. Nó
+# cũng chặn `positioning`/`accept_lift`/`shift_extend` mà test vòng đời đang dùng.
+#
+# Giữ ý định của Khánh, đổi NGUỒN của danh sách: suy từ registry thay vì viết cứng — nhưng **hai bề
+# mặt KHÁC NHAU**, vì GET và POST hỏi hai câu khác nhau.
+#
+# 🔴 Và Khánh đúng ở một điểm quan trọng hơn tôi tưởng lúc đầu. Docstring test của anh ấy:
+# *"V1 chỉ nhận ba legacy surface; **safety priority không do client khai**"*. Đó chính là phản biện
+# đúng cho lỗ `F1` mà soi độc lập bắt ở UPDATE-128: tôi để `is_soft_advice` suy từ **query param do
+# CLIENT chọn**, nên một GET là đủ dán nhãn "khuyên mềm" lên một thẻ kinh tế. Bề mặt hẹp của Khánh
+# **bịt lỗ đó từ gốc** — client không khai được nữa thì không dán nhãn sai được nữa.
+#
+# ⇒ GET giữ đúng ba bề mặt của Khánh. Khi có nguồn khuyên mềm thật, **SERVER** đặt `is_soft_advice`
+# theo NỘI DUNG thẻ, không theo thứ client hỏi.
+TopicGet = Literal[CLIENT_TOPICS]  # type: ignore[valid-type]
+
+# POST thì RỘNG HƠN, và phải vậy: client báo hành động trên một thẻ **server đã đưa** — mà thẻ đó có
+# thể là khuyên mềm. Nếu chặn `weather` ở pydantic thì `dismissed` (nút Ẩn) cũng bất khả ⇒ tài xế mất
+# cách tắt thẻ phiền, tức phá đúng điều Cường chốt (*"giữ nút ẩn, bỏ nút Làm theo"*). Và nó sẽ làm
+# cổng 422 của tôi đỏ **vì lý do khác** cái nó tuyên bố — đúng bẫy `D-M3-17`.
+TopicPost = Literal[tuple(sorted(set(CLIENT_TOPICS) | SOFT_TOPICS))]  # type: ignore[valid-type]
 
 
 def _norm_shift_end(shift_end_min: int, start_min: int = DEFAULT_SHIFT_START_MIN) -> int:
@@ -151,7 +181,7 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
                now_min: int = Query(14 * 60, ge=0, le=24 * 60),
                shift_end_min: int = Query(advisor.DEFAULT_SHIFT_END_MIN, ge=0, le=24 * 60),
                is_driving: bool = Query(False),
-               topic: Literal["brief", "nudge", "recap"] = Query(DEFAULT_TOPIC),
+               topic: TopicGet = Query(DEFAULT_TOPIC),
                shift_start_min: int = Query(DEFAULT_SHIFT_START_MIN, ge=0, le=1439)):
     """ĐA-04: nhịp do LUẬT CHUNG quyết định, không phải wall-clock của client.
 
@@ -167,21 +197,67 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
     verdict = evaluate(topic, float(now_min), phase,
                        _cadence_memory(did, d, phase, shift_end_min),
                        is_driving=is_driving)
+    # `is_soft_advice`: SERVER trả lời "thẻ này có phải khuyên mềm không", client KHÔNG tự suy.
+    #
+    # Bản đầu của UPDATE-128 để `cards.js` chép danh sách `SOFT_TOPICS` sang JS — tức **nguồn sự
+    # thật thứ hai** cho một ranh giới đạo đức, đúng thứ `D-M3-17` vừa trả giá (UI tự tính tầm pin
+    # bằng công thức riêng, lệch engine 1,76× mà 1.000 test không thấy vì không test nào so hai
+    # bên). Thêm topic mềm mà quên sửa JS thì thẻ đó vẫn vẽ nút "Làm theo". Nay client chỉ đọc
+    # cờ này; registry `advice_topics.py` là nguồn DUY NHẤT.
+    #
+    # 🔴 SOI ĐỘC LẬP 2026-08-03 BẮT MỘT LỖ THẬT Ở BẢN ĐẦU, đã sửa ngay dưới đây. Bản đầu chỉ làm
+    # `soft = is_soft(topic)` rồi trả kèm lời khuyên mà advisor sinh ra — nhưng `topic` là **query
+    # param do CLIENT chọn** và `advisor.advice()` **không nhận `topic`**. Tái lập được:
+    #
+    #   GET /api/v1/advice?topic=weather&now_min=840
+    #     -> is_soft_advice = True
+    #     -> item = {kind: "bonus_gap", title: "Còn với được mốc thưởng 30.000đ hôm nay"}
+    #     -> adherence_view = {}          # lời khuyên KINH TẾ thoát khỏi phép đo
+    #
+    # Tức "một nguồn sự thật" chỉ áp cho **PHÂN LOẠI topic**, chưa buộc vào **NỘI DUNG thẻ**. Một
+    # GET là đủ xoá một lời khuyên kinh tế khỏi bảng đo. (Hôm nay chưa có số nào sai: không client
+    # nào gửi `topic=weather` — `cards.js` chỉ gửi 3 giá trị hardcode — và không consumer nào đọc
+    # `adherence_view` trên đường UI. Nhưng đó là may, không phải cơ chế.)
+    #
+    # Sửa: (1) `topic` phải nằm trong registry, **fail-closed ở RUNTIME** chứ không chỉ ở test;
+    # (2) topic mềm thì KHÔNG được trả lời khuyên do pipeline kinh tế sinh — hôm nay **chưa có
+    # nguồn sinh khuyên mềm nào**, nên câu trả lời trung thực là IM LẶNG kèm lý do, không phải
+    # gắn nhãn mềm lên một thẻ thưởng.
+    # 🔴 HỢP NHẤT PR #4: hai nhánh từng ở đây (`classify(...)=="unknown"` → 422, và `if soft:` →
+    # im lặng `no_soft_producer`) NAY LÀ CODE CHẾT và đã bị xoá. Bề mặt GET hẹp của Khánh
+    # (`TopicGet` = 3 topic client) chặn cả hai ca **ở pydantic, trước khi vào hàm**.
+    #
+    # Đây là kết quả TỐT HƠN bản của tôi, và đáng ghi lại vì sao: lỗ `F1` (soi độc lập UPDATE-128)
+    # là *"cờ đạo đức suy từ query param do CLIENT chọn"*. Tôi vá bằng cách trả im lặng khi client
+    # hỏi topic mềm — tức vẫn để client khai. Khánh **bỏ hẳn quyền khai đó**. Nguyên tắc của anh ấy
+    # viết trong test: *"safety priority không do client khai"*.
+    #
+    # ⇒ `is_soft_advice` nay do SERVER quyết theo NỘI DUNG thẻ. Hôm nay luôn `False` vì chưa có
+    # nguồn sinh khuyên mềm; khi Khánh làm thẻ thời tiết thì server đặt cờ theo thẻ, không theo
+    # thứ client hỏi. Giữ field trong response (contract) để client không phải tự suy.
+    soft = False
+    prov = advisor.provenance(d, now_min)
+
     if verdict.verdict != PRESENT:
         _note_suppressed(did, d, topic, now_min, verdict.reason)
-        return {"scenario_id": f"mock-realdata:{d}",
-                "seed": int(mockdata.manifest().get("seed_base", 0)),
-                "data_mode": "mock-realdata", "is_mock": True,
-                "driver_id": did, "date": d, "items": [],
+        # HỢP NHẤT PR #4 (2026-08-03): Khánh và tôi độc lập tìm ra CÙNG lỗi này (nhánh im lặng
+        # thiếu `scenario_id`/`seed`/`data_mode` mà contract khai `required`) và sửa hai cách.
+        # Giữ bản dùng `advisor.provenance()` vì nó chia sẻ MỘT nguồn với adapter thay vì chép ba
+        # chuỗi sang router — đúng bài học `D-M3-17`. Đã đo: hai cách cho CÙNG giá trị
+        # (`advisor._dataset_seed()` == `mockdata.manifest()["seed_base"]` == 7000), nên đây là
+        # chọn cách viết, không phải bác kết quả của Khánh.
+        return {**prov, "driver_id": did, "date": d, "items": [],
                 "silent": {"is_silent": True, "reason_code": verdict.reason,
                            "message": _SILENT_MSG.get(
                                verdict.reason,
                                "Trợ lý tạm chưa có gì cần nói thêm lúc này.")},
+                "topic": topic, "is_soft_advice": soft,
                 "cadence": {"verdict": verdict.verdict, "phase": phase,
                             "next_eligible_min": verdict.next_eligible_min}}
     out = advisor.advice(did, d, now_min, shift_end_min)
     _note_shown(did, d, topic, now_min, out.get("items") or [])
-    return {**out, "cadence": {"verdict": PRESENT, "phase": phase}}
+    return {**out, "topic": topic, "is_soft_advice": soft,
+            "cadence": {"verdict": PRESENT, "phase": phase}}
 
 
 def _note_suppressed(driver_id: str, date: str, topic: str, now_min: int,
@@ -288,7 +364,48 @@ class AdviceAction(BaseModel):
     at_min: int | None = Field(default=None, ge=0, le=1439)
     # ĐA-04: chủ đề của thẻ — cooldown/dismiss là THEO CHỦ ĐỀ, không phải toàn cục
     # (bỏ qua nhắc đổi pin không được khoá miệng cảnh báo mất thưởng).
-    topic: Literal["brief", "nudge", "recap"] = "brief"
+    topic: TopicPost = DEFAULT_TOPIC
+
+    @field_validator("topic")
+    @classmethod
+    def _topic_phai_duoc_phan_loai(cls, v: str) -> str:
+        """Fail-closed ở RUNTIME, không chỉ ở test (soi độc lập 2026-08-03).
+
+        Bản đầu chỉ có cổng `tests/test_advice_topic_registry.py` quét **hằng chuỗi trong 3 file
+        .py**. Nhưng runtime thì `topic` là chuỗi tuỳ ý từ client ⇒ một topic chưa phân loại đi
+        thẳng vào store và **rơi vào nhóm ĐƯỢC ĐO** (`classify(None|lạ)` → không soft ⇒ có mẫu số).
+        Tức "fail-closed" đúng ở tầng phát triển mà **fail-OPEN ở tầng chạy** — đúng khoảng cách
+        mà `D-M3-08`/`D-M3-13` đã trả giá: cơ chế được khai là có, nhưng không phủ đường thật.
+        """
+        if classify(v) == "unknown":
+            raise ValueError(
+                f"topic {v!r} chưa được phân loại trong `gsm_core.lifecycle.advice_topics`. "
+                f"Một topic lạ sẽ IM LẶNG rơi vào nhóm ĐƯỢC ĐO — nếu nó thực ra là khuyên mềm "
+                f"thì ta vừa tạo một thước nghe-lời cho lời khuyên sức khoẻ. Khai vào "
+                f"MEASURED_TOPICS hoặc SOFT_TOPICS trước khi dùng.")
+        return v
+
+    @model_validator(mode="after")
+    def _khuyen_mem_khong_nhan_followed(self):
+        """Quyết định Cường 2026-08-03: khuyên mềm (thời tiết · gợi ý nghỉ · giao thông) KHÔNG
+        có trace đồng ý/không đồng ý.
+
+        `dismissed` vẫn nhận — nó là *"đừng nhắc nữa"* (nhịp nói ĐA-04), không phải *"tôi không
+        đồng ý"*. `followed` thì không: nó chỉ có một nghĩa, và nghĩa đó tạo ra một thước nghe-lời
+        cho lời khuyên sức khoẻ ⇒ biến sức khoẻ thành chỉ tiêu tối ưu, trái §1.2b.
+
+        Chặn HAI TẦNG như L4-07 đã làm: client không vẽ nút "Làm theo" cho thẻ mềm
+        (`cards.js` chế độ `soft`), và boundary này từ chối. Một tầng thôi thì tầng kia vẫn
+        thủng — client cũ, `curl`, app Flutter khác bản đều gọi được endpoint này.
+        """
+        if self.action == "followed" and is_soft(self.topic):
+            raise ValueError(
+                f"topic {self.topic!r} là KHUYÊN MỀM — không nhận action 'followed'. "
+                f"Khuyên mềm được nói vì đúng cho tài xế, KHÔNG kèm phép đo mức nghe lời: đo "
+                f"nó là biến sức khoẻ thành chỉ tiêu để tối ưu (§1.2b). Dùng 'dismissed' nếu ý "
+                f"bạn là 'đừng nhắc nữa' — đó là nhịp nói, không phải sự đồng thuận. "
+                f"Xem tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md")
+        return self
 
     @field_validator("advice_id")
     @classmethod
@@ -372,8 +489,17 @@ def get_actions(driver_id: str | None = Query(None), limit: int = Query(50, ge=1
         p = e["payload"]
         if driver_id and e["driver_id"] != driver_id:
             continue
+        topic = p.get("topic")
         rows.append({"advice_id": e["decision_id"], "driver_id": e["driver_id"],
                      "date": p.get("date"), "action": p.get("action"),
                      "card_kind": p.get("card_kind"), "at_min": p.get("at_min"),
+                     # `topic` + `is_soft_advice`: soi độc lập 2026-08-03 bắt được — UPDATE-128 sửa
+                     # `index.html` để HỨA rằng khối "Nhật ký làm-theo" phân biệt khuyên mềm, nhưng
+                     # endpoint này **bỏ rơi `topic`** khi dựng row ⇒ UI không có dữ liệu để phân
+                     # biệt. Tức tôi viết một lời hứa vào UI mà không nối đường dữ liệu cho nó —
+                     # đúng họ lỗi "tài liệu quảng cáo cơ chế không có đường chạy" mà chính cycle
+                     # này dựng cổng để chặn. `topic` ĐÃ có sẵn trong payload, chỉ là không được
+                     # mang ra.
+                     "topic": topic, "is_soft_advice": is_soft(topic),
                      "client_ts": e["observed_at"], "is_mock": True})
     return {"is_mock": True, "actions": rows[-limit:][::-1]}

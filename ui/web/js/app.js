@@ -490,6 +490,17 @@ function switchScreen(id) {
   if (id === "screen-now") setTimeout(() => map.invalidateSize(), 150);
 }
 
+// 🔀 HỢP NHẤT 2026-08-04 (rebase lên PR #5): hai bên cùng viết hàm này. Giữ **nền của Khánh**
+// (`replaceChildren` + `addText` — đường DOM an toàn; bản của tôi dựng `innerHTML` bằng
+// `.map().join("")` nội suy `topic`/`advice_id` từ server, tức một đường XSS ngay ở bảng nhật ký).
+// Ghép vào đó phần NHÃN KHUYÊN MỀM của tôi, thứ bản Khánh chưa có.
+//
+// Vì sao cần nhãn: một dòng `dismissed` của thẻ MỀM nằm chung bảng với các dòng ĐƯỢC ĐO sẽ bị đọc
+// thành *"tài xế không đồng ý"* — đúng **vai 2** mà QĐ-1 cấm (§4 văn bản quyết định: `dismissed` có
+// hai vai, nhịp-nói GIỮ / thước-adherence CẤM). Cờ `is_soft_advice` do **SERVER** cấp
+// (`GET /advice/actions`); client không tự tra danh sách — bài học `D-M3-17`.
+const NHAN_HANH_DONG = { followed: "✅ Làm theo", dismissed: "✖ Bỏ qua", expanded: "？Vì sao" };
+
 async function refreshAdherence() {
   try {
     const result = await api.adviceActions(S.driverId);
@@ -500,10 +511,21 @@ async function refreshAdherence() {
       return;
     }
     for (const action of result.actions.slice(0, 12)) {
+      const mem = Boolean(action.is_soft_advice);
       const row = document.createElement("div");
       row.style.padding = "5px 0";
       row.style.borderTop = "1px solid var(--border-hairline)";
-      addText(row, "span", `${action.action} · ${action.card_kind} · ${action.date} · ${action.advice_id}`);
+      if (mem) row.style.opacity = ".72";
+      // Thẻ mềm: "Bỏ qua" ở đây CHỈ nghĩa "đừng nhắc nữa", không phải bất đồng ý.
+      const nhan = mem && action.action === "dismissed"
+        ? "🔇 Đã ẩn" : (NHAN_HANH_DONG[action.action] || action.action);
+      addText(row, "b", nhan);
+      addText(row, "span", ` · ${action.card_kind}${action.topic ? ` · ${action.topic}` : ""}`
+        + ` · ${action.date} · ${action.advice_id}`);
+      if (mem) {
+        const ghi = addText(row, "span", " · khuyên mềm — KHÔNG tính vào tỷ lệ nghe lời");
+        if (ghi) { ghi.style.color = "var(--text-muted)"; ghi.style.fontSize = "10.5px"; }
+      }
       slot.appendChild(row);
     }
   } catch (error) {

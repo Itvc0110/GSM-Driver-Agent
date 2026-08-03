@@ -175,13 +175,27 @@ def _num_source(raw: str) -> str:
     return "SOLVER"
 
 
+def provenance(date: str, now_min: int) -> dict:
+    """Ba field XUẤT XỨ mà contract `ui/contracts/advice.json` khai `required` + nhãn mock.
+
+    Tách ra thành hàm public vì `routers/advice.py` **cũng** phải trả chúng: nhánh im lặng của
+    endpoint (cadence nén) tự dựng dict riêng và **thiếu cả ba** — vi phạm contract có từ trước
+    UPDATE-128, soi độc lập 2026-08-03 bắt được (`jsonschema` báo *"'scenario_id' is a required
+    property"*), và **không cổng nào phủ**.
+
+    Sửa bằng cách chia sẻ MỘT hàm thay vì chép ba chuỗi sang router — chép là dựng nguồn sự thật
+    thứ hai, đúng họ `D-M3-17` mà cycle này đã trả giá hai lần.
+    """
+    return {"scenario_id": f"mock-realdata:{date}", "seed": _dataset_seed(),
+            "data_mode": "mock-realdata", "is_mock": True, "generated_at_min": now_min}
+
+
 def _advice_raw(driver_id: str, date: str, now_min: int,
                 shift_end_min: int = DEFAULT_SHIFT_END_MIN) -> dict:
     """Dựng advice THÔ từ solver. KHÔNG gọi trực tiếp — dùng `advice()` (có guardrail)."""
     if not driver_id.startswith(("d-", "r-")):
         # policy S1 hiện là policy BIKE — không áp bừa cho đội car/premium (không bịa policy)
-        return {"scenario_id": f"mock-realdata:{date}", "seed": _dataset_seed(),
-                "data_mode": "mock-realdata", "is_mock": True, "generated_at_min": now_min,
+        return {**provenance(date, now_min),
                 "silent": {"is_silent": True, "reason_code": "no_active_channel",
                            "message": "Trợ lý mới phủ đội bike (chính sách điểm/thưởng bike). "
                                       "Đội car/premium sẽ có khi đủ policy — không đoán số."},

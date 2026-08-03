@@ -119,6 +119,34 @@ nghỉ (không tai nạn, không giảm chất lượng, không mệt qua đêm 
 khuyên hoãn nghỉ đều dương quá mức theo cấu trúc.** Lan can + guardrail, không con số, mới được quyết
 định việc có hoãn hay không.
 
+### 1.2c 🚫 TẦNG THỨ BA: mức NGHE LỜI của khuyên sức khoẻ cũng không được đo (chốt 2026-08-03)
+
+Quyết định Cường 2026-08-03 (`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`):
+*"trong UI cũng không nên có trace đồng ý làm theo hay không làm theo khi gợi ý — tương tự đối với
+thời tiết"*.
+
+**Lỗ mà mục này bịt.** §1.2b chặn tỷ giá sức-khoẻ↔tiền ở **tầng objective** (`C2` huỷ) và ở **tầng
+world** (không mô hình hoá hậu quả mệt). Nhưng cả hai đều **không nói gì** về việc *sản phẩm đếm mức
+nghe lời*. Nên tỷ giá bị chặn ở sim vẫn mọc lại được ở UI — bằng một trường trong event log, im lặng,
+và trước 2026-08-03 **không cổng nào bắt**.
+
+Cơ chế cụ thể, không phải lo xa: một khi `rest_adherence` tồn tại như **một con số trong bảng**, nó
+sẽ được nhìn như thứ cần cải thiện — và *"cải thiện tỷ lệ tài xế chịu nghỉ"* là tối ưu hoá **trên**
+sức khoẻ. Cùng lập luận đã dùng để huỷ `C2`, chỉ ở tầng thứ ba.
+
+| Đại lượng | Được đo? | Cơ chế enforce | Có thật chưa? |
+| --- | --- | --- | --- |
+| **KHUYÊN MỀM** (thời tiết · `rest_nudge` gợi ý nghỉ · giao thông) | 🚫 **KHÔNG** — 0 mẫu số, 0 `followed` | registry `SOFT_TOPICS`; `adherence_view` **vắng khoá** (không phải `None`) ở CẢ HAI vòng; `POST /advice/action` 422 | ✅ **CÓ từ 2026-08-03** (UPDATE-128; sever-restore 4/4 mũi bắn) |
+| **Nhịp nói** của khuyên mềm (`dismissed` = *"đừng nhắc nữa"*) | ✅ CÓ — và **phải** có | ĐA-04 `cadence.evaluate` (giữ nguyên) | ✅ CÓ |
+| Topic chưa phân loại | — | **fail-closed**: `classify()` → `"unknown"` ⇒ test ĐỎ | ✅ **CÓ từ 2026-08-03** |
+
+⚠ **`rest_window` (HOÃN nghỉ = `C2′`) KHÁC `rest_nudge` (GỢI Ý nghỉ).** Cái đầu đổi *thời điểm*, là
+kênh kinh tế, và hiện **vẫn được đo** — Cường chọn *"thử `D-M3-04` trước, nếu có ý nghĩa thì giữ,
+không thì revert và khuyên mềm"*. Luật quyết định đã đăng ký **trước khi đo** ở
+`specs/simulation/d-m3-04-multiday-prereg-locked.json` → `luat_quyet_dinh`. Nếu `D-M3-04` cho Δ ≤ 0
+hoặc ns (là nhánh prereg **dự đoán trước**, vì world β=0) thì `rest_window` chuyển sang `SOFT_TOPICS`
+và mục này áp cho nó luôn.
+
 ### 1.3 Mục tiêu phi tuyến cho tân binh
 `tenure_days ≤ 90` có **bảo lãnh doanh thu sàn** (PROXY 350k/ngày). Hàm mục tiêu là **bậc thang**:
 dưới sàn thì mọi đồng thêm bị bảo lãnh bù ⇒ giá trị biên ≈ 0; trên sàn mới có giá trị thật.

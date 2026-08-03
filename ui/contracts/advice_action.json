@@ -1,15 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "AdviceActionContract",
-  "description": "v1.0 (2026-07-27, DIRECTIVES §12; cập nhật 2026-07-29 ĐA-05). Đo adherence: tài xế bấm nút trên card advice. Canonical store nay là AdviceEventLog (append-only, validate qua registry trước khi ghi); advice_actions.jsonl chỉ còn debug export; GET /actions đọc từ event log. Hai đường đo EXPLICIT (bấm nút)/IMPLICIT (hành vi thật đổi sau advice, sim/A-B) đã hợp nhất vào MỘT event log + MỘT projection (phân biệt theo origin ui/sim). 3 namespace decision_id: adv-* (pipeline) / s1-* (UI) / slth-* (sim). Log local nhãn mock, không phải telemetry thật.",
+  "description": "v1.1 (2026-07-27, DIRECTIVES §12; cập nhật 2026-07-29 ĐA-05; 2026-08-03 thêm `topic` + ranh giới KHUYÊN MỀM). Đo adherence: tài xế bấm nút trên card advice. Canonical store nay là AdviceEventLog (append-only, validate qua registry trước khi ghi); advice_actions.jsonl chỉ còn debug export; GET /actions đọc từ event log. Hai đường đo EXPLICIT (bấm nút)/IMPLICIT (hành vi thật đổi sau advice, sim/A-B) đã hợp nhất vào MỘT event log + MỘT projection (phân biệt theo origin ui/sim). 3 namespace decision_id: adv-* (pipeline) / s1-* (UI) / slth-* (sim). Log local nhãn mock, không phải telemetry thật.",
   "type": "object",
   "properties": {
     "advice_id": { "type": "string" },
     "driver_id": { "type": "string" },
     "date": { "type": "string", "description": "ngày hồ sơ đang xem (YYYY-MM-DD)" },
-    "action": { "type": "string", "enum": ["followed", "dismissed", "expanded"] },
+    "action": { "type": "string", "enum": ["followed", "dismissed", "expanded"], "description": "⚠ 2026-08-03: `followed` bị TỪ CHỐI (422) khi `topic` là KHUYÊN MỀM — xem `topic`." },
     "card_kind": { "type": "string", "enum": ["brief", "nudge", "recap"] },
+    "topic": {
+      "type": "string",
+      "default": "bonus",
+      "description": "Chủ đề của thẻ — namespace của cooldown/dismiss (ĐA-04: bỏ qua nhắc đổi pin không được khoá miệng cảnh báo mất thưởng). ⚠ TRƯỜNG NÀY TRƯỚC 2026-08-03 KHÔNG CÓ TRONG CONTRACT dù API đã nhận từ ĐA-04 — contract drift, đã vá. ⚠⚠ RANH GIỚI KHUYÊN MỀM (quyết định Cường 2026-08-03): topic trong SOFT_TOPICS (`weather`, `rest_nudge`, `traffic`) là KHUYÊN MỀM — nói vì đúng cho tài xế, KHÔNG kèm phép đo mức nghe lời. Với chúng: `followed` bị từ chối 422; `dismissed` VẪN nhận nhưng CHỈ mang nghĩa 'đừng nhắc nữa trong pha này' (nhịp nói), KHÔNG mang nghĩa 'tài xế không đồng ý'; và topic mềm VẮNG KHOÁ hoàn toàn khỏi `adherence_view` (không phải trả null — null là tín hiệu thước hỏng, xem specs/adherence-measurement.md). Lý do: đo mức nghe lời của lời khuyên sức khoẻ = biến sức khoẻ thành chỉ tiêu tối ưu, trái specs/advisor-objective-model-v2.md §1.2c. Nguồn sự thật của danh sách: src/gsm_core/lifecycle/advice_topics.py. Client: `ui/web/js/cards.js` chế độ `soft` (nút Ẩn, KHÔNG có 'Làm theo')."
+    },
     "at_min": { "type": "integer", "minimum": 0, "maximum": 1439, "description": "phút trong ngày sim/demo lúc bấm (0-1439; 1440 sinh T24:00:00 — W-4)" },
+    "is_soft_advice": {
+      "type": "boolean",
+      "description": "CHỈ có ở đường ĐỌC (`GET /advice/actions`) — SERVER trả lời hàng này có phải KHUYÊN MỀM không. UI dùng nó để KHÔNG trình bày một `dismissed` của thẻ mềm như 'tài xế không đồng ý' (đó là vai-2 bị cấm); thẻ mềm hiện '🔇 Đã ẩn' + ghi chú 'không tính vào tỷ lệ nghe lời'. Thêm 2026-08-03 (UPDATE-128) sau khi soi độc lập bắt được: `index.html` đã HỨA phân biệt khuyên mềm nhưng endpoint bỏ rơi `topic` ⇒ UI không có dữ liệu để phân biệt. Client KHÔNG được tự tra danh sách topic mềm — nguồn duy nhất là `src/gsm_core/lifecycle/advice_topics.py`."
+    },
     "client_ts": { "type": "string", "description": "ISO timestamp máy client (chỉ để debug, không dùng phân tích)" },
     "is_mock": { "type": "boolean", "const": true }
   },

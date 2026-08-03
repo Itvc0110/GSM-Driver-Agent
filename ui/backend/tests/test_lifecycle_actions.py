@@ -181,6 +181,11 @@ def test_dismiss_does_not_silence_other_topic(tmp_path, monkeypatch):
     client.post("/api/v1/advice/action", json={
         **BODY, "action": "dismissed", "at_min": 600, "topic": "brief"})
     other = client.get(
+        # `rest` (topic bịa) → `nudge` (topic THẬT, được đo): boundary nay fail-closed với topic
+        # chưa phân loại. Ý định của test không đổi — chứng minh cooldown theo TỪNG chủ đề.
+        # ⚠ Cố ý KHÔNG khai `rest` vào registry: nhắc nghỉ ở sản phẩm phải dùng đúng một tên
+        # (`rest_nudge`), và để `rest` ở trạng thái "chưa phân loại" thì ai dùng nó sẽ nhận 422 và
+        # buộc phải quyết định — thay vì im lặng rơi vào nhóm được đo.
         "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=600&topic=nudge").json()
     assert other["cadence"]["verdict"] == "PRESENT"
 
@@ -262,12 +267,17 @@ def test_budget_counts_decisions_not_events(tmp_path, monkeypatch):
     "Làm theo"(followed) từng tiêu HAI suất — 3 card là advisor im cả ngày. Đúng họ lỗi
     decision-vs-event mà Cycle W đã trả giá 4 lượt review."""
     _patch(tmp_path, monkeypatch)
-    for i in range(3):   # 3 card, MỖI card cả expanded LẪN followed = 6 event
+    # UPDATE-128: dùng topic THẬT thay cho `f"topic-{i}"` bịa. Boundary nay từ chối topic chưa
+    # phân loại (fail-closed — một topic lạ sẽ im lặng rơi vào nhóm ĐƯỢC ĐO, và nếu nó thực ra là
+    # khuyên mềm thì ta vừa tạo một thước nghe-lời cho lời khuyên sức khoẻ). Đổi này làm test
+    # MẠNH hơn: nó chứng minh việc đếm ngân sách đúng trên **từ vựng topic thật**, chứ không phải
+    # trên ba chuỗi không bao giờ tồn tại.
+    for i, topic in enumerate(("brief", "nudge", "recap")):   # 3 card × (expanded+followed)
         aid = f"s1-driver-01-2026-07-29-{600 + i}"
         for act in ("expanded", "followed"):
             assert client.post("/api/v1/advice/action", json={
                 **BODY, "advice_id": aid, "action": act, "at_min": 600 + i,
-                "topic": ("brief", "nudge", "recap")[i % 3]}).status_code == 200
+                "topic": topic}).status_code == 200
     mem = advice_router._cadence_memory("driver-01", "2026-07-29", "mid")
     assert mem.proactive_count == 3, (
         f"3 card phải = 3 suất, không phải {mem.proactive_count} (đếm event = double-count)")
@@ -306,12 +316,19 @@ def test_shift_budget_exhausted_silences_ui(tmp_path, monkeypatch):
     Đây là nửa UI của cùng luật mà sim dùng — memory dựng từ event log thay vì RAM, nhưng
     gọi cùng `cadence.evaluate`. Không có test này thì "một luật" chỉ đúng ở sim."""
     _patch(tmp_path, monkeypatch)
-    for i in range(6):
+    # 6 topic THẬT khác nhau (xem ghi chú UPDATE-128 ở test trên). KHÔNG dùng `bonus` trong vòng
+    # lặp: lượt GET cuối hỏi `topic=bonus` và phải im vì **ngân sách ca** cạn — nếu `bonus` cũng
+    # nằm trong vòng thì `topic_cooldown` bắn trước và test đo sai cơ chế.
+    # HỢP NHẤT PR #4: bản của tôi dùng 6 topic PHÂN BIỆT (`positioning`/`accept_lift`/…) — nhưng
+    # bề mặt POST hẹp lại chỉ còn topic client + khuyên mềm, và đó là ĐÚNG: kênh SIM không có việc
+    # gì trên HTTP API. Lấy bản của Khánh (xoay 3 topic client). Ý định test không đổi — ngân sách
+    # đếm theo QUYẾT ĐỊNH, và 6 lần nói phải cạn suất; `topic_cooldown` không xen vào vì đây là
+    # POST (nhịp chỉ gác đường GET).
+    for i, topic in enumerate(("brief", "nudge", "recap") * 2):
         # `expanded` → event `displayed`, tức advisor đã hiện thẻ cho tài xế xem
         assert client.post("/api/v1/advice/action", json={
             **BODY, "advice_id": f"s1-driver-01-2026-07-29-{600 + i}", "action": "expanded",
-            "at_min": 600 + i,
-            "topic": ("brief", "nudge", "recap")[i % 3]}).status_code == 200
+            "at_min": 600 + i, "topic": topic}).status_code == 200
     r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
                    "&now_min=700&topic=brief").json()
     assert r["items"] == []

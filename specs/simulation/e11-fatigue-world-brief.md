@@ -7,6 +7,25 @@ cạn và Cường gọi tên.
 File này gom mọi điều đã học để workflow thiết kế spec (kiểu E10: N thiết kế độc lập +
 phản biện rò-rỉ + tổng hợp) không phải khai quật lại.
 
+> ## ⚠ CẬP NHẬT 2026-08-03 — kênh của E11 nay là KHUYÊN MỀM, tức KHÔNG ĐO ĐƯỢC như E11 giả định
+>
+> Quyết định Cường 2026-08-03 (`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`) xếp
+> **`rest_nudge`** — đúng cái kênh E11 sinh ra để đo — vào **`SOFT_TOPICS`**: không mẫu số
+> adherence, không `followed`, không claim tiền.
+>
+> **Đây là một mâu thuẫn thật với thiết kế E11, phải nói thẳng chứ không lấp:** E11 đo *"gợi ý nghỉ
+> đáng bao nhiêu theo từng mức β"* (bảng V1 "bảo toàn thu nhập"). Nếu kênh không được đo mức nghe
+> lời và không được claim tiền thì **V1 mất đường đo**, và phần còn dùng được của E11 là **V2**
+> (chỉ tiêu sức khoẻ tầng 5, cột riêng, không quy tiền) + **V4** (nền tảng/pháp lý).
+>
+> ⇒ Nếu E11 được gọi tên lại thì phải **thiết kế lại quanh V2**, không phải nối tiếp bản này. Và nó
+> phụ thuộc kết quả `D-M3-04`: nếu `D-M3-04` REVERT (nhánh prereg dự đoán trước, vì world β=0) thì
+> **cả kênh HOÃN nghỉ cũng thành khuyên mềm**, và lý do tồn tại của E11 yếu đi rõ — lúc đó câu hỏi
+> đúng không còn là *"nghỉ đáng bao nhiêu tiền"* mà là *"gợi ý nghỉ thế nào cho tài xế thấy được
+> tôn trọng"*, một câu hỏi UX, không phải câu hỏi sim.
+>
+> Trạng thái không đổi: **THỬ NGHIỆM, KHÔNG ƯU TIÊN.** `V-20` vẫn chờ Cường chốt văn bản phán quyết.
+
 ## Câu hỏi trung tâm
 
 > **Gợi ý nghỉ khi tài xế làm quá sức có giá trị bao nhiêu — theo từng mức giả định về

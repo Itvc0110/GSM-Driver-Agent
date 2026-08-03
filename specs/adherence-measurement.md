@@ -3,7 +3,9 @@
 Ngày: 2026-07-27 · Trạng thái: spec v0 — **một phần DONE-CODE** (Cycle W UPDATE-091; `D-M3-01` +
 `D-M3-10` UPDATE-102).
 🔴 **Đọc ĐÍNH CHÍNH 2026-07-30 ngay dưới §Nguyên tắc TRƯỚC khi dùng file này** — nó đảo một kết luận
-của spec (*"thiếu hiển thị"* → **thiếu khả năng đối chiếu**). Xem cả đính chính 2026-07-29 — trả lời câu hỏi Cường *"how are we tracking if the driver follow
+của spec (*"thiếu hiển thị"* → **thiếu khả năng đối chiếu**). Và đọc **BỔ SUNG 2026-08-03** (ngay
+trước §Đường 1): có một lớp lời khuyên — **khuyên mềm** — mà câu trả lời đúng là **không đo**, không
+phải đo cho đúng. Xem cả đính chính 2026-07-29 — trả lời câu hỏi Cường *"how are we tracking if the driver follow
 instructions, are there multiple ways done in same time?"*. Implement từng phần đã/sẽ theo cycle
 riêng; file này là bản đồ chung.
 
@@ -67,6 +69,48 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
 > 2. có tồn tại một **ground truth ĐỘC LẬP** để pin nó vào không? (sim: coin. Sản phẩm: **chưa có**)
 > 3. cổng nghiệm thu có **chứng minh được là ĐỎ ĐƯỢC** không? (test tautology của `F-1` sống 39
 >    artifact vì không ai đòi điều này)
+
+> ## 🚫 BỔ SUNG 2026-08-03 — có một lớp lời khuyên KHÔNG ĐƯỢC ĐO chút nào
+>
+> Quyết định Cường 2026-08-03 (`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`): *"trong UI
+> cũng không nên có trace đồng ý làm theo hay không làm theo khi gợi ý — tương tự đối với thời tiết"*.
+>
+> Cả spec này và bốn đính chính trên đều mặc định **mọi** lời khuyên đều nên đo được, và vấn đề duy
+> nhất là đo cho đúng. Bổ sung này nói: với **KHUYÊN MỀM** (thời tiết · `rest_nudge` gợi ý nghỉ ·
+> giao thông), câu trả lời đúng là **không đo**, và đó không phải nợ kỹ thuật.
+>
+> **Lý do:** đo *mức nghe lời* của lời khuyên sức khoẻ chính là biến sức khoẻ thành chỉ tiêu để tối
+> ưu. Một khi `rest_adherence` tồn tại như một con số trong bảng, nó sẽ bị nhìn như thứ cần cải thiện
+> — và *"cải thiện tỷ lệ tài xế chịu nghỉ"* là tối ưu hoá **trên** sức khoẻ, trái
+> `advisor-objective-model-v2.md` §1.2b. Đây là **tầng thứ ba** của cùng tỷ giá mà §1.2b đã bịt ở
+> tầng objective (`C2` huỷ) và tầng world (không mô hình hoá hậu quả mệt) — xem §1.2c mới của spec đó.
+>
+> | | Khuyên mềm |
+> | --- | --- |
+> | `decision_adherence` / `event_adherence` | 🚫 **KHÔNG TỒN TẠI** — topic mềm **vắng khoá** khỏi `adherence_view` |
+> | `followed` | 🚫 **422 tại boundary** (`POST /advice/action`) |
+> | `dismissed` | ✅ **CÓ** — nhưng chỉ mang nghĩa *"đừng nhắc nữa trong pha này"* (nhịp nói ĐA-04), **không** nghĩa *"tài xế không đồng ý"* |
+> | Nút UI | **Ẩn** + *Vì sao*. **Không** có "Làm theo" (`cards.js` chế độ `soft`) |
+>
+> ⚠ **Đây là chỗ dễ đọc sai nhất của bổ sung này:** *vắng khoá* ≠ `None`. Đính chính (a)/(d) ở trên
+> dạy rằng mẫu số 0 ⇒ `None` là **tín hiệu thước hỏng** — nếu khuyên mềm cũng trả `None` thì nó lẫn
+> vào đúng tín hiệu báo lỗi, và người sau sẽ đi "sửa" một ranh giới đang chạy đúng. Nên topic mềm
+> phải **không xuất hiện** trong view.
+>
+> **Đã thi hành bằng máy** (UPDATE-128, sever-restore 4/4 mũi bắn): registry
+> `src/gsm_core/lifecycle/advice_topics.py` · lọc ở **CẢ HAI** vòng của `adherence_view` (lọc một
+> vòng để hở vòng kia là đúng họ lỗi (c)#1) · cổng **fail-closed** `tests/test_advice_topic_registry.py`
+> — topic chưa phân loại ⇒ ĐỎ, không im lặng rơi vào bảng đo.
+>
+> ⚠ **`rest_window` KHÔNG nằm trong nhóm này (hiện tại).** Nó là HOÃN nghỉ = đổi *thời điểm* = `C2′`,
+> một kênh kinh tế. Cường chọn *"thử `D-M3-04` trước, nếu có ý nghĩa thì giữ, không thì revert và
+> khuyên mềm"*; luật quyết định đã đăng ký **trước khi đo** ở
+> `specs/simulation/d-m3-04-multiday-prereg-locked.json` → `luat_quyet_dinh`. Cái thuộc nhóm mềm là
+> `rest_nudge` (GỢI Ý nghỉ khi quá sức) — một kênh **khác**, chưa implement.
+>
+> **Hệ quả cho đính chính (c)#2** (*"không gian `topic` rời nhau"*): taxonomy nay có **hai lớp**, và
+> việc thống nhất `topic` giữa sim và sản phẩm phải tôn trọng lớp — không được gộp một topic mềm vào
+> một topic được đo để "cho join được".
 
 ## Đường 1 — EXPLICIT (ý định, UI) — ✅ ĐÃ CÓ từ UPDATE-067
 

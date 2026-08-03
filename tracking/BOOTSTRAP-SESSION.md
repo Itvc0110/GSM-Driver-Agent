@@ -50,7 +50,12 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 **Ranh giới CỐ ĐỊNH** (đọc `CLAUDE.md` §5, đây chỉ là ba cái bị vi phạm nhiều nhất):
 - Agent/LLM **không tự tính** số tài chính/xác suất — mọi số đến từ rule/analytics kiểm chứng được.
 - **Sức khoẻ tài xế KHÔNG phải biến để tối ưu.** Đã có phán quyết: **không mô hình hoá hậu quả của
-  mệt**, huỷ vĩnh viễn (`specs/advisor-objective-model-v2.md` §1.2b).
+  mệt**, huỷ vĩnh viễn (`specs/advisor-objective-model-v2.md` §1.2b). ⚠ **Bổ sung 2026-08-03 —
+  TẦNG THỨ BA**: cũng **không đo mức NGHE LỜI** của khuyên sức khoẻ. §1.2b bịt tỷ giá ở tầng
+  objective và tầng world nhưng không nói gì về việc *sản phẩm đếm mức nghe lời*, nên tỷ giá mọc
+  lại được ở UI — im lặng. Nay có cổng: `SOFT_TOPICS` (thời tiết · `rest_nudge` · giao thông) vắng
+  khoá khỏi `adherence_view`, `followed` bị 422. Xem §1.2c +
+  `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`.
 - Mock data **phải gắn nhãn mock**. Mọi số trong repo là MOCK; **GSM sẽ không cấp thêm dữ liệu**.
 
 ---
@@ -59,23 +64,33 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ```
 local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
-suite       = 1013 passed / 4 skipped / 0 failed  (2026-08-03: 935 + 78 UI)
-              uv run pytest -q                  -> xem số trên
-              uv run pytest -q ui/backend/tests -> 78
-UPDATE       = 114 file, mới nhất UPDATE-121 (104 UIUX + 105 codex review là của remote)
-PENDING      = 23 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
+suite       = 1076 passed / 4 skipped / 0 failed  (đo 2026-08-03: 961 + 115 UI)
+              uv run pytest -q                  -> 961 / 4 skip  (20′07″)
+              uv run pytest -q ui/backend/tests -> 115 / 0 skip
+              ⚠ ĐỪNG TIN hai số này nếu vừa có ai thêm test — ĐO LẠI. Trong UPDATE-128 con số UI
+                stale BA LẦN (101→108→111→115) vì viết bằng tay rồi không đếm lại
+              ⚠ chỉ khởi động suite khi ĐÃ NGỪNG sửa file nó thu — pytest import lúc
+                collection, sửa sau đó ⇒ kết quả đo CODE CŨ (đã trả giá 15′ máy 2026-08-03)
+UPDATE       = 116 file, mới nhất UPDATE-128 (104 UIUX + 105 codex review + 120 routing là của remote/Khánh)
+              ⚠ 116 ≠ 122 vì dãy số THIẾU 6 số (013–018). Đừng suy số file từ số cao nhất —
+                soi độc lập 2026-08-03 bắt được dòng này ghi 115 (đếm bằng ký ức, không bằng `ls`)
+PENDING      = 24 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-26 mới 2026-08-03):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
               V-20 (PHAN-QUYET đảo C2 — Cường đã hạ xuống THỬ NGHIỆM, chờ chốt văn bản)
               V-21 (L4-03 khe advisor nói MIỄN PHÍ — 3 lựa chọn, (a)/(b) đổi CHÍNH SÁCH)
               V-22 (xoá 300 dòng `trajectory.py` hay giữ? — module chết, bảng màu xung đột)
               V-23 (hai bản PDF Week 2 Report — brief 6 trang + kỹ thuật 30 trang)
+              V-24 (routing 3 tầng của KHÁNH — OSRM→GraphHopper→đường thẳng trung thực)
               V-25 (số tầm pin trên UI ĐỔI: 77 → 43,8 km; xe hơi hiện "chưa có cơ sở")
+              V-26 (ranh giới KHUYÊN MỀM KHÔNG ĐO + luật quyết định của D-M3-04 —
+                    tôi DỊCH câu nói của Cường thành tiêu chí máy chấm được; dịch lệch
+                    thì phải sửa TRƯỚC Cycle B, vì sửa sau khi thấy số là vi phạm prereg)
               ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
 ```
 
 🔴 **BẮT BUỘC: luôn chạy CẢ HAI lệnh khi nói "suite xanh".** `pyproject.toml` có
-`testpaths = ["tests"]` nên `pytest -q` từ root **BỎ 56 test ở `ui/backend/tests/`** — tức bỏ đúng
+`testpaths = ["tests"]` nên `pytest -q` từ root **BỎ 115 test ở `ui/backend/tests/`** — tức bỏ đúng
 test của **đường sản phẩm** (`D-M3-09`).
 
 ### Cấu hình đang chạy (đọc kỹ, dễ hiểu sai)
@@ -89,6 +104,16 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-128** — hai việc. **(a) Khoá ngoài: kiểm bằng GỌI THẬT cả 9 khoá/endpoint**, và cách đó
+  tìm ra ba lỗi mà đọc code không thấy: `OSRM_BASE_URL` **không ai đọc** ở runtime (chỉ script ma
+  trận offline đọc) dù `.env`/`.env.example` mô tả nó là tầng 1 · mirror OSRM thứ hai **sai tên
+  miền** (`router.project.osrm.org` — TLS hostname mismatch ⇒ **chưa từng chạy được**) · và
+  `GRAPHHOPPER_API_KEY` **thiếu hẳn** ở `.env` của Cường (gitignore nên bản Khánh sửa không sang
+  được) ⇒ tầng 2 chết lặng. Đã sửa cả ba + `GOOGLE_MAPS_API_KEY` gắn nhãn CHẾT (`REQUEST_DENIED`,
+  không code nào đọc). ⚠ Điều dễ hiểu sai: hai mirror OSRM **cùng một IP** ⇒ đổi mirror **không**
+  chữa được rate limit. **(b) Ranh giới KHUYÊN MỀM KHÔNG ĐO** — tầng thứ ba của tỷ giá sức-khoẻ↔KPI
+  (xem §1 ở trên). `V-26` chờ Cường. Bài học lặp lại lần thứ 5 của cùng một họ: **cấu hình/cơ chế
+  được tài liệu quảng cáo mà không có đường chạy** — và lần này chỉ **gọi thật** mới thấy.
 - **UPDATE-120 (Khánh)** — routing **3 tầng** OSRM → GraphHopper → ước lượng đường thẳng **trung
   thực**. Bỏ hẳn fallback từng vẽ một đường cong sin rồi gắn nhãn sai `"hanoi_street_graph_engine"`;
   thêm field `route_is_real_road` để UI phân biệt tuyến thật với ước lượng thay vì so chuỗi
@@ -142,7 +167,7 @@ test của **đường sản phẩm** (`D-M3-09`).
 | 1 | ~~**`L1-04`**~~ | — | ✅ **XONG (UPDATE-107)** — n=100 BÁC giả thuyết "28% mất hẳn": Δ=0 tuyệt đối; đó là gap LOGGING đã đóng bởi `D-M3-01`. Fix giữ (đúng `R-01`). ⚠ Kèm flaw #6 SUITE bắt: event MA sau khi áp — đã sửa (`mark_outcome_logged`) |
 | 2 | ~~**Cổng THỐNG KÊ**~~ | — | ✅ **XONG (UPDATE-107)** — z Poisson-binomial `\|z\| > 4` NỐI vào `run_ladder` thật; null đọc từ **nominal của run** (không hardcode); không treo oan arm tuân-thủ-tuyệt-đối |
 | 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG — nhưng ĐỌC SỐ CỦA UPDATE-113, KHÔNG phải 110.** ⚠ Thước adherence của UPDATE-110 SAI (trộn *tài xế đồng ý* với *hệ thống thực thi được*); sửa thước ⇒ **mọi số đo lại và giảm**: `B_oracle` **+3.939đ** [2.854, 5.033] · `hist` **+3.401đ** · `real` **+3.126đ** · `wait` +174đ **SỤP**. Lớp đổi **CÒN-MỘT-PHẦN → KQ-GIỮ** (CI của Δ vs oracle chứa 0). **+6.016đ của UPDATE-087 KHÔNG tái lập được** (CI mới không chứa nó) ⇒ `D-E10-06`. Phát biểu YẾU, bắt buộc kèm caveat L1+L2+`D-E10-07` |
-| 4 | **`D-M3-04`** multiday A/B cho `rest_window` | ~4–6 giờ | 🟢 **READY** — 3 câu hỏi thiết kế Cường đã duyệt (TB ngày 2..N bootstrap theo SEED · days=3 n=100 · prereg mới cho dải T thấp); acceptance đã sửa theo 5 lỗ UPDATE-114. ⚠ Trong cycle phải **nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`** — cơ chế có, đường chạy chưa (đúng họ lỗi (a), đừng lặp) |
+| 4 | **`D-M3-04`** multiday A/B cho `rest_window` — nay là **PHÉP THỬ CÓ ĐIỀU KIỆN** | ~4–6 giờ | 🟢 **CƯỜNG BẬT ĐÈN 2026-08-03**: *"thử D-M3-04 trước, nếu có ý nghĩa thì giữ, không thì revert và khuyên mềm"*. Luật quyết định đã đăng ký **TRƯỚC khi đo** (prereg → `luat_quyet_dinh`): GIỮ ⟺ Δ dương SIG + tầng 5 không suy giảm + 0 STOP; REVERT ⟺ Δ ≤ 0 / ns / STOP bắn. ⚠ **REVERT là nhánh prereg DỰ ĐOÁN TRƯỚC** (world β=0) ⇒ nếu nó xảy ra thì phép đo THÀNH CÔNG, không phải kênh thất bại. Là **Cycle B riêng** (đổi hành vi sim + thêm đường đo ⇒ `CLAUDE.md` §4b đòi plan riêng). Chi tiết cũ: 3 câu hỏi thiết kế Cường đã duyệt (TB ngày 2..N bootstrap theo SEED · days=3 n=100 · prereg mới cho dải T thấp); acceptance đã sửa theo 5 lỗ UPDATE-114. ⚠ Trong cycle phải **nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`** — cơ chế có, đường chạy chưa (đúng họ lỗi (a), đừng lặp) |
 | 5 | Cycle **đường SẢN PHẨM** — 13 finding sev CAO | phần lớn đã xong | ✅ **6/6 finding NẶNG đã xử lý** (kiểm bằng code 2026-08-01): `L3-03` tie-break `observed_at` ✓ · `L4-01` `displayed` vào máy trạng thái ✓ · `L4-04` `CLIENT_TOPICS`+`DEFAULT_TOPIC="brief"` ✓ · `L4-07` card im lặng dùng cờ `actionable` ✓ · `L4-09` `shift_start_min` thành Query param ✓ · `L4-03` = **`V-21` chờ Cường** (3 lựa chọn, 2 trong đó đổi CHÍNH SÁCH). Còn: `cards.js` `KIND_HOURS` vẫn ánh xạ 3 mốc giờ — nhưng là **PLACEHOLDER có nhãn**, chờ `ĐA-06 AdviceEnvelopeV2` mang chủ đề thật |
 | 6 | 🔴 **`D-M3-18`** — 40/150 tài xế là XE HƠI, repo chỉ có tham số tiêu hao XE MÁY | ~2–4 giờ | **TODO sev CAO** — backend+web đã gắn cờ, **app Flutter chưa đọc cờ** nên tài xế xe hơi trên app vẫn thấy số vô căn cứ (phần Khánh). Fix thật: thêm **field đội pin** vào view + tham số tiêu hao cho ô tô |
 | 7 | **`E9`** chọn lọc TRONG kênh | ~1 ngày | chờ |
@@ -181,7 +206,7 @@ cho luật positioning (sẽ đo ra ≈0 — xem §5 bẫy #7).
 
 ---
 
-## §5. 🔴 MƯỜI MỘT BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
+## §5. 🔴 MƯỜI HAI BẪY ĐÃ SẬP THẬT — đọc trước khi tin bất kỳ con số nào
 
 Đây là phần giá trị nhất của file này. Mỗi bẫy dưới đây **đã làm một con số bị báo sai cho Cường**.
 
@@ -237,6 +262,23 @@ cohort"* — sắp ghi thành lỗi thứ tư. Thực tế: `_mean` chỉ gộp 
 khỏi dict**, còn `touched_actors(rb)` trả đúng **90/90**. ⇒ Với `.get()` trả `None`, phân biệt
 *"giá trị là None"* với *"khoá không tồn tại"* trước khi kết luận. (Phát hiện sai vẫn dẫn tới một
 fix thật: mẫu số **phải** hiện trong artifact — `OK` trên 90/90 và trên 9/90 nghĩa khác hẳn.)
+
+**12. Cấu hình có thể CHẾT theo ba cách khác nhau, và `grep` chỉ thấy một.** Ngày 2026-08-03 Cường
+hỏi *"có cần cập nhật `OSRM_BASE_URL` ở end của tôi không"*. Câu trả lời trung thực hoá ra là *"đổi
+cũng không ảnh hưởng gì"* — vì **không code runtime nào đọc biến đó** (chỉ script ma trận offline
+đọc), trong khi `.env` và `.env.example` mô tả nó là **tầng 1 của routing**. Và **gọi thật** còn lộ
+thêm hai lỗi nữa mà đọc code không thấy:
+
+| Cách chết | Phát hiện bằng | Lỗi thật |
+| --- | --- | --- |
+| Không ai đọc biến | `grep` tên biến trong `src`/`ui` | `OSRM_BASE_URL` |
+| Giá trị **trông đúng** mà host chết | **gọi HTTP thật** | mirror 2 viết `router.project.osrm.org` (dấu **chấm**) — DNS phân giải được nên trông thật, nhưng TLS trả `Hostname mismatch` ⇒ **chưa từng chạy** |
+| Biến **vắng** ⇒ nhánh return `None` lặng lẽ | gọi thật **từng tầng** | `.env` thiếu `GRAPHHOPPER_API_KEY` (gitignore ⇒ bản Khánh sửa không sang máy Cường) ⇒ tầng 2 không tồn tại, app tụt thẳng xuống tầng 3 |
+
+⇒ **Suite không thể bắt loại này**: mọi test routing đều `monkeypatch` `urlopen`, nên tên miền không
+bao giờ bị phân giải thật. Và `test_config_flags_wired` chỉ quét `configs/pilot_dongda.yaml`, **không
+quét `.env`**. ⇒ **Với dịch vụ ngoài, hãy GỌI THẬT một lần rồi mới nói nó hoạt động** — và với biến
+gitignore, **đừng cho rằng đồng đội sửa `.env` là bạn cũng có.**
 
 **11. "Suite xanh + 5 cycle fix" KHÔNG có nghĩa luồng sản phẩm đã kín.** Sau 5 UPDATE liền và
 suite 1.000/0 đỏ, một **smoke end-to-end 10 phút** (gọi thật 4 endpoint qua `TestClient`) tìm ra

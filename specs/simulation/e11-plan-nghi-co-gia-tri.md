@@ -12,6 +12,22 @@ nghiệm — xem có thể khai thác nếu có ích không, do đã có phán q
 `tracking/PHAN-QUYET-2026-07-31-dao-c2-tang-world.md` ·
 `tracking/PHAN-QUYET-2026-07-29-diem3-met-nghi.md` · `specs/advisor-objective-model-v2.md` §1.2b
 
+> **⚠ ĐỌC TRƯỚC — cập nhật 2026-08-03 làm mất một trụ của plan này.** Quyết định Cường
+> (`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`) xếp kênh **`rest_nudge`** — đúng kênh
+> Phase B sinh ra để đo — vào **`SOFT_TOPICS`**: 0 mẫu số adherence, 0 `followed`, 0 claim tiền.
+>
+> Cụ thể trong plan này: mục **V1 "bảo toàn thu nhập"** (bảng §GIÁ TRỊ) **mất đường đo**; và Phase B
+> §"Đo" viết *"coin adherence riêng thấp hơn"* cho `rest_nudge` — **điều đó nay bị cấm**, vì một
+> coin adherence riêng cho kênh nghỉ chính là thước nghe-lời của lời khuyên sức khoẻ.
+>
+> Phần còn **nguyên giá trị**: **V2** (chỉ tiêu sức khoẻ tầng 5, cột riêng, không quy tiền — đã có
+> thật từ UPDATE-116), **V3** (niềm tin — vẫn là ASSUMPTION), **V4** (nền tảng/pháp lý), và toàn bộ
+> **Phase A** (đã xong). Phát hiện kỹ thuật về `online_min` **gộp cả thời gian nghỉ** (`world.py:756`)
+> cũng còn nguyên giá trị — nó là bẫy thật cho bất kỳ thiết kế liều-mệt nào.
+>
+> ⇒ Plan này giữ ở dạng **LƯU TRỮ**. Muốn hồi sinh thì phải **thiết kế lại quanh V2**, không nối
+> tiếp bản này. Xem thêm khung cập nhật ở `e11-fatigue-world-brief.md`.
+
 ---
 
 ## Context — và một xung đột phải nói thẳng
