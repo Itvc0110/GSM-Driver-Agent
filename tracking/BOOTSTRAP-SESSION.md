@@ -59,17 +59,18 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ```
 local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
-suite       = 1000 passed / 4 skipped / 0 failed  (2026-08-01: 935 + 65 UI)
+suite       = 1013 passed / 4 skipped / 0 failed  (2026-08-03: 935 + 78 UI)
               uv run pytest -q                  -> xem số trên
-              uv run pytest -q ui/backend/tests -> 65
-UPDATE       = 113 file, mới nhất UPDATE-119 (104 UIUX + 105 codex review là của remote)
-PENDING      = 21 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
+              uv run pytest -q ui/backend/tests -> 78
+UPDATE       = 114 file, mới nhất UPDATE-121 (104 UIUX + 105 codex review là của remote)
+PENDING      = 23 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
               V-20 (PHAN-QUYET đảo C2 — Cường đã hạ xuống THỬ NGHIỆM, chờ chốt văn bản)
               V-21 (L4-03 khe advisor nói MIỄN PHÍ — 3 lựa chọn, (a)/(b) đổi CHÍNH SÁCH)
               V-22 (xoá 300 dòng `trajectory.py` hay giữ? — module chết, bảng màu xung đột)
-              V-23 (bản PDF Week 2 Report — xem trước khi gửi mentor VÀ trước khi commit)
+              V-23 (hai bản PDF Week 2 Report — brief 6 trang + kỹ thuật 30 trang)
+              V-25 (số tầm pin trên UI ĐỔI: 77 → 43,8 km; xe hơi hiện "chưa có cơ sở")
               ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
 ```
 
@@ -88,6 +89,15 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-120 (Khánh)** — routing **3 tầng** OSRM → GraphHopper → ước lượng đường thẳng **trung
+  thực**. Bỏ hẳn fallback từng vẽ một đường cong sin rồi gắn nhãn sai `"hanoi_street_graph_engine"`;
+  thêm field `route_is_real_road` để UI phân biệt tuyến thật với ước lượng thay vì so chuỗi
+  `source`. Cùng họ lỗi mà repo đã trả giá nhiều lần: **nhãn nói một đằng, dữ liệu một nẻo**.
+- **UPDATE-121 `D-M3-17`** — tầm pin trên UI nay khớp engine (77 → **43,8 km** ở SOC 70%), và đây
+  là **cổng UI↔engine đầu tiên** của repo. Bài học kiến trúc test: **cổng phải đặt ở ĐƯỜNG NỐI
+  giữa hai thành phần**, không phải bên trong mỗi thành phần — 1.000 test cũ không thấy lệch 1,76×
+  vì mỗi bên đúng theo tiêu chuẩn của riêng nó. Mở `D-M3-18` sev CAO: **40/150 tài xế là xe hơi**
+  mà repo không có tham số tiêu hao cho xe hơi.
 - **UPDATE-119** — **Week 2 Report gửi mentor** (`docs/reports/week2/`, PDF 24 trang,
   `WAITING-VERDICT` V-23). Trước khi viết: 24 subagent đối chiếu toàn dự án. Bắt được doc của
   Khánh trích `+6.016đ` — con số **không tái lập được** sau khi sửa thước (UPDATE-113). Và khi chụp
@@ -128,13 +138,14 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 | # | Việc | Chi phí | Trạng thái |
 | --- | --- | --- | --- |
-| **0** | 🔴 **`D-M3-17` — VIỆC ĐẦU TIÊN CỦA PHIÊN SAU** (Cường chỉ đạo 2026-08-01: *"lưu lại flaw để sửa lại ngay sau phiên này"*): UI tự tính phạm vi pin `soc*1.1` cho MỌI tài xế trong khi engine cho **62,5 km** (swap, `soc/1.6`) và **117,6 km** (charge, `soc/0.85`) ⇒ tài xế **swap thấy số thổi 1,76×**; endpoint legacy `soc*3.2` = **5,1×**. Một đại lượng **4 công thức** | ~1–2 giờ | 🟢 **READY** — fix: UI đọc `behavior.soc_range_km` (nguồn công thức duy nhất sau `D-M3-15`) + mang `fleet` vào view; thiếu `fleet` là **thiếu field**, KHÔNG phải lý do bịa hệ số. Cần **visual review** (đổi số hiển thị) + cân nhắc xoá endpoint legacy. Chi tiết: `tracking/DEFERRED.md` `D-M3-17`, bẫy #11 ở §5 |
+| **0** | ~~**`D-M3-17`**~~ | — | ✅ **XONG (UPDATE-121)** — UI đọc hệ số từ `configs/pilot_dongda.yaml`, hiển thị **dải + cơ sở**, chọn mức **THẬN TRỌNG** (77,0 → **43,8 km** ở SOC 70%). Kèm **cổng UI↔engine đầu tiên** của repo (12 test, có sever-restore). Mở `D-M3-18` sev CAO: **40/150 tài xế là XE HƠI** mà repo không có tham số tiêu hao cho xe hơi ⇒ cờ `applicable=false`, UI hiện *"— chưa có cơ sở"* | chờ `V-25` |
 | 1 | ~~**`L1-04`**~~ | — | ✅ **XONG (UPDATE-107)** — n=100 BÁC giả thuyết "28% mất hẳn": Δ=0 tuyệt đối; đó là gap LOGGING đã đóng bởi `D-M3-01`. Fix giữ (đúng `R-01`). ⚠ Kèm flaw #6 SUITE bắt: event MA sau khi áp — đã sửa (`mark_outcome_logged`) |
 | 2 | ~~**Cổng THỐNG KÊ**~~ | — | ✅ **XONG (UPDATE-107)** — z Poisson-binomial `\|z\| > 4` NỐI vào `run_ladder` thật; null đọc từ **nominal của run** (không hardcode); không treo oan arm tuân-thủ-tuyệt-đối |
-| 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG (UPDATE-110)** — **mất λ thì +6.016đ còn 57–65%**; trigger chờ-lâu SỤP; không thấy herding; 9 lỗi script đo bị vòng soi bắt đã sửa. Chờ Cường: visual gate (artifact d8c58414) + phán quyết |
+| 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG — nhưng ĐỌC SỐ CỦA UPDATE-113, KHÔNG phải 110.** ⚠ Thước adherence của UPDATE-110 SAI (trộn *tài xế đồng ý* với *hệ thống thực thi được*); sửa thước ⇒ **mọi số đo lại và giảm**: `B_oracle` **+3.939đ** [2.854, 5.033] · `hist` **+3.401đ** · `real` **+3.126đ** · `wait` +174đ **SỤP**. Lớp đổi **CÒN-MỘT-PHẦN → KQ-GIỮ** (CI của Δ vs oracle chứa 0). **+6.016đ của UPDATE-087 KHÔNG tái lập được** (CI mới không chứa nó) ⇒ `D-E10-06`. Phát biểu YẾU, bắt buộc kèm caveat L1+L2+`D-E10-07` |
 | 4 | **`D-M3-04`** multiday A/B cho `rest_window` | ~4–6 giờ | 🟢 **READY** — 3 câu hỏi thiết kế Cường đã duyệt (TB ngày 2..N bootstrap theo SEED · days=3 n=100 · prereg mới cho dải T thấp); acceptance đã sửa theo 5 lỗ UPDATE-114. ⚠ Trong cycle phải **nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`** — cơ chế có, đường chạy chưa (đúng họ lỗi (a), đừng lặp) |
-| 5 | Cycle **đường SẢN PHẨM** — 13 finding sev CAO | ~1–2 ngày | chưa phản biện |
-| 6 | **`E9`** chọn lọc TRONG kênh | ~1 ngày | chờ |
+| 5 | Cycle **đường SẢN PHẨM** — 13 finding sev CAO | phần lớn đã xong | ✅ **6/6 finding NẶNG đã xử lý** (kiểm bằng code 2026-08-01): `L3-03` tie-break `observed_at` ✓ · `L4-01` `displayed` vào máy trạng thái ✓ · `L4-04` `CLIENT_TOPICS`+`DEFAULT_TOPIC="brief"` ✓ · `L4-07` card im lặng dùng cờ `actionable` ✓ · `L4-09` `shift_start_min` thành Query param ✓ · `L4-03` = **`V-21` chờ Cường** (3 lựa chọn, 2 trong đó đổi CHÍNH SÁCH). Còn: `cards.js` `KIND_HOURS` vẫn ánh xạ 3 mốc giờ — nhưng là **PLACEHOLDER có nhãn**, chờ `ĐA-06 AdviceEnvelopeV2` mang chủ đề thật |
+| 6 | 🔴 **`D-M3-18`** — 40/150 tài xế là XE HƠI, repo chỉ có tham số tiêu hao XE MÁY | ~2–4 giờ | **TODO sev CAO** — backend+web đã gắn cờ, **app Flutter chưa đọc cờ** nên tài xế xe hơi trên app vẫn thấy số vô căn cứ (phần Khánh). Fix thật: thêm **field đội pin** vào view + tham số tiêu hao cho ô tô |
+| 7 | **`E9`** chọn lọc TRONG kênh | ~1 ngày | chờ |
 
 **Vì sao `E10` đứng trên mọi thí nghiệm kênh khác** — và đây là điều một agent mới dễ bỏ sót:
 

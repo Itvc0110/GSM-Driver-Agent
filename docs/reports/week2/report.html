@@ -1250,11 +1250,36 @@ plan riêng cho việc này và <strong>chưa</strong> thực hiện (nhánh th�
 <p>Sổ nợ có <strong>90 mục, 21 đã đóng, 69 còn mở</strong>, mỗi mục có mã, mức nghiêm trọng, bằng chứng và điều
 kiện mở lại. <strong>20 mục</strong> đang chờ người review. Nhóm trình bày đây là <strong>kỷ luật</strong>, không phải điểm
 yếu: một flaw có mã và có điều kiện mở lại thì không biến mất trong im lặng.</p>
-<p><strong>Ví dụ một flaw tìm được vào đúng ngày phát hành báo cáo:</strong> UI tự tính tầm pin bằng công thức
-riêng (<code>soc × 1,1</code>) cho <strong>mọi</strong> tài xế, trong khi engine cho 62,5 km (đội đổi pin) và 117,6 km
-(đội sạc) — lệch nhau gần 2×. Tài xế đội đổi pin đang thấy số <strong>thổi 1,76 lần</strong>. Suite 1.000 test
-không bắt được, vì <strong>không có test nào so UI với engine</strong>. Đã ghi mã <code>D-M3-17</code>, xếp việc đầu tiên
-của tuần 3.</p>
+<p><strong>Ví dụ một flaw tìm được vào đúng ngày phát hành báo cáo — và đã sửa ngay:</strong> UI tự tính tầm pin
+bằng công thức riêng (<code>soc × 1,1</code>) cho <strong>mọi</strong> tài xế, trong khi engine cho 62,5 km (đội đổi pin) và
+117,6 km (đội sạc). Tài xế đội đổi pin đang thấy số <strong>thổi 1,76 lần</strong>; một endpoint cũ còn thổi
+<strong>5,1 lần</strong>. Suite 1.000 test không bắt được, vì <strong>không có test nào so UI với engine</strong> — lỗ hổng
+thật nằm ở đó, không phải ở hệ số.</p>
+<p>Đã sửa (<code>D-M3-17</code>): cả hai chỗ nay đọc hệ số từ <strong>cùng file cấu hình</strong> mà engine dùng, hiển thị
+<strong>dải</strong> kèm <strong>cơ sở</strong>, và chọn mức <strong>thận trọng</strong> vì hậu quả không đối xứng — báo tầm ngắn hơn thực
+tế chỉ gây bất tiện, báo dài hơn có thể làm tài xế hết pin giữa đường. Kèm <strong>cổng UI↔engine đầu
+tiên</strong> của repo (12 test).</p>
+<p>Khi sửa lại lộ ra một việc lớn hơn: catalog có <strong>40/150 tài xế xe hơi</strong>, mà hệ thống chỉ có tham số
+tiêu hao cho <strong>xe máy</strong>. Với họ, con số không có cơ sở — nên UI nay nói thẳng điều đó thay vì hiện
+một số sai loại xe:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Xe máy — có cơ sở" src="assets/ui-xe-pin-xemay.png"></td>
+<td><img alt="Xe hơi — chưa có cơ sở" src="assets/ui-xe-pin-xehoi.png"></td>
+</tr>
+<tr>
+<td><strong>Tài xế xe máy</strong> — hiện <strong>dải</strong> 36,2–68,2 km, chú thích nói rõ đây là đầu thấp (thận trọng)</td>
+<td><strong>Tài xế xe hơi</strong> — hiện <em>"— chưa có cơ sở"</em>, vì hệ thống chưa có tham số tiêu hao cho ô tô</td>
+</tr>
+</tbody>
+</table>
 <h3>12.6 Về hạ tầng CI</h3>
 <p>Có file GitHub Actions (<code>.github/workflows/ci.yml</code>, 61 dòng, 3 job) và nó <strong>đã nằm trên
 <code>origin/main</code></strong>, nhưng header của chính file tự khai <em>"CI DRAFT — CHƯA ACTIVE: repo hiện làm việc

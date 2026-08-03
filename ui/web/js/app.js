@@ -147,7 +147,33 @@ function renderIncome() {
 /* ================= XE & PIN ================= */
 function renderEv() {
   $("ev-soc").textContent = `${S.state.soc_percent}%`;
-  $("ev-range").textContent = `${S.state.vehicle_range_km} km`;
+  // D-M3-17/18: tầm pin nay là số THẬN TRỌNG suy từ hệ số của engine, và chỉ có cơ sở với đội
+  // XE MÁY. Với xe hơi backend trả `vehicle_range_km_applicable=false` — hiện một dấu gạch kèm
+  // lý do thay vì một con số sai loại xe. Nếu chỉ sửa backend mà không sửa chỗ này thì cờ trở
+  // thành cơ chế không có đường chạy, đúng mẫu lỗi đã trả giá ba lần trong repo.
+  const _ap = S.state.vehicle_range_km_applicable;
+  const _lo = S.state.vehicle_range_km_low, _hi = S.state.vehicle_range_km_high;
+  $("ev-range").textContent = (_ap === false)
+    ? "— chưa có cơ sở"
+    : (_lo != null && _hi != null ? `${_lo}–${_hi} km` : `${S.state.vehicle_range_km} km`);
+  $("ev-range").title = S.state.vehicle_range_km_basis || "";
+  // Chú thích PHẢI đi theo cơ sở thật, không phải một câu tĩnh. Bản cũ ghi cứng "giả định
+  // ~110 km/100%" trong HTML — đúng con số mà D-M3-17 vừa bỏ, nên nó thành lời giải thích SAI
+  // cho một con số ĐÚNG. Đây là mẫu "sửa một tầng, tầng khác không biết".
+  const _note = $("ev-range-note");
+  if (_note) {
+    _note.textContent = (_ap === false)
+      ? "Đội xe này chưa có tham số tiêu hao trong hệ thống nên không hiển thị số."
+      : `Dải suy từ mức tiêu hao của engine — hiển thị đầu THẤP (thận trọng). Không phải số thật.`;
+  }
+  // Nhãn loại xe theo ĐỘI thật của tài xế, không để một câu tĩnh nói "bike" cho tài xế xe hơi.
+  const _fleet = (S.catalog?.drivers || []).find((d) => d.driver_id === S.driverId)?.fleet || "";
+  const _ten = { "bike-sim": "VinFast (bike điện)", "bike-rto": "VinFast (bike điện · RTO)",
+                 "car-platform": "VinFast VF5 (ô tô)", "car-employee": "VinFast (ô tô · nhân viên)",
+                 "car-premium": "VinFast VF8 Luxury (ô tô)" };
+  $("ev-name").textContent = _ten[_fleet] || "Xe mô phỏng";
+  const _lbl = document.querySelector("#screen-ev .section-label, #screen-ev .card .note");
+  void _lbl;
   $("ev-plate").textContent = `Hồ sơ mô phỏng · ${S.driverId}`;
   $("station-rows").innerHTML = S.mapCtx.charging_stations.slice(0, 6).map((st) => `
     <div class="row-item"><div>🔋 <b>${st.name}</b><br>
