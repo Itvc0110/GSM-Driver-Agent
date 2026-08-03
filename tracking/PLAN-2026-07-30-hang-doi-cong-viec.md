@@ -243,7 +243,25 @@ Nặng nhất, tôi **đã tự kiểm bằng đọc code** (không phải claim
 | `L4-07` | Card IM LẶNG vẫn vẽ kèm nút "Làm theo" với `advice_id` do **client bịa** ⇒ một cú bấm tạo decision+followed cho quyết định advisor **chưa từng đưa ra** |
 | `L4-09` | Pha ca sản phẩm dùng hằng `SHIFT_START_MIN = 6*60` cho **mọi** tài xế — wall-clock quay lại đúng chỗ ĐA-04 tuyên bố đã bỏ |
 
-⚠ **Chưa cái nào qua phản biện đối kháng** (16/16 agent phản biện fail vì session limit, **hai lần**).
+✅ **CẬP NHẬT 2026-08-01 — kiểm bằng CODE, không bằng ký ức:**
+
+| Mã | Trạng thái thật hôm nay |
+| --- | --- |
+| `L3-03` | ✅ SỬA — `_ordered` sắp theo `(occurred_at, observed_at, event_id)`; `observed_at` là mốc server nhận nên phá được thế hoà ⇒ **ghi nhận được việc đổi ý** |
+| `L4-01` | ✅ SỬA — `displayed` vào máy trạng thái và vào mẫu số EVENT |
+| `L4-03` | ⏸ **`V-21` — CHỜ CƯỜNG.** Ba lựa chọn, hai trong đó **đổi CHÍNH SÁCH** (`min_gap` 20′→30′ hoặc bucket 30′→20′) nên agent không tự quyết |
+| `L4-04` | ✅ SỬA — `CLIENT_TOPICS = ("brief","nudge","recap")` + `DEFAULT_TOPIC = "brief"` |
+| `L4-07` | ✅ SỬA — `_render(..., actionable)`; card im lặng vẽ nút "Đã hiểu" và **không ghi event** |
+| `L4-09` | ✅ SỬA — `shift_start_min` thành Query param; `shift_phase` tính theo nó, `SHIFT_START_MIN` chỉ còn là DEFAULT |
+
+⚠ **Còn một chỗ ĐÃ KHAI, chưa đóng:** `ui/web/js/cards.js` vẫn ánh xạ `KIND_HOURS =
+{brief: 9h, nudge: 14h, recap: 21h30}`. Đây **không** phải wall-clock sống lại mà là
+**PLACEHOLDER có nhãn** — backend hôm nay chưa mang chủ đề thật cho từng item; `ĐA-06
+AdviceEnvelopeV2` đã duyệt nhưng chưa implement. Nó chỉ bảo đảm ba loại card không dùng chung một
+cooldown, **chưa** phân biệt "nhắc thưởng" với "nhắc nghỉ" trong cùng loại card.
+
+⚠ Vẫn đúng: **chưa cái nào qua phản biện đối kháng độc lập** (16/16 agent phản biện fail vì session
+limit, hai lần). Các fix trên do tôi tự kiểm — nên chúng là `DONE-CODE`, không phải `reviewed`.
 Danh sách đầy đủ: `tracking/SOI-2026-07-30-mau-so-adherence.md` §4.
 
 **Chi phí:** ~1–2 ngày. **Chặn:** mọi kết luận từ sim áp cho sản phẩm.

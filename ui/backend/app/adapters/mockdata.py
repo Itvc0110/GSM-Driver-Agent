@@ -37,6 +37,57 @@ def manifest() -> dict:
     return json.loads((DATA_DIR / "manifest.json").read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def _range_band() -> tuple[float, float, float, float]:
+    """Dải tầm pin ở SOC hiện tại — suy từ ĐÚNG hệ số engine dùng (`D-M3-17`).
+
+    Trả `(km_per_pct_ngan, km_per_pct_dai, consume_lon, consume_nho)`.
+
+    Vì sao phải dùng một DẢI chứ không một số: `13 bảng GSM` và bảng mock **không có** thông tin
+    đội pin — `driver_type` chỉ nói loại xe (`bike-electric`, `car`…), còn engine phân đội pin
+    theo *archetype* (P1 sạc · P2/P4/P6/P7 đổi pin · P3/P5 chia 50/50). Nên ở đây ta **không
+    biết** tài xế thuộc đội nào.
+
+    Bản cũ giải quyết bằng cách bịa một hệ số (`soc * 1.1` ⇒ 110 km ở SOC 100%), lệch tới
+    **1,76×** so với đội đổi pin (62,5 km) — đó chính là `D-M3-17`. Nay: lấy hệ số từ
+    `configs/pilot_dongda.yaml` (nguồn cấu hình duy nhất) và **hiển thị đầu THẤP của dải**.
+
+    Chọn thận trọng vì hậu quả không đối xứng: báo tầm ngắn hơn thực tế chỉ gây bất tiện, báo dài
+    hơn thực tế có thể làm tài xế hết pin giữa đường.
+    """
+    from gsm_sim.runner import Config
+    veh = Config.load(str(REPO_ROOT / "configs" / "pilot_dongda.yaml")).get("vehicle")
+    swap = float(veh["swap_consume_pct_per_km"])
+    charge = float(veh["charge_consume_pct_per_km"])
+    lon, nho = max(swap, charge), min(swap, charge)
+    return 1.0 / lon, 1.0 / nho, lon, nho
+
+
+def _range_fields(soc: int, fleet: str) -> dict:
+    """Khối field tầm pin — kèm CỜ cho biết con số có cơ sở hay không (`D-M3-18`).
+
+    Engine chỉ mô hình xe máy điện (hai loại pin). Với tài xế xe hơi, hệ số xe máy không áp dụng
+    được, và repo chưa có tham số nào cho xe hơi ⇒ ta phải nói *"chưa có cơ sở"* thay vì lặng lẽ
+    đưa một con số sai loại xe.
+    """
+    km_ngan, km_dai, lon, nho = _range_band()
+    la_bike = fleet.startswith("bike")
+    return {
+        "vehicle_range_km": round(soc * km_ngan, 1),
+        "vehicle_range_km_low": round(soc * km_ngan, 1),
+        "vehicle_range_km_high": round(soc * km_dai, 1),
+        "vehicle_range_km_applicable": la_bike,
+        "vehicle_range_km_basis": (
+            f"THẬN TRỌNG — mức tiêu hao cao nhất ({lon:.2f}%/km, đội đổi pin); đội sạc đi xa hơn "
+            f"({nho:.2f}%/km). Bảng dữ liệu không cho biết tài xế thuộc đội nào nên hiển thị đầu "
+            f"thấp của dải."
+            if la_bike else
+            f"KHÔNG CÓ CƠ SỞ cho đội `{fleet}` — hệ số {lon:.2f}/{nho:.2f}%/km là của XE MÁY "
+            f"điện; repo chưa có tham số tiêu hao cho xe hơi. Không hiển thị số này cho tài xế "
+            f"(D-M3-18)."),
+    }
+
+
 # prefix → đội (theo generator realdata.py: d-* là 90 tài xế BIKE mô phỏng bằng sim engine;
 # các đội khác rule-based). Advisor S1 (policy bike) chỉ phủ đội bike.
 # R5-B F-01 (UPDATE-072): map SAI một bậc — generator `mockgen/profiles.py:65` gán
@@ -144,7 +195,15 @@ def driver_state(driver_id: str, date: str) -> dict:
         # đúng mẫu lỗi "sửa một tầng, tầng khác không biết".
         "soc_source": "MOCK",
         "vehicle_range_km_source": "MOCK",          # suy TỪ soc bịa ⇒ cũng là mock
-        "vehicle_range_km": round(soc * 1.1, 1),   # PROXY: ~110km/100% (bike điện, ASSUMPTION)
+        # D-M3-17: tầm pin nay suy từ ĐÚNG hệ số engine (xem `_range_band`). Hiển thị đầu THẤP
+        # của dải vì không biết tài xế thuộc đội đổi pin hay đội sạc; dải đầy đủ + cơ sở đi kèm
+        # để người đọc biết đây là số thận trọng, không phải số chính xác.
+        #
+        # D-M3-18: hệ số này là của XE MÁY. Engine và config KHÔNG mô hình xe hơi, mà catalog có
+        # 40/150 tài xế car (cp/ce/px). Với họ con số dưới đây KHÔNG có cơ sở — nên có cờ
+        # `vehicle_range_km_applicable=False`. Giữ nguyên kiểu `number` (không trả null) vì
+        # `driver_state.dart:56` ép `as num` ⇒ null sẽ làm app Flutter crash; UI đọc cờ để ẩn.
+        **_range_fields(soc, FLEET_BY_PREFIX.get(driver_id.split("-")[0], "unknown")),
         "money": {
             "gross_vnd": gross,
             "payout_vnd": payout_trip + mission_paid,

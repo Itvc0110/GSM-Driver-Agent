@@ -10,6 +10,20 @@ from app.models import (
 BASE_LAT = 21.0285
 BASE_LNG = 105.8542
 
+# D-M3-17 (2026-08-01): trước đây file này tính tầm pin bằng `soc * 3.2` ⇒ 320 km ở SOC 100%,
+# tức 5,1× giá trị của engine và vô lý với xe máy điện (dải tham chiếu Feliz S: 100–130 km).
+# Endpoint dùng nó đã `deprecated` nhưng VẪN phục vụ được qua HTTP, nên số sai vẫn ra ngoài.
+# Nay lấy hệ số từ CÙNG nguồn cấu hình mà engine dùng, và chọn mức thận trọng (tầm ngắn hơn) —
+# xem `adapters/mockdata._range_band()` để biết vì sao không thể chọn theo đội pin.
+def _km_per_soc_pct() -> float:
+    """km đi được trên mỗi 1% SOC — mức THẬN TRỌNG, đọc từ `configs/pilot_dongda.yaml`."""
+    from pathlib import Path as _P
+    from gsm_sim.runner import Config
+    root = _P(__file__).resolve().parents[3]
+    veh = Config.load(str(root / "configs" / "pilot_dongda.yaml")).get("vehicle")
+    return 1.0 / max(float(veh["swap_consume_pct_per_km"]),
+                     float(veh["charge_consume_pct_per_km"]))
+
 # Geo-fence bounding box for Hanoi
 HANOI_BOUNDS = {
     "min_lat": 20.8000,
@@ -154,7 +168,7 @@ def generate_synthetic_map_context(scenario_id: str = "default_hanoi", seed: int
 def generate_synthetic_driver_state(scenario_id: str = "default_hanoi", seed: int = 42) -> DriverStateResponse:
     rng = random.Random(seed)
     soc = rng.randint(18, 85)
-    range_km = round(soc * 3.2, 1)
+    range_km = round(soc * _km_per_soc_pct(), 1)   # D-M3-17: không còn hệ số bịa
     trips = rng.randint(6, 16)
     payout_val = trips * rng.randint(45000, 65000)
     

@@ -798,11 +798,25 @@ Sổ nợ có **90 mục, 21 đã đóng, 69 còn mở**, mỗi mục có mã, m
 kiện mở lại. **20 mục** đang chờ người review. Nhóm trình bày đây là **kỷ luật**, không phải điểm
 yếu: một flaw có mã và có điều kiện mở lại thì không biến mất trong im lặng.
 
-**Ví dụ một flaw tìm được vào đúng ngày phát hành báo cáo:** UI tự tính tầm pin bằng công thức
-riêng (`soc × 1,1`) cho **mọi** tài xế, trong khi engine cho 62,5 km (đội đổi pin) và 117,6 km
-(đội sạc) — lệch nhau gần 2×. Tài xế đội đổi pin đang thấy số **thổi 1,76 lần**. Suite 1.000 test
-không bắt được, vì **không có test nào so UI với engine**. Đã ghi mã `D-M3-17`, xếp việc đầu tiên
-của tuần 3.
+**Ví dụ một flaw tìm được vào đúng ngày phát hành báo cáo — và đã sửa ngay:** UI tự tính tầm pin
+bằng công thức riêng (`soc × 1,1`) cho **mọi** tài xế, trong khi engine cho 62,5 km (đội đổi pin) và
+117,6 km (đội sạc). Tài xế đội đổi pin đang thấy số **thổi 1,76 lần**; một endpoint cũ còn thổi
+**5,1 lần**. Suite 1.000 test không bắt được, vì **không có test nào so UI với engine** — lỗ hổng
+thật nằm ở đó, không phải ở hệ số.
+
+Đã sửa (`D-M3-17`): cả hai chỗ nay đọc hệ số từ **cùng file cấu hình** mà engine dùng, hiển thị
+**dải** kèm **cơ sở**, và chọn mức **thận trọng** vì hậu quả không đối xứng — báo tầm ngắn hơn thực
+tế chỉ gây bất tiện, báo dài hơn có thể làm tài xế hết pin giữa đường. Kèm **cổng UI↔engine đầu
+tiên** của repo (12 test).
+
+Khi sửa lại lộ ra một việc lớn hơn: catalog có **40/150 tài xế xe hơi**, mà hệ thống chỉ có tham số
+tiêu hao cho **xe máy**. Với họ, con số không có cơ sở — nên UI nay nói thẳng điều đó thay vì hiện
+một số sai loại xe:
+
+| | |
+| --- | --- |
+| ![Xe máy — có cơ sở](assets/ui-xe-pin-xemay.png) | ![Xe hơi — chưa có cơ sở](assets/ui-xe-pin-xehoi.png) |
+| **Tài xế xe máy** — hiện **dải** 36,2–68,2 km, chú thích nói rõ đây là đầu thấp (thận trọng) | **Tài xế xe hơi** — hiện *"— chưa có cơ sở"*, vì hệ thống chưa có tham số tiêu hao cho ô tô |
 
 ### 12.6 Về hạ tầng CI
 

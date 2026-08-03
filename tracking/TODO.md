@@ -515,4 +515,6 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 | D-M3-16a | Single-source gate for activity-state colours (conditional on whether `trajectory` is imported) | FIXED | UPDATE-118; de-risks V-22 so the delete-or-keep call is no longer urgent |
 | D-M3-17 | UI recomputes battery range with its own formula (`soc*1.1`, one formula for both fleets) — 1.76x inflated for swap drivers; legacy endpoint uses `soc*3.2` = 5.1x | TODO (sev CAO) | Found by end-to-end smoke 2026-08-01; fix = read `behavior.soc_range_km` + carry `fleet` into the view; needs visual review |
 | WEEK2-REPORT | Mentor-facing Week 2 report: folder + 24-page PDF + audit checklist for Khanh + source-of-numbers table | WAITING-VERDICT (V-23) | UPDATE-119; 24 subagents cross-checked the repo first; caught Khanh's doc quoting a figure that no longer reproduces |
+| D-M3-17 | UI computed battery range with its own formula (1.76x inflated for swap-fleet drivers; 5.1x on the legacy endpoint) | FIXED | UPDATE-121; first UI-vs-engine gate in the repo (12 tests, incl. sever-restore) |
+| D-M3-18 | No battery-fleet field in the data, and 40/150 catalog drivers are CARS — bike consumption factors do not apply to them | TODO (sev CAO) | UPDATE-121; backend+web flag it, Flutter does not read the flag yet |
 

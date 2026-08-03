@@ -22,7 +22,8 @@
       "type": "integer"
     },
     "vehicle_range_km": {
-      "type": "number"
+      "type": "number",
+      "description": "Tầm pin còn lại (km) — số THẬN TRỌNG suy từ `vehicle.*_consume_pct_per_km` của engine (D-M3-17: bản cũ dùng hệ số riêng `soc*1.1`, lệch 1,76x). Bảng dữ liệu không cho biết đội pin nên đây là đầu THẤP của dải. Giữ kiểu `number` (không null) vì Flutter ép `as num`."
     },
     "money": {
       "type": "object",
@@ -178,6 +179,22 @@
         "THẬT"
       ],
       "description": "Nguồn của vehicle_range_km — suy từ soc_percent nên cùng nhãn."
+    },
+    "vehicle_range_km_low": {
+      "type": "number",
+      "description": "Đầu thấp của dải tầm pin (đội đổi pin)."
+    },
+    "vehicle_range_km_high": {
+      "type": "number",
+      "description": "Đầu cao của dải tầm pin (đội sạc)."
+    },
+    "vehicle_range_km_applicable": {
+      "type": "boolean",
+      "description": "D-M3-18: `false` khi hệ số KHÔNG áp dụng được cho đội của tài xế — engine chỉ mô hình XE MÁY điện, nhưng catalog có 40/150 tài xế xe hơi. UI PHẢI ẩn con số khi cờ này false (xem `ui/web/js/app.js` renderEv)."
+    },
+    "vehicle_range_km_basis": {
+      "type": "string",
+      "description": "Cơ sở của con số — nói rõ là THẬN TRỌNG hay KHÔNG CÓ CƠ SỞ, kèm hệ số dùng."
     }
   },
   "required": [
@@ -188,6 +205,8 @@
     "vehicle_range_km",
     "payout_summary",
     "soc_source",
-    "vehicle_range_km_source"
+    "vehicle_range_km_source",
+    "vehicle_range_km_applicable",
+    "vehicle_range_km_basis"
   ]
 }
