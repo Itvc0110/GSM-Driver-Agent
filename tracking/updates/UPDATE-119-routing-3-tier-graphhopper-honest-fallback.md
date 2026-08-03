@@ -74,8 +74,9 @@ Không áp dụng (đây là đường sản phẩm deterministic, không có se
 
 ## Visual verification
 
-- **Status:** đã tự chạy (agent) — **chờ Cường xem trước khi commit** (xem `V-23` ở
-  `PENDING-REVIEW.md`). Chưa waive.
+- **Status:** `WAIVED` — Khánh xác nhận trực tiếp trong hội thoại 2026-08-03 waive gate (đồng sở
+  hữu dự án, quyết định push ngay). Cường **chưa xem** — `V-23` ở `PENDING-REVIEW.md` vẫn còn hiệu
+  lực để Cường xem SAU khi push (hoãn ≠ waive nội dung, chỉ waive điều kiện chặn push).
 - **Cách launch:** `.venv/bin/python -m uvicorn app.main:app --app-dir ui/backend --port 8000`, mở
   `http://localhost:8000/app/`, bấm CTA nhận cuốc → xem polyline + `nav-state`.
 - **Bằng chứng đã thu thập:** Playwright headless Chromium (cài tạm ở scratchpad, không vào repo),
@@ -128,4 +129,5 @@ Không tự triển khai — chỉ ghi đề xuất:
 
 - Không phát sinh mục DEFERRED mới. Hai mục đã ghi ở cycle trước (dead-code `hanoi_graph.py`, sim
   replay straight-line) vẫn giữ nguyên trạng thái, chưa quyết định thêm.
-- Cần Cường xem `V-23` (PENDING-REVIEW.md) trước khi commit/push.
+- Đã push lên `origin/main` — Khánh waive gate trực tiếp trong hội thoại 2026-08-03. `V-23`
+  (PENDING-REVIEW.md) vẫn còn hiệu lực, Cường xem SAU khi code đã lên main.
