@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/map_context.dart';
 import '../models/driver_state.dart';
+import '../models/advice_v2.dart';
 import '../services/api_service.dart';
 import '../widgets/map_widget.dart';
 import '../widgets/alert_card.dart';
+import '../widgets/advice_checkpoint_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -16,6 +18,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   MapContextData? _mapContext;
   DriverStateData? _driverState;
+  AdviceEnvelopeV2? _adviceEnvelope;
+  bool _adviceV2Disabled = false;
   bool _isLoading = true;
   bool _isOnline = false;
   int _selectedBottomNavIndex = 0;
@@ -30,9 +34,27 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isLoading = true);
     final mapCtx = await _apiService.fetchMapContext();
     final drvState = await _apiService.fetchDriverState();
+    AdviceFetchResultV2? adviceResult;
+    if (drvState != null) {
+      final scenario = drvState.payoutSummary.scenarioId;
+      final adviceDate = scenario.contains(':') ? scenario.split(':').last : '';
+      if (adviceDate.isNotEmpty) {
+        adviceResult = await _apiService.fetchAdviceV2(
+          surface: 'nudge',
+          driverId: drvState.driverId,
+          date: adviceDate,
+          nowMin: 14 * 60,
+          shiftStartMin: 6 * 60,
+          shiftEndMin: 22 * 60,
+          isDriving: false,
+        );
+      }
+    }
     setState(() {
       _mapContext = mapCtx;
       _driverState = drvState;
+      _adviceEnvelope = adviceResult?.envelope;
+      _adviceV2Disabled = adviceResult?.disabled ?? false;
       _isLoading = false;
     });
   }
@@ -72,26 +94,37 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(width: 12),
                   Text(
-                    'Trợ Lý Xanh AI (Stitch)',
+                    'Trợ Lý Xanh',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0FDF4),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF00AFB9).withOpacity(0.3)),
+              if (_adviceEnvelope?.status == 'ready' &&
+                  _adviceEnvelope!.items.isNotEmpty)
+                AdviceCheckpointCard(
+                  card: _adviceEnvelope!.items.first,
+                  onMounted: () => _apiService
+                      .acknowledgeAdviceDisplay(_adviceEnvelope!.items.first),
+                  onResponse: (response) => _apiService
+                      .respondToAdvice(_adviceEnvelope!.items.first, response),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF00AFB9).withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    'Chưa có AdviceCheckpoint hợp lệ từ backend trong phiên này.\n'
+                    'Trợ lý sẽ chỉ hiển thị hành động, thời điểm và số liệu khi có nguồn dữ liệu đã được kiểm chứng.'
+                    '${_adviceV2Disabled ? '\nAPI v2 đang tắt — ứng dụng giữ trạng thái an toàn.' : ''}',
+                    style: const TextStyle(fontSize: 13.5, height: 1.5,
+                        color: Color(0xFF1C1C1E)),
+                  ),
                 ),
-                child: const Text(
-                  '🤖 Khuyến nghị tối ưu ca làm việc:\n'
-                  '• Dung lượng SOC hiện tại (22%) sắp chạm ngưỡng sạc. Khuyến nghị ghé trạm Vincom Đồng Khởi (cách 0.6km).\n'
-                  '• Dự báo mưa lớn tại Q.1 trong 15 phút tới. Nhu cầu xe tăng cao (+35%) ở các H3 zone đỏ.',
-                  style: TextStyle(fontSize: 13.5, height: 1.5, color: Color(0xFF1C1C1E)),
-                ),
-              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -105,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   child: const Text(
-                    'Đã Hiểu & Áp Dụng',
+                    'Đóng',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
