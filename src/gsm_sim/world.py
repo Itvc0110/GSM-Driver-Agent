@@ -109,7 +109,13 @@ class World:
 
         # SIM-3: cầu nối advice→action. Mặc định TẮT ⇒ World A (tự làm) không đổi gì.
         from .advice_bridge import AdviceActionBridge
-        self.advice = AdviceActionBridge(cfg, policy, seed)
+        from .checkpoint_trace import CheckpointTraceSink
+        self.checkpoint_trace = CheckpointTraceSink(
+            enabled=bool(cfg.get("checkpoint_shadow.enabled", False)),
+            run_id=run_id,
+        )
+        self.advice = AdviceActionBridge(
+            cfg, policy, seed, checkpoint_trace=self.checkpoint_trace, run_id=run_id)
         # T-045b (Cycle P): tham số CHI PHÍ, mặc định 0 ⇒ sổ chi phí luôn 0, hành vi y hệt.
         # Nguồn số cho sweep: research/economics/driver-cost-structure-2026.md (swap Platform
         # = 0đ official tới 31/03/2029; sạc nhà 70–93đ/km; sau ưu đãi 150đ/km).
@@ -384,7 +390,8 @@ class World:
             zones = [{"zone": c, "capacity": cap_left[c]} for c in ranked_eff]
             ai = derive_allocation_input(_iso(now), cands, [], zones,
                                          bucket_min=int(b))
-            sol = capacity_alloc.solve(ai)["solution"]
+            report = capacity_alloc.solve(ai)
+            sol = report["solution"]
             # E10b §4.4: bất biến zone-veto — không ai bị gán VÀO ô fired (kỳ vọng cấu trúc:
             # fired ∉ zones ⇒ Hungarian không có slot ở đó; assert để thủng là nổ, không im)
             assert all(al["assigned_target"] not in fired for al in sol["allocations"]),                 "zone-veto thủng: có người bị gán vào ô fired"
@@ -410,6 +417,8 @@ class World:
                 flags_by_cell.setdefault(cell, al.get("safety_flags") or [])
                 aid = int(al["driver_id"][2:])
                 did = self._decision_id(aid, "positioning", now)
+                self.checkpoint_trace.capture(
+                    "S4", self.actors[aid], now, ai, report, did)
                 assigned_by_cell.setdefault(cell, []).append(aid)
                 dids_by_cell.setdefault(cell, {})[str(aid)] = did
                 # "Đã nói" = advisor đưa lời khuyên, KHÔNG phụ thuộc tài xế có theo hay không
