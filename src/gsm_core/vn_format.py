@@ -29,6 +29,8 @@ def render_number_vn(value: float, unit: str) -> str:
         return f"{int(round(value))} cuốc"
     if unit == "ratio":
         return f"{value:.0%}"
+    if unit == "percent":
+        return f"{value:g}".replace(".", ",") + "%"
     if unit == "minutes":
         return f"{int(round(value))} phút"
     if unit == "count":

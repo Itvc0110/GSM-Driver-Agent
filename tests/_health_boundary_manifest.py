@@ -11,6 +11,8 @@ world sẽ khai cơ chế mệt→hiệu-suất vào đây CÓ KIỂM SOÁT; adv
 
 MANIFEST: dict[tuple[str, str], str] = {
     ('src/gsm_core/advisor/context_pack.py', 'build_context_pack'): "MONEY",
+    # Guardrail text-only: rejects income promises/fabricated digits but never computes payout.
+    ('src/gsm_core/advisor/checkpoint_presenter.py', 'verify_agent_output'): "NOT_MONEY",
     ('src/gsm_core/advisor/templates.py', '<toplevel>'): "MONEY",
     ('src/gsm_core/advisor/templates.py', '_khoan_sentence'): "MONEY",
     ('src/gsm_core/advisor/templates.py', '_mission_sentence'): "MONEY",
