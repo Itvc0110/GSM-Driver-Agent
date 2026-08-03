@@ -144,5 +144,6 @@ collect.
 - `DONE-CODE`: P0–P5 và automated gates nêu trên.
 - `WAITING-VERDICT/BLOCKED`: V-25 Flutter/device; không production-ready.
 - `OPEN`: Q-13, V-21, P6/live provider/canary. Cadence vẫn 20 phút/topic và 6 proactive/ca.
-- Không commit/push trong cycle này. Worktree vốn bẩn; thay đổi không liên quan được bảo toàn.
+- Đã tách thành các commit local theo từng lớp thay đổi; push lên remote và mở PR vào `main`
+  là bước bàn giao tiếp theo. Worktree vốn bẩn; thay đổi không liên quan được bảo toàn.
 - Subagent: **0**. Runtime không cung cấp `gpt-5.6-luna`, nên cap hạ còn 1 và triển khai local.
