@@ -1,5 +1,30 @@
 # Schema changelog
 
+## 2026-08-03 — AdviceCheckpoint runtime contract (1.1.0)
+
+- **`advisor/advice_checkpoint` 1.0.0 → 1.1.0**: thêm identity/reference tách bạch
+  `source_decision_id`, `run_id`, `solver_input_refs[]`, `solver_report_refs[]` để replay
+  tới exact solver artifacts mà không overload/backfill `decision_id` legacy.
+- **`advisor/advice_checkpoint_event` 1.0.0 → 1.1.0**: thêm event `expanded` dạng
+  side-channel; event này và `execution_observed` không đổi presentation state.
+- **`advisor/advice_artifact` 1.0.0 → 1.1.0**: thêm kind `agent_shadow_output` cho
+  evaluation artifact không được phép đi vào response/lifecycle tài xế.
+- Ba schema giữ snapshot 1.0.0 và pure upcaster 1.0→1.1; runtime producer luôn điền refs,
+  còn record cũ được upcast với refs nullable/rỗng đúng lịch sử.
+- Thêm contract đóng `agent_presentation_input@1.0.0` và
+  `agent_presentation_output@1.0.0`; output agent chỉ được tham chiếu fact/number/caveat ID
+  và enrich phần lý do, không sở hữu action/window/expiry/source/số tự do.
+
+## 2026-08-03 — AdviceCheckpoint shadow contract (1.0.0)
+
+- **`advisor/advice_artifact`**, **`advisor/advice_checkpoint`** và
+  **`advisor/advice_checkpoint_event`** là contract mới cho presentation lifecycle shadow.
+  Checkpoint không overload `decision_id` legacy; event stream có các trạng thái
+  `created/queued/ready/offered/displayed/...` và `execution_observed` là liên kết độc lập.
+- Store tương ứng là SQLite append-only, content-addressed artifacts và idempotent theo
+  `checkpoint_id`/`event_id`. Đây là snapshot lịch sử trước runtime v2; không dual-write
+  legacy lifecycle.
+
 ## 2026-07-29 (chiều) — B3: `policy_bundle` 1.0.0 → 1.1.0 (+`costs` optional)
 
 - **`l0/policy_bundle` 1.1.0** (minor, additive): +khối `costs` optional —

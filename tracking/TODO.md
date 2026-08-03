@@ -499,6 +499,7 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 | ID | Việc | Trạng thái | Evidence / gate |
 |---|---|---|---|
 | UI-FARE-01 | Unify Simulator and Web Driver demo fare through `PolicyBundle` | DONE-CODE / WAITING-VERDICT | UPDATE-073; **V-16** (đánh số lại từ V-11 — xem PENDING-REVIEW); do not touch Flutter `ui/driver_app/` |
+| **SOL-LUNA-HARNESS** | Codex delegation policy: đọc `CLAUDE.md` trước, Sol lập workflow, Luna `xhigh`, quota queue | DONE-CODE (docs-only) | UPDATE-125; `AGENTS.md`; không đổi runtime config |
 | UX-CARDS | Proactive cards + explicit adherence contract | DONE-CODE / WAITING-VERDICT | UPDATE-067; V-10 |
 | R1/R4 | App-language simulation shell + playback/feed | DONE-CODE / WAITING-VERDICT | UPDATE-068; V-10 |
 | AUDIT-A1/A2/A3 | Math, integrity, agent-system audit + narrow fix batches | DONE-CODE | UPDATE-064..066, 069..070; ĐA-01..06 and D-A3-01..06 remain open |
@@ -510,9 +511,23 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 | D-M3-04 | Multiday A/B so `rest_window` stops being INERT | READY (3 design questions approved; acceptance revised per UPDATE-114) | `specs/simulation/d-m3-04-multiday-ab-brief.md`; wire `touched_actors` into the tier-5 gate as part of the cycle |
 | D-M3-13 | Tier-5 guardrail had an aggregator but no data source in the A/B path | FIXED | UPDATE-116; measured: `TREO — THIẾU DỮ LIỆU` on every real pair; 0 stored artifacts carried the key |
 | D-M3-15 | Orphan-mechanism sweep: 5 unread config flags (3 of them documenting WRONG behaviour) + 14 uncalled public functions incl. a dead module with a conflicting colour table | FIXED | UPDATE-117; standing gate `test_config_flags_wired.py`; behaviour-neutral verified 5/5 seeds |
+| **BUG-F2-NOW** | 🔴 **Template F2 đã sửa trong cycle này** — dùng `schedule[0]` cho action hiện tại, tách `next_action` thành bước tương lai; legacy report thiếu `schedule` vẫn fallback tương thích. | **DONE-CODE / visual WAITING-VERDICT** | UPDATE-124; regression `test_f2_uses_action_now_not_next_action` |
+| **CKPT-00..05** | ⚠ **ĐÁNH SỐ LẠI 2026-08-03 (UPDATE-123)** → thay bằng `CKPT-A..F` + `CKPT-P1..P6` dưới đây. Kế hoạch hiện hành: `tracking/PLAN-2026-08-03-advice-checkpoint-agent-flow.md` (bản tổng hợp, đã đối chiếu plan review độc lập). Lý do đổi: thứ tự verifier↔agent bị SAI ở bản cũ, và GĐ0 nay là 6 việc làm được ngay chứ không phải hàng chờ | SUPERSEDED | UPDATE-123 |
+| **CKPT-A** | 🔴 **BUG-F2-NOW** — `templates.py` dùng `schedule[0]` cho hiện tại, `next_action` chỉ cho bước tương lai; prompt/context F2 đã nói rõ hai semantics | **DONE-CODE / visual WAITING-VERDICT** | UPDATE-124; PLAN §GĐ0-A; test đỏ trước |
+| **CKPT-B** | Safety text-card khi đang lái luôn queue; v1 chỉ nhận surface đóng `brief/nudge/recap`, v2 topic/priority hoàn toàn server-owned | **DONE-CODE** | UPDATE-126; backend contract/API regression |
+| **CKPT-C** | Sim journey chỉ project allowlist event tài xế; `advice_rest_veto` và event kỹ thuật không còn thành card | **DONE-CODE** | UPDATE-126; sim router regression |
+| **CKPT-D** | Mọi silent response v1 mang scenario/seed/data_mode/is_mock; enum reason đóng đã đủ queue/cooldown/budget/dismiss | **DONE-CODE** | UPDATE-126; contract validation mọi verdict |
+| **CKPT-E** | Flutter đã bỏ card recommendation hard-code SOC/trạm/nhu cầu; thay bằng empty state và chỉ hiển thị AdviceCheckpoint có provenance khi backend cung cấp | **DONE-CODE / visual WAITING-VERDICT** | UPDATE-124; PLAN §GĐ0-E; claim `ui/driver_app/` của Khánh |
+| **CKPT-F** | Trả nợ tài liệu: `findings.md` có 2 sai sót + 1 mâu thuẫn thứ tự đã vào repo | **DONE** 2026-08-03 | UPDATE-123; đã đính chính tại chỗ |
+| **CKPT-P1** | Contract 1.1, pure normalizer/policy/projection, atomic SQLite bundle và RAM journal; legacy lifecycle tách biệt | **DONE-CODE** | UPDATE-126; backward upcast + sever/restore tests |
+| **CKPT-P2** | Sim capture exact snapshot/input/report tại callsite hiện hữu, RAM journal, JSONL/manifest, deterministic segment/execution link và metrics tách biệt | **DONE-CODE** | UPDATE-126; comparator `IDENTICAL` 5/5 seed |
+| **CKPT-P3** | S1/S2 orchestration fail-isolated; S2 true-state fail-closed; atomic lease; API v2 + Web/Flutter template flow | **DONE-CODE / visual WAITING-VERDICT** | UPDATE-126; ACK là mounted ACK, metric break đã ghi |
+| **CKPT-P4** | Closed structured presenter/verifier; agent không sở hữu action/window/numbers; tối đa một repair rồi template fallback | **DONE-CODE** | UPDATE-126; golden/adversarial suite |
+| **CKPT-P5** | Runtime mặc định template, shadow artifact-only + stale discard/cache claim; simulator method D post-run | **DONE-CODE / shadow-only** | UPDATE-126; live/canary ngoài scope |
+| **CKPT-P6** | GĐ6 — LLM live + đánh giá; shadow→canary→opt-in | TODO | PLAN §GĐ6 |
+| **CKPT-MIG** | Không migration/backfill: `source_decision_id` là legacy solver/adherence reference; `checkpoint_id` là identity riêng của checkpoint stream | **RESOLVED-BY-DESIGN** | UPDATE-124/126; separate-stream architecture |
 | D-M3-16 | Gate for `STATE_COLORS` vs `ACTIVITY_COLORS`; decide delete-or-keep `trajectory.py` (V-22); real 15-min metrics bucket needs behaviour change + fresh measurement | TODO (sev TRUNG) | UPDATE-117; same family as D-M3-12 — architectural debt, not isolated accidents |
 | D-M3-12 | Future-leak probe promoted to a standing gate (7 derivers, sever-restore + empty-green counter-check) | FIXED | UPDATE-118; 7/7 clean = independent evidence UPDATE-115 closed the family |
 | D-M3-16a | Single-source gate for activity-state colours (conditional on whether `trajectory` is imported) | FIXED | UPDATE-118; de-risks V-22 so the delete-or-keep call is no longer urgent |
 | D-M3-17 | UI recomputes battery range with its own formula (`soc*1.1`, one formula for both fleets) — 1.76x inflated for swap drivers; legacy endpoint uses `soc*3.2` = 5.1x | TODO (sev CAO) | Found by end-to-end smoke 2026-08-01; fix = read `behavior.soc_range_km` + carry `fleet` into the view; needs visual review |
 | WEEK2-REPORT | Mentor-facing Week 2 report: folder + 24-page PDF + audit checklist for Khanh + source-of-numbers table | WAITING-VERDICT (V-23) | UPDATE-119; 24 subagents cross-checked the repo first; caught Khanh's doc quoting a figure that no longer reproduces |
-
