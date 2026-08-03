@@ -1,65 +1,68 @@
-> ⚠️ **SUPERSEDED — 2026-07-20.** File này thuộc pack cũ và đã bị thay thế bởi **`CLAUDE.md`** (harness hiện hành — đọc file đó trước tiên và làm theo nó khi có xung đột). Scope hiện hành: `planning/SCOPE.md`; quy trình: `tracking/`. Mục "Tách việc cho hai developer" bên dưới KHÔNG áp dụng — team dùng cơ chế tự nhận việc (self-claim, không ai giao việc) trong `tracking/ASSIGNMENTS.md`. Các ranh giới sản phẩm (LLM không tính số, không chạm dispatch, mock labeling…) đã được kế thừa trong CLAUDE.md §5.
+# AGENTS.md — Codex workflow bổ sung
 
-# Instructions for AI Coding Agents (pack cũ — tham khảo)
+File này là instruction bổ sung ở root của repo. **Mỗi phiên Codex phải đọc `CLAUDE.md` trước tiên** rồi mới dùng file này. Khi có xung đột, `CLAUDE.md` thắng tuyệt đối; không dùng `AGENTS.md` để nới scope, bỏ qua claim, thay đổi product boundary hoặc vượt quota guard trong `CLAUDE.md`.
 
-## Mission
+## Read order bắt buộc
 
-Xây dựng Driver Income OS như một hệ thống hỗ trợ quyết định an toàn, có thể kiểm chứng và thay thế được mock data bằng dữ liệu thật. Không tối ưu demo bằng cách làm suy yếu ranh giới với dispatch, safety hoặc platform guardrails.
+1. Đọc `CLAUDE.md`.
+2. Đọc `README.md` và `tracking/BOOTSTRAP-SESSION.md`.
+3. Đọc `tracking/ASSIGNMENTS.md`, `tracking/PENDING-REVIEW.md` và route tài liệu liên quan theo task.
+4. Kiểm tra worktree và claim trước khi sửa file; không chạm thay đổi không liên quan của người khác.
 
-## Source of truth
+Không đọc lại toàn bộ lịch sử hoặc toàn bộ `tracking/updates/` nếu task không yêu cầu. Tuân thủ plan/brainstorm/UPDATE/evidence/visual gate do `CLAUDE.md` quy định.
 
-Khi có xung đột, ưu tiên theo thứ tự: policy/compliance đã phê duyệt → contract version hiện hành → PHASE đang active → SPEC/PRD → MEMORY → code comments. Nếu xung đột chưa giải được, ghi `BLOCKER-*`; không âm thầm chọn một hành vi có tác động sản phẩm.
+## Vai trò của Sol
 
-## Quy trình bắt buộc
+`gpt-5.6-sol` là primary coordinator theo runtime hiện tại. Sol giữ các việc sau:
 
-1. Đọc `README.md`, tài liệu liên quan và `templates/MEMORY.md`; sau đó mới khảo sát code hiện hữu.
-2. Trước khi code, tạo/cập nhật `PHASE-###-<slug>.md` từ template, nêu assumption, scope, contract, acceptance criteria và test plan.
-3. Nếu sửa lỗi, tạo `FIX-###-<slug>.md`; phải có reproduction, root cause, regression test và phạm vi ảnh hưởng.
-4. Thực hiện lát cắt nhỏ nhất end-to-end. Không tạo microservice chỉ để tách folder.
-5. Sau thay đổi, chạy test phù hợp, cập nhật docs và MEMORY; ghi rõ việc chưa kiểm chứng.
-6. Không xóa/chỉnh thay đổi không liên quan của người khác. Không đổi schema dùng chung nếu chưa bump version và có compatibility test.
+- Hiểu yêu cầu, xác định critical path và đưa ra workflow ngắn trước khi delegate.
+- Giữ quyết định kiến trúc, product boundary, policy/safety và tổng hợp kết quả cuối.
+- Tự làm bước đang chặn critical path nếu chờ subagent sẽ làm chậm tiến độ.
+- Review output/diff của subagent, tích hợp có kiểm soát và chạy verification cuối.
 
-## Ranh giới kiến trúc không được phá
+Không gọi subagent theo phản xạ. Chỉ delegate khi task độc lập, bounded, có deliverable rõ và không chồng lấn claim/path.
 
-- LLM không được tính tiền, giải bài toán tối ưu, tự tạo số liệu, bypass policy gate hoặc trực tiếp ghi state vận hành.
-- Mọi số hiển thị cho tài xế phải đến từ `RecommendationEnvelope`/tool output có version và trace.
-- Optimizer không quyết định nhận/từ chối/hủy cuốc; không thay thế dispatch.
-- Phase 0–1 không phát recommendation reposition theo hotspot cụ thể. Phase 2 chỉ cho phép khi fleet capacity và network guardrails hoạt động.
-- Safety/legal/platform constraints là hard constraints hoặc veto ở policy gate; không biến thành penalty có thể “mua” bằng doanh thu.
-- Nếu forecast stale, solver infeasible/timeout hoặc policy không khả dụng, trả fallback an toàn; không bịa phương án.
+## Cách gọi Luna
 
-## Quy tắc dữ liệu
+Mỗi lần spawn subagent phải truyền runtime override rõ ràng:
 
-- Dùng adapter theo interface; domain không import trực tiếp SDK nguồn dữ liệu.
-- Mỗi event có `event_time`, `ingested_at`, `source`, `schema_version`, `data_mode`, `is_mock`, quality/freshness.
-- Không trộn synthetic và live trong cùng một evaluation run.
-- Mock generator phải deterministic theo seed, có scenario ID và cover normal/adverse/edge cases.
-- PII tối thiểu hóa; dùng zone/geofence thay cho địa chỉ nhà; không log tọa độ thô hoặc nội dung chat chứa PII.
+```text
+model = "gpt-5.6-luna"
+reasoning_effort = "xhigh"
+```
 
-## Quy tắc optimizer và recommendation
+Trong tool call thực tế dùng đúng field `model` và `reasoning_effort`; không chỉ viết chữ “Luna xhigh” trong prompt rồi giả định runtime đã đổi model. Nếu runtime không hỗ trợ override hoặc không xác nhận được model, không tuyên bố đã chạy Luna; tiếp tục local hoặc ghi `BLOCKER`/`QUOTA-BLOCKED` tùy nguyên nhân.
 
-- Tách forecast, candidate generation, optimization, policy và explanation để có thể test độc lập.
-- Lưu solver status, time limit, objective components, constraints binding và model versions.
-- Tạo baseline `do_nothing/current_plan`; mọi lợi ích là delta so với baseline với khoảng bất định.
-- Tối đa ba phương án không bị dominated; một phương án recommended chỉ khi vượt minimum-value và confidence gate.
-- Recommendation phải có expiry, confidence/calibration band, trade-off, data freshness và lý do policy.
-- Hành vi người dùng là tự nguyện; accept/ignore không được coi là “vâng lời” hoặc dùng để trừng phạt.
+Prompt cho mỗi subagent phải nêu: mục tiêu duy nhất, file/path được đọc hoặc sửa, boundary/claim liên quan, output bắt buộc, lệnh kiểm chứng và điều kiện dừng. Không giao hai subagent cùng write scope.
 
-## Tách việc cho hai developer
+## Parallel và quota guard
 
-- Dev A sở hữu `domain`, `data`, `forecasting`, `optimization`, `simulator`, offline evaluation.
-- Dev B sở hữu `api`, `recommendation`, `policy`, `explanation`, integration/UI contract, observability.
-- Hai bên chỉ tích hợp qua JSON Schema/OpenAPI, fixtures và contract tests. Không import module nội bộ chéo qua boundary đã nêu.
+- **Mặc định tối đa 2 phiên đồng thời tổng cộng** theo `CLAUDE.md` (primary + reviewer/subagent). Không tự nâng cap.
+- Nếu có 3 việc độc lập, queue theo batch `2 → 1`; persist finding/decision/failure trước batch sau.
+- Ưu tiên 1–2 subagent thật sự cần thiết; không tạo worker chỉ để chia nhỏ việc có thể làm local.
+- Không spawn worker thứ hai trên cùng claim/path; tránh mọi shared write scope.
+- Khi gặp quota/session-limit: retry tối đa một lần. Nếu vẫn lỗi, ghi `QUOTA-BLOCKED`, hạ cap còn 1 và tiếp tục bằng phương án local an toàn.
+- Chờ kết quả có chủ đích, review từng kết quả, đóng worker đã xong và không giữ agent mở không cần thiết.
 
-## Quality gates tối thiểu
+## Delegation flow
 
-- Format/lint/type check; unit + property + contract tests.
-- Schema backward compatibility; synthetic/live isolation test.
-- Solver feasibility, hard-constraint invariant, deterministic seed và timeout fallback.
-- Golden recommendation tests; prompt/tool injection tests cho explanation layer.
-- Offline scenario evaluation; platform/safety/fairness non-regression.
-- Migration, feature flag, canary/shadow plan và rollback đã kiểm chứng trước live.
+```text
+inspect → define critical path → split independent tasks → record mini-workflow
+       → spawn Luna (max 2 concurrent sessions) → review/close
+       → integrate locally → verify → update tracking/evidence
+```
 
-## Cách giao tiếp
+Trước khi spawn, Sol phải tự trả lời được:
 
-Nêu outcome trước. Phân biệt rõ `FACT`, `ASSUMPTION`, `HYPOTHESIS`, `DECISION`, `BLOCKER`. Không gọi prototype là production-ready và không dùng kết quả synthetic để tuyên bố uplift thật.
+1. Task nào độc lập và task nào nằm trên critical path?
+2. Subagent sẽ đọc/sửa chính xác path nào?
+3. Vì sao việc này đáng tiêu quota hơn làm local?
+4. Kết quả sẽ được kiểm chứng và tích hợp ở bước nào?
+
+Sau khi delegate, Sol không làm lại cùng một việc; tập trung vào phần không chồng lấn và tổng hợp. Subagent không tự quyết định thay đổi product boundary, schema public, policy/safety hoặc claim ownership.
+
+## Handoff và báo cáo
+
+Mỗi subagent phải trả về ngắn gọn: kết quả, file đã chạm, test/command đã chạy, vấn đề chưa giải quyết và assumption. Sol phải báo rõ số worker, model/reasoning đã dùng, batch/queue, kết quả verification và phần chưa kiểm chứng.
+
+Mọi thay đổi cuối cùng vẫn phải tuân thủ `CLAUDE.md`: self-claim, UPDATE, TODO/graph, test, adversarial review, visual gate và trạng thái `DONE-CODE`/`WAITING-VERDICT`/`BLOCKED` phù hợp.
