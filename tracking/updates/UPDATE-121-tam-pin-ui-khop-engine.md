@@ -71,8 +71,15 @@ có cơ sở"*.
   tự chứng minh scanner bắt được `soc * 3.2` và **miễn nhiễm** comment/docstring).
 - UI suite: **77 passed** (65 + 12).
 - Suite **CẢ HAI lệnh**: `uv run pytest -q` → **935 passed / 4 skipped / 0 failed** ·
-  `uv run pytest -q ui/backend/tests` → **77 passed**. Tổng **1.012** (935 + 77), tăng 12 so với
-  UPDATE-118 đúng bằng số test mới. **0 đỏ** — đổi 5 field trong contract không vỡ consumer nào.
+  `uv run pytest -q ui/backend/tests` → **78 passed**. Tổng **1.013** (935 + 78). **0 đỏ** — đổi 5
+  field trong contract không vỡ consumer nào.
+
+⚠ **Rebase lên việc của Khánh:** trong lúc tôi làm, Khánh push `UPDATE-120` (routing 3 tầng
+OSRM → GraphHopper → ước lượng đường thẳng trung thực) và **tự đánh số lại** `UPDATE-119→120`,
+`V-23→V-24` để tôn trọng origin. Nên tôi đổi số của mình: **`UPDATE-120` → `UPDATE-121`**,
+**`V-24` → `V-25`**. Xung đột duy nhất ở `PENDING-REVIEW.md` (cả hai thêm một mục `V-`) — đã giữ
+**cả hai**, không ghi đè mục của Khánh. Sau rebase, UI suite **78 passed** = 66 (Khánh) + 12 (tôi),
+cả hai cùng xanh trên một cây.
 
 ## Adversarial self-review / flaws found
 

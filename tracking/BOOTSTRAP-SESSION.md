@@ -59,9 +59,9 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ```
 local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
-suite       = 1012 passed / 4 skipped / 0 failed  (2026-08-01: 935 + 77 UI)
+suite       = 1013 passed / 4 skipped / 0 failed  (2026-08-03: 935 + 78 UI)
               uv run pytest -q                  -> xem số trên
-              uv run pytest -q ui/backend/tests -> 77
+              uv run pytest -q ui/backend/tests -> 78
 UPDATE       = 114 file, mới nhất UPDATE-121 (104 UIUX + 105 codex review là của remote)
 PENDING      = 23 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
