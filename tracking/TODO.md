@@ -514,4 +514,5 @@ Các mục dưới đây đã có UPDATE/evidence nhưng trước đây chưa c�
 | D-M3-12 | Future-leak probe promoted to a standing gate (7 derivers, sever-restore + empty-green counter-check) | FIXED | UPDATE-118; 7/7 clean = independent evidence UPDATE-115 closed the family |
 | D-M3-16a | Single-source gate for activity-state colours (conditional on whether `trajectory` is imported) | FIXED | UPDATE-118; de-risks V-22 so the delete-or-keep call is no longer urgent |
 | D-M3-17 | UI recomputes battery range with its own formula (`soc*1.1`, one formula for both fleets) — 1.76x inflated for swap drivers; legacy endpoint uses `soc*3.2` = 5.1x | TODO (sev CAO) | Found by end-to-end smoke 2026-08-01; fix = read `behavior.soc_range_km` + carry `fleet` into the view; needs visual review |
+| WEEK2-REPORT | Mentor-facing Week 2 report: folder + 24-page PDF + audit checklist for Khanh + source-of-numbers table | WAITING-VERDICT (V-23) | UPDATE-119; 24 subagents cross-checked the repo first; caught Khanh's doc quoting a figure that no longer reproduces |
 

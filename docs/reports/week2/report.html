@@ -1,0 +1,1387 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Week 2 — Báo cáo kỹ thuật chi tiết</title><style>
+@page { size: A4; margin: 17mm 16mm 18mm 16mm; }
+:root{ --xanh:#199e70; --duong:#3987e5; --amber:#c98500; --do:#b03030;
+       --muc:#1d2b27; --muc2:#4a5a56; --vien:#d8e2df; --nen:#f4f8f7; }
+*{ box-sizing:border-box; }
+body{ font-family:"Segoe UI","Calibri",sans-serif; font-size:10.2pt; line-height:1.55;
+      color:var(--muc); margin:0; }
+h1{ font-size:21pt; color:var(--xanh); margin:0 0 2mm; line-height:1.2;
+    border-bottom:3px solid var(--xanh); padding-bottom:3mm; }
+h2{ font-size:14pt; color:var(--muc); margin:9mm 0 3mm; padding-bottom:1.5mm;
+    border-bottom:1.5px solid var(--vien); page-break-after:avoid; }
+h3{ font-size:11.4pt; color:var(--xanh); margin:6mm 0 2mm; page-break-after:avoid; }
+h1+p,h2+p,h3+p{ margin-top:0; }
+p{ margin:0 0 2.6mm; text-align:justify; }
+strong{ color:#0f1a17; }
+code{ font-family:"Consolas","Courier New",monospace; font-size:8.8pt;
+      background:var(--nen); border:1px solid var(--vien); border-radius:2px; padding:0 1.2mm; }
+pre{ background:var(--nen); border:1px solid var(--vien); border-left:3px solid var(--xanh);
+     border-radius:3px; padding:3mm 4mm; font-size:8.4pt; line-height:1.45; overflow:hidden;
+     page-break-inside:avoid; }
+pre code{ background:none; border:none; padding:0; font-size:8.4pt; }
+table{ border-collapse:collapse; width:100%; margin:3mm 0 4mm; font-size:8.9pt;
+       page-break-inside:avoid; }
+th,td{ border:1px solid var(--vien); padding:1.7mm 2.2mm; text-align:left;
+       vertical-align:top; }
+th{ background:var(--nen); color:#0f1a17; font-weight:600; }
+tr:nth-child(even) td{ background:#fbfdfc; }
+blockquote{ margin:3mm 0; padding:2.5mm 4mm; background:#fffdf3;
+            border-left:3px solid var(--amber); font-size:9.4pt; page-break-inside:avoid; }
+blockquote p{ margin:0 0 1.5mm; }
+blockquote p:last-child{ margin:0; }
+img{ max-width:100%; height:auto; display:block; margin:3mm auto 1.5mm;
+     border:1px solid var(--vien); border-radius:3px; page-break-inside:avoid; }
+ul,ol{ margin:0 0 3mm; padding-left:6mm; }
+li{ margin-bottom:1.4mm; }
+hr{ border:none; border-top:1px solid var(--vien); margin:7mm 0; }
+.formula{ font-family:"Cambria Math","Times New Roman",serif; font-size:12pt; text-align:center;
+          background:var(--nen); border:1px solid var(--vien); border-radius:3px;
+          padding:3mm; margin:3mm 0; page-break-inside:avoid; }
+math{ font-family:"Cambria Math","Times New Roman",serif; }
+h2, h3, table, img, pre, blockquote { break-inside:avoid; }
+@media print { a{ color:var(--duong); text-decoration:none; } }
+</style></head><body><h1>Week 2 — Báo cáo kỹ thuật chi tiết</h1>
+<h3>Driver Advisor Team · GSM Driver Income AI Advisor</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dự án</strong></td>
+<td>GSM Driver Income AI Advisor — trợ lý hỗ trợ tài xế Xanh SM cải thiện thu nhập</td>
+</tr>
+<tr>
+<td><strong>Thành viên</strong></td>
+<td>Trần Quốc Khánh · Lưu Thiện Việt Cường</td>
+</tr>
+<tr>
+<td><strong>Kỳ báo cáo</strong></td>
+<td>23/07/2026 – 01/08/2026 (tuần 2)</td>
+</tr>
+<tr>
+<td><strong>Người nhận</strong></td>
+<td>Mentor — bản báo cáo để đánh giá</td>
+</tr>
+<tr>
+<td><strong>Ngày phát hành</strong></td>
+<td>01/08/2026</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>⚠ Cách đọc mọi con số trong báo cáo này</h2>
+<p>Đây là điều chúng em muốn nói <strong>trước</strong> mọi kết quả, vì nó quyết định cách đọc toàn bộ phần sau:</p>
+<ol>
+<li><strong>Mọi số đo trong báo cáo là số MÔ PHỎNG trên dữ liệu MOCK</strong>, sinh từ generator của nhóm theo
+   đúng schema 13 bảng GSM. Không có số nào là hiệu quả đã kiểm chứng trên vận hành GSM thật.
+   Script đo tự khai điều này ở dòng đầu (<code>scripts/measure_e10.py:9</code>).</li>
+<li><strong>Số MOCK / PROXY / ASSUMPTION được gắn nhãn tại chỗ.</strong> Ví dụ: SOC và tầm đi là PROXY
+   (13 bảng GSM không có telemetry pin); tỷ lệ nghe lời theo archetype là <strong>giả định hành vi của
+   mô hình</strong>, không phải tỷ lệ đo ở người thật.</li>
+<li><strong>Trạng thái công việc dùng <code>DONE-CODE</code> / <code>WAITING-VERDICT</code>, không dùng "DONE".</strong> Quy ước nội
+   bộ: chưa được người review thì code xong vẫn không gọi là xong. Hiện có <strong>20 mục đang chờ
+   review</strong>.</li>
+<li>Nhóm <strong>giữ lại cả kết quả xấu</strong> (kể cả Δ âm) trong báo cáo, vì chúng là bằng chứng cho phương
+   pháp đo — xem §11.6 và §12.</li>
+</ol>
+<hr>
+<h2>1. Mục tiêu tuần 2 và trạng thái thực tế</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Mục tiêu đặt ra</th>
+<th>Trạng thái</th>
+<th>Bằng chứng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>Trả lời được câu hỏi trung tâm: <strong>advisor mất thông tin cầu (λ) thì còn lại bao nhiêu giá trị?</strong></td>
+<td>✅ <strong>Đo xong</strong> 5 arm, n=100</td>
+<td>§11.1</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>Dựng <strong>hạ tầng đo tin được</strong>: ghép cặp CRN, bootstrap CI, cổng thống kê chặn kết luận sai</td>
+<td>✅ <strong>Đo xong</strong>, cổng đã bắn thật</td>
+<td>§11.3, §4.3</td>
+</tr>
+<tr>
+<td>M3</td>
+<td><strong>Guardrail sức khoẻ + hệ thống</strong> để advisor không tối ưu tiền bằng cách hại tài xế/hệ thống</td>
+<td>✅ <code>DONE-CODE</code> — nối nguồn 01/08</td>
+<td>§11.4, §7.4</td>
+</tr>
+<tr>
+<td>M4</td>
+<td><strong>Chuẩn hoá đường dữ liệu theo schema thật</strong>: 13 bảng → view L3 → solver</td>
+<td>✅ <strong>Xong</strong> — view + kiểm thử theo đúng schema GSM; sản phẩm chạy trên <strong>dữ liệu mô phỏng</strong> theo đúng phạm vi được phép</td>
+<td>§6.4</td>
+</tr>
+<tr>
+<td>M5</td>
+<td><strong>Sản phẩm demo được</strong>: app tài xế + khu mô phỏng</td>
+<td>✅ Chạy được, <code>WAITING-VERDICT</code></td>
+<td>§9</td>
+</tr>
+</tbody>
+</table>
+<p>Ngoài 5 mục tiêu trên, tuần 2 phát sinh <strong>một nhánh công việc không lên kế hoạch trước</strong> và nó
+chiếm phần lớn hai ngày cuối: sau khi hoàn tất M1, nhóm phát hiện <strong>thước đo dùng để kết luận M1
+bị sai</strong>, phải sửa thước và <strong>đo lại toàn bộ</strong> (§12.2). Đây là phần chúng em cho là đáng báo cáo
+nhất, dù nó làm con số headline <strong>giảm xuống</strong>.</p>
+<hr>
+<h2>2. Hướng xây dựng sản phẩm</h2>
+<h3>2.1 Bài toán</h3>
+<p>Thu nhập một ca không chỉ phụ thuộc số cuốc. Trong một ca, tài xế đồng thời phải cân: thời gian
+còn lại · cầu dự kiến theo từng khung giờ · trạng thái pin và thời gian đổi/sạc · mốc điểm thưởng
+đang theo · thời gian chờ · và ảnh hưởng của một lựa chọn lên kết quả cuối ca. Đây là <strong>bài toán
+tối ưu đa biến có ràng buộc</strong>, nhưng tài xế phải giải nó trên đường, trong vài giây.</p>
+<p>Sản phẩm định vị là <strong>trợ lý hỗ trợ quyết định</strong>: đưa phương án + lý do + điều kiện, rồi để tài xế
+tự quyết. Không phải chatbot trả lời chung.</p>
+<h3>2.2 Ba thời điểm có giá trị</h3>
+<table>
+<thead>
+<tr>
+<th>Thời điểm</th>
+<th>Câu hỏi của tài xế</th>
+<th>Sản phẩm cung cấp</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Trước ca</strong></td>
+<td>Đặt mục tiêu gì, phân bổ thời gian thế nào?</td>
+<td>Kế hoạch ca + khoảng cách tới mốc thưởng</td>
+</tr>
+<tr>
+<td><strong>Trong ca</strong></td>
+<td>Nên chạy tiếp, đứng chờ, chuyển vùng, nghỉ hay đi sạc?</td>
+<td>Phương án theo trạng thái hiện tại + dự báo cầu</td>
+</tr>
+<tr>
+<td><strong>Sau ca</strong></td>
+<td>Vì sao ca chưa đạt kỳ vọng?</td>
+<td>Phân tích thời gian chờ, cuốc, điểm, mẫu hành vi</td>
+</tr>
+</tbody>
+</table>
+<h3>2.3 Ranh giới — điều sản phẩm KHÔNG làm</h3>
+<p>Đây là <strong>ràng buộc cứng</strong>, được thi hành bằng cơ chế trong code (§7), không phải bằng lời hứa:</p>
+<ul>
+<li><strong>Không</strong> tự nhận / từ chối / huỷ một cuốc cụ thể;</li>
+<li><strong>Không</strong> thay thế hay can thiệp dispatch · matching · pricing · routing của GSM — advisor chạy
+  <strong>trên nền</strong> các thuật toán đó (chứng minh: <code>src/gsm_sim/dispatcher.py</code> <strong>151 dòng, 0 lần</strong> tham
+  chiếu <code>advice|advisor|bridge</code>);</li>
+<li><strong>Không</strong> hứa chắc mức thu nhập; mọi phát biểu kèm bất định và điều kiện;</li>
+<li><strong>Không</strong> để LLM tự sinh số tài chính — mọi số hiển thị đến từ solver kiểm chứng được (§7.2);</li>
+<li><strong>Không</strong> coi sức khoẻ là biến để tối ưu, tức không đánh đổi sức khoẻ lấy tiền (§7.4);</li>
+<li><strong>Không</strong> trình bày số mô phỏng như số thật của GSM.</li>
+</ul>
+<hr>
+<h2>2b. Finding facts — cơ sở thực tế để dựng mô phỏng</h2>
+<p>Mô phỏng chỉ có giá trị nếu tham số của nó đến từ thực tế. Trước khi viết engine, nhóm nghiên cứu
+chính sách và cấu trúc chi phí thật của GSM, và <strong>gắn nhãn độ tin cậy cho từng con số</strong> —
+<code>REAL</code> (từ nguồn official có URL, đã fetch), <code>PROXY</code> (suy từ nguồn gián tiếp), <code>ASSUMPTION</code>
+(nhóm tự đặt, chưa có nguồn).</p>
+<h3>2b.1 Chính sách thu nhập — nền của mọi phép tính tiền</h3>
+<table>
+<thead>
+<tr>
+<th>Nội dung</th>
+<th>Số thật</th>
+<th>Nhãn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Chia sẻ doanh số Bike</td>
+<td><strong>"lên tới 75%"</strong>, hiệu lực 02/03/2026</td>
+<td><code>REAL</code> — greensm.com</td>
+</tr>
+<tr>
+<td>Mốc điểm → thưởng tuần, Khu vực 1 (HN/HCM/ĐN/BD)</td>
+<td>400–699đ: <strong>200k</strong> · 700–1.099đ: <strong>400k</strong> · 1.100–1.399đ: <strong>800k</strong> · ≥1.400đ: mốc cao nhất</td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Điểm mỗi cuốc (snapshot 07/2025 — <strong>sim đang dùng</strong>)</td>
+<td>cao điểm 6–8h &amp; 16–18h: <strong>10 điểm</strong> · giờ thường: <strong>5 điểm</strong></td>
+<td><code>REAL</code> (snapshot)</td>
+</tr>
+<tr>
+<td>Điều kiện thưởng tuần</td>
+<td>≥5 ngày hoạt động/tuần + nhận ≥85% + hoàn thành ≥85%; bản mới thêm <strong>điểm sao &gt; 4,85</strong></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Khoán tuần — truy thu khi không đạt</td>
+<td><strong>20%</strong> phần doanh số chưa đạt (toàn quốc), <strong>tới 40%</strong> ở HN/HCM</td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td><strong>Bỏ phạt tỷ lệ nhận/hoàn thành</strong> (23/02/2026)</td>
+<td><em>"Không áp dụng hình thức xử phạt khi tỷ lệ nhận chuyến và tỷ lệ hoàn thành thấp"</em></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Đảm bảo thu nhập 3 tháng đầu</td>
+<td>HN/HCM: full-time <strong>tới 600.000đ/ngày</strong>, part-time tối thiểu <strong>360.000đ/ngày</strong></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Thưởng thâm niên</td>
+<td>6–9 tháng: <strong>500k/tháng</strong> · 9–12 tháng: <strong>700k</strong> · ≥12 tháng: <strong>1tr</strong></td>
+<td><code>REAL</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Một phát hiện làm đổi hướng thiết kế:</strong> chính sách 23/02/2026 <strong>bỏ hình thức phạt</strong> theo tỷ lệ
+nhận/hoàn thành và chuyển sang <strong>khoán tuần + truy thu</strong>. Nghĩa là cấu trúc động lực của tài xế đã
+dịch từ <em>"tránh bị phạt"</em> sang <em>"đạt khoán"</em>. Nghiên cứu ban đầu của nhóm (dựa trên bản cũ) đã lỗi
+thời và phải cập nhật lại toàn bộ — đây là lý do trong repo có một vòng "research refresh" riêng.</p>
+<h3>2b.2 Cấu trúc chi phí — vì sao mô phỏng phải mô hình pin nghiêm túc</h3>
+<table>
+<thead>
+<tr>
+<th>Nội dung</th>
+<th>Số thật</th>
+<th>Nhãn</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Đổi pin tại trạm công cộng</td>
+<td><strong>9.000đ/lượt</strong></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Miễn phí đổi pin cho tài xế Platform độc quyền</td>
+<td><strong>không giới hạn, tới 31/03/2029</strong></td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Thuê pin sau ưu đãi</td>
+<td><strong>175.000đ/tháng</strong> (1 pin) · <strong>300.000đ/tháng</strong> (2 pin)</td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Dung lượng pin</td>
+<td>pack đổi LFP <strong>1,5 kWh</strong> · Feliz S / Evo200 <strong>3,5 kWh</strong> LFP</td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>Sạc tại nhà</td>
+<td>~<strong>70–93đ/km</strong>; sau ưu đãi ~<strong>150đ/km</strong></td>
+<td><code>PROXY</code></td>
+</tr>
+</tbody>
+</table>
+<p>Vì phí đổi pin đang <strong>miễn phí tới 2029</strong>, mô hình chi phí mặc định đặt <code>swap_fee = 0</code> — nhưng
+tham số vẫn để mở để quét được khi ưu đãi kết thúc. Đây là ví dụ cho nguyên tắc: <strong>số có thể đổi
+thì phải là tham số, không phải hằng số chôn trong code</strong>.</p>
+<h3>2b.3 Những gì nhóm CHƯA có nguồn — khai thẳng</h3>
+<table>
+<thead>
+<tr>
+<th>Thiếu</th>
+<th>Hệ quả</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Dữ liệu về mệt và tai nạn</strong></td>
+<td>Không thể định giá "gợi ý nghỉ đáng bao nhiêu tiền" ⇒ nhóm <strong>từ chối</strong> đưa ra con số đó (§12.4)</td>
+</tr>
+<tr>
+<td><strong>Telemetry pin trong 13 bảng GSM</strong></td>
+<td>SOC và tầm đi phải dùng <code>PROXY</code> tất định, không phải số đo</td>
+</tr>
+<tr>
+<td><strong>Tỷ lệ nghe lời của tài xế thật</strong></td>
+<td>Tỷ lệ trong mô phỏng là <code>ASSUMPTION</code> — dùng để quét độ nhạy, không phải để dự báo</td>
+</tr>
+<tr>
+<td><strong>4/13 bảng chưa có danh sách cột</strong> (gồm <code>trips</code>)</td>
+<td>Chưa verify được schema khớp GSM ⇒ 4 test đang skip (§11.5)</td>
+</tr>
+<tr>
+<td>Trần ca 12h/ngày</td>
+<td><code>ASSUMPTION</code> — không có cửa sổ ca khai báo trong bảng thật</td>
+</tr>
+</tbody>
+</table>
+<p>Nhóm chủ trương: <strong>thiếu thì nói thiếu</strong>. Một khoảng trống được khai báo an toàn hơn một con số
+được điền cho đủ bảng.</p>
+<hr>
+<h2>3. Định hướng từng feature</h2>
+<p>Advisor có <strong>5 kênh</strong> can thiệp. Điều đáng nói là trạng thái bật/tắt của chúng <strong>do kết quả đo
+quyết định</strong>, không do ý muốn:</p>
+<table>
+<thead>
+<tr>
+<th>Kênh</th>
+<th>Làm gì</th>
+<th>Trạng thái</th>
+<th>Vì sao</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>positioning_overrides</code></td>
+<td>Khi bản năng tài xế là <em>đứng chờ</em>, gợi ý chuyển sang ô có cầu cao hơn</td>
+<td>✅ <strong>BẬT</strong> (<code>wait_only</code>)</td>
+<td>Kênh <strong>duy nhất</strong> được duyệt: đo ra dương và bền qua nhiều vòng</td>
+</tr>
+<tr>
+<td><code>shift_plan</code></td>
+<td>Lập lịch ca (chạy/nghỉ/sạc)</td>
+<td>❌ <strong>TẮT</strong></td>
+<td>Đo ra <strong>có hại</strong> — quyết định ĐA-07</td>
+</tr>
+<tr>
+<td><code>accept_lift</code></td>
+<td>Nâng nhẹ xu hướng nhận cuốc (<code>step 0,10</code>, trần <code>0,15</code>)</td>
+<td>❌ <strong>TẮT</strong></td>
+<td>Đo ra không hiệu quả</td>
+</tr>
+<tr>
+<td><code>shift_extend</code></td>
+<td>Gợi ý kéo dài ca</td>
+<td>❌ <strong>TẮT</strong></td>
+<td>Đo ra không hiệu quả</td>
+</tr>
+<tr>
+<td><code>rest_window</code></td>
+<td>Gợi ý khung nghỉ</td>
+<td>❌ <strong>TẮT</strong></td>
+<td>Trong A/B một-ngày kênh này <strong>nói 0/873 lần</strong> — cần chế độ nhiều ngày mới đo được (§12.4)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nguyên tắc rút ra:</strong> <em>"không hiệu quả thì TẮT để advisor im lặng"</em>. Một trợ lý nói ít mà đúng
+tốt hơn một trợ lý nói nhiều. Đây cũng là lý do §9.2 thiết kế "card im lặng".</p>
+<hr>
+<h2>4. Công nghệ và toán ứng dụng</h2>
+<h3>4.1 Chín solver — phát biểu toán học</h3>
+<p>Mọi con số tài chính hiển thị cho tài xế <strong>phải</strong> đi qua một trong chín solver này. Solver là code
+thuần, tất định, có test — không phải LLM.</p>
+<table>
+<thead>
+<tr>
+<th>Solver</th>
+<th>Bài toán</th>
+<th>Phương pháp</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>S1</strong> <code>bonus_feasibility</code></td>
+<td>Còn <em>h</em> giờ và <em>p</em> điểm hiện tại, có kịp mốc thưởng kế tiếp không? Cần thêm bao nhiêu cuốc/giờ?</td>
+<td>Đại số đóng trên tốc độ điểm/giờ theo khung giờ + kiểm khả thi so quỹ giờ</td>
+</tr>
+<tr>
+<td><strong>S2</strong> <code>shift_dp</code></td>
+<td>Phân bổ các khoảng <code>ONLINE / REST / SWAP / END</code> trong thời gian còn lại</td>
+<td><strong>Dynamic programming</strong> trên trạng thái (thời gian còn lại, SOC, điểm, nợ nghỉ)</td>
+</tr>
+<tr>
+<td><strong>S3</strong> <code>f3_patterns</code></td>
+<td>Ca vừa rồi có mẫu hành vi nào làm giảm hiệu quả?</td>
+<td>Thống kê mô tả trên chuỗi phân đoạn</td>
+</tr>
+<tr>
+<td><strong>S4</strong> <code>capacity_alloc</code></td>
+<td>Nếu <strong>nhiều</strong> tài xế cùng nhận một gợi ý thì trạm/khu có chịu được không?</td>
+<td><strong>Linear assignment</strong> (<code>scipy.optimize.linear_sum_assignment</code>) chống dồn cục</td>
+</tr>
+<tr>
+<td><strong>S5</strong> <code>weekly_khoan</code></td>
+<td>Khoán tuần: còn thiếu bao nhiêu, có khả thi không?</td>
+<td>Đại số + kiểm ràng buộc, tách gross/payout</td>
+</tr>
+<tr>
+<td><strong>S6</strong> <code>mission_knapsack</code></td>
+<td>Chọn tổ hợp nhiệm vụ nào trong quỹ thời gian còn lại?</td>
+<td><strong>0/1 knapsack</strong> (reward vs effort, capacity = giờ còn)</td>
+</tr>
+<tr>
+<td><strong>S7</strong> <code>idle_reduction</code></td>
+<td>Khoảng chờ dài nào đáng chuyển thành di chuyển/nghỉ?</td>
+<td>Phát hiện đoạn + so sánh chi phí cơ hội theo cầu giờ</td>
+</tr>
+<tr>
+<td><strong>S8</strong> <code>penalty_explain</code></td>
+<td>Khoản trừ đến từ đâu, ngưỡng chính sách nào?</td>
+<td>Tra cứu + đối chiếu <code>PolicyBundle</code> có version</td>
+</tr>
+<tr>
+<td><strong>S9</strong> <code>anomaly_alert</code></td>
+<td>Chỉ số nào lệch bất thường so với chính tài xế đó?</td>
+<td>So sánh với phân phối lịch sử cá nhân</td>
+</tr>
+</tbody>
+</table>
+<p>Mỗi solver trả về một <strong><code>SolverReport</code></strong> gồm: <code>problem_digest</code> (phát biểu bài toán), <em>numbers with
+source</em> (mỗi số kèm nguồn), <code>sensitivity</code>, và <code>infeasible_reason</code> khi bài toán không khả thi.
+Trường "nguồn cho từng số" chính là thứ khiến tầng agent <strong>không thể</strong> bịa số (§7.2).</p>
+<h3>4.2 Điều phối cuốc trong mô phỏng — hai tầng</h3>
+<p>Đây là cơ chế tạo ra "thế giới vận hành" để đánh giá advisor. <strong>Không phải</strong> tính năng cho advisor
+điều khiển hệ thống GSM.</p>
+<p><strong>Tầng 1 — thu hẹp ứng viên bằng H3.</strong> Với mỗi đơn, chỉ xét tài xế trong <code>grid_disk(pickup_cell,
+k_max)</code> ở <strong>H3 resolution 9</strong> (lưới vận hành ~<strong>85 ô lõi</strong>; resolution 8 dùng để tổng hợp
+heatmap). Điều này giảm số cặp phải tính và phản ánh thực tế: không phải mọi tài xế trong thành
+phố đều là ứng viên cho một đơn.</p>
+<p><strong>Tầng 2 — ghép cặp theo lô, tối ưu tổng ETA.</strong> Các cặp (đơn, tài xế) khả thi vào một ma trận chi
+phí với <code>cost = ETA_pickup</code>; cặp không khả thi gán <code>INFEASIBLE = 1e6</code>; giải bằng
+<strong><code>linear_sum_assignment</code></strong> (thuật toán Hungarian), chỉ nhận cặp có <code>ETA ≤ eta_max_min</code>, mỗi tài
+xế tối đa 1 đơn/tick.</p>
+<p>Vì sao không dùng greedy: greedy có thể chọn tài xế gần theo đường chim bay nhưng ETA thực tế xấu
+hơn, và xử lý đơn theo <code>order_id</code> làm đơn tới sau mất ứng viên khả thi duy nhất. Greedy <strong>vẫn được
+giữ</strong> làm baseline đối chiếu và làm đường lui khi <code>n_orders × n_drivers &gt; 200.000</code> cặp.</p>
+<p><strong>ETA</strong> tính bằng haversine giữa toạ độ liên tục thật của tài xế và điểm đón, <strong>nhân hệ số đường
+thật theo cặp ô</strong> từ ma trận <strong>OSRM</strong> cache offline — không dùng hệ số phẳng, vì hệ số OSRM thật
+biến thiên <strong>1,00 → 3,50</strong> (dùng hệ số phẳng từng làm <strong>293/3.520 lượt bị bỏ oan</strong>).</p>
+<h3>4.3 Phương pháp thống kê — phần quyết định độ tin của mọi kết luận</h3>
+<p><strong>(a) Ghép cặp CRN (common random numbers).</strong> Trace ngoại sinh (đơn hàng, thời tiết) được sinh
+<strong>trước</strong> khi chạy, tất định theo seed, và <strong>dùng chung cho cả hai arm</strong>. Hai thế giới chỉ khác
+đúng một điều: arm B nghe advisor. Nhờ vậy Δ per-seed loại được phương sai ngoại sinh —
+<code>Δ_X(s) = B_X(s) − A(s)</code>, và so arm-vs-arm là <strong>hiệu của hiệu</strong> trên từng seed.</p>
+<p><strong>(b) Bootstrap CI theo cặp.</strong> <code>n_boot = 5000</code>, <code>alpha = 0,05</code>, <code>seed = 12345</code> — resample <strong>theo
+seed</strong> (đơn vị độc lập), không theo tài xế hay theo ngày, vì tài xế trong cùng một run không độc
+lập với nhau.</p>
+<p><strong>(c) Ngưỡng cỡ mẫu được mã hoá trong code, không tuỳ ý:</strong>
+<code>MIN_SEEDS_FOR_SIGNIFICANCE = 30</code> cho so A/B thường; <code>MIN_SEEDS_FOR_VARIANT_COMPARISON = 100</code> cho
+so <strong>hai biến thể advice</strong> (bài toán khó hơn, cần cỡ mẫu lớn hơn). Kèm <strong>MDE</strong> báo cùng mỗi Δ:
+MDE cho biết ta chỉ loại trừ được suy giảm <em>lớn hơn</em> mức đó — không phải "suy giảm bằng 0".</p>
+<p><strong>(d) Cổng thống kê Poisson-binomial cho tỷ lệ nghe lời.</strong> Mỗi lần advisor nói, việc tài xế nghe
+hay không là một Bernoulli với xác suất riêng theo archetype ⇒ tổng số lần nghe theo
+<strong>Poisson-binomial</strong>. Cổng tính</p>
+<div class="formula">z = (S − Σpᵢ) / √(Σpᵢ(1−pᵢ))</div>
+
+<p>với <code>pᵢ</code> lấy từ <strong>tỷ lệ danh nghĩa của chính run đó</strong> (không hard-code), và <strong>TREO kết luận khi
+|z| &gt; 4,0</strong> (<code>ADHERENCE_Z_MAX = 4.0</code>), kèm ngưỡng mẫu số tối thiểu <code>20</code> để không phán trên mẫu quá
+nhỏ. Cổng này đã <strong>thực sự bắn</strong> và chặn một kết luận sai — §11.3.</p>
+<p><strong>(e) Ước lượng không thiên lệch cho tiêu chí cá nhân.</strong> Dùng <strong>cohort estimator</strong> (trung bình
+trên <em>mọi</em> tài xế, tách theo archetype), <strong>không</strong> dùng argmax. Lý do ở §11.6 — đây là bài học đắt
+nhất của nhóm.</p>
+<p><strong>(f) Công bằng và tập trung.</strong> <strong>Gini</strong> trên phân phối payout (bất bình đẳng thu nhập giữa tài
+xế) và <strong>HHI</strong> (Herfindahl–Hirschman Index) cho mức dồn cục ở trạm pin và ở ô cung.</p>
+<hr>
+<h2>4b. Architecture choice — bốn quyết định và lý do</h2>
+<p>Bốn quyết định kiến trúc dưới đây định hình toàn bộ dự án. Nhóm ghi cả <strong>phương án đã bị loại</strong> để
+mentor thấy đây là chọn lựa có cân nhắc, không phải mặc định.</p>
+<h3>4b.1 Tách "tính" khỏi "nói" — thay vì để LLM làm cả hai</h3>
+<p><strong>Chọn:</strong> solver tính → agent diễn giải → verifier kiểm bằng code → card.
+<strong>Đã loại:</strong> để LLM đọc dữ liệu thô rồi tự đưa ra khuyến nghị kèm số.</p>
+<p><strong>Lý do:</strong> sản phẩm nói về tiền của người khác. Một con số sai không chỉ là bug — nó là lời khuyên
+sai về thu nhập. Kiến trúc này làm việc bịa số <strong>bất khả về mặt cấu trúc</strong>, chứ không phụ thuộc
+việc prompt có tốt hay không: agent chỉ nhận được <code>SolverReport</code>, và mỗi số trong đó đã mang nguồn.
+Đổi lại, nhóm mất khả năng trả lời những câu hỏi mở mà solver chưa phủ — chấp nhận được ở giai đoạn
+này.</p>
+<h3>4b.2 Top-down (flow-first) — thay vì mô hình hoá từ đầu</h3>
+<p><strong>Chọn:</strong> dựng luồng sản phẩm trước, mỗi bước gọi một solver độc lập.
+<strong>Đã loại:</strong> dựng một bài toán tối ưu tổng thể từ các biến nguyên tử rồi giải một lần.</p>
+<p><strong>Lý do:</strong> bài toán thật <em>là</em> một bài tối ưu đa biến có ràng buộc, nhưng nếu mô hình hoá toàn bộ
+ngay từ đầu thì (a) chưa có dữ liệu thật để hiệu chuẩn, và (b) không ship được gì cho tới khi mô
+hình hoàn chỉnh. Cách top-down cho phép <strong>từng kênh được đo và tắt/bật độc lập</strong> — chính vì thế
+tuần này nhóm mới tắt được 4/5 kênh dựa trên số đo (§3) thay vì phải giữ cả khối.</p>
+<h3>4b.3 Mô phỏng ghép cặp — thay vì thử trực tiếp hoặc A/B trên người</h3>
+<p><strong>Chọn:</strong> hai thế giới cùng seed, khác đúng một biến.
+<strong>Đã loại:</strong> thử nghiệm trên tài xế thật ở giai đoạn này.</p>
+<p><strong>Lý do:</strong> không thể (và không nên) đem một trợ lý chưa kiểm chứng vào thu nhập thật của người
+khác. Mô phỏng ghép cặp cho phép trả lời <em>"nếu nhiều người cùng làm theo thì sao"</em> — câu hỏi mà
+A/B trên người <strong>không</strong> trả lời được nếu nhóm thử nghiệm quá nhỏ. Giá phải trả: mọi kết luận chỉ
+đúng trong phạm vi mô hình, nên báo cáo này gắn nhãn MOCK ở mọi bảng số.</p>
+<h3>4b.4 Phân tầng dữ liệu <code>L1</code> / <code>L1R</code> — thay vì một tầng chung</h3>
+<p><strong>Chọn:</strong> tách rõ dẫn xuất-từ-sim (<code>L1</code>) và dẫn xuất-từ-bảng-thật (<code>L1R</code>), gặp nhau ở tầng view
+<code>L3</code> mà solver đọc.
+<strong>Đã loại:</strong> một tầng dữ liệu chung cho cả hai nguồn.</p>
+<p><strong>Lý do:</strong> bảng thật GSM <strong>đã có</strong> field đo được (<code>acceptance_rate</code>, <code>online_time</code>, <code>commission</code>);
+tự đếm lại từ event là tạo ra nguồn sự thật thứ hai — và nhóm đã trả giá cho việc đó bằng một lỗi
+<code>online_time = 0</code>. Nhờ tách tầng, solver <strong>không cần biết</strong> dữ liệu đến từ sim hay từ bảng thật;
+đó cũng là điều kiện để sau này thay nguồn mà không sửa solver.</p>
+<hr>
+<h2>5. Thiết kế mô phỏng (simulator)</h2>
+<h3>5.1 Vì sao cần mô phỏng</h3>
+<p>Không thể thử advisor trực tiếp trên vận hành GSM thật. Mô phỏng là <strong>môi trường thí nghiệm có
+kiểm soát</strong> để trả lời bốn câu hỏi không thể hỏi bằng cách khác: bật/tắt advice thì cùng một tình
+huống đổi thế nào · một phương án có lợi cho một tài xế có gây hại cho người khác không · khi nhiều
+người cùng nhận một gợi ý thì capacity và số đơn hết hạn ra sao · kết luận có bền qua nhiều seed
+không.</p>
+<h3>5.2 Kiến trúc engine</h3>
+<p>Discrete-event simulation trên <strong>SimPy</strong>. Mỗi tài xế là một process; cộng các process nền:
+dispatcher, quét đơn hết hạn, planner vị trí (khi bật kênh), probe thống kê. Kết thúc bằng
+<code>env.run(until=end_min)</code> rồi chốt sổ và <strong>censor đơn còn treo</strong> (ghi <code>CENSORED_END_OF_RUN</code> hoặc
+<code>EXPIRED</code>, không bỏ im lặng).</p>
+<h3>5.3 Actor: số lượng, trạng thái, hành động</h3>
+<p><strong>90 tài xế</strong>, lấy mẫu từ <strong>bảy archetype</strong> <code>P1…P7</code>. Số lượng mỗi loại tính bằng
+<code>round(n × tỷ trọng)</code> rồi hiệu chỉnh cho đủ tổng — <strong>không dùng RNG</strong>, nên cố định với mọi seed.
+(P6 "ca sáng sớm" và P7 "ca tối-đêm" được thêm để phủ khung 05–06h và 21–23h.)</p>
+<p><strong>Trạng thái</strong> — enum <code>ActorState</code> <strong>6 giá trị</strong>: <code>OFFLINE</code> · <code>IDLE</code> · <code>ENROUTE</code> (đang tới điểm
+đón) · <code>ON_TRIP</code> · <code>CHARGING</code> · <code>REST</code>. Đội xe chia hai loại <code>FleetType</code>: <strong>SWAP</strong> (đổi pin tại
+trạm) và <strong>CHARGE</strong> (sạc tại nhà).</p>
+<p>Ngoài enum, mỗi actor mang một khối trạng thái chia 4 nhóm: (1) tham số bất biến trong ngày
+(archetype, fleet, ô nhà, giờ vào/ra ca, sai số kinh nghiệm cá nhân, ngưỡng mệt, giờ ăn);
+(2) trạng thái động (state, ô, toạ độ, SOC, ô đang tới, giờ nghỉ đã lên kế hoạch); (3) bộ đếm
+ngày (cuốc, đơn được chào/nhận/hoàn thành/huỷ/bỏ vì SOC, gross, payout, điểm, số lần mắc kẹt,
+rating…); (4) đồng hồ thời gian (online, rỗng, có khách, chờ, nghỉ, sạc, <strong>chuỗi chờ liên tục</strong>,
+nợ nghỉ, thời gian đã kéo ca…).</p>
+<p><strong>Hành động khi rỗi</strong> — enum <code>IdleAction</code> <strong>6 giá trị</strong>, chọn theo thứ tự ưu tiên:</p>
+<ol>
+<li><code>GO_SWAP</code> / <code>GO_CHARGE</code> — SOC ≤ ngưỡng (ưu tiên cao nhất);</li>
+<li><code>END_SHIFT</code> — quá giờ tan ca;</li>
+<li><code>REST</code> — đúng giờ ăn <strong>và</strong> mệt &gt; 0,35 <strong>và</strong> coin 0,5 (tối đa 1 lần/ngày);</li>
+<li><code>REST</code> — mệt &gt; 1,0 <strong>và</strong> coin 0,3;</li>
+<li><code>RELOCATE</code> — so sánh kỳ vọng cầu ô lân cận với ô hiện tại;</li>
+<li><code>WAIT</code> — mặc định.</li>
+</ol>
+<h3>5.4 Cách chọn tối ưu — và chỗ mô hình cố ý <em>không</em> tối ưu</h3>
+<p>Điểm thiết kế quan trọng: <strong>tài xế trong mô phỏng không phải người tối ưu hoàn hảo.</strong> Nếu họ tối
+ưu hoàn hảo thì advisor không thể có giá trị, và mô hình sẽ không nói được gì về thực tế.</p>
+<ul>
+<li><strong>Quyết định nhận cuốc</strong> là một mô hình logit:
+  <code>x = logit(accept_base) + w · z</code>, với <code>z = (net − center)/scale</code> <strong>kẹp trong [−2, 2]</strong> và
+  <code>net = gross − pickup_km × pickup_disutility</code>. Tiêu <strong>đúng một</strong> lần <code>rng.random()</code> để không
+  làm lệch chuỗi ngẫu nhiên — đây là điều kiện để CRN còn đúng.</li>
+<li><strong>Kinh nghiệm cầu là sai lệch có chủ ý:</strong> mỗi archetype có <code>demand_prior_sigma</code> riêng, nên tài
+  xế nhìn cầu <strong>qua một lớp nhiễu cá nhân</strong>, trong khi thế giới có λ thật. Khoảng trống giữa hai
+  cái đó chính là <strong>dư địa của advisor</strong> — và §11.1 đo đúng khoảng trống này.</li>
+<li><strong>"Sốt ruột" là bản năng, không phải lời khuyên:</strong> khi chuỗi chờ dài ra, tài xế tự nới bán kính
+  tìm kiếm và hạ tiêu chuẩn kén chọn; tới hạn thì bỏ hẳn phép so sánh và đi tới ô lân cận tốt
+  nhất. Cơ chế này <strong>được gắn nhãn bản năng</strong> để không bị tính nhầm thành công của advisor.</li>
+</ul>
+<h3>5.5 Tham số thế giới đang chạy</h3>
+<table>
+<thead>
+<tr>
+<th>Tham số</th>
+<th>Giá trị</th>
+<th>Ghi chú</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cửa sổ chạy</td>
+<td>05:00 – 24:00, <strong>warm-up 60′</strong></td>
+<td>Metrics tính từ 06:00</td>
+</tr>
+<tr>
+<td>Đơn/ngày</td>
+<td><strong>1.200</strong> (kỳ vọng trong cửa sổ)</td>
+<td>Hình dạng theo giờ được chuẩn hoá lại</td>
+</tr>
+<tr>
+<td>Lưới không gian</td>
+<td><strong>H3 res 9</strong> (~85 ô lõi), res 8 để tổng hợp</td>
+<td>Đống Đa, Hà Nội</td>
+</tr>
+<tr>
+<td>Nhịp thời gian</td>
+<td><strong>5 nhịp khác nhau</strong>: dispatch 5s · quét hết hạn 0,5′ · actor chờ 2,0′ · actor bận 1,0′ · planner 60′</td>
+<td>Không phải một tick duy nhất</td>
+</tr>
+<tr>
+<td>Tiêu hao pin</td>
+<td>swap <strong>1,6 %/km</strong> · charge <strong>0,85 %/km</strong></td>
+<td>⇒ tầm ở SOC 100%: <strong>62,5 km</strong> / <strong>117,6 km</strong></td>
+</tr>
+<tr>
+<td>Sạc tại nhà</td>
+<td><strong>210′</strong>, SOC → 100</td>
+<td>Phải <em>về nhà</em> (tốn thời gian + pin thật)</td>
+</tr>
+<tr>
+<td>Trạm đổi pin</td>
+<td>tủ có <strong>tồn kho pin</strong>, sạc lại <strong>105′</strong>/viên, chờ tối đa <strong>60′</strong></td>
+<td>Đổi 1–1 <strong>atomic</strong> để tổng pin bất biến, chống hai tài xế giành một viên</td>
+</tr>
+<tr>
+<td>Cổng SOC trước khi chào đơn</td>
+<td><code>soc − total_km × pct_per_km &gt; 8,0</code></td>
+<td>Không đủ thì đếm riêng <code>orders_soc_skipped</code>, <strong>không</strong> tính là "huỷ"</td>
+</tr>
+</tbody>
+</table>
+<p>Toàn bộ số trên đọc từ <code>configs/pilot_dongda.yaml</code> — <strong>một nguồn cấu hình duy nhất</strong> cho mọi phép
+đo (xem §12.3 về việc nhóm vừa xoá ba tham số dẫn xuất khỏi file này).</p>
+<hr>
+<h2>6. Luồng dữ liệu qua schema</h2>
+<h3>6.1 Kiến trúc phân tầng</h3>
+<pre><code>L0  nguồn thô (event / bảng)
+L1  dẫn xuất từ sim          L1R  dẫn xuất từ 13 BẢNG THẬT của GSM
+L2  tổng hợp                 L2I  tổng hợp phía inference
+L3  VIEW đầu vào cho solver  ──►  solver (S1…S9)  ──►  SolverReport  ──►  card
+</code></pre>
+<p>Tách <code>L1</code> (sim) và <code>L1R</code> (bảng thật) là quyết định kiến trúc có chủ ý: bảng thật GSM <strong>đã có field
+đo được</strong> (<code>acceptance_rate</code>, <code>fulfillment_rate</code>, <code>online_time</code>, <code>total_fee</code>/<code>commission</code>), nên
+phải <strong>đọc thẳng</strong>, không tự đếm lại từ event — chính việc recompute từng là nguồn của một lỗi
+<code>online_time = 0</code>.</p>
+<h3>6.2 Ví dụ cụ thể: view cho S1 đọc field nào</h3>
+<p><code>bonus_gap_input</code> (đầu vào của S1 BonusFeasibility):</p>
+<table>
+<thead>
+<tr>
+<th>Field của view</th>
+<th>Nguồn</th>
+<th>Ghi chú</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>acceptance_rate</code>, <code>completion_rate</code></td>
+<td><strong>đọc thẳng</strong> <code>driver_statistic_daily</code></td>
+<td>Nếu hôm nay chưa có dòng đo → carry-forward giá trị đo gần nhất và <strong>hạ nhãn xuống <code>ESTIMATED</code></strong>, không bịa 1,0 lạc quan</td>
+</tr>
+<tr>
+<td><code>points_now</code></td>
+<td><strong>tính</strong> từ <code>trips</code> × <code>PolicyBundle</code></td>
+<td>Điểm không có trong bảng thật; chỉ cộng cuốc có <code>complete_time ≤ t_now</code></td>
+</tr>
+<tr>
+<td><code>hours_budget_remaining</code></td>
+<td><code>driver_online_hours_sap_id</code> hoặc cửa sổ ca khai báo</td>
+<td>Trần ca 12h là ASSUMPTION</td>
+</tr>
+<tr>
+<td><code>historical_points_per_hour</code></td>
+<td><code>trips</code> các ngày <strong>trước</strong> hôm nay</td>
+<td>Chỉ lấy khi có ≥ 3 ngày</td>
+</tr>
+<tr>
+<td><code>next_tiers</code></td>
+<td><code>PolicyBundle</code> (có version)</td>
+<td>Mốc thưởng theo chính sách đã lưu</td>
+</tr>
+<tr>
+<td><code>soc_pct</code></td>
+<td><strong><code>None</code></strong></td>
+<td>13 bảng GSM <strong>không có</strong> telemetry pin — khai thẳng là thiếu</td>
+</tr>
+</tbody>
+</table>
+<h3>6.3 Dữ liệu mock sinh theo schema</h3>
+<p>Generator sinh dữ liệu <strong>đúng theo schema 13 bảng</strong>, tất định theo seed, và ở chế độ mặc định các
+ngày là <strong>một chuỗi liên tục</strong> (cùng nhóm tài xế, trạng thái mang sang) thay vì các ngày rời rạc —
+để đo được hiệu ứng liên-ngày như "học từ hôm qua".</p>
+<h3>6.4 Trạng thái thật của luồng này</h3>
+<table>
+<thead>
+<tr>
+<th>Luồng</th>
+<th>Trạng thái</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>mô phỏng → solver → agent → UI</strong></td>
+<td><strong>Kín, chạy được</strong> — kiểm end-to-end 01/08: 4/4 endpoint trả HTTP 200 kèm nhãn <code>data_mode</code>/<code>is_mock</code></td>
+</tr>
+<tr>
+<td><strong>schema 13 bảng → view L3 → solver</strong></td>
+<td><strong>Đã viết và có kiểm thử</strong> theo đúng schema thật; sản phẩm chạy trên <strong>dữ liệu mô phỏng sinh theo chính schema đó</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Đây là <strong>lựa chọn về phạm vi, không phải thiếu sót</strong>: GSM cấp <em>cấu trúc</em> 13 bảng, còn dữ liệu vận
+hành thật thì nhóm không truy cập. Nên nhóm dựng đường đọc dữ liệu <strong>đúng theo schema</strong> rồi chạy
+trên dữ liệu mô phỏng sinh cùng schema — nhờ vậy solver không cần biết dữ liệu đến từ đâu, và khi
+có quyền truy cập thật thì thay nguồn mà không phải sửa solver (§4b.4).</p>
+<p>Hệ quả cần nhớ khi đọc báo cáo: <strong>mọi số trong §11 là số mô phỏng</strong> — điều này đã nêu ở đầu tài liệu.</p>
+<hr>
+<h2>7. Agent được dùng ở đâu, và guardrails</h2>
+<h3>7.1 Ranh giới: agent giải thích, solver tính</h3>
+<pre><code>Dữ liệu + bối cảnh  →  Solver / analytics  →  SolverReport (số + NGUỒN từng số)
+                                                      │
+                                                      ▼
+                          Agent: diễn giải · so sánh · nêu lý do · nêu caveat
+                                                      │
+                                                      ▼
+                            Verifier (kiểm 3 tầng, CODE veto)  →  Card cho tài xế
+                                                      │
+                                                      ▼
+                                     Tài xế tự quyết định  →  ghi nhận kết cục
+</code></pre>
+<p>Agent <strong>không</strong> thực hiện phép tối ưu và <strong>không</strong> sinh số tài chính. Nó nhận kết quả đã tính rồi
+chuyển thành ngôn ngữ tài xế dùng được. Cách này giữ hai yêu cầu cùng lúc: sản phẩm có giao tiếp
+tự nhiên, mà các con số vẫn đến từ thành phần kiểm chứng được.</p>
+<h3>7.2 Điều này được <strong>thi hành</strong> thế nào, không chỉ là nguyên tắc</h3>
+<p>Adapter phục vụ UI (<code>ui/backend/app/adapters/advisor.py</code>) dựng <code>bonus_gap_input</code> từ bảng rồi <strong>gọi
+solver S1 thật</strong> (<code>gsm_core.solvers.bonus_feasibility.solve()</code>); nó chỉ <em>dịch</em> <code>SolverReport</code> sang
+contract của card. Mỗi số trong card mang field <code>source</code>. Trong code còn một chốt tường minh: khi
+một đại lượng không có nguồn chắc chắn thì <strong>để danh sách <code>numbers</code> rỗng</strong> kèm ghi chú <em>"hiển thị
+nó ở đây sẽ thành lời hứa"</em> — tức thà nói ít hơn là nói một con số không truy được.</p>
+<h3>7.3 Pipeline Router → Composer → Verifier</h3>
+<p><strong>Router</strong> (zero-ML, luật) chọn chủ đề và solver. <strong>Composer</strong> dựng câu trả lời theo hướng
+placeholder-first: khung câu và các ô số được xác định trước, LLM chỉ điền diễn giải.
+<strong>Verifier</strong> kiểm ba tầng bằng <strong>code</strong> (không phải bằng LLM) và có quyền <strong>veto</strong>. Khi tắt LLM,
+hệ thống <strong>bắt buộc</strong> rơi về template — tức sản phẩm vẫn hoạt động, chỉ kém tự nhiên hơn.</p>
+<h3>7.4 Năm tầng guardrail</h3>
+<table>
+<thead>
+<tr>
+<th>Tầng</th>
+<th>Canh gì</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 · Cá nhân</td>
+<td>Payout, cuốc, thời gian chờ, SOC, điểm của từng tài xế</td>
+</tr>
+<tr>
+<td>2 · Hệ thống</td>
+<td>Tỷ lệ phục vụ, đơn hoàn thành, tổng payout, đơn hết hạn, thời gian khách chờ</td>
+</tr>
+<tr>
+<td>3 · Công bằng</td>
+<td><strong>Gini</strong> payout — advisor không được làm giàu một người bằng cách bần cùng người khác</td>
+</tr>
+<tr>
+<td>4 · Tập trung</td>
+<td><strong>HHI</strong> trạm pin và ô cung, số giờ đói cung — chống dồn cục do nhiều người nhận cùng gợi ý</td>
+</tr>
+<tr>
+<td>5 · <strong>Sức khoẻ</strong></td>
+<td><code>rest_min_total</code> · <code>veto_fired_n</code> · <strong>hai</strong> định nghĩa quá sức: <code>work_span p90/max</code> và <code>drive_min p90/max</code></td>
+</tr>
+</tbody>
+</table>
+<p>Tầng 5 là <strong>cổng một chiều</strong>: nó chỉ tố giác suy giảm, <strong>không bao giờ</strong> được đọc như "hệ thống
+tốt lên". Lý do: nếu để nó vào bảng hai chiều thì "số lần chặn vì quá sức tăng" sẽ bị đọc thành
+tiến bộ, trong khi nó nghĩa là tài xế đang chạm ngưỡng mệt nhiều hơn.</p>
+<p>Ngoài ra có hai cơ chế chống chính nhóm phát triển tự nới ràng buộc:</p>
+<ul>
+<li><strong><code>POLICY_LOCKED_KEYS</code></strong> — khoá cứng trần hoãn nghỉ (120′) và trần kéo ca (60′) khỏi mọi phép
+  quét tham số, ở một chốt duy nhất. Không ai "cứu" một con số xấu bằng cách nới trần sức khoẻ.</li>
+<li><strong>Scanner ranh giới tiền ↔ mệt</strong> — quét AST hai lớp trên đường tính tiền của
+  advisor/solver/policy; biến mệt xuất hiện ở đó là <strong>test đỏ</strong>. Đã kiểm bằng cách tiêm 4 lỗi vào
+  file thật để chứng minh scanner thực sự bắn.</li>
+</ul>
+<h3>7.5 Nhịp nói — để không làm phiền</h3>
+<p>Advisor có ngân sách phát ngôn: cooldown theo chủ đề, lưới quyết định <strong>30 phút</strong> dùng chung cho
+mọi kênh (một số duy nhất, không phải mỗi kênh một lưới), cửa sổ im lặng sau khi tài xế bấm "Bỏ
+qua", và không nói khi đang chở khách.</p>
+<h3>7.6 Đo "tài xế có nghe không"</h3>
+<p>Định nghĩa hiện hành: <code>followed</code> = <strong>kết cục tại thời điểm gán quyết định</strong>, và <code>execution_rate</code>
+(việc có thực thi được hay không) tách riêng — vì trộn hai thứ này chính là nguyên nhân của lỗi
+thước đo ở §12.2. Tỷ lệ nghe lời <strong>danh nghĩa</strong> theo archetype (P1 0,55 · P2 0,50 · P3 0,30 ·
+P4 0,75 · P5 0,30 · P6 0,50) là <strong>tham số giả định của mô hình</strong> — không phải số đo ở người thật.</p>
+<hr>
+<h2>8. Dữ liệu từ API bên ngoài và logic request</h2>
+<p><strong>Hiện có đúng một lời gọi API ngoài trên đường chạy sản phẩm:</strong> <code>POST /api/v1/routing/calculate</code>
+gọi <strong>OSRM public</strong> (<code>urllib.request.urlopen</code> có timeout). Ngoài ra OSRM được dùng <strong>offline</strong> để
+dựng ma trận hệ số đường thật theo cặp ô (<code>factor = osrm_km / haversine</code>, kẹp <code>[1,0; 3,5]</code>), sau
+đó cache — nên lúc mô phỏng <strong>không gọi mạng</strong>, giữ được tính tất định.</p>
+<p><strong>Chưa có:</strong> thời tiết và mật độ giao thông theo thời gian thực. Kiến trúc đã có chỗ cắm
+(<code>EnvironmentContext</code> đang mang hệ số ảnh hưởng tầm pin theo nhiệt độ), nên việc này nằm trong
+mục tiêu tuần 3 (§13.5) cùng các khuyên mềm dựa trên nó: <em>gợi ý nghỉ giữ sức, cảnh báo thời tiết,
+cảnh báo mật độ giao thông</em>.</p>
+<p><strong>Nguyên tắc khi cắm API ngoài</strong> (đã ghi thành luật nội bộ trước khi làm): lỗi hạ tầng phải
+<strong>fail-loud</strong> với fixture tái lập được ở đúng biên; <strong>không</strong> sửa logic nghiệp vụ để che lỗi
+external.</p>
+<h3>8.1 Nhóm "khuyên mềm" — thiết kế đã có, dữ liệu chờ tuần 3</h3>
+<p>Đây là nhóm tính năng nhóm cho là quan trọng nhất về mặt <strong>niềm tin của tài xế</strong>, và nó phụ thuộc
+trực tiếp vào API ngoài:</p>
+<table>
+<thead>
+<tr>
+<th>Khuyên mềm</th>
+<th>Dựa trên</th>
+<th>Trạng thái</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gợi ý nghỉ giữ sức</strong> khi thấy làm quá sức</td>
+<td>Chỉ tiêu tầng 5 (<code>work_span</code>, <code>online_min</code>) — <strong>đã có, đo được</strong></td>
+<td>Trigger sẵn; nhưng mô phỏng chưa mô tả hậu quả của mệt nên <strong>chưa đo được giá trị</strong> (§12.4)</td>
+</tr>
+<tr>
+<td><strong>Cảnh báo thời tiết</strong> (mưa, nắng gắt)</td>
+<td>API thời tiết</td>
+<td>⚠ <strong>Chưa có API</strong> → tuần 3</td>
+</tr>
+<tr>
+<td><strong>Cảnh báo mật độ giao thông</strong></td>
+<td>API giao thông thời gian thực</td>
+<td>⚠ <strong>Chưa có API</strong> → tuần 3. Hiện chỉ có hệ số đường <strong>tĩnh</strong> từ ma trận OSRM offline</td>
+</tr>
+<tr>
+<td><strong>Nhắc đổi pin trước khi vào khu khó tìm trạm</strong></td>
+<td>Trạng thái pin + vị trí trạm — đã có trong mô phỏng</td>
+<td>Chưa đưa lên UI</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vì sao nhóm coi đây là tính năng "niềm tin", không phải tính năng "tiền":</strong> một trợ lý chỉ nói
+về tiền dễ bị cảm nhận như công cụ vắt sức. Một lời nhắc <em>"trời sắp mưa to, cân nhắc nghỉ 20 phút"</em>
+đúng lúc là tín hiệu app đứng về phía tài xế — và giả thuyết của nhóm là <strong>nó làm tăng tỷ lệ nghe
+lời của các kênh khác</strong>. Giả thuyết này chưa đo được (cần người thật), nên được ghi nhãn
+<code>ASSUMPTION</code> chứ không đưa vào bảng kết quả.</p>
+<p><strong>Điểm thiết kế quan trọng:</strong> khuyên mềm phải có <strong>giọng nhẹ hơn</strong> khuyên thường — gợi ý, không chỉ
+thị; không lặp lại sau khi bị Bỏ qua; và <strong>không bao giờ</strong> nói khi tài xế đang chở khách. Về mặt
+đo lường, nhóm dự kiến tỷ lệ nghe lời của khuyên mềm <strong>thấp hơn</strong> khuyên thường, và điều đó không
+phải thất bại — nó là bản chất của một gợi ý không bắt buộc.</p>
+<hr>
+<h2>9. UI/UX hiện tại</h2>
+<h3>9.1 Ba mặt giao diện</h3>
+<table>
+<thead>
+<tr>
+<th>Mặt</th>
+<th>Cho ai</th>
+<th>Trạng thái</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>App tài xế</strong> (Flutter, Khánh)</td>
+<td>Tài xế</td>
+<td>Chạy được trên emulator; ảnh §9.3</td>
+</tr>
+<tr>
+<td><strong>Track UI web</strong></td>
+<td>Team + demo</td>
+<td>Chạy được (<code>/app</code>), gồm cả <strong>Khu Mô phỏng</strong></td>
+</tr>
+<tr>
+<td><strong>Dashboard mô phỏng</strong> (Streamlit)</td>
+<td>Nội bộ phân tích</td>
+<td>Chạy được, <strong>7 tab</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>9.2 Proactive card — chủ động mà không làm phiền</h3>
+<p><img alt="Track UI — proactive card trước ca" src="assets/ui-track-01-landing.png"></p>
+<p>Ảnh trên là màn chính. Điểm thiết kế:</p>
+<ul>
+<li>Card <strong>tự xuất hiện</strong> đúng thời điểm (badge <em>"Trước ca · Trợ Lý Xanh"</em>), tài xế không phải đi
+  tìm hay phải hỏi;</li>
+<li>Nội dung là <strong>một việc, một lý do, một điều kiện</strong>: <em>"Còn với được mốc thưởng 30.000đ hôm nay —
+  Bạn thiếu 55 điểm để chạm mốc kế (khoảng 9,5 giờ chạy nữa, 11 cuốc). Quỹ giờ còn lại đủ."</em>
+  Các số này đến từ <strong>solver S1</strong>, không phải LLM;</li>
+<li><strong>Ba nút, trong đó có nút để từ chối</strong>: <code>Làm theo</code> · <code>Bỏ qua</code> · <code>? Vì sao</code>. "Bỏ qua" không chỉ
+  đóng card mà còn <strong>mở cửa sổ im lặng</strong> cho chủ đề đó;</li>
+<li>Nhãn <strong>"Dữ liệu mô phỏng — không phải số thật GSM"</strong> hiện ngay trên màn.</li>
+</ul>
+<p>Ngoài ra có loại <strong>"card im lặng"</strong>: khi advisor không có gì đáng nói, nó hiển thị trạng thái mà
+<strong>không ghi nhận là một lần can thiệp</strong> — để không làm phồng tỷ lệ nghe lời bằng những lần nói vô
+nghĩa.</p>
+<h3>9.3 App tài xế (ảnh do Khánh cung cấp)</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Replay ca chạy" src="assets/ui-driver-app-replay.png"></td>
+<td><img alt="Cuốc trên đường thật OSRM" src="assets/ui-driver-app-cuoc-osrm.png"></td>
+</tr>
+<tr>
+<td><strong>Replay ca mô phỏng</strong> — payout luỹ tiến, <code>Step 12/36</code>, mốc <code>Agent Advice</code> trên timeline, nhãn <em>"mô phỏng"</em></td>
+<td><strong>Cuốc trên đường thật</strong> — tuyến OSRM 284 điểm, có chặng dừng trạm sạc, cước tính theo policy</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Chat Trợ Lý Xanh" src="assets/ui-driver-app-chat-tro-ly.png"></p>
+<p>Chat để tài xế hỏi lại. Lưu ý trung thực: đường chạy chính thống cho các số này là adapter → solver
+S1 (§7.2); <strong>text trong ảnh này cần Khánh xác nhận</strong> là đã đi qua đường đó hay còn là bản mockup
+giao diện (đã ghi thành câu hỏi trong tài liệu audit kèm theo).</p>
+<h3>9.4 Khu Mô phỏng — visualize giá trị của hệ thống</h3>
+<p><img alt="Khu Mô phỏng — replay đội xe" src="assets/ui-track-mo-phong.png"></p>
+<p>Bốn tab: <strong>Replay đội xe</strong> (ảnh trên — <code>29/90</code> tài xế trên đường lúc 15:06, màu theo trạng thái) ·
+<strong>Hành trình 1 tài xế</strong> · <strong>Thế giới song song A/B</strong> · <strong>Độ nhạy (30 seed)</strong>.</p>
+<p><img alt="Thế giới song song A/B" src="assets/ui-track-08-ab-ketqua.png"></p>
+<p>Đây là ảnh chúng em <strong>cố ý đưa vào dù nó cho kết quả xấu</strong>, vì nó minh hoạ đúng hai điều:</p>
+<ol>
+<li><strong>Kỷ luật đọc số:</strong> UI tự cảnh báo <em>"1 seed = 1 ngày mô phỏng — kết quả đơn lẻ KHÔNG phải kết
+   luận. Kết luận cần ≥30 seed + CI bootstrap"</em>, và ô guardrail ghi <strong>"— (1 seed)"</strong> thay vì bịa
+   một verdict.</li>
+<li><strong>Một mâu thuẫn nhóm đang phải xử lý:</strong> ảnh cho <code>Δ payout = −10.819đ</code>, trong khi §11 báo Δ
+   dương. Không phải hai số này đánh nhau — chúng là <strong>hai cấu hình khác nhau</strong>: dòng chú thích
+   trên ảnh ghi <em>"Kênh: all (accept_lift + shift_extend + rest_window + shift_plan)"</em>, tức UI đang
+   demo tổ hợp <strong>đã bị tắt vì đo ra có hại</strong> (§3), chứ không phải cấu hình duyệt hiện hành
+   (<code>positioning wait_only</code>). ⇒ <strong>Việc phải làm:</strong> đổi cấu hình mặc định của UI về cấu hình duyệt.
+   Đã ghi vào mục tiêu tuần 3.</li>
+</ol>
+<h3>9.5 Dashboard phân tích nội bộ</h3>
+<p><img alt="Dashboard mô phỏng" src="assets/dashboard-01-tong-quan.png"></p>
+<p>Bảy tab (Bản đồ · Replay · Nhịp ngày · Môi trường · Đội xe · Hành trình · Thế giới song song),
+tiêu đề mang nhãn <code>(MOCK)</code>.</p>
+<h3>9.6 Trạng thái review của UI</h3>
+<p>Tất cả mặt UI ở trên là <code>DONE-CODE</code> / <code>WAITING-VERDICT</code>: chúng chạy được, nhưng <strong>các cổng review
+trực quan vẫn đang mở</strong> (V-09, V-10, V-16, V-18, V-22). Theo quy ước nội bộ, hoãn review <strong>không</strong>
+đồng nghĩa với miễn review.</p>
+<hr>
+<h2>10. Công bằng và phương châm "tăng đều trên mọi tài xế"</h2>
+<h3>10.1 Không tối ưu cho một người rồi hại người khác</h3>
+<p>Đây là lý do nhóm đo <strong>bốn tầng chỉ tiêu song song</strong> (§7.4) thay vì chỉ đo payout của một tài xế
+mục tiêu. Một khuyến nghị có thể tốt ở tầng cá nhân nhưng tạo dồn cung hoặc giảm chất lượng phục
+vụ ở tầng hệ thống; nếu chỉ đo tầng 1 thì ta sẽ không thấy.</p>
+<h3>10.2 Số đo được (MOCK)</h3>
+<table>
+<thead>
+<tr>
+<th>Chỉ tiêu công bằng / hệ thống</th>
+<th>Kết quả</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Gini payout</strong></td>
+<td><strong>−0,0069, SIG</strong> — bất bình đẳng thu nhập <strong>giảm</strong></td>
+</tr>
+<tr>
+<td>Không ai bị hại theo archetype</td>
+<td><strong>0/7</strong> archetype bị hại; <strong>5/7</strong> dương có ý nghĩa</td>
+</tr>
+<tr>
+<td>Dồn cục cung (<strong>HHI</strong>)</td>
+<td>real 0,01235 vs oracle 0,01214 — <strong>không có dấu hiệu herding</strong></td>
+</tr>
+<tr>
+<td>9 tầng chỉ tiêu hệ thống suy giảm</td>
+<td><strong>0/9</strong> ở mọi arm</td>
+</tr>
+<tr>
+<td>Đường cong độ phủ — Δ tỷ lệ phục vụ</td>
+<td>phủ 10% → 25% → 50% → 100%: <strong>+0,60 → +0,98 → +1,13 → +1,74</strong> điểm phần trăm</td>
+</tr>
+</tbody>
+</table>
+<p>Dòng cuối là bằng chứng trực tiếp cho phương châm: <strong>càng nhiều tài xế dùng, tỷ lệ phục vụ càng
+tăng</strong> — tức lợi ích không phải trò chơi có tổng bằng không giữa các tài xế.</p>
+<h3>10.3 Chạy trên nền thuật toán của GSM</h3>
+<p>Advisor <strong>không</strong> đọc và <strong>không</strong> sửa dispatch. Bằng chứng kiểm được:
+<code>src/gsm_sim/dispatcher.py</code> dài <strong>151 dòng</strong> và tham chiếu <code>advice|advisor|bridge</code> <strong>0 lần</strong>.
+Advisor chỉ tác động lên <strong>quyết định của tài xế</strong> (đứng chờ hay chuyển vùng, nghỉ khi nào), rồi
+để hệ thống điều phối của GSM làm việc của nó.</p>
+<hr>
+<h2>11. Kết quả đo được</h2>
+<blockquote>
+<p><strong>Toàn bộ số trong mục này là MÔ PHỎNG trên dữ liệu MOCK</strong>, ghép cặp CRN, bootstrap CI 5000 lần.
+Không phải hiệu quả đã kiểm chứng ở vận hành GSM.</p>
+</blockquote>
+<h3>11.1 Bảng B1 — advisor mất thông tin cầu (λ) thì còn lại bao nhiêu giá trị?</h3>
+<p>Đây là câu hỏi trung tâm của tuần 2. Trong mô phỏng, advisor có thể được cho biết λ thật; ngoài
+đời <strong>không bao giờ</strong> có λ. Nên nhóm dựng bốn arm với mức thông tin giảm dần:</p>
+<p><img alt="E10 — bốn arm" src="assets/fig-e10-arms.png"></p>
+<table>
+<thead>
+<tr>
+<th>Arm</th>
+<th>Advisor biết gì</th>
+<th>Δ payout/tài xế/ngày</th>
+<th>CI 95%</th>
+<th>MDE</th>
+<th>Lớp kết luận</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>B_oracle</code></td>
+<td>λ <strong>thật</strong> (trần lý thuyết)</td>
+<td><strong>+3.939đ</strong></td>
+<td>[2.854; 5.033]</td>
+<td>1.080</td>
+<td>trần</td>
+</tr>
+<tr>
+<td><code>B_hist</code></td>
+<td>prior lịch sử</td>
+<td><strong>+3.401đ</strong></td>
+<td>[2.423; 4.337]</td>
+<td>957</td>
+<td>🟢 KQ-GIỮ</td>
+</tr>
+<tr>
+<td><code>B_real</code></td>
+<td><math><mover><mi>λ</mi><mo>̂</mo></mover></math> <strong>tự học</strong> từ cuốc đã đón</td>
+<td><strong>+3.126đ</strong></td>
+<td>[2.080; 4.167]</td>
+<td>1.035</td>
+<td>🟢 KQ-GIỮ</td>
+</tr>
+<tr>
+<td><code>B_wait</code></td>
+<td>chỉ "ô này chờ lâu" (T=30′)</td>
+<td>+174đ</td>
+<td>[−603; +916]</td>
+<td>770</td>
+<td><strong>KQ-SỤP</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Đọc kết quả:</strong> khi advisor <strong>không</strong> biết λ mà phải tự học (<code>B_real</code>), giá trị <strong>vẫn giữ được</strong> —
+CI của hiệu <code>(Δ_real − Δ_oracle)</code> <strong>chứa 0</strong>. Nhưng trigger chỉ dựa trên "ô này chờ lâu" thì <strong>sụp
+hoàn toàn</strong>: CI chứa 0, tức không phân biệt được với không làm gì.</p>
+<p><strong>Ba caveat bắt buộc kèm</strong> (không được trích bảng trên mà bỏ phần này):</p>
+<ul>
+<li><strong>L1</strong> — thế giới mô phỏng có thứ hạng ô <strong>đứng yên cả ngày</strong>, tức bài toán khó nhất ngoài đời
+  (mẫu cầu sáng/tối đổi hạng) <strong>không tồn tại</strong> ở đây;</li>
+<li><strong>L2</strong> — <math><mover><mi>λ</mi><mo>̂</mo></mover></math> "ngửi" được λ thật qua hành vi đội xe (tương quan Spearman pickup-vs-λ = <strong>0,41</strong>);</li>
+<li><strong>MDE ≈ 1.000–1.200đ</strong> — ta chỉ loại trừ được suy giảm <em>lớn hơn</em> mức đó. Δ so với oracle vẫn âm
+  (−538đ và −813đ), chỉ là chưa vượt nhiễu.</li>
+</ul>
+<p>⇒ Ngoài đời phần giữ lại <strong>thấp hơn</strong> con số này. Kết luận là <strong>YẾU</strong>, không phải "advisor không
+cần λ".</p>
+<p><strong>Một điều nữa phải nói:</strong> ở vòng đo trước, cùng cấu hình cho <strong>+6.016đ</strong>. Sau khi sửa thước đo
+(§12.2), CI mới là [2.854; 5.033] — <strong>không chứa +6.016</strong> ⇒ nhóm <strong>không tái lập được</strong> con số cũ.
+Báo cáo này dùng số mới, thấp hơn.</p>
+<h3>11.2 Bảng B2 — quét ngưỡng trigger, và bằng chứng "không mua kết quả bằng khối lượng"</h3>
+<p><img alt="E10b — quét ngưỡng T" src="assets/fig-e10b-threshold.png"></p>
+<table>
+<thead>
+<tr>
+<th>Ngưỡng T</th>
+<th>Δ vs A</th>
+<th>CI 95%</th>
+<th>Can thiệp/ngày</th>
+<th>Giữ được % so oracle</th>
+<th>Lớp</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10′</td>
+<td>+2.589đ</td>
+<td>[1.688; 3.464]</td>
+<td><strong>46,3</strong></td>
+<td>66%</td>
+<td>CÒN-MỘT-PHẦN</td>
+</tr>
+<tr>
+<td><strong>12′</strong></td>
+<td><strong>+2.961đ</strong></td>
+<td>[2.058; 3.830]</td>
+<td>42,1</td>
+<td><strong>75%</strong></td>
+<td>🟢 <strong>KQ-GIỮ</strong></td>
+</tr>
+<tr>
+<td>15′</td>
+<td>+2.159đ</td>
+<td>[945; 3.314]</td>
+<td>36,0</td>
+<td>—</td>
+<td>CÒN-MỘT-PHẦN</td>
+</tr>
+<tr>
+<td>18′</td>
+<td>+1.778đ</td>
+<td>[788; 2.759]</td>
+<td>27,4</td>
+<td>—</td>
+<td>CÒN-MỘT-PHẦN</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Vì sao bảng này quan trọng hơn con số đỉnh:</strong> ở T=10′ advisor can thiệp <strong>nhiều hơn</strong> (46,3 lần/
+ngày so với 42,1) nhưng kết quả <strong>thấp hơn</strong>. Nếu giá trị chỉ đến từ việc nói nhiều thì T=10′ phải
+cao nhất. Nó không cao nhất ⇒ <strong>trigger có tính chọn lọc thật</strong>. Kỳ vọng "sẽ quay đầu" này được
+<strong>ghi vào file khoá trước khi đo</strong>, nên đây là dự đoán được xác nhận, không phải giải thích sau.</p>
+<h3>11.3 Bảng B3 — độ ổn định: ba loại bằng chứng khác nhau</h3>
+<table>
+<thead>
+<tr>
+<th>Loại</th>
+<th>Kết quả</th>
+<th>Ý nghĩa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tất định</strong> (fingerprint per-actor)</td>
+<td>15/15 · 10/10 · 5/5 <strong>IDENTICAL</strong> qua ba vòng đo độc lập (vd <code>040c79a862f4b6a4</code>)</td>
+<td>Cùng seed ⇒ cùng kết quả từng bit. Nếu không có tính chất này thì mọi Δ vô nghĩa</td>
+</tr>
+<tr>
+<td><strong>Bất định còn lại</strong></td>
+<td>Ba lần hiện thực hoá <strong>cùng seed, cùng lưới</strong> cho SD ≈ <strong>409đ</strong></td>
+<td>Tự khai giới hạn: CI per-seed <strong>hẹp hơn</strong> bất định thật</td>
+</tr>
+<tr>
+<td><strong>Cổng thống kê</strong></td>
+<td>thước cũ: z = −2,39 (n=30, "OK") → z = <strong>−4,41 TREO</strong> (n=100) → thước mới: z = −0,38 / +0,82 / −0,95 / −0,16 (<strong>OK cả 4 arm</strong>)</td>
+<td>Cổng <strong>đã thực sự bắn</strong> và chặn một kết luận sai</td>
+</tr>
+</tbody>
+</table>
+<p>Dòng thứ ba là ví dụ cụ thể cho một bài học phương pháp: <strong>cổng chạy ở cỡ mẫu nhỏ không chứng minh
+được thước lành ở cỡ mẫu lớn.</strong> Cùng một sai lệch 2,4 điểm phần trăm, ở n=30 cho z = 2,29 (không
+bắn) nhưng ở n=100 cho z = 4,20 (bắn).</p>
+<h3>11.4 Bảng B4 — guardrail sức khoẻ (hai vòng đo độc lập)</h3>
+<table>
+<thead>
+<tr>
+<th>Chỉ tiêu</th>
+<th>Vòng 1 (5 seed 5100–5104)</th>
+<th>Vòng 2 (đường thật, seed 5011)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phạm vi chấm</td>
+<td>—</td>
+<td><strong>90/90 tài xế</strong></td>
+</tr>
+<tr>
+<td><code>rest_min_total</code></td>
+<td>3.772,6′ → <strong>4.774,2′</strong></td>
+<td>3.689,0′ → <strong>4.041,8′</strong> (<strong>+352,8′</strong>)</td>
+</tr>
+<tr>
+<td><code>work_span_p90</code></td>
+<td>452,8′ → …</td>
+<td>388,3′ → <strong>370,5′</strong> (<strong>−17,8′</strong>)</td>
+</tr>
+<tr>
+<td><code>drive_min_p90</code></td>
+<td>—</td>
+<td>314,6′ → <strong>301,2′</strong> (<strong>−13,4′</strong>)</td>
+</tr>
+<tr>
+<td><code>veto_fired_n</code></td>
+<td>—</td>
+<td>175 → 184</td>
+</tr>
+<tr>
+<td>Verdict</td>
+<td>—</td>
+<td><strong>OK</strong>, không cờ nào bật</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Đọc đúng cách:</strong> kênh vị trí làm tài xế <strong>nghỉ nhiều hơn</strong> và <strong>làm việc ít căng hơn</strong>. Ba số này
+báo ở <strong>cột sức khoẻ riêng</strong> và <strong>không</strong> được quy ra tiền — đó là nguyên tắc nhóm tự đặt.</p>
+<h3>11.5 Bảng B5 — kỷ luật kiểm thử</h3>
+<p><img alt="Suite theo thời gian" src="assets/fig-suite-growth.png"></p>
+<p>Số test <strong>passed</strong> (chạy cả hai lệnh) qua các mốc: 850 → 860 → 907 → 939 → 959 → 990 → 994 →
+<strong>1.000</strong>.</p>
+<p>Chú thích cần thiết: <strong>1.000 là số test <em>passed</em></strong> (935 + 65). Tổng thu thập là <strong>1.004</strong>, trong đó
+<strong>4 test skip</strong> vì GSM chưa cấp danh sách cột cho 4 bảng (<code>trips</code>, <code>driver_penalization_ATA</code>,
+<code>public_frauds</code>, <code>public_user_mission_progress</code>) — trong đó <code>trips</code> là bảng cốt lõi. Nghĩa là với
+4 bảng này nhóm <strong>chưa verify được</strong> schema của mình khớp GSM; đã khai thẳng thay vì để test xanh
+giả.</p>
+<h3>11.6 Bảng B6 — bài học đắt nhất: đổi thước thì kết luận ĐẢO DẤU</h3>
+<p><img alt="Estimator đảo dấu" src="assets/fig-estimator-signflip.png"></p>
+<p><strong>Cùng một can thiệp, cùng 5 seed, chỉ khác cách chọn tài xế để đo:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Cách đo</th>
+<th>Δ payout</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>argmax arm A (chọn tài xế "tốt nhất" ở A)</td>
+<td><strong>−19.654đ</strong></td>
+<td>⟵ kết luận: advisor có hại</td>
+</tr>
+<tr>
+<td>argmax arm B (chọn ở B)</td>
+<td><strong>+27.416đ</strong></td>
+<td>⟵ kết luận: advisor cực tốt</td>
+</tr>
+<tr>
+<td>mean P4 (không chọn lọc)</td>
+<td>+3.610đ</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>toàn đội (cohort — đang dùng)</strong></td>
+<td><strong>+5.350đ</strong></td>
+<td>⟵ kết luận đáng tin</td>
+</tr>
+</tbody>
+</table>
+<p>Hai dòng đầu là <strong>cùng một dữ liệu</strong>. Nguyên nhân: chọn theo cực trị (argmax) thì mọi nhiễu đều bị
+hồi quy về trung bình, và dấu của Δ phụ thuộc <em>chọn cực trị ở arm nào</em>. Đây là lý do nhóm chuyển
+sang cohort estimator.</p>
+<p><strong>Nếu chỉ có một điều mentor mang về từ báo cáo này, chúng em mong đó là bảng trên:</strong> trong mô
+phỏng, chọn sai thước đo không làm số lệch một chút — nó <strong>đảo ngược kết luận</strong>.</p>
+<hr>
+<h2>12. Bài học phương pháp</h2>
+<h3>12.1 "Không hiệu quả thì tắt"</h3>
+<p>4/5 kênh advice đang <strong>tắt</strong> vì đo ra không hiệu quả hoặc có hại (§3). Nhóm coi đây là kết quả
+dương của việc đo: nếu không có A/B ghép cặp, cả bốn kênh đó đã được ship.</p>
+<h3>12.2 Thước đo sai làm sụp cả một kết luận đã công bố</h3>
+<p>Sau khi công bố kết quả E10, cổng thống kê <strong>treo</strong> arm oracle (z = −4,41). Truy nguyên: thước đo
+tỷ lệ nghe lời trộn hai thứ khác nhau — <em>"tài xế đồng ý"</em> và <em>"hệ thống thực thi được"</em>. Sửa thước
+(tách <code>followed</code> theo kết cục tại lúc gán, <code>execution_rate</code> riêng) thì cả 4 arm về <strong>OK</strong>, nhưng
+<strong>mọi con số phải đo lại</strong> và headline <strong>giảm</strong> từ +5.529đ xuống <strong>+3.939đ</strong>, đồng thời không tái
+lập được +6.016đ của vòng trước.</p>
+<p>Nhóm chọn báo con số thấp hơn. Bài học: <strong>một cổng chạy ở cỡ mẫu nhỏ không chứng minh thước lành ở
+cỡ mẫu lớn.</strong></p>
+<h3>12.3 "Cơ chế được khai báo nhưng không có đường chạy" — sập 3 lần trong 2 ngày</h3>
+<p>Ba lần trong hai ngày cuối, nhóm phát hiện một bảo đảm <strong>đã được viết trong tài liệu và có hàm</strong>
+nhưng <strong>không ai nối nguồn vào</strong>:</p>
+<ol>
+<li>cổng kiểm arm đối chứng: có field, có comment giải thích, <strong>không cổng nào đọc</strong>;</li>
+<li>guardrail tầng 5: có hàm gộp, có hàm đo, nhưng nguồn dữ liệu <strong>chưa nối</strong> ⇒ mọi phép đo trả
+   <em>"TREO — thiếu dữ liệu"</em>, tức tầng 5 <strong>chưa bao giờ đo được gì</strong>;</li>
+<li>ba tham số trong file cấu hình <strong>không dòng code nào đọc</strong>, và hai trong đó còn <strong>lệch</strong> với giá
+   trị hiệu dụng (tầm pin khai 60/110 km trong khi công thức cho 62,5/117,6 km) — tức <strong>tài liệu
+   sai nằm trong file được coi là nguồn sự thật</strong>.</li>
+</ol>
+<p>Đối phó: nhóm dựng <strong>ba cổng thường trực</strong> để họ lỗi này không tái diễn (mọi cờ cấu hình phải có
+người đọc · không view nào được đọc dữ liệu chưa xảy ra · chỉ một bảng màu trạng thái). Riêng cổng
+thứ hai còn có <strong>test tự chứng minh nó bắn được</strong>: tái tạo đúng lỗi gốc rồi đòi phép thử phải phát
+hiện — vì một cổng luôn xanh không phân biệt được "không có lỗi" với "không đo gì".</p>
+<h3>12.4 Có những câu hỏi mô phỏng hiện tại <strong>không thể</strong> trả lời</h3>
+<p>Kênh <code>rest_window</code> nói <strong>0/873 lần</strong> trong A/B một-ngày, vì bộ nhớ liên-ngày chỉ sống ở chế độ
+nhiều ngày. Quan trọng hơn: trong thế giới <strong>không mô hình hoá hậu quả của mệt</strong>, gợi ý nghỉ về
+mặt cấu trúc <strong>không thể</strong> có giá trị dương — nghỉ chỉ tốn thời gian kiếm tiền. Nên "đo ra 0" ở đây
+<strong>không</strong> chứng minh "gợi ý nghỉ vô ích"; nó chỉ nói mô phỏng đang mù với chiều đó. Nhóm đã viết
+plan riêng cho việc này và <strong>chưa</strong> thực hiện (nhánh thử nghiệm, không ưu tiên).</p>
+<h3>12.5 Trung thực về nợ kỹ thuật</h3>
+<p>Sổ nợ có <strong>90 mục, 21 đã đóng, 69 còn mở</strong>, mỗi mục có mã, mức nghiêm trọng, bằng chứng và điều
+kiện mở lại. <strong>20 mục</strong> đang chờ người review. Nhóm trình bày đây là <strong>kỷ luật</strong>, không phải điểm
+yếu: một flaw có mã và có điều kiện mở lại thì không biến mất trong im lặng.</p>
+<p><strong>Ví dụ một flaw tìm được vào đúng ngày phát hành báo cáo:</strong> UI tự tính tầm pin bằng công thức
+riêng (<code>soc × 1,1</code>) cho <strong>mọi</strong> tài xế, trong khi engine cho 62,5 km (đội đổi pin) và 117,6 km
+(đội sạc) — lệch nhau gần 2×. Tài xế đội đổi pin đang thấy số <strong>thổi 1,76 lần</strong>. Suite 1.000 test
+không bắt được, vì <strong>không có test nào so UI với engine</strong>. Đã ghi mã <code>D-M3-17</code>, xếp việc đầu tiên
+của tuần 3.</p>
+<h3>12.6 Về hạ tầng CI</h3>
+<p>Có file GitHub Actions (<code>.github/workflows/ci.yml</code>, 61 dòng, 3 job) và nó <strong>đã nằm trên
+<code>origin/main</code></strong>, nhưng header của chính file tự khai <em>"CI DRAFT — CHƯA ACTIVE: repo hiện làm việc
+local"</em>. Nói chính xác: <strong>CI đã được viết và đã push, chưa xác nhận là đã chạy</strong>. Việc kích hoạt và
+xác nhận nằm trong tuần 3.</p>
+<p>Thay cho CI, kỷ luật hiện tại đến từ quy trình: mỗi thay đổi có ý nghĩa phải có một file
+<code>UPDATE-###</code> ghi rõ <em>cái gì đổi · vì sao · đã kiểm chứng gì · cái gì CHƯA kiểm chứng · flaw phát
+sinh</em>. Tới nay có <strong>112 file</strong> như vậy.</p>
+<h3>12.7 Hạ tầng hỗ trợ phát triển sản phẩm</h3>
+<p>Ngoài test, nhóm dựng một số cơ chế để việc phát triển không phá thứ đã đo:</p>
+<table>
+<thead>
+<tr>
+<th>Cơ chế</th>
+<th>Giải quyết vấn đề gì</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Ba cổng thường trực</strong> (mới tuần này)</td>
+<td>(1) mọi tham số cấu hình phải có người đọc — cấu hình chết sẽ làm người sau quét tham số ra Δ=0 rồi kết luận sai; (2) không view nào được đọc dữ liệu chưa xảy ra; (3) chỉ một bảng màu trạng thái cho toàn bộ UI</td>
+</tr>
+<tr>
+<td><strong>File khoá tham số trước khi đo</strong> (prereg)</td>
+<td>Ghi trước <em>tham số · kỳ vọng · điều kiện dừng</em>, kể cả <strong>dự đoán có thể sai</strong>. Nhờ vậy §11.2 mới nói được "dự đoán được xác nhận" thay vì giải thích sau khi thấy số</td>
+</tr>
+<tr>
+<td><strong>Fingerprint tất định</strong></td>
+<td>Mỗi lần sửa "không đổi hành vi", chạy 5–15 seed và so dấu vân tay từng tài xế. Nếu khác một bit thì thay đổi đó <strong>không</strong> phải behavior-neutral</td>
+</tr>
+<tr>
+<td><strong>Script vận hành có thể tái tạo</strong></td>
+<td>Sinh lại dữ liệu mock, chạy A/B nhiều seed, dựng catalog dữ liệu, đo từng thí nghiệm — mọi số trong báo cáo này tái tạo được bằng lệnh</td>
+</tr>
+<tr>
+<td><strong>Một nguồn cấu hình duy nhất</strong></td>
+<td>Mọi tham số mô phỏng ở một file; báo cáo và dashboard đọc cùng file đó</td>
+</tr>
+<tr>
+<td><strong>Sổ nợ có mã</strong></td>
+<td>Mỗi flaw có mã, mức nghiêm trọng, bằng chứng, điều kiện mở lại (§12.5)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Một bẫy vận hành đáng kể đã ghi lại:</strong> lệnh test mặc định của repo <strong>chỉ thu một trong hai</strong> thư
+mục test, nên "suite xanh" chỉ đúng khi chạy <strong>cả hai</strong> lệnh. Bẫy này từng làm một con số suite bị
+báo thiếu — nay đã ghi thành cảnh báo ở đầu tài liệu điều hướng.</p>
+<hr>
+<h2>13. Mục tiêu tuần 3</h2>
+<p>Bốn hướng chính, cộng phần dọn nợ đã ghi nhận trong tuần 2:</p>
+<table>
+<thead>
+<tr>
+<th>Hướng</th>
+<th>Nội dung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>UI/UX</strong></td>
+<td>Tinh chỉnh cách trợ lý xuất hiện và cách trình bày lời khuyên; giảm tải nhận thức cho tài xế</td>
+</tr>
+<tr>
+<td><strong>Làm giàu dữ kiện từ cộng đồng</strong></td>
+<td>Thu thập thông tin từ các hội nhóm tài xế để tìm thêm pain point thật. Mọi nguồn cộng đồng phải qua bước <strong>kiểm chứng và lọc rủi ro</strong> (chống tin sai, tin lỗi thời, thông tin cá nhân) và <strong>không</strong> được dùng làm nguồn cho số tài chính/chính sách</td>
+</tr>
+<tr>
+<td><strong>Mô phỏng và thuật toán tối ưu hoá</strong></td>
+<td>Tăng độ sát thực tế của thế giới mô phỏng và chất lượng lời khuyên. Gồm việc sửa cách mô phỏng để <strong>đo được</strong> giá trị của gợi ý nghỉ (§12.4)</td>
+</tr>
+<tr>
+<td><strong>Nối tối ưu hoá + dữ liệu ngoài → agent</strong></td>
+<td>Kết nối kết quả tối ưu hoá với phần gọi API ngoài (thời tiết, mật độ giao thông), rồi đưa qua agent để <strong>chuẩn hoá đầu ra cho tài xế</strong>: cùng một giọng, cùng một mức chắc chắn, luôn kèm lý do. Đây là phần mở nhóm khuyên mềm ở §8.1</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Dọn nợ đã ghi nhận:</strong> số tầm đi của xe hiển thị trên giao diện chưa khớp phần tính toán bên trong
+(§12.5 — việc đầu tiên) · cho giao diện chạy đủ các phần tính toán để phép đo và sản phẩm là một
+thứ (<code>Q-14</code>) · dọn ba điểm lệch giữa các mặt UI (§9.4) · đóng các mục chờ review và xác nhận CI
+thật sự chạy.</p>
+<hr>
+<h2>Phụ lục A — Nguồn số liệu</h2>
+<p>Mọi con số trong báo cáo truy được về file cụ thể. Xem <code>NGUON-SO-LIEU.md</code> đi kèm folder này.</p>
+<h2>Phụ lục B — Thuật ngữ</h2>
+<table>
+<thead>
+<tr>
+<th>Thuật ngữ</th>
+<th>Nghĩa trong báo cáo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>arm A / arm B</strong></td>
+<td>Hai thế giới song song cùng seed; A = tài xế tự làm, B = có advisor</td>
+</tr>
+<tr>
+<td><strong>CRN</strong></td>
+<td>Common random numbers — dùng chung chuỗi ngẫu nhiên ngoại sinh để giảm phương sai</td>
+</tr>
+<tr>
+<td><strong>CI 95%</strong></td>
+<td>Khoảng tin cậy bootstrap 5000 lần, resample theo seed</td>
+</tr>
+<tr>
+<td><strong>MDE</strong></td>
+<td>Minimum detectable effect — mức hiệu ứng nhỏ nhất phép đo phân biệt được với 0</td>
+</tr>
+<tr>
+<td><strong>λ / <math><mover><mi>λ</mi><mo>̂</mo></mover></math></strong></td>
+<td>Cường độ cầu thật / ước lượng của advisor</td>
+</tr>
+<tr>
+<td><strong>KQ-GIỮ / KQ-SỤP</strong></td>
+<td>Lớp kết luận: giá trị giữ được / mất hẳn khi advisor mất thông tin</td>
+</tr>
+<tr>
+<td><strong>Gini · HHI</strong></td>
+<td>Chỉ số bất bình đẳng thu nhập · chỉ số dồn cục</td>
+</tr>
+<tr>
+<td><strong><code>DONE-CODE</code></strong></td>
+<td>Code xong, <strong>chưa</strong> được review — không gọi là DONE</td>
+</tr>
+</tbody>
+</table>
+<h2>Phụ lục C — Ghi công ảnh</h2>
+<p>Ảnh app tài xế (<code>ui-driver-app-*.png</code>) và Khu Mô phỏng (<code>ui-track-mo-phong.png</code>) do <strong>Trần Quốc
+Khánh</strong> cung cấp. Ảnh Track UI còn lại và dashboard chụp tự động bằng Playwright ngày 01/08/2026.
+Bốn biểu đồ sinh từ artifact JSON bằng <code>make_figures.py</code> (đọc số từ file, không nhập tay).</p></body></html>

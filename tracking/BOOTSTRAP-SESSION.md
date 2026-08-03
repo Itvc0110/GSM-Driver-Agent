@@ -62,13 +62,14 @@ local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
 suite       = 1000 passed / 4 skipped / 0 failed  (2026-08-01: 935 + 65 UI)
               uv run pytest -q                  -> xem số trên
               uv run pytest -q ui/backend/tests -> 65
-UPDATE       = 112 file, mới nhất UPDATE-118 (104 UIUX + 105 codex review là của remote)
-PENDING      = 20 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
+UPDATE       = 113 file, mới nhất UPDATE-119 (104 UIUX + 105 codex review là của remote)
+PENDING      = 21 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-22 mới 2026-08-01):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
               V-20 (PHAN-QUYET đảo C2 — Cường đã hạ xuống THỬ NGHIỆM, chờ chốt văn bản)
               V-21 (L4-03 khe advisor nói MIỄN PHÍ — 3 lựa chọn, (a)/(b) đổi CHÍNH SÁCH)
               V-22 (xoá 300 dòng `trajectory.py` hay giữ? — module chết, bảng màu xung đột)
+              V-23 (bản PDF Week 2 Report — xem trước khi gửi mentor VÀ trước khi commit)
               ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
 ```
 
@@ -87,6 +88,10 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-119** — **Week 2 Report gửi mentor** (`docs/reports/week2/`, PDF 24 trang,
+  `WAITING-VERDICT` V-23). Trước khi viết: 24 subagent đối chiếu toàn dự án. Bắt được doc của
+  Khánh trích `+6.016đ` — con số **không tái lập được** sau khi sửa thước (UPDATE-113). Và khi chụp
+  ảnh thì phát hiện **UI đang demo cấu hình đã bị ĐA-07 bác bỏ** (Δ = −10.819đ trên UI).
 - **UPDATE-118** — **BA cổng thường trực** nay canh ba bảo đảm mà `CLAUDE.md` §4b đòi nhưng
   trước đây không ai thi hành: cờ config phải có người đọc · không L3 view nào đọc record chưa
   tồn tại (7/7 deriver sạch, **có test sever-restore tự chứng minh cổng bắn được**) · chỉ MỘT
@@ -123,6 +128,7 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 | # | Việc | Chi phí | Trạng thái |
 | --- | --- | --- | --- |
+| **0** | 🔴 **`D-M3-17` — VIỆC ĐẦU TIÊN CỦA PHIÊN SAU** (Cường chỉ đạo 2026-08-01: *"lưu lại flaw để sửa lại ngay sau phiên này"*): UI tự tính phạm vi pin `soc*1.1` cho MỌI tài xế trong khi engine cho **62,5 km** (swap, `soc/1.6`) và **117,6 km** (charge, `soc/0.85`) ⇒ tài xế **swap thấy số thổi 1,76×**; endpoint legacy `soc*3.2` = **5,1×**. Một đại lượng **4 công thức** | ~1–2 giờ | 🟢 **READY** — fix: UI đọc `behavior.soc_range_km` (nguồn công thức duy nhất sau `D-M3-15`) + mang `fleet` vào view; thiếu `fleet` là **thiếu field**, KHÔNG phải lý do bịa hệ số. Cần **visual review** (đổi số hiển thị) + cân nhắc xoá endpoint legacy. Chi tiết: `tracking/DEFERRED.md` `D-M3-17`, bẫy #11 ở §5 |
 | 1 | ~~**`L1-04`**~~ | — | ✅ **XONG (UPDATE-107)** — n=100 BÁC giả thuyết "28% mất hẳn": Δ=0 tuyệt đối; đó là gap LOGGING đã đóng bởi `D-M3-01`. Fix giữ (đúng `R-01`). ⚠ Kèm flaw #6 SUITE bắt: event MA sau khi áp — đã sửa (`mark_outcome_logged`) |
 | 2 | ~~**Cổng THỐNG KÊ**~~ | — | ✅ **XONG (UPDATE-107)** — z Poisson-binomial `\|z\| > 4` NỐI vào `run_ladder` thật; null đọc từ **nominal của run** (không hardcode); không treo oan arm tuân-thủ-tuyệt-đối |
 | 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG (UPDATE-110)** — **mất λ thì +6.016đ còn 57–65%**; trigger chờ-lâu SỤP; không thấy herding; 9 lỗi script đo bị vòng soi bắt đã sửa. Chờ Cường: visual gate (artifact d8c58414) + phán quyết |

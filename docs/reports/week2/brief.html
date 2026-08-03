@@ -1,0 +1,233 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Week 2 Report — Driver Advisor Team</title><style>
+@page { size: A4; margin: 15mm 15mm 16mm 15mm; }
+:root{ --xanh:#199e70; --duong:#3987e5; --amber:#c98500;
+       --muc:#1d2b27; --muc2:#4a5a56; --vien:#dbe5e2; --nen:#f4f8f7; }
+*{ box-sizing:border-box; }
+body{ font-family:"Segoe UI","Calibri",sans-serif; font-size:10.6pt; line-height:1.6;
+      color:var(--muc); margin:0; }
+h1{ font-size:23pt; color:var(--xanh); margin:0 0 1mm; line-height:1.15;
+    border-bottom:3px solid var(--xanh); padding-bottom:2.5mm; }
+h1+h3{ font-size:10.4pt; color:var(--muc2); font-weight:500; margin:0 0 5mm;
+       border:none; padding:0; }
+h2{ font-size:14.5pt; color:var(--xanh); margin:8mm 0 2.5mm; page-break-after:avoid; }
+h3{ font-size:11.5pt; color:var(--muc); margin:5mm 0 2mm; page-break-after:avoid; }
+p{ margin:0 0 2.8mm; text-align:justify; }
+strong{ color:#0c1512; }
+em{ color:var(--muc2); }
+table{ border-collapse:collapse; width:100%; margin:3mm 0 4mm; font-size:9.6pt;
+       page-break-inside:avoid; }
+th,td{ border:1px solid var(--vien); padding:2mm 2.4mm; text-align:left; vertical-align:top; }
+th{ background:var(--nen); color:#0c1512; font-weight:600; }
+/* bang 2 cot chi de xep anh -> bo vien cho thoang */
+table:has(img) th, table:has(img) td{ border:none; padding:1mm 1.5mm; }
+table:has(img) td{ font-size:9pt; color:var(--muc2); text-align:center; }
+blockquote{ margin:3.5mm 0; padding:3mm 4.5mm; background:#fffdf3;
+            border-left:3.5px solid var(--amber); font-size:9.9pt; page-break-inside:avoid; }
+blockquote p{ margin:0; }
+img{ max-width:100%; height:auto; display:block; margin:2mm auto 1mm;
+     border:1px solid var(--vien); border-radius:4px; page-break-inside:avoid;
+     /* chan anh chiem ca trang: dieu quyet dinh do dai ban brief */
+     max-height:76mm; width:auto; object-fit:contain; }
+/* anh dien thoai (doc) trong bang 2 cot -> cho cao hon mot chut */
+table:has(img) img{ max-height:88mm; }
+/* bieu do (ngang, ratio > 2) -> cho rong het khung */
+p > img{ max-height:66mm; }
+ul,ol{ margin:0 0 3mm; padding-left:6.5mm; }
+li{ margin-bottom:1.8mm; }
+hr{ border:none; border-top:1px solid var(--vien); margin:6mm 0; }
+h2, h3, table, img, blockquote { break-inside:avoid; }
+</style></head><body><h1>Week 2 Report — Driver Advisor Team</h1>
+<h3>Trần Quốc Khánh · Lưu Thiện Việt Cường · 23/07 – 01/08/2026</h3>
+<hr>
+<h2>Chúng em đang xây cái gì</h2>
+<p>Một trợ lý cho tài xế Xanh SM. Tài xế chạy cả ngày và liên tục phải tự trả lời những câu rất thực
+tế: <em>giờ này nên đứng chờ ở đây hay chuyển sang khu khác? Còn kịp mốc thưởng hôm nay không? Đi đổi
+pin lúc nào thì ít mất cuốc nhất?</em> Hiện tại mỗi người tự đoán một kiểu.</p>
+<p>Sản phẩm không lái thay tài xế và <strong>không can thiệp vào việc GSM chia cuốc</strong> — nó chạy trên nền hệ
+thống điều phối của GSM. Việc nó làm là: <strong>tính giúp, giải thích, rồi để tài xế tự quyết</strong>. Con số
+do phần tính toán làm ra; phần AI chỉ diễn giải cho dễ hiểu. Nhờ tách vai như vậy, trợ lý <strong>không
+thể tự nói vống một con số</strong> — đó là ràng buộc quan trọng nhất khi sản phẩm nói về thu nhập của
+người khác.</p>
+<p><strong>Ba mục tiêu tuần 2:</strong> làm cho sản phẩm chạy được để xem tận mắt · dựng môi trường mô phỏng để đo
+xem lời khuyên có thật giúp được không · trả lời câu hỏi khó nhất: <em>trợ lý còn hữu ích không khi nó
+không được biết trước nhu cầu khách?</em></p>
+<hr>
+<h2>Sản phẩm hiện tại</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="App tài xế" src="assets/ui-driver-app-replay.png"></td>
+<td><img alt="Một cuốc thật" src="assets/ui-driver-app-cuoc-osrm.png"></td>
+</tr>
+<tr>
+<td><strong>Xem lại một ngày chạy</strong> — thu nhập cộng dồn theo từng cuốc, kèm các mốc trợ lý đã lên tiếng</td>
+<td><strong>Cuốc trên đường thật</strong> — tuyến lấy từ bản đồ thật, có chặng ghé trạm sạc</td>
+</tr>
+</tbody>
+</table>
+<p>Trợ lý <strong>tự lên tiếng đúng lúc, không bắt tài xế đi tìm</strong>:</p>
+<p><img alt="Thẻ gợi ý trước ca" src="assets/ui-track-01-landing.png"></p>
+<p>Thẻ tự hiện trước ca: <em>"Còn với được mốc thưởng 30.000đ hôm nay — bạn thiếu 55 điểm, khoảng 9,5 giờ
+chạy nữa, 11 cuốc. Quỹ giờ còn lại đủ."</em> Ba điểm thiết kế có chủ ý:</p>
+<ul>
+<li><strong>Một việc, một lý do, một điều kiện</strong> — không đổ cả bảng số liệu cho tài xế tự đọc.</li>
+<li><strong>Có nút để từ chối.</strong> Bấm "Bỏ qua" thì chủ đề đó im một lúc. Trợ lý cũng không nói khi tài xế
+  đang chở khách.</li>
+<li><strong>Có nút "Vì sao"</strong> để xem trợ lý dựa vào đâu.</li>
+</ul>
+<p>Nếu không có gì đáng nói, trợ lý <strong>im lặng</strong>. Một trợ lý nói ít mà đúng thì đáng tin hơn một trợ lý
+nói suốt ngày.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Hỏi lại trợ lý" src="assets/ui-driver-app-chat-tro-ly.png"></td>
+<td><img alt="Màn thu nhập" src="assets/ui-track-02-thu-nhap.png"></td>
+</tr>
+<tr>
+<td>Tài xế hỏi lại bằng tiếng nói thường ngày: <em>"Mốc thưởng hôm nay của tôi thế nào?"</em></td>
+<td>Màn theo dõi thu nhập trong ngày</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Về tính năng:</strong> trợ lý có 5 kênh gợi ý, nhưng hiện <strong>chỉ 1 kênh được bật</strong>. Bốn kênh còn lại bị
+tắt vì <strong>đo ra không hiệu quả hoặc có hại</strong> — trong đó có kênh lập lịch ca, ban đầu bọn em tưởng sẽ
+là tính năng chính. Nhóm coi việc tắt chúng là kết quả dương của việc chịu đo.</p>
+<hr>
+<h2>Làm sao biết lời khuyên có thật giúp được</h2>
+<p>Đây là phần đầu tư nhiều nhất trong tuần, vì không đo được thì mọi tính năng chỉ là phỏng đoán.
+Cách làm: dựng <strong>hai thế giới mô phỏng giống nhau từng chi tiết</strong> — cùng ngày, cùng khách, cùng thời
+tiết, cùng tài xế — <strong>khác duy nhất một điều</strong>: một bên có trợ lý. Chênh lệch chính là giá trị
+(hoặc sự vô ích) của lời khuyên.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Đội xe trong mô phỏng" src="assets/ui-track-mo-phong.png"></td>
+<td><img alt="So hai thế giới" src="assets/ui-track-08-ab-ketqua.png"></td>
+</tr>
+<tr>
+<td><strong>90 tài xế trong một ngày mô phỏng</strong> — xem được từng người đang chở khách, đi đón, đổi pin hay đang chờ</td>
+<td><strong>So hai thế giới cùng một ngày.</strong> Màn này tự nhắc: một ngày lẻ chưa phải kết luận, cần ít nhất 30 ngày</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="Hành trình một tài xế" src="assets/ui-track-07-hanh.png"></td>
+<td><img alt="Bảng theo dõi nội bộ" src="assets/dashboard-01-tong-quan.png"></td>
+</tr>
+<tr>
+<td>Xem kỹ hành trình một tài xế: chờ ở đâu, đi đón bao xa, nghỉ lúc nào</td>
+<td>Bảng theo dõi nội bộ để soi từng mặt: bản đồ, nhịp ngày, môi trường, đội xe</td>
+</tr>
+</tbody>
+</table>
+<p>Mô phỏng cũng là nơi trả lời câu mà thử nghiệm nhỏ <strong>không</strong> trả lời được: <em>nếu nhiều tài xế cùng
+làm theo một gợi ý thì trạm pin và khu vực có chịu được không?</em></p>
+<hr>
+<h2>Kết quả</h2>
+<p><strong>Câu hỏi khó nhất:</strong> ngoài đời trợ lý sẽ không bao giờ biết trước khách gọi ở đâu — nó phải tự học
+từ những gì quan sát được. Vậy nó còn hữu ích không?</p>
+<p><img alt="Kết quả bốn phương án" src="assets/fig-brief-arms.png"></p>
+<table>
+<thead>
+<tr>
+<th>Trợ lý biết gì</th>
+<th>Thu nhập tăng thêm / tài xế / ngày</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Biết trước nhu cầu khách (giới hạn lý thuyết)</td>
+<td><strong>+3.939đ</strong></td>
+</tr>
+<tr>
+<td>Dựa trên số liệu quá khứ</td>
+<td><strong>+3.401đ</strong></td>
+</tr>
+<tr>
+<td><strong>Tự học từ những gì quan sát được</strong> — sát thực tế nhất</td>
+<td><strong>+3.126đ</strong></td>
+</tr>
+<tr>
+<td>Chỉ dựa vào tín hiệu thô "khu này đang vắng khách"</td>
+<td>+174đ — <em>không phân biệt được với không làm gì</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Nghĩa là:</strong> trợ lý <strong>giữ được phần lớn giá trị</strong> khi phải tự học thay vì được cho biết trước.
+Nhưng một tín hiệu quá thô thì <strong>vô dụng</strong> — chi tiết này quan trọng, vì nó nói rằng phải đầu tư vào
+chất lượng dự báo, không phải chỉ thêm luật.</p>
+<p><img alt="Nói nhiều hơn không tốt hơn" src="assets/fig-brief-threshold.png"></p>
+<p>Một kết quả nữa: khi cho trợ lý nói <strong>nhiều hơn</strong>, kết quả lại <strong>kém hơn</strong> — nói 42 lần/ngày tốt
+hơn nói 46 lần. Giá trị không đến từ nói nhiều, mà từ <strong>chọn đúng lúc để nói</strong>.</p>
+<p><strong>Cả đội cùng có lợi, không phải giành nhau.</strong> Chênh lệch thu nhập giữa các tài xế <strong>giảm</strong>; không
+nhóm tài xế nào bị thiệt; và tỷ lệ khách được phục vụ <strong>tăng dần theo số người dùng</strong> (10% → 25% →
+50% → 100% cho mức tăng 0,6 → 1,0 → 1,1 → 1,7 điểm phần trăm). Càng nhiều người dùng thì hệ thống
+càng tốt lên.</p>
+<p><strong>Trợ lý không đánh đổi sức khoẻ lấy tiền.</strong> Đo được: tài xế <strong>nghỉ nhiều hơn</strong> và <strong>thời gian làm
+việc liên tục giảm</strong>, trong khi thu nhập vẫn tăng. Đây là ràng buộc bọn em đặt ngay từ đầu và kiểm
+bằng cơ chế, không phải bằng lời hứa.</p>
+<blockquote>
+<p><strong>Lưu ý:</strong> toàn bộ số trên là <strong>kết quả mô phỏng trên dữ liệu giả lập</strong>, không phải hiệu quả đã
+kiểm chứng với tài xế thật. Bọn em cố ý không nói mạnh hơn thế.</p>
+</blockquote>
+<hr>
+<h2>Bài học lớn nhất của tuần</h2>
+<p><img alt="Cùng dữ liệu, đổi cách đo thì đảo ngược kết luận" src="assets/fig-brief-signflip.png"></p>
+<p>Hình trên là <strong>cùng một dữ liệu, cùng một tính năng</strong> — chỉ khác cách chọn tài xế để đo. Kết quả
+chạy từ <strong>−19.654đ</strong> (kết luận: trợ lý gây hại) tới <strong>+27.416đ</strong> (kết luận: trợ lý cực tốt).</p>
+<p>Nếu tuần này bọn em không phát hiện ra, rất có thể đã báo cáo một con số đẹp mà sai. Bài học:
+<strong>chọn sai cách đo không làm con số lệch một chút — nó đảo ngược cả kết luận.</strong> Từ đó nhóm chuyển
+sang đo trên toàn đội thay vì chọn người tiêu biểu.</p>
+<p>Một chuyện tương tự xảy ra ngay cuối tuần: sau khi đã có kết quả, nhóm phát hiện <strong>thước đo dùng để
+kết luận bị sai</strong>, phải sửa và <strong>đo lại toàn bộ</strong>. Con số cuối <strong>thấp hơn</strong> con số ban đầu, và một
+con số cũ thì <strong>không tái lập được nữa</strong>. Nhóm chọn báo con số thấp hơn, vì nó đúng.</p>
+<p><img alt="Số lượng kiểm thử tăng dần" src="assets/fig-suite-growth.png"></p>
+<p>Đi kèm là kỷ luật kiểm thử: <strong>1.000 bài kiểm tra tự động</strong> chạy đúng, tăng từ 850 đầu tuần. Mỗi
+thay đổi có ý nghĩa đều phải ghi lại <em>đã kiểm chứng gì</em> và — quan trọng hơn — <strong>cái gì chưa kiểm
+chứng</strong>. Hiện có <strong>69 mục nợ kỹ thuật còn mở</strong>, mỗi mục có mã và điều kiện mở lại; bọn em trình bày
+đây là kỷ luật chứ không phải điểm yếu, vì một vấn đề có mã thì không biến mất trong im lặng.</p>
+<hr>
+<h2>Tuần 3 sẽ làm gì</h2>
+<ul>
+<li><strong>Cải thiện UI/UX</strong> — tinh chỉnh cách trợ lý xuất hiện và cách trình bày lời khuyên cho dễ hiểu
+  hơn.</li>
+<li><strong>Thu thập thông tin từ các hội nhóm tài xế</strong> để làm giàu dữ kiện và tìm thêm pain point thật —
+  những vấn đề tài xế nói với nhau mà báo cáo nội bộ không thấy.</li>
+<li><strong>Cải thiện mô phỏng và các thuật toán tối ưu hoá</strong> — cả về độ sát thực tế của thế giới mô phỏng
+  và chất lượng lời khuyên.</li>
+<li><strong>Kết nối kết quả tối ưu hoá với phần gọi dữ liệu ngoài</strong> (thời tiết, mật độ giao thông) <strong>rồi
+  đưa qua agent để chuẩn hoá đầu ra cho tài xế</strong> — mục tiêu là mọi lời khuyên đến tay tài xế đều
+  cùng một giọng, cùng một mức chắc chắn, và luôn kèm lý do.</li>
+<li><strong>Sửa các chỗ chưa khớp đã ghi nhận trong tuần 2</strong> — trong đó việc đầu tiên là số tầm đi của xe
+  hiển thị trên giao diện chưa khớp với phần tính toán bên trong.</li>
+</ul>
+<hr>
+<p><em>Bản kỹ thuật chi tiết kèm theo: </em><em><code>Week2-Bao-cao-ky-thuat-chi-tiet.pdf</code></em><em> — đầy đủ phương pháp đo,
+thiết kế mô phỏng (số lượng actor/trạng thái/hành động), luồng dữ liệu qua từng trường của schema,
+cơ sở nghiên cứu chính sách, guardrails, lựa chọn kiến trúc và nguồn của từng con số.</em></p></body></html>
