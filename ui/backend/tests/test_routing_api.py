@@ -53,6 +53,7 @@ def test_routing_calculate_multistop():
     assert data["total_dist_km"] > 0
     assert data["fare_vnd"] > 0
     assert "source" in data
+    assert "route_is_real_road" in data
 
 
 def test_osrm_route_uses_simulator_policy_quote(monkeypatch):
@@ -78,10 +79,51 @@ def test_osrm_route_uses_simulator_policy_quote(monkeypatch):
     assert data["fare_policy_version"] == "sim-policy-v0"
     assert data["data_mode"] == "synthetic"
     assert data["is_mock"] is True
+    assert data["route_is_real_road"] is True
+
+
+def _graphhopper_payload():
+    return {
+        "paths": [{
+            "distance": 1984.456,
+            "time": 212_203.0,
+            "points": {"type": "LineString", "coordinates": [[105.8280, 21.0125], [105.8190, 21.0035]]},
+            "instructions": [{"text": "Đi thẳng"}, {"text": "Rẽ trái"}],
+        }],
+    }
+
+
+def test_graphhopper_tier_used_when_osrm_fails(monkeypatch):
+    """Cả 2 mirror OSRM lỗi → rơi xuống GraphHopper (tier 2), không phải straight-line (tier 3)."""
+    monkeypatch.setenv("GRAPHHOPPER_API_KEY", "test-key-not-real")
+
+    def _urlopen(request, *_args, **_kwargs):
+        if "graphhopper.com" in request.full_url:
+            return _OsrmResponse(_graphhopper_payload())
+        raise OSError("offline fixture")
+
+    monkeypatch.setattr(routing.urllib.request, "urlopen", _urlopen)
+    response = client.post("/api/v1/routing/calculate", json={
+        "waypoints": [
+            {"lat": 21.0125, "lng": 105.8280, "name": "A"},
+            {"lat": 21.0035, "lng": 105.8190, "name": "B"},
+        ],
+    })
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["source"] == "graphhopper_real"
+    assert data["route_is_real_road"] is True
+    assert data["total_dist_km"] == 2.0        # round(1984.456 / 1000, 1)
+    assert data["total_duration_min"] == 4     # round(212_203 / 60_000)
+    assert data["fare_vnd"] > 0
 
 
 def test_fallback_route_uses_same_base_fare(monkeypatch):
-    """Bắt nhánh fallback còn dùng 24k/km; route 0 km vẫn phải có base fare."""
+    """Bắt nhánh fallback còn dùng 24k/km; route 0 km vẫn phải có base fare.
+    Cả OSRM lẫn GraphHopper phải lỗi để thật sự rơi xuống tier 3 (đường thẳng)."""
+    monkeypatch.delenv("GRAPHHOPPER_API_KEY", raising=False)
+
     def _offline(*_args, **_kwargs):
         raise OSError("offline fixture")
 
@@ -91,7 +133,8 @@ def test_fallback_route_uses_same_base_fare(monkeypatch):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["source"] == "hanoi_street_graph_engine"
+    assert data["source"] == "fallback_straight_line_estimate"
+    assert data["route_is_real_road"] is False
     assert data["total_dist_km"] == 0.0
     assert data["fare_vnd"] == 13_000
     assert data["driver_payout_vnd"] == 9_750

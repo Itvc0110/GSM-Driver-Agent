@@ -94,4 +94,5 @@ class RouteCalculateResponse(BaseModel):
     is_mock: bool = True
     turn_instruction: str
     source: str = "osrm_real_proxy"
+    route_is_real_road: bool  # True: OSRM/GraphHopper bám đường thật. False: ước lượng đường thẳng.
 

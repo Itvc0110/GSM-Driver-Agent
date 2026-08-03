@@ -228,9 +228,15 @@ async function startIncomingTrip() {
   const quote = demoQuote(route);
   S.activeRoute = { ...route, quote, wps, trip: t };
   clearRoute();
-  // polyline 2 lớp theo brand Khánh
+  // polyline 2 lớp theo brand Khánh — route ước lượng (không phải OSRM/GraphHopper thật) thì
+  // nét đứt + amber, không giả vờ là đường thật
+  const isRealRoad = route.route_is_real_road;
   routeLayers.push(L.polyline(route.coords, { color: "#0f172a", weight: 10, opacity: 0.9 }).addTo(map));
-  routeLayers.push(L.polyline(route.coords, { color: "#00AFB9", weight: 6 }).addTo(map));
+  routeLayers.push(L.polyline(route.coords, {
+    color: isRealRoad ? "#00AFB9" : "#F59E0B",
+    weight: 6,
+    dashArray: isRealRoad ? null : "8 8",
+  }).addTo(map));
   wps.forEach((w, i) => routeLayers.push(L.marker([w.lat, w.lng], {
     icon: L.divIcon({
       html: `<div style="width:24px;height:24px;border-radius:50%;background:${WP_COLORS[i % 4]};
@@ -268,7 +274,9 @@ function acceptTrip() {
   const r = S.activeRoute;
   $("trip-incoming").classList.add("hidden");
   $("trip-active").classList.remove("hidden");
-  $("nav-state").textContent = "ĐANG ĐẾN ĐIỂM ĐÓN (OSRM)";
+  $("nav-state").textContent = r.route_is_real_road
+    ? "ĐANG ĐẾN ĐIỂM ĐÓN (CHỈ ĐƯỜNG THỰC)"
+    : "ĐANG ĐẾN ĐIỂM ĐÓN (ƯỚC LƯỢNG THẲNG)";
   $("nav-cust").textContent = r.trip.customer_name;
   $("nav-route").textContent = r.wps.map((w) => w.name.split(":")[1]).join(" ➔ ");
   $("nav-fare").textContent = r.quote.grossText;
