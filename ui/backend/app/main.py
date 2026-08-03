@@ -28,6 +28,7 @@ from app.adapters import mockdata
 from app.routers.routing import router as routing_router
 from app.routers.driver import router as driver_router
 from app.routers.advice import router as advice_router
+from app.routers.advice_v2 import router as advice_v2_router
 from app.routers.sim import router as sim_router
 
 app = FastAPI(
@@ -39,6 +40,7 @@ app = FastAPI(
 app.include_router(routing_router, prefix="/api/v1/routing", tags=["Routing"])
 app.include_router(driver_router, prefix="/api/v1/driver", tags=["Driver"])
 app.include_router(advice_router, prefix="/api/v1/advice", tags=["Advice"])
+app.include_router(advice_v2_router, prefix="/api/v2/advice", tags=["Advice v2"])
 app.include_router(sim_router, prefix="/api/v1/sim", tags=["Simulation"])
 
 app.add_middleware(

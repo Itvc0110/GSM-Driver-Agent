@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gsm-driver-agent/ui/contracts/advice_v2",
+  "title": "AdviceEnvelopeV2",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "status": {"enum": ["ready", "silent"]},
+    "surface": {"enum": ["brief", "nudge", "recap"]},
+    "generated_at": {"type": "string", "format": "date-time"},
+    "silent": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {"reason_code": {"type": "string", "minLength": 1}},
+      "required": ["reason_code"]
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 1,
+      "items": {"$ref": "#/$defs/card"}
+    }
+  },
+  "required": ["status", "surface", "generated_at", "items"],
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "ready"}}},
+      "then": {"properties": {"items": {"minItems": 1}}, "not": {"required": ["silent"]}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "silent"}}},
+      "then": {"required": ["silent"], "properties": {"items": {"maxItems": 0}}}
+    }
+  ],
+  "$defs": {
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {"enum": ["PROTECT_ELIGIBILITY", "ONLINE", "REST", "SWAP", "END", "EXTEND", "REPOSITION_SIM_ONLY", "NO_ACTION"]},
+        "label_id": {"type": "string", "minLength": 1}
+      },
+      "required": ["code", "label_id"]
+    },
+    "window": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "start": {"type": "string", "format": "date-time"},
+        "end": {"type": "string", "format": "date-time"}
+      },
+      "required": ["start", "end"]
+    },
+    "number": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "value": {"type": "number"},
+        "unit": {"type": "string", "minLength": 1},
+        "source": {"type": "string", "minLength": 1},
+        "artifact_ref": {"type": "string", "minLength": 1}
+      },
+      "required": ["id", "value", "unit", "source", "artifact_ref"]
+    },
+    "card": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "checkpoint_id": {"type": "string", "pattern": "^ckpt-"},
+        "display_id": {"type": "string", "minLength": 1},
+        "topic": {"enum": ["bonus_eligibility", "energy", "rest", "shift_boundary", "shift_timing", "positioning_sim_only", "policy_info", "safety_reserved"]},
+        "surface": {"enum": ["brief", "nudge", "recap"]},
+        "canonical_action": {"$ref": "#/$defs/action"},
+        "action_window": {"$ref": "#/$defs/window"},
+        "future_plan": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "code": {"type": "string"},
+              "label_id": {"type": "string"},
+              "window": {"type": ["object", "null"]}
+            },
+            "required": ["code", "label_id"]
+          }
+        },
+        "title": {"type": "string", "minLength": 1},
+        "summary": {"type": "string", "minLength": 1},
+        "why": {"type": "string", "minLength": 1},
+        "validity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "valid_from": {"type": "string", "format": "date-time"},
+            "valid_until": {"type": "string", "format": "date-time"},
+            "freshness_deadline": {"type": "string", "format": "date-time"}
+          },
+          "required": ["valid_from", "valid_until", "freshness_deadline"]
+        },
+        "confidence_band": {"enum": ["low", "medium", "high"]},
+        "caveat_ids": {"type": "array", "items": {"type": "string"}},
+        "numbers": {"type": "array", "items": {"$ref": "#/$defs/number"}},
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "snapshot_ref": {"type": "string", "minLength": 1},
+            "solver_input_refs": {"type": "array", "items": {"type": "string"}},
+            "solver_report_refs": {"type": "array", "items": {"type": "string"}},
+            "policy_version": {"type": "string", "minLength": 1},
+            "checkpoint_schema_version": {"const": "1.1.0"},
+            "data_mode": {"enum": ["synthetic", "mock-realdata", "live"]},
+            "is_mock": {"type": "boolean"}
+          },
+          "required": ["snapshot_ref", "solver_input_refs", "solver_report_refs", "policy_version", "checkpoint_schema_version", "data_mode", "is_mock"]
+        },
+        "solver_set": {"type": "array", "items": {"enum": ["S1", "S2"]}, "uniqueItems": true},
+        "response_options": {"type": "array", "const": ["accepted", "dismissed", "expanded"]}
+      },
+      "required": ["checkpoint_id", "display_id", "topic", "surface", "canonical_action", "action_window", "future_plan", "title", "summary", "why", "validity", "confidence_band", "caveat_ids", "numbers", "provenance", "solver_set", "response_options"]
+    }
+  }
+}
