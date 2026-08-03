@@ -1,4 +1,9 @@
-# UPDATE-119 — Routing 3-tier: OSRM → GraphHopper → đường thẳng trung thực (bỏ fake sine-curve)
+# UPDATE-120 — Routing 3-tier: OSRM → GraphHopper → đường thẳng trung thực (bỏ fake sine-curve)
+
+> ⚠ Đánh số lại từ UPDATE-119 → **UPDATE-120** khi rebase 2026-08-03: `origin/main` đã dùng số 119
+> cho một việc khác (`UPDATE-119-week2-report-mentor.md`, báo cáo Week 2 gửi mentor) trước khi
+> nhánh này push. Không đổi nội dung, chỉ đổi số + tên file + mọi tham chiếu chéo (`V-23` trong
+> `PENDING-REVIEW.md` cũng đổi thành `V-24` vì cùng lý do trùng số).
 
 - **Ngày:** 2026-08-03
 - **Người thực hiện:** Khánh (agent), theo yêu cầu Khánh trong hội thoại

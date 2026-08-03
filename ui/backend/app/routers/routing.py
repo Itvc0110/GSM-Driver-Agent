@@ -21,7 +21,7 @@ router = APIRouter()
 # Bản giữ lại là của `origin/main` vì nó trả kèm payout + `fare_policy_version` + nhãn mock, thay
 # vì chép lại công thức — đúng tinh thần "một luật, một nguồn" mà cả hai bản cùng nhắm tới.
 #
-# UPDATE-119: 3 tier rõ ràng — OSRM public (thật) → GraphHopper (thật, cần GRAPHHOPPER_API_KEY) →
+# UPDATE-120: 3 tier rõ ràng — OSRM public (thật) → GraphHopper (thật, cần GRAPHHOPPER_API_KEY) →
 # ước lượng đường thẳng (KHÔNG còn fake sine-curve giả làm "hanoi_street_graph_engine" — tên đó
 # ngụ ý một đồ thị đường phố thật không hề tồn tại). Mọi tier trả cùng field `route_is_real_road`
 # để frontend phân biệt trung thực, không phải suy đoán qua chuỗi `source`.
