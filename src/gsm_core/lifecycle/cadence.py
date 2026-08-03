@@ -49,8 +49,9 @@ PRESENT = "PRESENT"
 QUEUE = "QUEUE"
 SUPPRESS = "SUPPRESS"
 
-# Chủ đề thuộc lớp AN TOÀN — priority cao nhất (design: safety > policy/bonus > demand):
-# không bị chặn bởi budget/cooldown và KHÔNG hoãn khi đang chạy.
+# Chủ đề thuộc lớp AN TOÀN. Card chữ hiện chưa có emergency modality riêng; vì vậy
+# `safety` chỉ được ưu tiên trước budget/cooldown khi xe đứng yên, còn đang lái vẫn
+# phải QUEUE cùng card thường (CKPT-B, 2026-08-03).
 SAFETY_TOPICS = frozenset({"safety"})
 
 # Độ rộng bucket định danh MỘT QUYẾT ĐỊNH (phút). Đây là NGUỒN SỰ THẬT DUY NHẤT —
@@ -147,16 +148,16 @@ def evaluate(topic: str, now_min: float, phase: str, memory: CadenceMemory,
              cfg: CadenceConfig | None = None, is_driving: bool = False) -> CadenceVerdict:
     """Có nên nói về `topic` lúc này không? Thứ tự xét = thứ tự ưu tiên đã duyệt.
 
-    An toàn đi trước mọi thứ (không bị budget/cooldown/driving chặn). Sau đó: đang chạy
-    xe ⇒ QUEUE (hoãn, KHÔNG mất — khác SUPPRESS); đã bấm Bỏ qua trong pha này ⇒ im;
+    An toàn đi trước budget/cooldown khi xe đứng yên. Khi đang chạy xe, mọi card chữ
+    (kể cả `safety`) ⇒ QUEUE (hoãn, KHÔNG mất — khác SUPPRESS); đã bấm Bỏ qua trong pha này ⇒ im;
     hết ngân sách ca ⇒ im; chưa đủ 20′ kể từ lần nói cuối cùng về topic ⇒ im kèm
     `next_eligible_min` để caller biết khi nào hỏi lại.
     """
     c = cfg or CadenceConfig()
-    if topic in SAFETY_TOPICS:
-        return CadenceVerdict(PRESENT)
     if is_driving:
         return CadenceVerdict(QUEUE, "unsafe_while_moving")
+    if topic in SAFETY_TOPICS:
+        return CadenceVerdict(PRESENT)
     if memory.dismissed_in_phase.get(topic) == phase:
         return CadenceVerdict(SUPPRESS, "dismissed_for_window")
     if memory.proactive_count >= c.max_proactive_per_shift:

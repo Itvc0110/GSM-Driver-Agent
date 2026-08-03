@@ -47,6 +47,31 @@ def _spi_100_to_110(record: dict) -> dict:
     return {**record, "schema_version": "1.1.0"}
 
 
+@_register("advice_checkpoint", "1.0.0")
+def _checkpoint_100_to_110(record: dict) -> dict:
+    """Separate-stream trace refs were unknown in 1.0; preserve that uncertainty."""
+    return {
+        **record,
+        "schema_version": "1.1.0",
+        "source_decision_id": None,
+        "run_id": None,
+        "solver_input_refs": [],
+        "solver_report_refs": [],
+    }
+
+
+@_register("advice_checkpoint_event", "1.0.0")
+def _checkpoint_event_100_to_110(record: dict) -> dict:
+    """1.1 adds an event enum value but does not reinterpret old events."""
+    return {**record, "schema_version": "1.1.0"}
+
+
+@_register("advice_artifact", "1.0.0")
+def _advice_artifact_100_to_110(record: dict) -> dict:
+    """1.1 only adds the agent-shadow artifact enum; old payloads are unchanged."""
+    return {**record, "schema_version": "1.1.0"}
+
+
 from functools import lru_cache
 
 

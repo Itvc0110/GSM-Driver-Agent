@@ -14,7 +14,7 @@
       "description": "khi không có advice — nêu LÝ DO có cấu trúc, UI hiển thị tử tế thay vì trống",
       "properties": {
         "is_silent": { "type": "boolean" },
-        "reason_code": { "type": "string", "enum": ["already_on_track", "insufficient_budget_hours", "insufficient_history", "no_active_channel", "verify_failed"], "description": "verify_failed = R5-A (UPDATE-071): card không qua verifier tầng 1 → fail-closed thành im lặng, KHÔNG trả nội dung sai" },
+        "reason_code": { "type": "string", "enum": ["already_on_track", "insufficient_budget_hours", "insufficient_history", "no_active_channel", "verify_failed", "unsafe_while_moving", "topic_cooldown", "shift_budget_exhausted", "dismissed_for_window"], "description": "verify_failed = R5-A (UPDATE-071): card không qua verifier tầng 1 → fail-closed thành im lặng, KHÔNG trả nội dung sai" },
         "message": { "type": "string" }
       },
       "required": ["is_silent"]

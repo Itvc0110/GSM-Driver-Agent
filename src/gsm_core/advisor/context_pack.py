@@ -38,7 +38,7 @@ VÍ DỤ 2 (hỏi chính sách):
 _FEATURE_INSTRUCTION = {
     "F0": "NHIỆM VỤ: Trả lời câu hỏi chính sách của tài xế dựa trên trích đoạn [P-id] và số liệu [N-id]. Bắt buộc cite [P-id] cho mọi claim chính sách.",
     "F1": "NHIỆM VỤ: Tư vấn kế hoạch ca (mục tiêu điểm/thưởng + lịch chạy-nghỉ-sạc) từ báo cáo solver. Một thông điệp gọn, nêu next step rõ.",
-    "F2": "NHIỆM VỤ: Khuyên hành động KẾ TIẾP trong ca (nghỉ/sạc/chạy tiếp) từ next_action của solver. Ngắn gọn 2-3 câu.",
+    "F2": "NHIỆM VỤ: Nêu hành động hiện tại từ schedule[0] trước; chỉ nêu next_action như bước sắp tới nếu khác bucket. Không gọi next_action là hành động hiện tại. Ngắn gọn 2-3 câu.",
     "F3": "NHIỆM VỤ: Tổng kết ca + nêu ĐÚNG MỘT điểm cải thiện nổi bật nhất (top_pattern). Không phán xét, giọng khích lệ.",
 }
 
@@ -57,14 +57,19 @@ def build_context_pack(feature: str, solver_reports: list[dict],
         sol = rep.get("solution", {})
         # whitelist key được đưa vào prompt. S5/S6 (PI-5a) thêm key riêng — nếu không
         # khai ở đây thì LLM/verifier KHÔNG thấy nội dung khoán tuần / mini-task.
-        for k in ("feasible", "next_action", "top_pattern", "herding_avoided",
+        for k in ("feasible", "schedule", "next_action", "top_pattern", "herding_avoided",
                   "quota_available", "gap_revenue_vnd", "clawback_risk_vnd",
                   "expected_reward_vnd", "chosen_missions",
                   "total_idle_min", "idle_share", "worst_window", "reposition_mission",
                   "total_deducted_vnd", "penalty_count", "open_count", "top_severity"):
             if k in sol and sol[k] is not None:
                 v = sol[k]
-                if isinstance(v, dict):
+                if k == "schedule" and isinstance(v, list):
+                    v = "; ".join(
+                        f"{item.get('bucket')}: {item.get('action')}"
+                        for item in v if isinstance(item, dict)
+                    )
+                elif isinstance(v, dict):
                     v = v.get("action", v.get("type", ""))
                 elif isinstance(v, list):  # chosen_missions → tên nhiệm vụ (số ở [N-id])
                     v = ", ".join(str(x.get("name") or x.get("mission_id")) for x in v) or "không có"

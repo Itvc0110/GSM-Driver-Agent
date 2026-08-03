@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -20,7 +21,28 @@ client = TestClient(app)
 
 BODY = {"advice_id": "s1-driver-01-2026-07-29-840", "driver_id": "driver-01",
         "date": "2026-07-29", "action": "followed", "card_kind": "brief",
-        "at_min": 840}
+        "at_min": 840, "topic": "brief"}
+
+
+@pytest.mark.parametrize("topic", ["safety", "bonus", "energy", "unknown"])
+def test_v1_rejects_non_surface_topics(topic):
+    """V1 chỉ nhận ba legacy surface; safety priority không do client khai."""
+    response = client.get("/api/v1/advice", params={"topic": topic})
+    assert response.status_code == 422
+
+
+def test_v1_driving_silent_response_is_contract_complete(tmp_path, monkeypatch):
+    """QUEUE/SUPPRESS vẫn phải mang đủ provenance envelope, không tạo card giả."""
+    _patch(tmp_path, monkeypatch)
+    body = client.get("/api/v1/advice", params={
+        "topic": "brief", "is_driving": True, "now_min": 600,
+    }).json()
+    assert body["items"] == []
+    assert body["silent"]["reason_code"] == "unsafe_while_moving"
+    assert isinstance(body["scenario_id"], str) and body["scenario_id"]
+    assert isinstance(body["seed"], int)
+    assert body["data_mode"] in {"synthetic", "mock-realdata"}
+    assert body["is_mock"] is True
 
 
 class _FrozenDatetime(datetime):
@@ -140,12 +162,12 @@ def test_dismiss_silences_same_topic_in_phase(tmp_path, monkeypatch):
     """Trước ĐA-04: GET /advice stateless — bấm "Bỏ qua" xong hỏi lại vẫn ra card y hệt
     (vòng §12 HỞ về hành vi). Nay: im trong PHA đó (Cường chốt cửa sổ = hết pha)."""
     _patch(tmp_path, monkeypatch)
-    q = "?driver_id=driver-01&date=2026-07-29&now_min=600&topic=bonus"
+    q = "?driver_id=driver-01&date=2026-07-29&now_min=600&topic=brief"
     first = client.get("/api/v1/advice" + q).json()
     assert first["cadence"]["verdict"] == "PRESENT"
 
     assert client.post("/api/v1/advice/action", json={
-        **BODY, "action": "dismissed", "at_min": 600, "topic": "bonus"}).status_code == 200
+        **BODY, "action": "dismissed", "at_min": 600, "topic": "brief"}).status_code == 200
 
     after = client.get("/api/v1/advice" + q).json()
     assert after["items"] == []
@@ -157,9 +179,9 @@ def test_dismiss_does_not_silence_other_topic(tmp_path, monkeypatch):
     """Bỏ qua nhắc thưởng KHÔNG được khoá miệng cảnh báo chủ đề khác (cooldown theo topic)."""
     _patch(tmp_path, monkeypatch)
     client.post("/api/v1/advice/action", json={
-        **BODY, "action": "dismissed", "at_min": 600, "topic": "bonus"})
+        **BODY, "action": "dismissed", "at_min": 600, "topic": "brief"})
     other = client.get(
-        "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=600&topic=rest").json()
+        "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=600&topic=nudge").json()
     assert other["cadence"]["verdict"] == "PRESENT"
 
 
@@ -167,9 +189,9 @@ def test_dismiss_expires_next_phase(tmp_path, monkeypatch):
     """Sang PHA mới được nói lại — không im hết ca (giữ đường cho cảnh báo thật)."""
     _patch(tmp_path, monkeypatch)
     client.post("/api/v1/advice/action", json={
-        **BODY, "action": "dismissed", "at_min": 600, "topic": "bonus"})
+        **BODY, "action": "dismissed", "at_min": 600, "topic": "brief"})
     late = client.get(
-        "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=1200&topic=bonus").json()
+        "/api/v1/advice?driver_id=driver-01&date=2026-07-29&now_min=1200&topic=brief").json()
     assert late["cadence"]["phase"] != "mid"
     assert late["cadence"]["verdict"] == "PRESENT"
 
@@ -183,7 +205,7 @@ def test_showing_a_card_consumes_budget_without_any_tap(tmp_path, monkeypatch):
     _patch(tmp_path, monkeypatch)
     # Dùng tài xế MẶC ĐỊNH (d-19) — `driver-01` của BODY không được kênh nào phủ nên GET
     # luôn trả `no_active_channel` + items rỗng, và một test dựng trên đó sẽ XANH GIẢ.
-    q = "/api/v1/advice?topic=bonus&now_min="
+    q = "/api/v1/advice?topic=brief&now_min="
     seen = [client.get(q + str(m)).json() for m in (600, 630, 660, 690, 720, 750, 780)]
     assert any(r.get("items") for r in seen), "kịch bản phải sinh card thật, không thì test rỗng"
     reasons = [r.get("silent", {}).get("reason_code") for r in seen]
@@ -199,7 +221,7 @@ def test_polling_same_bucket_does_not_burn_budget(tmp_path, monkeypatch):
     _patch(tmp_path, monkeypatch)
     dv = client.get("/api/v1/driver/default-view").json()
     for m in range(600, 630, 2):        # 15 lần trong CÙNG bucket 30′
-        r = client.get(f"/api/v1/advice?topic=bonus&now_min={m}").json()
+        r = client.get(f"/api/v1/advice?topic=brief&now_min={m}").json()
     # ⚠ Kỳ vọng đổi PRESENT → SUPPRESS ngày 2026-07-31 (UPDATE-112, V-21). Bản cũ pin ĐÚNG
     # LỖI `L4-03`: cooldown 20′ ngắn hơn bucket 30′ nên ở phút 620–628 verdict quay lại
     # PRESENT — card hiện lại thật — trong khi `_note_shown` khoá theo bucket nên KHÔNG ghi
@@ -224,9 +246,9 @@ def test_phase_uses_one_formula_across_write_and_read(tmp_path, monkeypatch):
     _patch(tmp_path, monkeypatch)
     SHIFT_END = 18 * 60
     assert client.post("/api/v1/advice/action", json={
-        **BODY, "action": "dismissed", "at_min": 16 * 60, "topic": "bonus"}).status_code == 200
+        **BODY, "action": "dismissed", "at_min": 16 * 60, "topic": "brief"}).status_code == 200
     r = client.get(f"/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                   f"&now_min={16 * 60 + 30}&shift_end_min={SHIFT_END}&topic=bonus").json()
+                   f"&now_min={16 * 60 + 30}&shift_end_min={SHIFT_END}&topic=brief").json()
     assert r["cadence"]["phase"] == "late"
     assert r["silent"]["reason_code"] == "dismissed_for_window", (
         "pha của event dismissed phải được tính lại bằng công thức của người ĐỌC "
@@ -245,13 +267,13 @@ def test_budget_counts_decisions_not_events(tmp_path, monkeypatch):
         for act in ("expanded", "followed"):
             assert client.post("/api/v1/advice/action", json={
                 **BODY, "advice_id": aid, "action": act, "at_min": 600 + i,
-                "topic": f"topic-{i}"}).status_code == 200
+                "topic": ("brief", "nudge", "recap")[i % 3]}).status_code == 200
     mem = advice_router._cadence_memory("driver-01", "2026-07-29", "mid")
     assert mem.proactive_count == 3, (
         f"3 card phải = 3 suất, không phải {mem.proactive_count} (đếm event = double-count)")
     # và ngân sách 6 CHƯA cạn — advisor vẫn được nói
     r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                   "&now_min=700&topic=bonus").json()
+                   "&now_min=700&topic=brief").json()
     assert r["cadence"]["verdict"] == "PRESENT"
 
 
@@ -263,10 +285,10 @@ def test_topic_cooldown_alive_in_product(tmp_path, monkeypatch):
     không chạy = "một luật" chỉ đúng một nửa."""
     _patch(tmp_path, monkeypatch)
     assert client.post("/api/v1/advice/action", json={
-        **BODY, "action": "expanded", "at_min": 600, "topic": "bonus"}).status_code == 200
+        **BODY, "action": "expanded", "at_min": 600, "topic": "brief"}).status_code == 200
 
     soon = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                      "&now_min=610&topic=bonus").json()
+                      "&now_min=610&topic=brief").json()
     assert soon["cadence"]["verdict"] == "SUPPRESS"
     assert soon["silent"]["reason_code"] == "topic_cooldown"
     # 620 → 630 (UPDATE-112, V-21): cooldown thực thi = max(20′ cấu hình, 30′ bucket quyết
@@ -274,7 +296,7 @@ def test_topic_cooldown_alive_in_product(tmp_path, monkeypatch):
     assert soon["cadence"]["next_eligible_min"] == 630.0
 
     later = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                       "&now_min=630&topic=bonus").json()
+                       "&now_min=630&topic=brief").json()
     assert later["cadence"]["verdict"] == "PRESENT", "sang bucket mới phải được nói lại"
 
 
@@ -288,9 +310,10 @@ def test_shift_budget_exhausted_silences_ui(tmp_path, monkeypatch):
         # `expanded` → event `displayed`, tức advisor đã hiện thẻ cho tài xế xem
         assert client.post("/api/v1/advice/action", json={
             **BODY, "advice_id": f"s1-driver-01-2026-07-29-{600 + i}", "action": "expanded",
-            "at_min": 600 + i, "topic": f"topic-{i}"}).status_code == 200
+            "at_min": 600 + i,
+            "topic": ("brief", "nudge", "recap")[i % 3]}).status_code == 200
     r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                   "&now_min=700&topic=bonus").json()
+                   "&now_min=700&topic=brief").json()
     assert r["items"] == []
     assert r["silent"]["reason_code"] == "shift_budget_exhausted"
     assert "nhắc đủ" in r["silent"]["message"]
@@ -300,6 +323,6 @@ def test_driving_queues_advice(tmp_path, monkeypatch):
     """An toàn: đang lái ⇒ HOÃN (QUEUE), không mất lời khuyên."""
     _patch(tmp_path, monkeypatch)
     r = client.get("/api/v1/advice?driver_id=driver-01&date=2026-07-29"
-                   "&now_min=600&topic=bonus&is_driving=true").json()
+                   "&now_min=600&topic=brief&is_driving=true").json()
     assert r["cadence"]["verdict"] == "QUEUE"
     assert r["silent"]["reason_code"] == "unsafe_while_moving"
