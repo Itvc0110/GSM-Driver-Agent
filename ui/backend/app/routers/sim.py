@@ -28,6 +28,18 @@ SWEEP_FILE = REPO_ROOT / "research" / "experiments" / "sensitivity" / "dsim06_sw
 AB_WARNING = ("1 seed = 1 ngày mô phỏng — kết quả đơn lẻ KHÔNG phải kết luận. "
               "Kết luận cần ≥30 seed + CI bootstrap (xem tab Độ nhạy).")
 
+# Chỉ event đã thực sự mang nghĩa driver-facing mới được project lên hành trình.
+# Audit/guardrail/timeout có thể dùng cùng prefix `advice_` nhưng không phải card.
+DRIVER_FACING_ADVICE_EVENTS = frozenset({
+    "advice_bonus_gate",
+    "advice_shift_extend",
+    "advice_given",
+    "advice_suppressed",
+    "advice_followed",
+    "advice_rest_window",
+    "standby_followed",
+})
+
 
 @lru_cache(maxsize=1)
 def _cfg() -> Config:
@@ -57,7 +69,7 @@ def _journey_payload(result, actor_id: int, seed: int) -> dict:
     for e in result.events:
         if e.actor_id != actor_id:
             continue
-        if e.kind.startswith("advice_") or e.kind == "standby_followed":
+        if e.kind in DRIVER_FACING_ADVICE_EVENTS:
             # ĐA-04/W6: TRƯỚC ĐÂY nén thành {"kind":"advice","label":...} — mất
             # followed/channel/reason nên khu Mô phỏng không thể cho thấy NHỊP nói
             # (khi nào advisor im và vì sao). Nay giữ đủ để nhìn thấy cadence.

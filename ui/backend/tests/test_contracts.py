@@ -110,6 +110,28 @@ def test_sim_journey_matches_contract():
         assert body["income_curve"][-1][1] == m["payout_vnd"]
 
 
+def test_sim_journey_projects_only_driver_facing_advice(monkeypatch):
+    """Technical/audit events must not become cards or journey advice markers."""
+    from types import SimpleNamespace
+    from app.routers import sim as sim_router
+
+    journey = SimpleNamespace(
+        archetype="P1", timeline=[], offers=[], income_curve=[], metrics={})
+    monkeypatch.setattr(sim_router, "build_journey", lambda result, actor_id: journey)
+    result = SimpleNamespace(events=[
+        SimpleNamespace(actor_id=7, kind="advice_rest_veto", t_min=500,
+                        detail={"channel": "rest_window", "reason": "rail"}),
+        SimpleNamespace(actor_id=7, kind="advice_solver_timeout", t_min=501,
+                        detail={"channel": "shift_plan", "reason": "timeout"}),
+        SimpleNamespace(actor_id=7, kind="advice_suppressed", t_min=502,
+                        detail={"channel": "shift_plan", "reason": "topic_cooldown"}),
+    ])
+
+    payload = sim_router._journey_payload(result, actor_id=7, seed=1000)
+
+    assert [event["kind"] for event in payload["events"]] == ["advice_suppressed"]
+
+
 def test_sim_replay_matches_contract():
     r = client.get("/api/v1/sim/replay?seed=1000")
     assert r.status_code == 200

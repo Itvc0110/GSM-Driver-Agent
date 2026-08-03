@@ -432,6 +432,13 @@ advice:
     P6: 0.50
     P7: 0.50
 
+# AdviceCheckpoint trace/presenter is observational only in the simulator. Keep both
+# gates off/template by default so enabling trace capture cannot enable an agent or
+# alter world dynamics (UPDATE-126).
+checkpoint_shadow:
+  enabled: false
+  presentation_mode: template
+
 # --- SIM-XANH Phase 1: đường THẬT từ OSRM (UPDATE-054) ---
 # Ma trận fetch MỘT LẦN (scripts/fetch_osrm_matrix.py), sim đọc OFFLINE. Đo được:
 # factor median 1.46 (p10 1.24 · p90 1.94) — detour hằng 1.3 cũ ƯỚC NON đường Hà Nội.

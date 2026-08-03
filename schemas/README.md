@@ -13,7 +13,7 @@ Validate qua `gsm_core.schema_registry.SchemaRegistry` — solver/agent/mockgen,
 | `l2/` | State fields (supply/demand/station/driver-day) | derivation job có version |
 | `l2i/` | Inferred views | **tầng RIÊNG — nhãn INFERRED + rule version bắt buộc** |
 | `l3/` | Feature views cho solver | read-only |
-| `advisor/` | I/O pipeline (request / solver report / composed advice) + lifecycle event log (ĐA-05): entity thứ 4 `advice_lifecycle_event` (1.0.0) — **append-only, idempotent theo `event_id`**; 3 namespace `decision_id`: `adv-*` (pipeline) / `s1-*` (UI) / `slth-*` (sim); store canonical + projections **MỘT LUẬT** (UI + sim) ra **hai tên** `decision_adherence`/`event_adherence` | đóng băng contract |
+| `advisor/` | I/O pipeline (request / solver report / composed advice) + lifecycle event log legacy (ĐA-05). AdviceCheckpoint v2 dùng stream riêng `advice_artifact@1.1`, `advice_checkpoint@1.1`, `advice_checkpoint_event@1.1`, presentation schemas đóng và identity `checkpoint_id` riêng; không overload/backfill `decision_id`, không dual-write legacy lifecycle. Metrics vẫn báo riêng `decision_adherence`, `event_adherence`, `accept_rate`, `execution_rate` | đóng băng contract |
 
 ## Quy ước (spec §1.6)
 

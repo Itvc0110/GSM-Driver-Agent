@@ -43,7 +43,8 @@ from .demand import generate_orders
 from .geo import build_grid, load_road_matrix
 from .journey import build_journey
 from .policy import PolicyBundle
-from .runner import RunResult, _data, build_environment, derive_run_id
+from .runner import (RunResult, _data, build_environment, derive_run_id,
+                     finalize_checkpoint_trace)
 from .world import World
 
 
@@ -250,14 +251,15 @@ def run_multiday(cfg: Config, seed: int, days: int = 7,
         # lúc này chỉ chứa các ngày ĐÃ XONG (cập nhật ở cuối vòng lặp) — không rò tương lai.
         world.advice.memory = memory
         events = world.run()
+        segments, trace = finalize_checkpoint_trace(world, events)
         # CHỤP ẢNH actor của NGÀY NÀY. Nếu để chung một list, `days[0].actors` sẽ phản ánh
         # trạng thái ngày CUỐI (vì actor bị reset tại chỗ mỗi ngày) ⇒ mọi journey/metric theo
         # ngày đều sai mà không có gì báo.
         snapshot = copy.deepcopy(actors)
         r = RunResult(seed=s_day, events=events, actors=snapshot, orders=orders, config=cfg,
                       policy=policy, grid=grid, env=env, congestion=congestion,
-                      traj=world.traj, segments=world.segments, stations=world.stations,
-                      order_states=world.order_states)
+                      traj=world.traj, segments=segments, stations=world.stations,
+                      order_states=world.order_states, **trace)
         out.append(r)
         for a in actors:                                # cập nhật SAU khi ngày đã xong
             _update_memory(memory[a.actor_id], r, a)

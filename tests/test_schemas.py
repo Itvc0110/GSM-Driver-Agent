@@ -38,6 +38,9 @@ EXPECTED = {
     "advice_request", "solver_report", "composed_advice",
     # Cycle W (ĐA-05): event log lifecycle append-only
     "advice_lifecycle_event",
+    # AdviceCheckpoint shadow presentation lifecycle — không overload decision_id legacy
+    "advice_artifact", "advice_checkpoint", "advice_checkpoint_event",
+    "agent_presentation_input", "agent_presentation_output",
 }
 
 # L1-real (re-ground về bảng thật gsm-data-prod — UPDATE-033/034, PI-1)
@@ -57,7 +60,13 @@ def test_all_entities_registered():
 # Bump có chủ ý ⇒ sửa map này + CHANGELOG + snapshot @old + upcaster (quy trình schemas/README).
 # `shift_plan_input` 1.1.0 là bump THẬT đầu tiên (Cycle R thêm 2 trường rest mà const chưa đổi
 # — đúng anti-pattern B-02; nay trả nợ).
-LATEST_VERSIONS = {"shift_plan_input": "1.1.0", "policy_bundle": "1.1.0"}   # entity vắng mặt = "1.0.0"
+LATEST_VERSIONS = {
+    "shift_plan_input": "1.1.0",
+    "policy_bundle": "1.1.0",
+    "advice_checkpoint": "1.1.0",
+    "advice_checkpoint_event": "1.1.0",
+    "advice_artifact": "1.1.0",
+}   # entity vắng mặt = "1.0.0"
 
 
 def test_all_schemas_load_and_have_version(reg):

@@ -139,7 +139,8 @@ class AdviceActionBridge:
     liên quan tới advice, phá nền CRN (paired-seed) mà SIM-4 dựa vào.
     """
 
-    def __init__(self, cfg, policy, seed: int):
+    def __init__(self, cfg, policy, seed: int, *, checkpoint_trace=None,
+                 run_id: str = ""):
         adv = cfg.get("advice", {}) or {}
         # D-M3-08 cơ chế 1 (spec §1.2b): khoá chính sách sức khoẻ — nổ NGAY tại đây nếu ai
         # sweep/override trần hoãn. Chokepoint là bridge chứ KHÔNG phải run_once: multiday
@@ -252,6 +253,10 @@ class AdviceActionBridge:
         self._last_consult: dict[int, float] = {}
         # ĐA-04 (2026-07-29): nhịp nói dùng LUẬT CHUNG với UI (gsm_core/lifecycle/cadence.py).
         self.seed = int(seed)
+        # P2 shadow trace: sink chỉ nhận dữ liệu SAU solver call hiện hữu; không sở hữu RNG,
+        # không kích hoạt solver và mặc định tắt.
+        self.checkpoint_trace = checkpoint_trace
+        self.run_id = run_id
         cad = (adv.get("cadence") or {})
         self.cadence_cfg = CadenceConfig(
             min_gap_min_per_topic=float(cad.get("min_gap_min_per_topic", 20.0)),
@@ -589,6 +594,7 @@ class AdviceActionBridge:
         schedule = sol.get("schedule") or []
         if not schedule:
             return None
+        self._capture_checkpoint("S2", actor, now_min, spi, report, "shift_plan")
 
         # BẪY 1: hành động TỨC THỜI = bucket hiện tại, KHÔNG phải `next_action`
         solver_action = str(schedule[0].get("action") or "ONLINE").upper()
@@ -737,6 +743,8 @@ class AdviceActionBridge:
         if not sol.get("notable"):
             return None                      # S7 KHÔNG bịa vấn đề khi tài xế không chờ nhiều
         w = sol.get("worst_window")
+        if w:
+            self._capture_checkpoint("S7", actor, now_min, ii, rep, "rest_window")
         return int(w["hour"]) if w else None
 
     def should_defer_rest(self, actor: Actor, now_min: float, hour: int,
@@ -863,7 +871,8 @@ class AdviceActionBridge:
           ngày** — *"tới giờ này còn gỡ kịp không?"* (`_acceptance_recoverable`). S1 chỉ kiểm
           TĨNH (`acceptance >= ngưỡng`) nên không thay thế được phần này.
         """
-        rep = bonus_feasibility.solve(self.build_bonus_gap_input(actor, now_min), self.policy)
+        solver_input = self.build_bonus_gap_input(actor, now_min)
+        rep = bonus_feasibility.solve(solver_input, self.policy)
         sol = rep.get("solution") or {}
         # C2 (UPDATE-076): chỉ im lặng khi kịch mốc **VÀ** thưởng thật sự an toàn. Kịch mốc mà
         # tỷ lệ dưới ngưỡng ⇒ chính sách trả 0đ; im lặng lúc đó là bỏ rơi tài xế đúng lúc còn
@@ -891,6 +900,7 @@ class AdviceActionBridge:
 
         if not self._acceptance_recoverable(actor, now_min, thr):
             return False, "acceptance_unrecoverable"
+        self._capture_checkpoint("S1", actor, now_min, solver_input, rep, "accept_lift")
         return True, ""
 
     # ---------- SIM-4 kênh 3: hoãn kết ca khi sát mốc điểm ----------
@@ -919,6 +929,26 @@ class AdviceActionBridge:
             return 0.0                        # không với tới trong trần cho phép
         if not self.cadence_allows(actor, "shift_extend", now_min):
             return 0.0                        # ĐA-04: hết cooldown/ngân sách ⇒ im
+        rule_input = {
+            "driver_id": f"d-{actor.actor_id}", "t_now": _iso(now_min),
+            "points_now": int(actor.points), "gap_points": gap_points,
+            "points_per_hour": rate, "need_min": need_min,
+            "extend_remaining_min": self.extend_max_min - actor.shift_extended_min,
+        }
+        rule_report = {
+            "status": "optimal", "confidence": 1.0,
+            "reason_code": "bonus_tier_within_extension_cap",
+            "solution": {
+                "action": "EXTEND",
+                "action_window": {
+                    "start": _iso(now_min),
+                    "end": _iso(min(self.world_end_min,
+                                    actor.shift_end_min + need_min * 1.15)),
+                },
+            },
+        }
+        self._capture_checkpoint(
+            "RULE", actor, now_min, rule_input, rule_report, "shift_extend")
         # R-09: `cadence_note_spoken` phải chạy VÔ ĐIỀU KIỆN — ngân sách là ngân sách CHÚ Ý
         # của người nghe, advisor NÓI là đã tiêu, bất kể tài xế có làm theo hay không. Bản
         # trước gọi nó SAU `coin_follows` nên lời khuyên bị bỏ ngoài tai KHÔNG tiêu suất ⇒
@@ -965,6 +995,17 @@ class AdviceActionBridge:
         actor.shift_extended_min += add
         actor.shift_end_min += add
         return add
+
+    def _capture_checkpoint(self, solver_name: str, actor: Actor, now_min: float,
+                            solver_input: dict, solver_report: dict,
+                            channel: str) -> str | None:
+        if self.checkpoint_trace is None:
+            return None
+        source_decision_id = (
+            f"slth-{self.run_id}-{actor.actor_id}-{channel}-{decision_bucket(now_min)}")
+        return self.checkpoint_trace.capture(
+            solver_name, actor, now_min, solver_input, solver_report,
+            source_decision_id)
 
 
 def _map_action(solver_action: str, actor: Actor) -> IdleAction | None:

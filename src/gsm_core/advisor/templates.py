@@ -243,6 +243,22 @@ def _advice_spec(action: str | None, bucket: str | None) -> dict:
             "target_window": bucket, "target_zone_or_station": None}
 
 
+def _shift_now_and_future(solution: dict) -> tuple[dict | None, dict | None]:
+    """Tách action của bucket hiện tại khỏi bước tiếp theo trong kế hoạch S2.
+
+    `schedule[0]` là action đang có hiệu lực. `next_action` là action đầu tiên
+    cần làm trong tương lai theo solver. Với report cũ chưa có schedule, giữ
+    backward compatibility bằng cách coi `next_action` là action hiện tại.
+    """
+    schedule = solution.get("schedule") or []
+    current = schedule[0] if schedule else solution.get("next_action")
+    future = solution.get("next_action") if schedule else None
+    if current and future and current.get("action") == future.get("action") \
+            and current.get("bucket") == future.get("bucket"):
+        future = None
+    return current, future
+
+
 def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[dict],
                     numbers_registry: dict) -> dict:
     reg = numbers_registry
@@ -280,17 +296,27 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
             advice_spec = _advice_spec(na.get("action"), na.get("bucket"))
     elif feature == "F2":
         dp = next((r for r in solver_reports if r["solver"] == "shift_dp"), None)
-        na = (dp or {}).get("solution", {}).get("next_action") if dp else None
+        now_action, future_action = _shift_now_and_future(
+            ((dp or {}).get("solution") or {}) if dp else {})
         act_vn = {"REST": "nghỉ một lúc", "SWAP": "đi đổi pin", "ONLINE": "tiếp tục chạy",
-                  "END": "cân nhắc kết ca"}.get((na or {}).get("action", ""), "tiếp tục chạy")
-        reason = (na or {}).get("reason", "")
-        reason_txt = f" — {reason}" if reason else ""
+                  "END": "cân nhắc kết ca"}.get(
+                      (now_action or {}).get("action", ""), "tiếp tục chạy")
+        future_act_vn = {"REST": "nghỉ một lúc", "SWAP": "đi đổi pin", "ONLINE": "tiếp tục chạy",
+                         "END": "cân nhắc kết ca"}.get(
+                             (future_action or {}).get("action", ""), "tiếp tục chạy")
+        now_reason = (now_action or {}).get("reason", "")
+        now_reason_txt = f" — {now_reason}" if now_reason else ""
+        future_reason = (future_action or {}).get("reason", "")
+        future_reason_txt = f" — {future_reason}" if future_reason else ""
+        future_bucket = (future_action or {}).get("bucket")
+        future_line = (f" Sắp tới {future_bucket} nên {future_act_vn}{future_reason_txt}."
+                       if future_action and future_bucket else "")
         progress = _gap_sentence(solver_reports, reg, n1, n2)
-        msg = (f"Gợi ý lúc này: anh/chị nên {act_vn}{reason_txt}.{progress}"
+        msg = (f"Bây giờ: anh/chị nên {act_vn}{now_reason_txt}.{future_line}{progress}"
                f"{_idle_sentence(solver_reports, reg)}"
                f"{_mission_sentence(solver_reports, reg)}{disclaimer}")
-        if na:
-            advice_spec = _advice_spec(na.get("action"), na.get("bucket"))
+        if now_action:
+            advice_spec = _advice_spec(now_action.get("action"), now_action.get("bucket"))
     else:  # F3
         f3 = next((r for r in solver_reports if r["solver"] == "f3_patterns"), None)
         top = (f3 or {}).get("solution", {}).get("top_pattern") if f3 else None

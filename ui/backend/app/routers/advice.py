@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from datetime import date as _date
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
@@ -150,7 +151,7 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
                now_min: int = Query(14 * 60, ge=0, le=24 * 60),
                shift_end_min: int = Query(advisor.DEFAULT_SHIFT_END_MIN, ge=0, le=24 * 60),
                is_driving: bool = Query(False),
-               topic: str = Query(DEFAULT_TOPIC),
+               topic: Literal["brief", "nudge", "recap"] = Query(DEFAULT_TOPIC),
                shift_start_min: int = Query(DEFAULT_SHIFT_START_MIN, ge=0, le=1439)):
     """ĐA-04: nhịp do LUẬT CHUNG quyết định, không phải wall-clock của client.
 
@@ -168,7 +169,10 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
                        is_driving=is_driving)
     if verdict.verdict != PRESENT:
         _note_suppressed(did, d, topic, now_min, verdict.reason)
-        return {"is_mock": True, "driver_id": did, "date": d, "items": [],
+        return {"scenario_id": f"mock-realdata:{d}",
+                "seed": int(mockdata.manifest().get("seed_base", 0)),
+                "data_mode": "mock-realdata", "is_mock": True,
+                "driver_id": did, "date": d, "items": [],
                 "silent": {"is_silent": True, "reason_code": verdict.reason,
                            "message": _SILENT_MSG.get(
                                verdict.reason,
@@ -284,7 +288,7 @@ class AdviceAction(BaseModel):
     at_min: int | None = Field(default=None, ge=0, le=1439)
     # ĐA-04: chủ đề của thẻ — cooldown/dismiss là THEO CHỦ ĐỀ, không phải toàn cục
     # (bỏ qua nhắc đổi pin không được khoá miệng cảnh báo mất thưởng).
-    topic: str = Field(default="bonus", min_length=1)
+    topic: Literal["brief", "nudge", "recap"] = "brief"
 
     @field_validator("advice_id")
     @classmethod

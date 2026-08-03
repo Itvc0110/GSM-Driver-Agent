@@ -9,6 +9,16 @@ async function get(url) {
   return r.json();
 }
 
+async function post(url, body) {
+  const r = await fetch(BASE + url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`${url} -> ${r.status}`);
+  return r.json();
+}
+
 export const api = {
   defaultView: () => get("/api/v1/driver/default-view"),
   catalog: () => get("/api/v1/driver/catalog"),
@@ -23,6 +33,21 @@ export const api = {
     get(`/api/v1/advice?driver_id=${driverId}&date=${date}&now_min=${nowMin}`
         + (topic ? `&topic=${encodeURIComponent(topic)}` : "")
         + (isDriving ? "&is_driving=true" : "")),
+  adviceV2: async ({surface, driverId, date, nowMin, shiftStartMin, shiftEndMin, isDriving}) => {
+    const query = new URLSearchParams({
+      surface, driver_id: driverId, date, now_min: String(nowMin),
+      shift_start_min: String(shiftStartMin), shift_end_min: String(shiftEndMin),
+      is_driving: String(Boolean(isDriving)),
+    });
+    const r = await fetch(`${BASE}/api/v2/advice?${query}`);
+    if (r.status === 503) return {status: "disabled", fallback: "v1"};
+    if (!r.ok) throw new Error(`/api/v2/advice -> ${r.status}`);
+    return r.json();
+  },
+  adviceV2Display: (checkpointId, body) =>
+    post(`/api/v2/advice/${encodeURIComponent(checkpointId)}/display`, body),
+  adviceV2Response: (checkpointId, body) =>
+    post(`/api/v2/advice/${encodeURIComponent(checkpointId)}/response`, body),
   mapContext: (date, hour, driverId) =>
     get(`/api/v1/map-context?date=${date}&hour=${hour}${driverId ? `&driver_id=${driverId}` : ""}`),
   tripStep: (idx, step) => get(`/api/v1/trip/step?trip_index=${idx}&step=${step}`),

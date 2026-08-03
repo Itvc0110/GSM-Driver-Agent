@@ -35,6 +35,11 @@ class RunResult:
     segments: list = field(default_factory=list)
     stations: list = field(default_factory=list)
     order_states: dict = field(default_factory=dict)
+    advice_artifacts: list = field(default_factory=list)
+    advice_checkpoints: list = field(default_factory=list)
+    advice_checkpoint_events: list = field(default_factory=list)
+    execution_links: list = field(default_factory=list)
+    pending_execution_observations: list = field(default_factory=list)
 
 
 def _data(cfg: Config, fname_key: str) -> Path:
@@ -131,7 +136,30 @@ def run_once(cfg: Config, seed: int) -> RunResult:
     world = World(grid, cfg, policy, orders, actors, seed, environment=env, congestion=congestion,
                   run_id=derive_run_id(cfg, seed))
     events = world.run()
+    segments, trace = finalize_checkpoint_trace(world, events)
     return RunResult(seed=seed, events=events, actors=actors, orders=orders,
                      config=cfg, policy=policy, grid=grid, env=env,
-                     congestion=congestion, traj=world.traj, segments=world.segments,
-                     stations=world.stations, order_states=world.order_states)
+                     congestion=congestion, traj=world.traj, segments=segments,
+                     stations=world.stations, order_states=world.order_states,
+                     **trace)
+
+
+def finalize_checkpoint_trace(world: World, events: list[Event]) -> tuple[list, dict]:
+    """Attach diagnostic identities and resolve observations after the run."""
+    sink = world.checkpoint_trace
+    if not sink.enabled:
+        return world.segments, {
+            "advice_artifacts": [], "advice_checkpoints": [],
+            "advice_checkpoint_events": [], "execution_links": [],
+            "pending_execution_observations": [],
+        }
+    from .checkpoint_trace import annotate_segment_ids
+    segments = annotate_segment_ids(world.run_id, world.segments)
+    sink.finalize_execution_links(segments, events)
+    return segments, {
+        "advice_artifacts": sink.artifacts,
+        "advice_checkpoints": sink.checkpoints,
+        "advice_checkpoint_events": sink.events,
+        "execution_links": sink.execution_links,
+        "pending_execution_observations": sink.pending_execution_observations,
+    }

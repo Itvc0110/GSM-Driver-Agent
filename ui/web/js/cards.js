@@ -16,6 +16,26 @@ const KIND_TOPIC = { brief: "brief", nudge: "nudge", recap: "recap" };
 const KIND_LABEL = { brief: "Trước ca", nudge: "Trong ca", recap: "Tổng kết ca" };
 const KIND_ICON = { brief: "🌅", nudge: "⚡", recap: "🌙" };
 
+const eventId = () => globalThis.crypto?.randomUUID?.()
+  || `client-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+export const mountEventId = (displayId) => `mount-${displayId}`;
+
+export function v2CardView(item) {
+  return {
+    title: item.title,
+    summary: item.summary,
+    why: item.why,
+    action: item.canonical_action,
+    actionWindow: item.action_window,
+    futurePlan: item.future_plan,
+    numbers: item.numbers,
+    provenance: item.provenance,
+    confidenceBand: item.confidence_band,
+    caveatIds: item.caveat_ids,
+  };
+}
+
 export const Cards = {
   mount: null,
   ctx: null,          // { profile: () => ({driverId, date}), state: () => driverState }
@@ -35,6 +55,68 @@ export const Cards = {
         topic: KIND_TOPIC[kind] || kind,
       });
     } catch (e) { console.warn("log action fail", e); }
+  },
+
+  async _v2(kind, isDriving = false) {
+    const { driverId, date } = this.ctx.profile();
+    return api.adviceV2({
+      surface: kind, driverId, date, nowMin: KIND_HOURS[kind],
+      shiftStartMin: 6 * 60, shiftEndMin: 22 * 60, isDriving,
+    });
+  },
+
+  _renderV2(item) {
+    const view = v2CardView(item);
+    const el = document.createElement("div");
+    el.className = "adv-card enter";
+    const rows = (view.numbers || []).map((n) => `
+      <tr><td>${n.id}</td><td>${n.unit === "vnd" ? fmtVnd(n.value) : `${n.value} ${n.unit}`}</td>
+      <td>${n.source}</td></tr>`).join("");
+    const mock = view.provenance?.is_mock === true;
+    el.innerHTML = `
+      <div class="adv-head">
+        <span class="adv-kind">${KIND_ICON[item.surface]} ${KIND_LABEL[item.surface]} · Trợ Lý Xanh</span>
+        ${mock ? `<span class="mock-badge">mô phỏng</span>` : ""}
+      </div>
+      <b class="adv-title">${view.title}</b>
+      <p class="adv-msg">${view.summary}</p>
+      <div class="adv-why hidden"><p>${view.why}</p>
+        <table class="num-table">${rows}</table>
+        <div class="meta">${view.confidenceBand} · ${view.provenance.data_mode} · ${view.provenance.policy_version}</div>
+      </div>
+      <div class="adv-actions">
+        <button class="adv-btn follow">✅ Làm theo</button>
+        <button class="adv-btn dismiss">✖ Bỏ qua</button>
+        <button class="adv-btn why">？Vì sao</button>
+      </div>`;
+    while (this.mount.children.length >= 2) this.mount.firstChild.remove();
+    this.mount.appendChild(el);
+
+    // Mounted ACK happens only after the card is present in the DOM.
+    api.adviceV2Display(item.checkpoint_id, {
+      display_id: item.display_id, client_event_id: mountEventId(item.display_id),
+      mounted_at: new Date().toISOString(),
+    }).catch((e) => console.warn("v2 display ack fail", e));
+
+    const respond = (response) => api.adviceV2Response(item.checkpoint_id, {
+      display_id: item.display_id, client_event_id: eventId(), response,
+      occurred_at: new Date().toISOString(),
+    }).catch((e) => console.warn("v2 response fail", e));
+    el.querySelector(".follow").addEventListener("click", () => {
+      respond("accepted"); el.classList.add("followed");
+      setTimeout(() => el.remove(), 650);
+    });
+    el.querySelector(".dismiss").addEventListener("click", () => {
+      respond("dismissed"); el.classList.add("dismissed");
+      setTimeout(() => el.remove(), 650);
+    });
+    el.querySelector(".why").addEventListener("click", () => {
+      el.querySelector(".adv-why").classList.toggle("hidden");
+      respond("expanded");
+    });
+    this.history.push({kind: item.surface, title: view.title,
+                       at: new Date().toLocaleTimeString("vi-VN")});
+    return el;
   },
 
   // L4-07 (2026-07-31): card IM LẶNG không có quyết định thật để hành động lên. Trước đây
@@ -100,6 +182,10 @@ export const Cards = {
   // -------- BRIEF (F1): mốc hôm nay + advice S1 đầu ca --------
   async brief() {
     const { driverId, date } = this.ctx.profile();
+    const v2 = await this._v2("brief");
+    if (v2.status !== "disabled") {
+      return v2.status === "ready" ? this._renderV2(v2.items[0]) : null;
+    }
     const a = await api.advice(driverId, date, KIND_HOURS.brief, KIND_TOPIC.brief);
     if (a.silent.is_silent) {
       return this._render("brief", `brief-${date}`, "Bạn đang đúng nhịp",
@@ -122,6 +208,10 @@ export const Cards = {
     //       tài xế cần; return null làm mất luôn.
     // An toàn KHÔNG giảm: backend trả QUEUE ⇒ `silent` ⇒ không card nào được vẽ.
     const { driverId, date } = this.ctx.profile();
+    const v2 = await this._v2("nudge", isDriving);
+    if (v2.status !== "disabled") {
+      return v2.status === "ready" ? this._renderV2(v2.items[0]) : null;
+    }
     const a = await api.advice(driverId, date, KIND_HOURS.nudge, KIND_TOPIC.nudge, isDriving);
     if (a.silent.is_silent) return null;   // im lặng = KHÔNG card, không bịa
     const it = a.items[0];
@@ -137,6 +227,10 @@ export const Cards = {
   // -------- RECAP (F3): payout thật + lời khuyên cuối ngày --------
   async recap() {
     const { driverId, date } = this.ctx.profile();
+    const v2 = await this._v2("recap");
+    if (v2.status !== "disabled") {
+      return v2.status === "ready" ? this._renderV2(v2.items[0]) : null;
+    }
     const st = this.ctx.state();
     if (!st) return null;   // R5 double-check: bấm recap trước khi hồ sơ tải xong
     const m = st.money;
