@@ -603,7 +603,8 @@ class AdviceCheckpointService:
             "response_options": ["accepted", "dismissed", "expanded"],
         }
         return {"status": "ready", "surface": surface,
-                "generated_at": generated_at, "items": [item]}
+                "generated_at": generated_at, "presentation_source": "template",
+                "items": [item]}
 
     @staticmethod
     def _silent(surface: str, generated_at: str, reason: str) -> dict:

@@ -75,6 +75,7 @@ def test_demo_step_persists_existing_checkpoint_and_offers_template_envelope(tmp
 
     advice = step["advice"]
     assert advice["status"] == "ready"
+    assert advice["presentation_source"] == "template"
     item = advice["items"][0]
     assert item["checkpoint_id"] == checkpoint["checkpoint_id"]
     assert item["display_id"]
