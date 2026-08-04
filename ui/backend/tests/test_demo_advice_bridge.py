@@ -74,6 +74,7 @@ def test_demo_step_persists_existing_checkpoint_and_offers_template_envelope(tmp
                            expected_step_version=0)
 
     advice = step["advice"]
+    assert step["run_id"] == "run-1"
     assert advice["status"] == "ready"
     assert advice["presentation_source"] == "template"
     item = advice["items"][0]
@@ -81,6 +82,9 @@ def test_demo_step_persists_existing_checkpoint_and_offers_template_envelope(tmp
     assert item["display_id"]
     assert item["canonical_action"]["code"] == "PROTECT_ELIGIBILITY"
     assert item["provenance"]["is_mock"] is True
+    from gsm_core.lifecycle.checkpoint_store import CheckpointStore
+    with CheckpointStore(service.checkpoint_path("advice-session")) as store:
+        assert store.checkpoint(checkpoint["checkpoint_id"])["run_id"] == "run-1"
 
     why = service.explain_demo_why(
         "advice-session", item["checkpoint_id"], display_id=item["display_id"],
