@@ -30,6 +30,7 @@ def test_session_requires_actor_and_advance_is_idempotent():
         run_factory=lambda seed: _result(), session_id_factory=lambda: "sess-1")
     created = service.create(seed=1000)
     assert created["session_id"] == "sess-1"
+    assert created["run_id"] == "run-1"
     assert created["status"] == "awaiting_actor"
     assert created["actors"] == [{"actor_id": 7, "archetype": "P4", "fleet": "swap"}]
 
@@ -41,6 +42,7 @@ def test_session_requires_actor_and_advance_is_idempotent():
     retry = service.advance("sess-1", client_step_id="step-1", expected_step_version=0)
     assert first == retry
     assert first["step_version"] == 1
+    assert first["run_id"] == "run-1"
     assert first["transition"]["kind"] == "go_online"
 
     with pytest.raises(DemoSessionConflict, match="step_version"):

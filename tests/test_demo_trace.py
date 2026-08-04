@@ -3,6 +3,17 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 
+def test_run_result_accepts_canonical_run_id():
+    from gsm_sim.runner import RunResult
+
+    result = RunResult(
+        run_id="run-1", seed=1000, events=[], actors=[], orders=[],
+        config=object(), policy=object(), grid=object(),
+    )
+
+    assert result.run_id == "run-1"
+
+
 def _actor(**overrides):
     values = {
         "actor_id": 7,

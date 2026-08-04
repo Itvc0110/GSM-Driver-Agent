@@ -38,7 +38,9 @@ class _DemoSession:
     cursor: int = -1
     step_version: int = 0
     status: str = "awaiting_actor"
+    checkpoint_store_path: Path | None = None
     idempotent_responses: dict[str, dict] = field(default_factory=dict)
+    idempotent_request_fingerprints: dict[str, str] = field(default_factory=dict)
     route_cache: dict[tuple, dict] = field(default_factory=dict)
     lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
@@ -77,6 +79,16 @@ def _default_run(seed: int):
     return run_once(config, int(seed))
 
 
+def _iso_for_demo_now(session: _DemoSession) -> str:
+    from app.services.advice_checkpoint import _iso_for_minute
+    if session.selected_actor_id is not None and session.cursor >= 0:
+        transition = session.traces[session.selected_actor_id]["transitions"][session.cursor]
+        minute = int(round(float(transition.get("t_min", 0))))
+    else:
+        minute = 0
+    return _iso_for_minute("2026-07-01", minute)
+
+
 class DemoSessionService:
     """Small in-process session store for one demo process.
 
@@ -87,7 +99,8 @@ class DemoSessionService:
     def __init__(self, *, run_factory: Callable[[int], Any] | None = None,
                  session_id_factory: Callable[[], str] | None = None,
                  route_factory: Callable[[list[dict]], dict] | None = None,
-                 checkpoint_store_path: str | Path | None = None):
+                 checkpoint_store_path: str | Path | None = None,
+                 agent_provider=None, why_agent_enabled: bool | None = None):
         self.run_factory = run_factory or _default_run
         self.session_id_factory = session_id_factory or (lambda: str(uuid.uuid4()))
         self.route_factory = route_factory or _default_route
@@ -98,6 +111,10 @@ class DemoSessionService:
         self.checkpoint_store_path.parent.mkdir(parents=True, exist_ok=True)
         self._sessions: dict[str, _DemoSession] = {}
         self._lock = threading.RLock()
+        self.agent_provider = agent_provider
+        self.why_agent_enabled = (
+            why_agent_enabled if why_agent_enabled is not None else
+            __import__("os").getenv("ADVICE_WHY_AGENT_ENABLED", "0") == "1")
 
     def create(self, seed: int = 1000) -> dict:
         result = self.run_factory(int(seed))
@@ -112,11 +129,27 @@ class DemoSessionService:
         traces = {item["actor_id"]: build_demo_trace(result, item["actor_id"])
                   for item in actors}
         session_id = self.session_id_factory()
+        checkpoint_store_path = self._session_checkpoint_path(session_id, result)
         session = _DemoSession(session_id=session_id, seed=int(seed), result=result,
-                               traces=traces, actors=actors)
+                               traces=traces, actors=actors,
+                               checkpoint_store_path=checkpoint_store_path)
         with self._lock:
             self._sessions[session_id] = session
         return self._summary(session)
+
+    def _session_checkpoint_path(self, session_id: str, result: Any) -> Path:
+        """Return a deterministic SQLite namespace for one replay session/run."""
+        run_id = str(getattr(result, "run_id", ""))
+        digest = hashlib.sha256(f"{session_id}:{run_id}".encode("utf-8")).hexdigest()[:16]
+        suffix = self.checkpoint_store_path.suffix or ".db"
+        stem = self.checkpoint_store_path.stem or "advice_checkpoint"
+        path = self.checkpoint_store_path.with_name(f"{stem}-{digest}{suffix}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def checkpoint_path(self, session_id: str) -> Path:
+        """Expose the session namespace for focused integration tests and diagnostics."""
+        return self._get(session_id).checkpoint_store_path  # type: ignore[return-value]
 
     def _get(self, session_id: str) -> _DemoSession:
         with self._lock:
@@ -164,7 +197,7 @@ class DemoSessionService:
             self._checkpoint_for_actor(session, checkpoint_id)
             from app.services.advice_checkpoint import AdviceCheckpointService
             from gsm_core.lifecycle.checkpoint_store import CheckpointStore
-            with CheckpointStore(self.checkpoint_store_path) as store:
+            with CheckpointStore(session.checkpoint_store_path) as store:
                 return AdviceCheckpointService(store).acknowledge_display(
                     checkpoint_id, display_id=display_id,
                     client_event_id=client_event_id, mounted_at=mounted_at)
@@ -177,11 +210,48 @@ class DemoSessionService:
             self._checkpoint_for_actor(session, checkpoint_id)
             from app.services.advice_checkpoint import AdviceCheckpointService
             from gsm_core.lifecycle.checkpoint_store import CheckpointStore
-            with CheckpointStore(self.checkpoint_store_path) as store:
+            with CheckpointStore(session.checkpoint_store_path) as store:
                 return AdviceCheckpointService(store).record_response(
                     checkpoint_id, display_id=display_id,
                     client_event_id=client_event_id, response=response,
                     occurred_at=occurred_at)
+
+    def explain_demo_why(self, session_id: str, checkpoint_id: str, *,
+                         display_id: str, client_request_id: str,
+                         expected_step_version: int | None = None) -> dict:
+        session = self._get(session_id)
+        with session.lock:
+            self._checkpoint_for_actor(session, checkpoint_id)
+            from app.services.advice_checkpoint import AdviceCheckpointService
+            from gsm_core.lifecycle.checkpoint_store import CheckpointStore
+            from gsm_core.advisor.checkpoint_presenter import CheckpointPresenter
+            import os
+
+            with CheckpointStore(session.checkpoint_store_path) as store:
+                provider = (None if os.getenv("ADVICE_AGENT_KILL_SWITCH", "0") == "1"
+                            else self.agent_provider)
+                if (provider is None and self.why_agent_enabled
+                        and os.getenv("ADVICE_AGENT_ALLOWLIST", "0") == "1"):
+                    try:
+                        from gsm_core.advisor.advice_agent import OpenAIAdviceProvider
+                        provider = OpenAIAdviceProvider.from_env()
+                    except Exception:
+                        provider = None
+                service = AdviceCheckpointService(
+                    store, presenter=CheckpointPresenter(mode="template"),
+                    agent_provider=provider,
+                    why_agent_enabled=self.why_agent_enabled)
+                result = service.explain_why(
+                    checkpoint_id, display_id=display_id,
+                    client_request_id=client_request_id,
+                    generated_at=_iso_for_demo_now(session),
+                    is_driving=False)
+            # The response carries the current version for the Web monotonic guard.  An
+            # older expected version is not a lifecycle conflict: the card may be historical.
+            result = {**result, "session_id": session_id,
+                      "step_version": session.step_version,
+                      "expected_step_version": expected_step_version}
+            return result
 
     def advance(self, session_id: str, *, client_step_id: str,
                 expected_step_version: int) -> dict:
@@ -191,6 +261,11 @@ class DemoSessionService:
         with session.lock:
             cached = session.idempotent_responses.get(client_step_id)
             if cached is not None:
+                request_fingerprint = hashlib.sha256(
+                    str(int(expected_step_version)).encode("utf-8")).hexdigest()
+                if session.idempotent_request_fingerprints.get(client_step_id) != request_fingerprint:
+                    raise DemoSessionConflict(
+                        f"client_step_id {client_step_id!r} đã dùng cho request khác")
                 return cached
             if session.selected_actor_id is None:
                 raise DemoSessionConflict("chưa chọn actor")
@@ -206,12 +281,22 @@ class DemoSessionService:
             if next_cursor >= len(transitions):
                 session.status = "completed"
                 raise DemoSessionNotFound("session đã completed")
+            old_cursor, old_version, old_status = (
+                session.cursor, session.step_version, session.status)
             session.cursor = next_cursor
             session.step_version += 1
+            try:
+                response = self._step_response(session, transitions[session.cursor])
+            except Exception:
+                # Cursor publication is coupled to a successfully built canonical response.
+                session.cursor, session.step_version, session.status = (
+                    old_cursor, old_version, old_status)
+                raise
             if session.cursor == len(transitions) - 1:
                 session.status = "completed"
-            response = self._step_response(session, transitions[session.cursor])
             session.idempotent_responses[client_step_id] = response
+            session.idempotent_request_fingerprints[client_step_id] = hashlib.sha256(
+                str(int(expected_step_version)).encode("utf-8")).hexdigest()
             return response
 
     @staticmethod
@@ -277,16 +362,19 @@ class DemoSessionService:
 
     def _advice(self, session: _DemoSession, checkpoint: dict | None,
                 simulation_time_min: float, *, is_driving: bool) -> dict:
+        from app.services.advice_checkpoint import _iso_for_minute
+        generated_at = _iso_for_minute("2026-07-01", int(round(simulation_time_min)))
         if checkpoint is None:
-            return {"status": "silent", "reason_code": "no_checkpoint"}
+            return {"status": "silent", "surface": "nudge",
+                    "generated_at": generated_at,
+                    "silent": {"reason_code": "no_checkpoint"}, "items": []}
         # The simulator has already produced the exact snapshot/input/report.  Persist and
         # present that immutable record; never invoke ProductSolverOrchestrator on a click.
-        from app.services.advice_checkpoint import AdviceCheckpointService, _iso_for_minute
+        from app.services.advice_checkpoint import AdviceCheckpointService
         from gsm_core.lifecycle.checkpoint_store import CheckpointStore
         from gsm_core.advisor.checkpoint_presenter import CheckpointPresenter
         import os
 
-        generated_at = _iso_for_minute("2026-07-01", int(round(simulation_time_min)))
         try:
             artifact_by_id = {
                 item["artifact_id"]: item
@@ -296,7 +384,7 @@ class DemoSessionService:
                     *(checkpoint.get("solver_input_refs") or []),
                     *(checkpoint.get("solver_report_refs") or [])]
             artifacts = [artifact_by_id[ref] for ref in refs if ref in artifact_by_id]
-            with CheckpointStore(self.checkpoint_store_path) as store:
+            with CheckpointStore(session.checkpoint_store_path) as store:
                 store.create_checkpoint_bundle(artifacts, checkpoint)
                 # Replay the simulator's policy verdict exactly.  The bridge only creates
                 # a READY event for hand-built traces that did not export lifecycle events;
@@ -305,8 +393,9 @@ class DemoSessionService:
                     if (event.get("checkpoint_id") == checkpoint.get("checkpoint_id")
                             and event.get("event_type") != "created"):
                         store.append_event(event)
+                mode = os.getenv("ADVICE_PRESENTATION_MODE", "template")
                 presenter = CheckpointPresenter(
-                    mode=os.getenv("ADVICE_PRESENTATION_MODE", "template"))
+                    mode="template" if mode == "internal_live" else mode)
                 advice = AdviceCheckpointService(store, presenter=presenter).present_existing_checkpoint(
                     checkpoint["checkpoint_id"], surface=checkpoint["surface"],
                     generated_at=generated_at, is_driving=is_driving)

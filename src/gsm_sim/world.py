@@ -644,11 +644,6 @@ class World:
                 self.open_orders.pop(order.order_id, None)
                 self.order_open_since.pop(order.order_id, None)
                 self._order_transition(order.order_id, "MATCHED")
-                # SIM-2: ghi cùng bộ số như lúc từ chối ⇒ so sánh được cuốc NHẬN vs cuốc BỎ
-                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id,
-                         net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
-                         gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4),
-                         reason=dec.reason)
                 # ENROUTE_EXEMPT (T-045a b2): đi ĐÓN KHÁCH thì KHÔNG đặt `enroute_cell`.
                 # Đích thật của chuyến này là điểm TRẢ khách, cách đây một quãng bất định và có
                 # thể vài chục phút. Coi tài xế đang chở khách là "cung sắp tới ô Y" sẽ thổi
@@ -656,6 +651,13 @@ class World:
                 # thiếu người. Giới hạn này có nhãn, không phải bỏ sót — xem
                 # `tests/test_market_state_sim_producer.py::test_every_enroute_transition_sets_a_target`.
                 actor.state = ActorState.ENROUTE
+                # Snapshot order_matched sau boundary state mutation.  Event details remain
+                # identical; only the observer's canonical actor state changes from idle to
+                # enroute.  No RNG or simulator decision is added here.
+                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id,
+                         net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
+                         gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4),
+                         reason=dec.reason)
                 self.env.process(self._serve_trip(actor, order, asg))
 
     def _serve_trip(self, actor: Actor, order, asg):
@@ -685,9 +687,9 @@ class World:
             self._seg(actor.actor_id, t_assign, self.env.now, "enroute", frm, (lat, lon),
                       order_id=order.order_id)
             self._order_transition(order.order_id, "CANCELLED_AFTER_ACCEPT")
+            actor.state = ActorState.IDLE
             self.log(actor.actor_id, "order_cancelled_after_accept", actor.cell,
                      order_id=order.order_id, wasted_min=round(spent, 2))
-            actor.state = ActorState.IDLE
             return
 
         yield self.env.timeout(pickup_min)

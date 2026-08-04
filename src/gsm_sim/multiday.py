@@ -258,6 +258,7 @@ def run_multiday(cfg: Config, seed: int, days: int = 7,
         snapshot = copy.deepcopy(actors)
         r = RunResult(seed=s_day, events=events, actors=snapshot, orders=orders, config=cfg,
                       policy=policy, grid=grid, env=env, congestion=congestion,
+                      run_id=world.run_id,
                       traj=world.traj, segments=segments, stations=world.stations,
                       order_states=world.order_states, **trace)
         out.append(r)

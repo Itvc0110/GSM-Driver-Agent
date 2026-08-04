@@ -69,7 +69,9 @@ def test_step_response_contains_canonical_driver_trip_map_and_route():
     assert step["map"]["driver"]["lat"] == 21.01
     assert step["routes"][0]["leg"] == "driver_to_pickup"
     assert step["routes"][0]["route_id"].startswith("route-")
-    assert step["advice"] == {"status": "silent", "reason_code": "no_checkpoint"}
+    assert step["advice"]["status"] == "silent"
+    assert step["advice"]["silent"]["reason_code"] == "no_checkpoint"
+    assert step["advice"]["items"] == []
     assert [item["kind"] for item in step["timeline"]] == ["go_online", "order_matched"]
 
 
@@ -89,3 +91,77 @@ def test_route_failure_is_a_fallback_and_does_not_fail_step():
     assert step["routes"][0]["source"] == "fallback_straight_line"
     assert step["routes"][0]["route_is_real_road"] is False
     assert step["routes"][0]["is_mock"] is True
+
+
+def test_silent_advice_uses_closed_envelope_shape():
+    from app.services.demo_session import DemoSessionService
+
+    service = DemoSessionService(run_factory=lambda seed: _result(),
+                                 session_id_factory=lambda: "silent-contract")
+    service.create()
+    service.select_actor("silent-contract", 7)
+    step = service.advance("silent-contract", client_step_id="step-1",
+                           expected_step_version=0)
+
+    assert step["advice"] == {
+        "status": "silent",
+        "surface": "nudge",
+        "generated_at": "2026-07-01T08:20:00+07:00",
+        "silent": {"reason_code": "no_checkpoint"},
+        "items": [],
+    }
+
+
+def test_step_cursor_rolls_back_when_response_build_fails():
+    import pytest
+    from app.services.demo_session import DemoSessionService
+
+    service = DemoSessionService(run_factory=lambda seed: _result(),
+                                 session_id_factory=lambda: "atomic-step")
+    service.create()
+    service.select_actor("atomic-step", 7)
+
+    def fail(_session, _transition):
+        raise RuntimeError("render failed")
+
+    service._step_response = fail
+    with pytest.raises(RuntimeError, match="render failed"):
+        service.advance("atomic-step", client_step_id="step-1",
+                        expected_step_version=0)
+
+    state = service.state("atomic-step")
+    assert state["cursor"] == -1
+    assert state["step_version"] == 0
+    assert state["status"] == "active"
+
+
+def test_reusing_client_step_id_with_different_request_conflicts():
+    import pytest
+    from app.services.demo_session import DemoSessionConflict, DemoSessionService
+
+    service = DemoSessionService(run_factory=lambda seed: _result(),
+                                 session_id_factory=lambda: "idempotency-conflict")
+    service.create()
+    service.select_actor("idempotency-conflict", 7)
+    service.advance("idempotency-conflict", client_step_id="step-1",
+                    expected_step_version=0)
+
+    with pytest.raises(DemoSessionConflict, match="client_step_id"):
+        service.advance("idempotency-conflict", client_step_id="step-1",
+                        expected_step_version=1)
+
+
+def test_concurrent_next_step_same_client_id_advances_once():
+    from concurrent.futures import ThreadPoolExecutor
+    from app.services.demo_session import DemoSessionService
+
+    service = DemoSessionService(run_factory=lambda seed: _result(),
+                                 session_id_factory=lambda: "concurrent-step")
+    service.create()
+    service.select_actor("concurrent-step", 7)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(
+            lambda _: service.advance("concurrent-step", client_step_id="same",
+                                      expected_step_version=0), [0, 1]))
+    assert results[0] == results[1]
+    assert service.state("concurrent-step")["step_version"] == 1

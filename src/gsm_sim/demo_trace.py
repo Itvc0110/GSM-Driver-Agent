@@ -14,8 +14,11 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Any
 
+from gsm_core.lifecycle.checkpoint import project_checkpoint_events, select_primary_candidate
+
 
 _BASE_DATE = date(2026, 7, 1)
+_TIME_EPSILON = 1e-6
 _VISIBLE_EVENT_KINDS = frozenset({
     "go_online", "order_matched", "order_declined", "order_skipped_soc",
     "order_cancelled_after_accept", "pickup", "dropoff", "rest",
@@ -138,28 +141,120 @@ def _checkpoint_for(checkpoints: list[dict], driver_id: str, t_min: float) -> di
         if checkpoint.get("driver_id") != driver_id:
             continue
         observed = _checkpoint_minute(checkpoint)
-        if observed is not None and abs(observed - t_min) < 1e-6:
+        if observed is not None and abs(observed - t_min) < _TIME_EPSILON:
             candidates.append(checkpoint)
     if not candidates:
         return None
-    return dict(sorted(candidates, key=lambda c: c.get("checkpoint_id", ""))[0])
+    return dict(select_primary_candidate(candidates) or candidates[0])
 
 
-def _checkpoint_transitions(checkpoints: list[dict], driver_id: str,
-                            existing_times: set[float], snapshots: list[dict],
-                            run_id: str, seed: int) -> list[dict]:
-    extra: list[dict] = []
+def _checkpoint_states(checkpoints: list[dict], lifecycle_events: list[dict]) -> dict[str, str]:
+    events_by_checkpoint: dict[str, list[dict]] = defaultdict(list)
+    for event in lifecycle_events:
+        checkpoint_id = event.get("checkpoint_id")
+        if checkpoint_id:
+            events_by_checkpoint[str(checkpoint_id)].append(event)
+    states: dict[str, str] = {}
+    for checkpoint in checkpoints:
+        checkpoint_id = str(checkpoint.get("checkpoint_id"))
+        events = events_by_checkpoint.get(checkpoint_id, [])
+        if not events and checkpoint.get("state") is None:
+            # Legacy hand-built fixtures predate exported lifecycle events.  The runtime
+            # trace always carries `created` + policy event; retaining this compatibility
+            # inference keeps those fixtures displayable without changing production state.
+            states[checkpoint_id] = "ready"
+            continue
+        try:
+            states[checkpoint_id] = str(project_checkpoint_events(events)["state"])
+        except Exception:
+            # Hand-built fixtures may omit lifecycle events.  Do not invent READY; an
+            # absent state is audited and therefore cannot silently become a card.
+            states[checkpoint_id] = str(checkpoint.get("state") or "unknown")
+    return states
+
+
+def _prepare_checkpoint_attachments(
+        checkpoints: list[dict], lifecycle_events: list[dict], events: list[Any],
+        snapshots_by_event: dict[int, dict], driver_id: str
+        ) -> tuple[dict[int, dict], list[tuple[dict, dict, float]], list[dict]]:
+    """Assign READY checkpoints to one visible event or one explicit extra transition.
+
+    Checkpoint timestamps are minute-bucket timestamps while event times can be fractional.
+    The first visible event at/after the bucket owns the checkpoint.  Same-time candidates
+    use the lifecycle primary selector; all other candidates receive an audit reason.
+    """
+    actor_id = int(str(driver_id).removeprefix("d-"))
+    states = _checkpoint_states(checkpoints, lifecycle_events)
+    audit: list[dict] = []
+    ready: list[tuple[float, dict]] = []
     for checkpoint in checkpoints:
         if checkpoint.get("driver_id") != driver_id:
             continue
+        checkpoint_id = str(checkpoint.get("checkpoint_id"))
+        state = states.get(checkpoint_id, "unknown")
+        if state != "ready":
+            audit.append({"checkpoint_id": checkpoint_id,
+                          "state": state, "reason": f"not_ready:{state}"})
+            continue
         t_min = _checkpoint_minute(checkpoint)
-        if t_min is None or any(abs(t_min - value) < 1e-6 for value in existing_times):
+        if t_min is None:
+            audit.append({"checkpoint_id": checkpoint_id,
+                          "state": state, "reason": "missing_alignment"})
             continue
-        previous = [snapshot for snapshot in snapshots
-                    if float(snapshot.get("t_min", -1)) <= t_min]
-        if not previous:
-            continue
-        raw = previous[-1]
+        ready.append((t_min, checkpoint))
+
+    grouped: list[list[tuple[float, dict]]] = []
+    for item in sorted(ready, key=lambda pair: (pair[0], str(pair[1].get("checkpoint_id")))):
+        if not grouped or abs(grouped[-1][0][0] - item[0]) >= _TIME_EPSILON:
+            grouped.append([item])
+        else:
+            grouped[-1].append(item)
+
+    assignments: dict[int, dict] = {}
+    extras: list[tuple[dict, dict, float]] = []
+    used_event_indices: set[int] = set()
+    visible = [
+        (index, event) for index, event in enumerate(events)
+        if int(getattr(event, "actor_id", -1)) == actor_id
+        and str(getattr(event, "kind", "")) in _VISIBLE_EVENT_KINDS
+        and index in snapshots_by_event
+    ]
+
+    for group in grouped:
+        candidates = [checkpoint for _, checkpoint in group]
+        primary = select_primary_candidate(candidates)
+        for _, checkpoint in group:
+            checkpoint_id = str(checkpoint.get("checkpoint_id"))
+            if primary is None or checkpoint_id != primary.get("checkpoint_id"):
+                audit.append({"checkpoint_id": checkpoint_id, "state": "ready",
+                              "reason": "non_primary_same_time"})
+                continue
+            t_min = _checkpoint_minute(checkpoint)
+            assert t_min is not None
+            event_choice = next((
+                (index, event) for index, event in visible
+                if index not in used_event_indices
+                and float(getattr(event, "t_min", -1.0)) >= t_min - _TIME_EPSILON
+            ), None)
+            if event_choice is not None:
+                index, _event = event_choice
+                assignments[index] = checkpoint
+                used_event_indices.add(index)
+                continue
+            previous = [snapshot for snapshot in snapshots_by_event.values()
+                        if float(snapshot.get("t_min", -1.0)) <= t_min + _TIME_EPSILON]
+            if previous:
+                extras.append((checkpoint, dict(previous[-1]), t_min))
+            else:
+                audit.append({"checkpoint_id": checkpoint_id, "state": "ready",
+                              "reason": "missing_snapshot"})
+    return assignments, extras, audit
+
+
+def _checkpoint_transitions(extras: list[tuple[dict, dict, float]],
+                            run_id: str, seed: int) -> list[dict]:
+    extra: list[dict] = []
+    for checkpoint, raw, t_min in extras:
         driver = _driver_snapshot({**raw, "t_min": t_min}, run_id, seed)
         transition_id = "transition-" + _digest({
             "run_id": run_id, "actor_id": raw["actor_id"], "kind": "advice_checkpoint",
@@ -192,6 +287,11 @@ def build_demo_trace(result: Any, actor_id: int) -> dict[str, Any]:
     segments = [dict(item) for item in getattr(result, "segments", [])]
     checkpoints = [dict(item) for item in getattr(result, "advice_checkpoints", [])]
     events = list(getattr(result, "events", []))
+    lifecycle_events = [dict(item) for item in
+                        getattr(result, "advice_checkpoint_events", [])]
+    checkpoint_assignments, checkpoint_extras, checkpoint_audit = (
+        _prepare_checkpoint_attachments(
+            checkpoints, lifecycle_events, events, snapshots_by_event, f"d-{actor_id}"))
     lifecycle: dict[int, str] = {}
     previous_driver: dict[str, Any] | None = None
     transitions: list[dict[str, Any]] = []
@@ -228,7 +328,7 @@ def build_demo_trace(result: Any, actor_id: int) -> dict[str, Any]:
         order = order_by_id.get(order_id) if order_id is not None else None
         trip = _trip(order, lifecycle[order_id]) if order is not None and order_id in lifecycle else None
         segment = _segment_for(segments, int(actor_id), float(event.t_min), order_id)
-        checkpoint = _checkpoint_for(checkpoints, f"d-{actor_id}", float(event.t_min))
+        checkpoint = checkpoint_assignments.get(event_index)
         transition_id = "transition-" + _digest({
             "run_id": run_id, "actor_id": actor_id, "event_index": event_index,
             "kind": kind, "t_min": float(event.t_min), "detail": detail,
@@ -243,8 +343,7 @@ def build_demo_trace(result: Any, actor_id: int) -> dict[str, Any]:
         })
         event_times.add(float(event.t_min))
 
-    transitions.extend(_checkpoint_transitions(
-        checkpoints, f"d-{actor_id}", event_times, raw_snapshots, run_id, seed))
+    transitions.extend(_checkpoint_transitions(checkpoint_extras, run_id, seed))
     transitions.sort(key=lambda item: (float(item["t_min"]), item["event_index"] is None,
                                        item["event_index"] if item["event_index"] is not None else -1,
                                        item["transition_id"]))
@@ -256,6 +355,7 @@ def build_demo_trace(result: Any, actor_id: int) -> dict[str, Any]:
         "fleet": getattr(getattr(actor, "fleet", None), "value", getattr(actor, "fleet", None)),
         "transitions": transitions,
         "checkpoints": checkpoints,
+        "checkpoint_audit": checkpoint_audit,
         "provenance": {"run_id": run_id, "seed": seed,
                         "data_mode": "sim-engine", "is_mock": True},
     }
