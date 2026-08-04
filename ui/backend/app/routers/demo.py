@@ -1,0 +1,76 @@
+"""HTTP boundary for the server-owned unified Web demo session."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.services.demo_session import (
+    DEMO_SESSIONS,
+    DemoSessionConflict,
+    DemoSessionNotFound,
+)
+
+
+router = APIRouter()
+
+
+class CreateSessionBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    seed: int = Field(default=1000, ge=0)
+
+
+class SelectActorBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    actor_id: int = Field(ge=0)
+
+
+class StepBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    client_step_id: str = Field(min_length=1, max_length=160)
+    expected_step_version: int = Field(ge=0)
+
+
+def _error(exc: Exception) -> HTTPException:
+    if isinstance(exc, DemoSessionNotFound):
+        status = 410 if "completed" in str(exc) else 404
+        return HTTPException(status_code=status, detail=str(exc))
+    if isinstance(exc, DemoSessionConflict):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, ValueError):
+        return HTTPException(status_code=422, detail=str(exc))
+    return HTTPException(status_code=500, detail="demo_session_error")
+
+
+@router.post("/sessions")
+def create_session(body: CreateSessionBody):
+    try:
+        return DEMO_SESSIONS.create(seed=body.seed)
+    except Exception as exc:  # keep simulation/provider errors explicit at the boundary
+        raise _error(exc) from exc
+
+
+@router.put("/sessions/{session_id}/driver")
+def select_actor(session_id: str, body: SelectActorBody):
+    try:
+        return DEMO_SESSIONS.select_actor(session_id, body.actor_id)
+    except Exception as exc:
+        raise _error(exc) from exc
+
+
+@router.get("/sessions/{session_id}/state")
+def get_state(session_id: str):
+    try:
+        return DEMO_SESSIONS.state(session_id)
+    except Exception as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/sessions/{session_id}/steps")
+def next_step(session_id: str, body: StepBody):
+    try:
+        return DEMO_SESSIONS.advance(
+            session_id, client_step_id=body.client_step_id,
+            expected_step_version=body.expected_step_version)
+    except Exception as exc:
+        raise _error(exc) from exc
