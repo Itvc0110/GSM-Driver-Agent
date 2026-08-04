@@ -199,9 +199,39 @@ Ba ghi chú về **cách chọn mũi**, vì chọn sai mũi là cách dễ nhấ
 | `uv run python scratchpad/sever_qd4_failclosed.py` | n/a | 3 mũi tiêm | 3/3 BẮT ĐƯỢC | — |
 
 **Không chạy sim/A-B trong update này** — thay đổi không chạm `world.py`, `parallel.py` hay bất kỳ
-động lực nào. `advice_topics.py` chỉ **thêm** khoá, không bớt, nên `classify()` của 5 kênh sim không
-đổi ⇒ mọi số A/B đã đo giữ nguyên. (Đây là suy luận từ cấu trúc; nếu muốn bằng chứng đo thì phải
-chạy fingerprint per-actor — đã ghi là **chưa làm**.)
+động lực nào.
+
+### 🔴 ĐÍNH CHÍNH 2026-08-04 — tuyên bố "behavior-neutral" của tôi SAI, và phép đo (V-29) bác nó
+
+Bản đầu của mục này viết: *"`advice_topics.py` chỉ **thêm** khoá, không bớt, nên mọi số A/B đã đo
+giữ nguyên"*, và tự khai đó là **suy luận cấu trúc, chưa đo**. Cường duyệt chạy phép đo
+(`scratchpad/v29_do_adherence.py`, bản "TRƯỚC" lấy bằng `git show a6c79ee:…` chứ **không gõ tay**).
+Kết quả:
+
+**Phần 1 — dữ liệu THẬT (`data/ui-telemetry/advice_lifecycle.db`): không đổi.**
+Nhưng phần này **RỖNG**: store chỉ có **3 event** (`nudge`, `bonus`, `brief`) và **không event nào
+mang một trong 9 topic đã đổi lớp**. Một phép đo rỗng luôn cho "không đổi" và **không chứng minh
+gì** — đúng bẫy #9 (*cổng quét ra rỗng thì luôn xanh*). Nếu tôi dừng ở đây rồi báo "đã verify" thì
+đó là con số thứ tư tôi báo sai trong cycle này.
+
+**Phần 2 — event tổng hợp cho đúng 9 topic đã đổi lớp: 9/9 ĐỔI hành vi.**
+
+| Nhóm | TRƯỚC (`a6c79ee`) | SAU | Nghĩa |
+| --- | --- | --- | --- |
+| 6 topic kinh tế v2 (`bonus_eligibility` · `energy` · `shift_boundary` · `shift_timing` · `positioning_sim_only` · `policy_info`) | `khoá=0`, `drops.unknown=1` ⇒ **loại khỏi mẫu số + TREO** | `khoá=1`, `decided=1`, `drops=0` ⇒ **được đếm, hết TREO** | phép đo **thay đổi output** |
+| 3 topic mềm (`rest` · `safety_reserved` · `safety`) | `drops.unknown=1` ⇒ **loại + TREO** | `drops.soft=1` ⇒ **loại, KHÔNG cờ** | vẫn vắng khoá, nhưng **TREO biến mất** |
+
+⇒ **Câu đúng không phải *"phép đo bất biến"* mà là *"output không đổi vì HÔM NAY chưa event nào mang
+các topic đó"*.** Hai câu này khác nhau, và cái sau là câu phải ghi.
+
+**Hệ quả thực tế — đây mới là phần đáng giá của phép đo:** ngày ai đó nối store v2 vào
+`adherence_view` (`D-QD4-02`), **6 topic bắt đầu được đếm** và **3 topic bắt đầu bị loại im lặng**,
+trong khi TRƯỚC đó mọi thứ đều bị **TREO**. Cả hai đều là hành vi **có chủ ý** — nhưng ai chạy phép
+đo A/B đầu tiên sau khi nối sẽ thấy con số xuất hiện từ hư không nếu không đọc mục này.
+
+⚠ Việc TREO biến mất cho 3 topic mềm là **đúng thiết kế**, không phải mất cảnh báo: khuyên mềm bị
+loại là ranh giới chạy đúng, và `test_N5_topic_MEM_khong_bi_gan_co` ghim chính điều đó — gắn cờ cho
+nó sẽ dạy người đọc bỏ qua cờ.
 
 ### 🔴 Ba test ĐỎ — chứng minh CÓ SẴN, không phải suy đoán
 
