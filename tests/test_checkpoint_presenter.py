@@ -123,3 +123,60 @@ def test_template_mode_never_calls_agent():
         checkpoint(), facts=facts, numbers=numbers, caveats=caveats)
     assert output.fallback_used is True
     assert agent.generate_calls == 0
+
+
+def test_agent_input_contains_typed_current_and_future_plan_context():
+    from gsm_core.advisor.checkpoint_presenter import build_agent_input
+    from gsm_core.schema_registry import SchemaRegistry
+    from pathlib import Path
+
+    value = checkpoint("ONLINE")
+    value["future_plan"] = [{
+        "code": "SWAP", "label_id": "action.swap",
+        "window": {"start": "2026-08-04T10:00:00+07:00",
+                    "end": "2026-08-04T11:00:00+07:00"},
+    }]
+    facts, numbers, caveats = registries()
+    payload = build_agent_input(value, facts=facts, numbers=numbers, caveats=caveats)
+
+    assert payload["current_action"] == payload["canonical_action"]
+    assert payload["future_plan"][0]["code"] == "SWAP"
+    errors = SchemaRegistry(Path(__file__).parents[1] / "schemas").validate(
+        "agent_presentation_input", payload)
+    assert errors == []
+
+
+def test_verifier_rejects_future_action_as_current_and_fabricated_target():
+    from gsm_core.advisor.checkpoint_presenter import CheckpointPresenter
+
+    value = checkpoint("ONLINE")
+    value["future_plan"] = [{"code": "SWAP", "label_id": "action.swap"}]
+    facts, numbers, caveats = registries()
+    for text in ("Hãy đổi pin ngay.", "Đi tới trạm gần nhất.", "Khu vực này tốt hơn."):
+        bad = {**valid_output(), "checkpoint_id": "ckpt-1", "why_template": text}
+        output = CheckpointPresenter(agent=Agent(bad), mode="shadow").present(
+            value, facts=facts, numbers=numbers, caveats=caveats)
+        assert output.agent_output is None
+
+
+def test_explanation_contract_is_closed_and_keeps_display_identity():
+    from gsm_core.advisor.checkpoint_presenter import (
+        build_explanation_input, verify_explanation_output,
+    )
+    from gsm_core.schema_registry import SchemaRegistry
+    from pathlib import Path
+
+    value = checkpoint("SWAP")
+    facts, numbers, caveats = registries()
+    payload = build_explanation_input(
+        value, display_id="display-1", facts=facts, numbers=numbers, caveats=caveats,
+        presentation={"title": "Pin", "summary": "Đổi pin"}, checkpoint_status="displayed",
+        is_historical=False)
+    assert SchemaRegistry(Path(__file__).parents[1] / "schemas").validate(
+        "agent_explanation_input", payload) == []
+    output, errors = verify_explanation_output({
+        "schema_version": "1.0.0", "checkpoint_id": "ckpt-1",
+        "display_id": "display-1", "explanation_template": "Vì {{F1}}.",
+        "used_fact_ids": ["F1"], "used_number_ids": [], "used_caveat_ids": [],
+    }, value, display_id="display-1", facts=facts, numbers=numbers, caveats=caveats)
+    assert errors == [] and output["display_id"] == "display-1"

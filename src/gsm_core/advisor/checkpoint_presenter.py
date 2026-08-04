@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from gsm_core.advisor._text import normalize_vi
+from gsm_core.advisor.checkpoint_templates import CheckpointTemplateRegistry
 from gsm_core.schema_registry import SchemaRegistry
 from gsm_core.vn_format import render_number_vn
 
@@ -18,22 +19,6 @@ _PLACEHOLDER = re.compile(r"\{\{([FNC]\d+)\}\}")
 _CJK = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 _UNSAFE_MARKUP = re.compile(r"<\s*/?\s*[A-Za-z][^>]*>|[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
-_TEMPLATE = {
-    "PROTECT_ELIGIBILITY": (
-        "Bảo vệ điều kiện thưởng", "Giữ tỷ lệ đủ điều kiện theo chính sách hiện hành.",
-        "Điều kiện thưởng được đánh giá lại theo kết quả cuối ca."),
-    "REST": ("Nghỉ trong khung này", "Ưu tiên nghỉ trong cửa sổ đang còn hiệu lực.",
-             "Kế hoạch đã tính trạng thái nghỉ và thời gian trong ca."),
-    "SWAP": ("Chuẩn bị đổi pin", "Đổi pin trong cửa sổ được đề xuất.",
-             "Trạng thái runtime cho thấy cần bảo vệ phần ca còn lại."),
-    "END": ("Kết ca", "Kết ca theo ranh giới kế hoạch hiện tại.",
-            "Chạy thêm không cải thiện kế hoạch hiện tại."),
-    "EXTEND": ("Cân nhắc kéo dài ca", "Kéo dài trong giới hạn đang hiển thị.",
-               "Mốc kế tiếp còn nằm trong trần kéo dài đã khóa."),
-    "ONLINE": ("Tiếp tục online", "Giữ trạng thái online trong khung hiện tại.",
-               "Đây là trạng thái duy trì, không phải chỉ định vị trí."),
-}
-
 _ACTION_WORDS = {
     "PROTECT_ELIGIBILITY": ("bao ve dieu kien", "giu ty le"),
     "REST": ("nghi",),
@@ -42,6 +27,11 @@ _ACTION_WORDS = {
     "EXTEND": ("keo dai ca", "chay them"),
     "ONLINE": ("online", "tiep tuc chay"),
 }
+
+_TARGET_OR_INTERNAL_WORDS = (
+    "tram", "khu vuc", "toa do", "station", "zone", "solver report",
+    "prompt noi bo", "api key", "authorization",
+)
 
 
 @dataclass(frozen=True)
@@ -57,13 +47,19 @@ class PresentationText:
 
 def build_agent_input(checkpoint: dict, *, facts: list[dict], numbers: list[dict],
                       caveats: list[dict], locale: str = "vi-VN") -> dict:
+    current_action = checkpoint.get("current_action") or {
+        "code": "NO_ACTION", "label_id": "action.no_action"}
     payload = {
-        "schema_version": "1.0.0",
+        "schema_version": "1.1.0",
         "checkpoint_id": checkpoint["checkpoint_id"],
         "surface": checkpoint["surface"],
         "locale": locale,
         "topic": checkpoint["topic"],
-        "canonical_action": checkpoint["current_action"],
+        # Both names are intentional: canonical_action is the public invariant;
+        # current_action makes the current/future boundary explicit to the model.
+        "canonical_action": current_action,
+        "current_action": current_action,
+        "future_plan": checkpoint.get("future_plan") or [],
         "action_window": checkpoint.get("action_window"),
         "facts": facts,
         "numbers": [{k: item[k] for k in ("id", "value", "unit", "source")}
@@ -76,6 +72,40 @@ def build_agent_input(checkpoint: dict, *, facts: list[dict], numbers: list[dict
     errors = _REGISTRY.validate("agent_presentation_input", payload)
     if errors:
         raise ValueError(f"agent presentation input không hợp lệ: {errors}")
+    return payload
+
+
+def build_explanation_input(checkpoint: dict, *, display_id: str,
+                            facts: list[dict], numbers: list[dict],
+                            caveats: list[dict], presentation: dict,
+                            checkpoint_status: str, is_historical: bool,
+                            locale: str = "vi-VN") -> dict:
+    """Build the separate, closed lazy-why context (no solver/store access)."""
+    current_action = checkpoint.get("current_action") or {
+        "code": "NO_ACTION", "label_id": "action.no_action"}
+    payload = {
+        "schema_version": "1.0.0", "request_type": "explain_why",
+        "checkpoint_id": checkpoint["checkpoint_id"], "display_id": display_id,
+        "surface": checkpoint.get("surface", "nudge"), "locale": locale,
+        "topic": checkpoint.get("topic", "policy_info"),
+        "canonical_action": current_action, "current_action": current_action,
+        "future_plan": checkpoint.get("future_plan") or [],
+        "action_window": checkpoint.get("action_window"), "facts": facts,
+        "numbers": [{k: item[k] for k in ("id", "value", "unit", "source")}
+                    for item in numbers],
+        "confidence_band": checkpoint.get("confidence_band", "medium"),
+        "caveats": caveats,
+        "presentation_text": {
+            "title": str(presentation.get("title", "")),
+            "summary": str(presentation.get("summary", "")),
+        },
+        "checkpoint_status": checkpoint_status,
+        "is_historical": bool(is_historical),
+        "summary_max_chars": 120, "why_max_chars": 280,
+    }
+    errors = _REGISTRY.validate("agent_explanation_input", payload)
+    if errors:
+        raise ValueError(f"agent explanation input không hợp lệ: {errors}")
     return payload
 
 
@@ -142,11 +172,60 @@ def verify_agent_output(raw: Any, checkpoint: dict, *, facts: list[dict],
         errors.append("window_conflict")
 
     canonical = (checkpoint.get("current_action") or {}).get("code")
+    future_codes = {
+        str(item.get("code")) for item in (checkpoint.get("future_plan") or [])
+        if item.get("code")
+    }
     for action, phrases in _ACTION_WORDS.items():
-        if action != canonical and any(phrase in normalized for phrase in phrases):
+        if action not in ({canonical} | future_codes) and any(
+                phrase in normalized for phrase in phrases):
             errors.append("action_conflict")
             break
+        if action != canonical and action in future_codes and any(
+                phrase in normalized for phrase in phrases):
+            # A future action may be explained, but it cannot be rewritten as
+            # an instruction for the current moment.
+            if not any(marker in normalized for marker in ("sap toi", "ke tiep", "sau do")):
+                errors.append("current_future_conflict")
+                break
+    if any(phrase in normalized for phrase in _TARGET_OR_INTERNAL_WORDS):
+        errors.append("target_or_internal_detail")
     return (None, errors) if errors else (output, [])
+
+
+def verify_explanation_output(raw: Any, checkpoint: dict, *, display_id: str,
+                              facts: list[dict], numbers: list[dict],
+                              caveats: list[dict]) -> tuple[dict | None, list[str]]:
+    """Verify lazy-why output while reusing the canonical text safety checks."""
+    if isinstance(raw, str):
+        try:
+            output = json.loads(raw)
+        except (json.JSONDecodeError, TypeError) as exc:
+            return None, [f"malformed_json:{exc}"]
+    elif isinstance(raw, dict):
+        output = dict(raw)
+    else:
+        return None, ["output_not_object"]
+    errors = _REGISTRY.validate("agent_explanation_output", output)
+    if errors:
+        return None, errors
+    if output["checkpoint_id"] != checkpoint["checkpoint_id"]:
+        return None, ["checkpoint_id_mismatch"]
+    if output["display_id"] != display_id:
+        return None, ["display_id_mismatch"]
+    converted = {
+        "schema_version": "1.0.0", "checkpoint_id": checkpoint["checkpoint_id"],
+        "reason_template": output["explanation_template"],
+        "why_template": output["explanation_template"],
+        "used_fact_ids": output["used_fact_ids"],
+        "used_number_ids": output["used_number_ids"],
+        "used_caveat_ids": output["used_caveat_ids"],
+    }
+    verified, safety_errors = verify_agent_output(
+        converted, checkpoint, facts=facts, numbers=numbers, caveats=caveats)
+    if verified is None:
+        return None, safety_errors
+    return output, []
 
 
 def _render(output: dict, facts: list[dict], numbers: list[dict],
@@ -164,17 +243,18 @@ def _render(output: dict, facts: list[dict], numbers: list[dict],
 
 class CheckpointPresenter:
     def __init__(self, *, agent=None, mode: str = "template"):
-        if mode not in {"template", "shadow"}:
-            raise ValueError("presentation_mode chỉ nhận template|shadow")
+        if mode not in {"template", "shadow", "internal_live"}:
+            raise ValueError("presentation_mode chỉ nhận template|shadow|internal_live")
         self.agent = agent
         self.mode = mode
+        self.templates = CheckpointTemplateRegistry()
 
     def present(self, checkpoint: dict, *, facts: list[dict], numbers: list[dict],
                 caveats: list[dict], locale: str = "vi-VN") -> PresentationText:
-        action = (checkpoint.get("current_action") or {}).get("code", "NO_ACTION")
-        title, summary, why = _TEMPLATE.get(
-            action, ("Gợi ý cho ca hiện tại", "Xem kế hoạch đang còn hiệu lực.",
-                     "Gợi ý được tạo từ solver và dữ liệu có nguồn."))
+        template = self.templates.resolve(
+            checkpoint, facts=facts, numbers=numbers, caveats=caveats,
+            locale=locale, surface=checkpoint.get("surface", "nudge"))
+        title, summary, why = template.title, template.summary, template.why
         errors: list[str] = []
         accepted = None
         shadow = None

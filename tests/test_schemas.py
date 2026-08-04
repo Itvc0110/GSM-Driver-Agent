@@ -41,6 +41,7 @@ EXPECTED = {
     # AdviceCheckpoint shadow presentation lifecycle — không overload decision_id legacy
     "advice_artifact", "advice_checkpoint", "advice_checkpoint_event",
     "agent_presentation_input", "agent_presentation_output",
+    "agent_explanation_input", "agent_explanation_output",
 }
 
 # L1-real (re-ground về bảng thật gsm-data-prod — UPDATE-033/034, PI-1)
@@ -66,6 +67,7 @@ LATEST_VERSIONS = {
     "advice_checkpoint": "1.1.0",
     "advice_checkpoint_event": "1.1.0",
     "advice_artifact": "1.1.0",
+    "agent_presentation_input": "1.1.0",
 }   # entity vắng mặt = "1.0.0"
 
 
