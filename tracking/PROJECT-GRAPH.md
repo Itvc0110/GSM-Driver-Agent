@@ -234,6 +234,7 @@ files (074–091) had no graph link. Do not delete rows here without re-running 
 ### 3.10 Merge reconciliation cho PR #4
 
 | [UPDATE-127](updates/UPDATE-127-reconcile-advice-checkpoint-merge.md) | **Hòa giải `origin/main` với AdviceCheckpoint P2–P5**: giữ cả hai visual gate V-25 theo source UPDATE-121/126, hợp nhất D-M3-17 về `FIXED`, giữ D-M3-18 `TODO`; không đổi runtime | `DONE-CODE` / docs-only | tracking / governance / UI gate | Không đóng V-25; chờ human/device verdict |
+| [UPDATE-128](updates/UPDATE-128-unified-web-demo-trace.md) | Unified Web Demo — observer-only simulator snapshots và deterministic transition projection | `DONE-CODE / VISUAL BLOCKED` | simulator / web / replay | mở server session, canonical step và Web render |
 
 ## 4. Task and file routing
 
