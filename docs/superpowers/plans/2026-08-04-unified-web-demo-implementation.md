@@ -20,6 +20,14 @@
 - Không chạm các thay đổi dirty có trước trong worktree.
 - Mỗi task: RED test → GREEN implementation → focused verification → một commit riêng → một UPDATE tracking tương ứng.
 
+## Implementation status (2026-08-04)
+
+Tasks 1–5 are implemented in focused commits `9cccfbc`, `3cb655d`, `926bf11`, `0785728`,
+and `f7d1b8c`; the presentation provenance follow-up is `1def318`. Focused evidence is
+recorded in UPDATE-128..132 and the final evidence/rollback note is UPDATE-133. The live
+default simulator run, browser visual review, multi-worker deployment and Agent provider are
+intentionally **not** claimed: they remain `WAITING-VERDICT`/open gates.
+
 ---
 
 ### Task 1: Observable replay trace và canonical transition projection
