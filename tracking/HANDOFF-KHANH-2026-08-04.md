@@ -79,6 +79,63 @@ Nếu đã lọt tới tầng 4 thì phải **đóng thẻ** để cú bấm có
 contract**. Cổng `test_QD4_ghim_khoang_HO_giua_cac_tu_vung_topic` sẽ ĐỎ — đó là cố ý; sửa bảng ghim
 trong test **có chủ ý** kèm ghi lý do, đừng sửa cho test xanh.
 
+### 1.1c 🔴 `K-02` — `test_demo_advice_ack.py` CHẶN CẢ SUITE `ui/backend`, và bạn sẽ không thấy
+
+`ui/backend/tests/test_demo_advice_ack.py:3`:
+```python
+from ui.backend.tests.test_demo_advice_bridge import _checkpoint_bundle, _result
+```
+Không có `__init__.py` nào ở `ui/`, `ui/backend/`, `ui/backend/tests/` ⇒ `ui` không phải package.
+
+**Vì sao máy bạn xanh mà máy khác đỏ** — đã đo, không phải phỏng đoán:
+
+| Lệnh | Kết quả trên `origin/main` SẠCH |
+| --- | --- |
+| `python -m pytest ui/backend/tests/test_demo_advice_ack.py` | **1 passed** |
+| `pytest ui/backend/tests/test_demo_advice_ack.py` (console script, = `uv run pytest`) | **ModuleNotFoundError: No module named 'ui'** |
+
+`python -m pytest` đặt **CWD vào `sys.path`**; console script thì **không**. Đây đúng bẫy đã ghi ở
+`HANDOFF §5.2`, và lần này nó cắn ngược lại.
+
+⚠ **Nặng hơn một test đỏ:** đây là lỗi **collection** ⇒ pytest dừng với `Interrupted: 1 error during
+collection` và **KHÔNG chạy file nào khác** trong `ui/backend/tests`. Tức lệnh chuẩn của repo
+(`uv run pytest -q ui/backend/tests`) hiện **không chạy được gì cả**.
+
+**Tôi không tự sửa** (file của bạn, và có ≥3 cách sửa với hệ quả khác nhau). Ba lựa chọn:
+1. thêm `__init__.py` cho `ui/`, `ui/backend/`, `ui/backend/tests/` — nhưng đổi cách import toàn cây;
+2. đổi import thành tương đối/qua `conftest.py` — hẹp nhất;
+3. đưa hai helper `_checkpoint_bundle`/`_result` vào `conftest.py` làm fixture — sạch nhất về lâu dài.
+
+Cùng họ với `K-01` (`scripts/` thiếu `__init__.py`). Nếu chọn (1) thì sửa được cả hai một lần.
+
+### 1.1d 🔴 `K-03` — CỔNG RANH GIỚI SỨC KHOẺ đang ĐỎ trên `origin/main`
+
+`tests/test_health_boundary.py::test_money_manifest_is_complete` — docstring của chính nó:
+*"Hàm MỚI chạm token tiền mà chưa phân loại ⇒ đỏ — chặn đường lách 'viết hàm mới'"*.
+
+```
+AssertionError: scope chạm tiền chưa phân loại:
+  ('src/gsm_sim/demo_trace.py', '_driver_snapshot')
+  ('src/gsm_sim/demo_trace.py', '_trip')
+  ('src/gsm_sim/demo_trace.py', 'build_demo_trace')
+  ('src/gsm_sim/world.py', 'World.log')
+```
+
+Đã kiểm trên `origin/main` **sạch** (worktree riêng, không có việc của tôi) ⇒ **đỏ sẵn**, không do
+tích hợp.
+
+**Cổng đang làm ĐÚNG việc** — nó bắt được 4 hàm mới chạm token tiền mà chưa ai phân loại. Nhưng:
+
+> Một cổng ĐỎ THƯỜNG TRỰC thì mất tác dụng. Người ta quen với màu đỏ, và nó **không còn bắt được vi
+> phạm TIẾP THEO**. Đó đúng cơ chế đã để `D-M3-01` sống qua 39 artifact.
+
+**Tôi KHÔNG tự phân loại giúp.** Phân loại sai còn tệ hơn để đỏ: manifest này là ranh giới
+`fatigue`↔tiền (§1.2b), và chỉ người viết `demo_trace.py` mới biết ba hàm đó **đọc** số tiền để hiển
+thị hay **tính** ra nó. Cần bạn khai vào manifest ở `tests/_health_boundary_scan.py`.
+
+⚠ Kèm theo: `tests/test_demo_trace_neutrality.py::test_real_demo_order_boundaries_capture_post_mutation_state`
+cũng đỏ sẵn trên `origin/main`.
+
 ### 1.2 `K-01` — 3 test ĐỎ có sẵn trên `main`, tôi KHÔNG tự sửa
 
 Đã chứng minh là đỏ sẵn (stash toàn bộ việc của tôi rồi chạy trên cây sạch `51e877e`):

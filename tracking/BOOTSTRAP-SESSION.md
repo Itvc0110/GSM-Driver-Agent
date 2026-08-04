@@ -64,9 +64,23 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ```
 local HEAD  = 51e877e (UPDATE-135/129) + cây làm việc UPDATE-137 CHƯA commit
-suite       = 1184 passed / 4 skipped / **3 FAILED** (đo 2026-08-04 SAU khi sửa soi độc lập)
-              uv run pytest -q                  -> 1022 / 3 fail / 4 skip  (22′05″)
-              uv run pytest -q ui/backend/tests -> 162  / 0 fail / 0 skip
+suite       = 1232 passed / 4 skipped / **5 FAILED** + **1 file KHÔNG THU ĐƯỢC**
+              (đo 2026-08-04 SAU khi rebase lên PR #5 của Khánh)
+              uv run pytest -q                  -> 1045 / 5 fail / 4 skip  (20′23″)
+              uv run pytest -q ui/backend/tests -> ⛔ **Interrupted: collection error**
+                 phải thêm `--ignore=ui/backend/tests/test_demo_advice_ack.py` -> 187 passed
+              🔴 CẢ 5 FAIL + lỗi collection đều ĐỎ SẴN trên origin/main — đã chứng minh bằng
+                `git worktree add <tmp> origin/main` rồi chạy ở đó (KHÔNG có việc của tôi):
+                  K-01 (3): cadence QUEUE≠PRESENT · 2× checkpoint_trace thiếu `__init__.py`
+                  K-02 (1): test_demo_advice_ack.py — `from ui.backend.tests...` mà `ui` không
+                            phải package ⇒ **lỗi COLLECTION, chặn CẢ suite ui/backend**.
+                            `python -m pytest` XANH / `pytest` console script ĐỎ (CWD vào sys.path)
+                  K-03 (2): test_money_manifest_is_complete — 4 hàm mới chạm token tiền chưa phân
+                            loại (`demo_trace._driver_snapshot/_trip/build_demo_trace`,
+                            `world.World.log`) · test_demo_trace_neutrality
+                ⚠ K-03 là **cổng ranh giới sức khoẻ**. Nó đang làm đúng việc, nhưng đỏ thường trực
+                  ⇒ mất tác dụng bắt vi phạm TIẾP THEO. Không tự phân loại giúp — phân loại sai
+                  còn tệ hơn để đỏ. Chi tiết + 3 lựa chọn: `tracking/HANDOFF-KHANH-2026-08-04.md`
               🔴 3 F là ĐỎ SẴN sau PR #4 (`K-01`), KHÔNG do cycle nào của tôi — đã chứng minh bằng
                 `git stash push -u` rồi chạy đúng 3 test đó trên cây sạch ⇒ vẫn 3 failed:
                   tests/test_cadence_policy.py::test_safety_topic_presents_even_while_driving

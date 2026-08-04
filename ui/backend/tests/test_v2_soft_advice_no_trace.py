@@ -170,6 +170,34 @@ def test_checkpoint_KHONG_TON_TAI_van_la_404_khong_bi_nuot_thanh_ranh_gioi():
                             response="accepted", occurred_at="2026-08-04T09:00:00+07:00")
 
 
+def test_be_mat_DEMO_cua_Khanh_van_di_qua_cong():
+    """🔀 Kiểm sau rebase PR #5 — Khánh thêm bề mặt HTTP **thứ hai** ghi phản hồi:
+    `POST /demo/sessions/{sid}/advice/{cid}/response` (`routers/demo.py`).
+
+    Câu hỏi bắt buộc: đó có phải **đường ghi thứ NĂM** né cổng không? Đo được: **KHÔNG** —
+    `DemoSessionRegistry.record_demo_response` uỷ quyền thẳng cho
+    `AdviceCheckpointService.record_response`, tức đi qua đúng lan can QĐ-4.
+
+    Cổng này ghim điều đó lại. Nếu ai đó "tối ưu" bằng cách gọi thẳng `store.append_event` trong
+    `demo_session.py` thì ranh giới hở lại **im lặng** — đúng cách lỗ v2 ban đầu ra đời.
+
+    ⚠ Giới hạn đã khai: đây là kiểm **CẤU TRÚC** (AST), không phải hành vi. Nó chứng minh *lời gọi
+    tồn tại*, không chứng minh *mọi nhánh đều đi qua nó*. Kiểm hành vi đầy đủ cần dựng một demo
+    session thật — ghi là việc của Khánh (`HANDOFF` §1.1c cùng vùng)."""
+    import ast
+
+    src = (ROOT / "ui/backend/app/services/demo_session.py").read_text(encoding="utf-8")
+    fn = next((n for n in ast.walk(ast.parse(src))
+               if isinstance(n, ast.FunctionDef) and n.name == "record_demo_response"), None)
+    assert fn is not None, "`record_demo_response` đổi tên/biến mất — cổng đang canh hàm không còn"
+    goi = {ast.unparse(n.func) for n in ast.walk(fn) if isinstance(n, ast.Call)}
+    assert any(g.endswith("record_response") for g in goi), (
+        f"bề mặt demo KHÔNG còn đi qua `record_response` (các lời gọi: {sorted(goi)}) ⇒ ranh giới "
+        f"khuyên mềm hở ở đường thứ NĂM. Mọi đường ghi phản hồi phải đi qua MỘT lan can.")
+    assert not any("append_event" in g for g in goi), (
+        "`record_demo_response` gọi thẳng `append_event` ⇒ ghi vòng qua cổng")
+
+
 def test_loi_ranh_gioi_la_LOP_RIENG_khong_phai_conflict():
     """`409 conflict` nghĩa *"trạng thái không cho phép LÚC NÀY"* — hàm ý thử lại có thể được.
     Ranh giới thì **vĩnh viễn không được phép** ⇒ `422`. Dùng lại `CheckpointConflictError` sẽ dạy

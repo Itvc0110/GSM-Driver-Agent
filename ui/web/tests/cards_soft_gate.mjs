@@ -30,13 +30,21 @@
 let apiCalls = [];
 let warns = [];
 
+// 🔀 Viết lại 2026-08-04 sau khi rebase lên PR #5. Bản đầu kiểm bằng regex trên chuỗi `innerHTML`;
+// Khánh đã chuyển `_render` sang **dựng DOM node** (`node()` đặt `textContent`) nên không còn chuỗi
+// nào để regex — cổng sẽ **xanh rỗng** nếu không sửa. Đây là mini-DOM thật: `createElement` ·
+// `appendChild` · `textContent` · `className` · `querySelector` **đi theo CÂY**.
+//
+// Kiểm trên CÂY mạnh hơn kiểm trên chuỗi: một nút `follow` nhét vào bằng đường khác vẫn có thể lọt
+// regex, nhưng không lọt phép duyệt cây.
 class ElGia {
   constructor(tag) {
     this.tag = tag;
     this.className = "";
-    this._html = "";
+    this.textContent = "";
+    this.style = {};
     this.children = [];
-    this.listeners = {};      // selector -> [handler]
+    this.listeners = [];
     this.classes = new Set();
     this.classList = {
       add: (c) => this.classes.add(c),
@@ -44,32 +52,47 @@ class ElGia {
       contains: (c) => this.classes.has(c),
     };
   }
-  set innerHTML(v) { this._html = v; }
-  get innerHTML() { return this._html; }
   get firstChild() { return this.children[0]; }
   appendChild(el) { this.children.push(el); return el; }
+  replaceChildren(...c) { this.children = c; }
   remove() { }
-  // `querySelector` chỉ cần đủ để `_render` gắn listener: trả một handle nếu class có trong HTML,
-  // `null` nếu không. Trả `null` đúng lúc là điều QUAN TRỌNG NHẤT — `_render` gọi
-  // `el.querySelector(".follow").addEventListener(...)` không guard, nên nếu ta trả bừa một object
-  // cho mọi selector thì bug "thẻ mềm vẫn có nút follow" sẽ KHÔNG bao giờ lộ ra.
+  addEventListener(_ev, fn) { this.listeners.push(fn); }
+
+  /** Duyệt CẢ CÂY kể cả chính nút này, theo thứ tự tài liệu.
+   *  Phòng thủ với child KHÔNG phải `ElGia` (chuỗi, fragment thật) — `_whyHtml` của Khánh trả
+   *  `DocumentFragment`, và một `walk()` giả định mọi child đều là node sẽ **nổ** thay vì báo sai.
+   *  Cổng phải hỏng ở chỗ ranh giới hở, không hỏng ở chỗ stub thiếu. */
+  *walk() {
+    yield this;
+    for (const c of this.children) {
+      if (c && typeof c.walk === "function") yield* c.walk();
+    }
+  }
+
+  /** Toàn bộ text của cây — thay cho `innerHTML` trong các phép kiểm. */
+  get text() { return [...this.walk()].map((n) => n.textContent || "").join(" "); }
+
+  // Trả `null` khi không có — điều QUAN TRỌNG NHẤT của stub này. `_render` gọi
+  // `el.querySelector(".follow").addEventListener(...)` KHÔNG guard, nên nếu trả bừa một object
+  // cho mọi selector thì bug "thẻ mềm vẫn có nút follow" sẽ không bao giờ lộ ra.
   querySelector(sel) {
     const cls = sel.replace(/^\./, "");
-    if (!new RegExp(`class="[^"]*\\b${cls}\\b`).test(this._html)) return null;
-    const self = this;
-    return {
-      addEventListener(_ev, fn) { (self.listeners[cls] ||= []).push(fn); },
-      classList: { toggle() { }, add() { }, contains: () => false },
-    };
+    for (const n of this.walk()) {
+      if (n !== this && String(n.className || "").split(/\s+/).includes(cls)) return n;
+    }
+    return null;
   }
   click(cls) {
-    const fns = this.listeners[cls];
-    if (!fns) throw new Error(`không có listener cho '.${cls}' — thẻ này không có nút đó`);
-    fns.forEach((f) => f());
+    const el = this.querySelector("." + cls);
+    if (!el) throw new Error(`không có nút '.${cls}' trong cây — thẻ này không vẽ nút đó`);
+    el.listeners.forEach((f) => f());
   }
 }
 
-globalThis.document = { createElement: (t) => new ElGia(t) };
+globalThis.document = {
+  createElement: (t) => new ElGia(t),
+  createDocumentFragment: () => new ElGia("#fragment"),
+};
 globalThis.setTimeout = () => 0;                     // `_render` dùng để gỡ thẻ; không cần chạy
 globalThis.console = { ...console, warn: (...a) => warns.push(a.join(" ")) };
 
@@ -97,10 +120,19 @@ const kiem = (ten, dieu_kien, thong_diep) => {
   console.log(`  ✗ ${ten}\n      ${thong_diep}`);
 };
 
+/** `extraContent` nay là một NODE (Khánh đổi từ chuỗi HTML sang DocumentFragment ở PR #5) —
+ *  truyền chuỗi vào sẽ làm `why.appendChild()` nhận sai kiểu và cổng hỏng vì lý do không phải
+ *  ranh giới. */
+const noiDungViSao = () => {
+  const f = document.createDocumentFragment();
+  f.appendChild(Object.assign(new ElGia("i"), { textContent: "vì sao" }));
+  return f;
+};
+
 const ve = (opts) => {
   Cards.mount = new ElGia("div");
   apiCalls = []; warns = [];
-  return Cards._render("nudge", "adv-1", "Tiêu đề", "Nội dung", "<i>vì sao</i>", 0.8,
+  return Cards._render("nudge", "adv-1", "Tiêu đề", "Nội dung", noiDungViSao(), 0.8,
     opts.actionable ?? true, opts.topic ?? null, opts.isSoft ?? false);
 };
 
@@ -110,22 +142,22 @@ console.log("CỔNG cards.js — KHUYÊN MỀM không có nút 'Làm theo'\n");
 {
   const el = ve({ isSoft: true, topic: "rest_nudge" });
   kiem("thẻ mềm KHÔNG có nút 'Làm theo'",
-    !el.innerHTML.includes("Làm theo") && !/class="[^"]*\bfollow\b/.test(el.innerHTML),
+    !el.text.includes("Làm theo") && el.querySelector(".follow") === null,
     "thẻ khuyên mềm vẫn vẽ nút 'Làm theo' ⇒ tài xế bị hỏi 'anh có nghe lời khuyên nghỉ không' — "
     + "đúng câu QĐ-1 cấm hỏi. Xem tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md");
-  kiem("thẻ mềm CÓ nút 'Ẩn'", el.innerHTML.includes(">Ẩn<"),
+  kiem("thẻ mềm CÓ nút 'Ẩn'", el.querySelector(".hide") !== null,
     "mất nút Ẩn ⇒ tài xế không tắt được thẻ phiền. Cường chốt: 'giữ nút ẩn, bỏ nút Làm theo'");
   kiem("thẻ mềm mang class `adv-soft`", el.className.includes("adv-soft"),
     "thiếu hook CSS để style thẻ mềm khác thẻ kinh tế");
 }
 
 // --- 2. ĐỐI CHỨNG: thẻ kinh tế VẪN có nút Làm theo ------------------------------------
-// Không có bước này thì một `_render` trả chuỗi rỗng cũng làm cổng trên xanh.
+// Không có bước này thì một `_render` không vẽ nút nào cũng làm cổng trên xanh.
 {
   const el = ve({ isSoft: false, topic: "nudge" });
-  kiem("ĐỐI CHỨNG — thẻ kinh tế VẪN có 'Làm theo'", el.innerHTML.includes("Làm theo"),
+  kiem("ĐỐI CHỨNG — thẻ kinh tế VẪN có 'Làm theo'", el.querySelector(".follow") !== null,
     "cổng đang xanh vì thẻ nào cũng không có nút, không phải vì ranh giới chạy đúng");
-  kiem("ĐỐI CHỨNG — thẻ kinh tế KHÔNG có nút 'Ẩn'", !el.innerHTML.includes(">Ẩn<"),
+  kiem("ĐỐI CHỨNG — thẻ kinh tế KHÔNG có nút 'Ẩn'", el.querySelector(".hide") === null,
     "hai chế độ lẫn vào nhau");
 }
 
@@ -133,8 +165,23 @@ console.log("CỔNG cards.js — KHUYÊN MỀM không có nút 'Làm theo'\n");
 {
   const el = ve({ actionable: false });
   kiem("thẻ im lặng chỉ có 'Đã hiểu'",
-    el.innerHTML.includes("Đã hiểu") && !el.innerHTML.includes("Làm theo"),
+    el.querySelector(".close") !== null && el.querySelector(".follow") === null,
     "L4-07: thẻ im lặng không có quyết định thật, bấm nút sẽ tạo adherence giả");
+}
+
+// --- 3b. 🔀 SAU REBASE PR #5: text KHÔNG được đi qua innerHTML -------------------------
+// Khánh chuyển `_render` sang `node()` (đặt `textContent`) đúng lúc bản của tôi còn nội suy
+// `${title}` vào `innerHTML`. Giữ nền của anh ấy là quyết định BẢO MẬT, nên phải có cổng canh —
+// nếu không, lần refactor sau rất dễ quay lại innerHTML cho "gọn".
+{
+  const doc = "<img src=x onerror=alert(1)>";
+  Cards.mount = new ElGia("div"); apiCalls = [];
+  const el = Cards._render("nudge", "adv-x", doc, doc, null, 0.5, true, "nudge", false);
+  const co_the_la_markup = [...el.walk()].some((n) => n.tag === "img");
+  kiem("tiêu đề/nội dung KHÔNG bị diễn giải thành markup",
+    !co_the_la_markup && el.text.includes(doc),
+    "text từ server/LLM đang được đưa vào DOM dưới dạng markup — đường XSS ngay chỗ hiển thị "
+    + "lời khuyên. Dùng `node()`/`textContent`, đừng quay lại `innerHTML`.");
 }
 
 // --- 4. HÀNH VI: bấm Ẩn gửi `dismissed`, KHÔNG phải `followed` ------------------------
