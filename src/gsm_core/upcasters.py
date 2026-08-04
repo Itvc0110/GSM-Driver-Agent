@@ -72,6 +72,14 @@ def _advice_artifact_100_to_110(record: dict) -> dict:
     return {**record, "schema_version": "1.1.0"}
 
 
+@_register("agent_presentation_input", "1.0.0")
+def _agent_input_100_to_110(record: dict) -> dict:
+    """1.1 adds explicit current/future action context; old input remains replayable."""
+    return {**record, "schema_version": "1.1.0",
+            "current_action": record.get("canonical_action"),
+            "future_plan": []}
+
+
 from functools import lru_cache
 
 

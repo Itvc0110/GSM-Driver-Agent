@@ -1,26 +1,28 @@
-// app.js — GSM Driver web app (Track UI U2 + UX-CARDS UPDATE-067).
-// Nguyên tắc: UI CHỈ RENDER số từ backend (contract-first). Cuốc "demo" là mô phỏng
-// interaction — cước demo KHÔNG được cộng vào payout (payout đến từ data mock).
-// UX-CARDS (DIRECTIVES §12): advisor là PROACTIVE CARDS, không phải chatbot.
+// Unified GSM Driver Web demo.
+// The browser renders server-owned snapshots from an immutable simulator replay.  It does
+// not construct trips, advance a cursor, calculate SOC/payout or ask an agent for advice.
 
-import { api, demoQuote, fmtVnd } from "./api.js";
-import { Cards } from "./cards.js";
+import { api, fmtVnd } from "./api.js";
+import { beginDisplayAck, completeDisplayAck, isStaleStep } from "./demo_guards.js";
 
 const S = {
-  driverId: null, date: null,
-  state: null, history: null, mapCtx: null, catalog: null,
-  demoTrips: [], tripStep: 0, activeRoute: null,
+  driverId: null, date: null, state: null, history: null, mapCtx: null, catalog: null,
+  demo: {
+    sessionId: null, actorId: null, stepVersion: 0, busy: false,
+    renderedStepVersion: 0, ackedDisplayIds: new Set(), pendingDisplayIds: new Set(),
+    lastResponse: null,
+  },
 };
 
 const $ = (id) => document.getElementById(id);
+let map, demandLayer, stationLayer, routeLayers = [], driverMarker;
 
 /* ================= MAP ================= */
-let map, demandLayer, stationLayer, routeLayers = [], driverMarker, moveTimer;
-
 function initMap() {
   map = L.map("map", { zoomControl: false }).setView([21.013, 105.827], 13.5);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    { maxZoom: 19, subdomains: "abcd", attribution: "© OSM · © CARTO" }).addTo(map);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19, subdomains: "abcd", attribution: "© OSM · © CARTO",
+  }).addTo(map);
   demandLayer = L.layerGroup().addTo(map);
   stationLayer = L.layerGroup().addTo(map);
   driverMarker = L.marker([21.013, 105.827], {
@@ -37,382 +39,512 @@ function initMap() {
 function renderMapContext(mc) {
   demandLayer.clearLayers();
   stationLayer.clearLayers();
-  // demand: sequential cyan theo intensity (magnitude — 1 hue, dataviz tokens)
   const seq = ["#c3ebee", "#95dbe0", "#5ec4cc", "#22a9b4", "#068c96"];
-  for (const z of mc.demand_zones) {
+  for (const z of mc.demand_zones || []) {
     const c = seq[Math.min(seq.length - 1, Math.floor(z.intensity * seq.length))];
     L.circle([z.lat, z.lng], {
       radius: 220 + z.intensity * 420, color: c, weight: 1,
       fillColor: c, fillOpacity: 0.42,
     }).bindPopup(`Số đơn đặt (mô phỏng): cường độ ${(z.intensity * 100).toFixed(0)}%<br>
-      <small>hex ${z.h3_index} · không đảm bảo đơn về tay bạn</small>`)
-      .addTo(demandLayer);
+      <small>hex ${z.h3_index} · không đảm bảo đơn về tay bạn</small>`).addTo(demandLayer);
   }
-  for (const st of mc.charging_stations) {
+  for (const st of mc.charging_stations || []) {
     L.circleMarker([st.lat, st.lng], {
-      radius: 7, color: "#fff", weight: 2, fillColor: "var(--viz-charge)".includes("var")
-        ? "#eda100" : "#eda100", fillOpacity: 1,
+      radius: 7, color: "#fff", weight: 2, fillColor: "#eda100", fillOpacity: 1,
     }).bindPopup(`<b>${st.name}</b><br><small>tủ đổi pin (OSM — vị trí thật)</small>`)
       .addTo(stationLayer);
   }
   const alertSlot = $("alert-slot");
-  alertSlot.innerHTML = "";
-  for (const a of mc.alerts) {
-    alertSlot.insertAdjacentHTML("beforeend", `
-      <div class="alert-card"><div class="ico">📈</div>
-        <div><b>${a.title}</b><p>${a.message}</p></div></div>`);
+  alertSlot.replaceChildren();
+  for (const alert of mc.alerts || []) {
+    const card = document.createElement("div");
+    card.className = "alert-card";
+    const icon = document.createElement("div");
+    icon.className = "ico";
+    icon.textContent = "📈";
+    card.appendChild(icon);
+    const body = document.createElement("div");
+    const title = document.createElement("b");
+    title.textContent = alert.title;
+    body.appendChild(title);
+    const message = document.createElement("p");
+    message.textContent = alert.message;
+    body.appendChild(message);
+    card.appendChild(body);
+    alertSlot.appendChild(card);
   }
 }
 
-/* ================= DATA LOAD ================= */
+/* ================= PROFILE SCREENS (read-only context) ================= */
 async function loadProfile(driverId, date) {
-  S.driverId = driverId; S.date = date;
-  const [st, hist, mc] = await Promise.all([
+  S.driverId = driverId;
+  S.date = date;
+  const [state, history, mapContext] = await Promise.all([
     api.state(driverId, date),
     api.history(driverId, date, 14),
     api.mapContext(date, 18, driverId),
   ]);
-  S.state = st; S.history = hist; S.mapCtx = mc;
-  renderHeader(); renderIncome(); renderEv(); renderSettings(); renderMapContext(mc);
-  $("bot-dot").classList.remove("hidden");
+  S.state = state;
+  S.history = history;
+  S.mapCtx = mapContext;
+  renderHeader();
+  renderIncome();
+  renderEv();
+  renderSettings();
+  renderMapContext(mapContext);
 }
 
 function renderHeader() {
-  const m = S.state.money;
-  const pill = $("pill-payout");
-  // countup nhẹ cho stakeholder demo — số cuối luôn là số THẬT từ data
-  const target = m.payout_vnd;
-  const start = performance.now();
-  const dur = 650;
-  const tick = (t) => {
-    const f = Math.min(1, (t - start) / dur);
-    const v = Math.round(target * (0.4 + 0.6 * f));
-    pill.innerHTML = `${fmtVnd(f >= 1 ? target : v)}
-      <span class="sub">Thu nhập tài xế (payout) · ${S.date} · mô phỏng</span>`;
-    if (f < 1) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-  pill.classList.remove("bump"); void pill.offsetWidth; pill.classList.add("bump");
+  const money = S.state.money;
+  $("pill-payout").textContent = `${fmtVnd(money.payout_vnd)} · ${S.date} · mô phỏng`;
   $("pill-trips").textContent = `${S.state.payout_summary.trips_count} cuốc`;
   const soc = S.state.soc_percent;
-  const socEl = $("pill-soc");
-  // Q-06: nhãn nguồn đọc TỪ PAYLOAD (`soc_source`), không hard-code — backend là nơi biết
-  // số này thật hay mô phỏng. 13 bảng GSM chưa có telemetry pin ⇒ hiện luôn là MOCK.
-  const socTag = $("pill-soc-tag");
-  socEl.firstChild.nodeValue = `⚡ ${soc}% `;
-  socTag.hidden = S.state.soc_source !== "MOCK";
-  socEl.classList.toggle("low", soc < 25);
-  socEl.classList.toggle("is-mock", S.state.soc_source === "MOCK");
+  const socElement = $("pill-soc");
+  socElement.firstChild.nodeValue = `⚡ ${soc}% `;
+  $("pill-soc-tag").hidden = S.state.soc_source !== "MOCK";
+  socElement.classList.toggle("low", soc < 25);
+  socElement.classList.toggle("is-mock", S.state.soc_source === "MOCK");
 }
 
-/* ================= THU NHẬP ================= */
 function renderIncome() {
-  const m = S.state.money;
+  const money = S.state.money;
   $("inc-date").textContent = S.date;
-  $("inc-payout").textContent = fmtVnd(m.payout_vnd);
-  const bd = m.payout_breakdown || {};
+  $("inc-payout").textContent = fmtVnd(money.payout_vnd);
+  const breakdown = money.payout_breakdown || {};
   $("inc-breakdown").textContent =
-    `cuốc ${fmtVnd(bd.trip_payout_vnd)} · mission ${fmtVnd(bd.mission_reward_vnd || 0)}`
-    + " · thưởng ngày/tân binh: xem khu Mô phỏng";
-  $("inc-gross").textContent = fmtVnd(m.gross_vnd);
+    `cuốc ${fmtVnd(breakdown.trip_payout_vnd)} · mission ${fmtVnd(breakdown.mission_reward_vnd || 0)} · mô phỏng`;
+  $("inc-gross").textContent = fmtVnd(money.gross_vnd);
   $("inc-net").textContent = "—";
-
   const days = S.history.days;
   Plotly.newPlot("chart-income", [{
-    x: days.map((d) => d.date.slice(5)),
-    y: days.map((d) => d.payout_vnd),
-    type: "bar",
-    marker: { color: "#2a78d6", cornerradius: 4 },
+    x: days.map((day) => day.date.slice(5)), y: days.map((day) => day.payout_vnd),
+    type: "bar", marker: { color: "#2a78d6", cornerradius: 4 },
     hovertemplate: "%{x}: <b>%{y:,.0f}đ</b> payout<extra></extra>",
   }], {
     margin: { l: 44, r: 8, t: 8, b: 26 },
     font: { family: "Be Vietnam Pro, sans-serif", size: 10.5, color: "#52514e" },
     paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
     yaxis: { gridcolor: "#e1e0d9", tickformat: "~s", zeroline: false },
-    xaxis: { showgrid: false },
-    bargap: 0.35,
+    xaxis: { showgrid: false }, bargap: 0.35,
   }, { displayModeBar: false, responsive: true });
-
-  $("income-rows").innerHTML = days.slice().reverse().map((d) => `
-    <div class="row-item">
-      <div><b>${d.date}</b><br>
-        <span style="color:var(--text-muted);font-size:11px">
-          ${d.trips} cuốc · ${d.online_h}h online · nhận ${(d.acceptance_rate * 100).toFixed(0)}%</span></div>
-      <div style="text-align:right">
-        <div class="amt">${fmtVnd(d.payout_vnd)}</div>
-        <div style="font-size:10px;color:var(--text-muted)">gộp ${fmtVnd(d.gross_vnd)}</div></div>
-    </div>`).join("");
+  $("income-rows").replaceChildren();
+  for (const day of days.slice().reverse()) {
+    const row = document.createElement("div");
+    row.className = "row-item";
+    addText(row, "div", `${day.date} · ${day.trips} cuốc · ${day.online_h}h online · nhận ${(day.acceptance_rate * 100).toFixed(0)}%`);
+    addText(row, "div", `${fmtVnd(day.payout_vnd)} · gross ${fmtVnd(day.gross_vnd)}`);
+    $("income-rows").appendChild(row);
+  }
 }
 
-/* ================= XE & PIN ================= */
 function renderEv() {
   $("ev-soc").textContent = `${S.state.soc_percent}%`;
-  // D-M3-17/18: tầm pin nay là số THẬN TRỌNG suy từ hệ số của engine, và chỉ có cơ sở với đội
-  // XE MÁY. Với xe hơi backend trả `vehicle_range_km_applicable=false` — hiện một dấu gạch kèm
-  // lý do thay vì một con số sai loại xe. Nếu chỉ sửa backend mà không sửa chỗ này thì cờ trở
-  // thành cơ chế không có đường chạy, đúng mẫu lỗi đã trả giá ba lần trong repo.
-  const _ap = S.state.vehicle_range_km_applicable;
-  const _lo = S.state.vehicle_range_km_low, _hi = S.state.vehicle_range_km_high;
-  $("ev-range").textContent = (_ap === false)
-    ? "— chưa có cơ sở"
-    : (_lo != null && _hi != null ? `${_lo}–${_hi} km` : `${S.state.vehicle_range_km} km`);
+  const applicable = S.state.vehicle_range_km_applicable;
+  const low = S.state.vehicle_range_km_low;
+  const high = S.state.vehicle_range_km_high;
+  $("ev-range").textContent = applicable === false ? "— chưa có cơ sở" :
+    (low != null && high != null ? `${low}–${high} km` : `${S.state.vehicle_range_km} km`);
   $("ev-range").title = S.state.vehicle_range_km_basis || "";
-  // Chú thích PHẢI đi theo cơ sở thật, không phải một câu tĩnh. Bản cũ ghi cứng "giả định
-  // ~110 km/100%" trong HTML — đúng con số mà D-M3-17 vừa bỏ, nên nó thành lời giải thích SAI
-  // cho một con số ĐÚNG. Đây là mẫu "sửa một tầng, tầng khác không biết".
-  const _note = $("ev-range-note");
-  if (_note) {
-    _note.textContent = (_ap === false)
-      ? "Đội xe này chưa có tham số tiêu hao trong hệ thống nên không hiển thị số."
-      : `Dải suy từ mức tiêu hao của engine — hiển thị đầu THẤP (thận trọng). Không phải số thật.`;
-  }
-  // Nhãn loại xe theo ĐỘI thật của tài xế, không để một câu tĩnh nói "bike" cho tài xế xe hơi.
-  const _fleet = (S.catalog?.drivers || []).find((d) => d.driver_id === S.driverId)?.fleet || "";
-  const _ten = { "bike-sim": "VinFast (bike điện)", "bike-rto": "VinFast (bike điện · RTO)",
-                 "car-platform": "VinFast VF5 (ô tô)", "car-employee": "VinFast (ô tô · nhân viên)",
-                 "car-premium": "VinFast VF8 Luxury (ô tô)" };
-  $("ev-name").textContent = _ten[_fleet] || "Xe mô phỏng";
-  const _lbl = document.querySelector("#screen-ev .section-label, #screen-ev .card .note");
-  void _lbl;
+  $("ev-range-note").textContent = applicable === false
+    ? "Đội xe này chưa có tham số tiêu hao trong hệ thống nên không hiển thị số."
+    : "Dải suy từ mức tiêu hao của engine — đầu thấp thận trọng; không phải số thật.";
+  const fleet = (S.catalog?.drivers || []).find((driver) => driver.driver_id === S.driverId)?.fleet || "";
+  const names = {
+    "bike-sim": "VinFast (bike điện)", "bike-rto": "VinFast (bike điện · RTO)",
+    "car-platform": "VinFast VF5 (ô tô)", "car-employee": "VinFast (ô tô · nhân viên)",
+    "car-premium": "VinFast VF8 Luxury (ô tô)",
+  };
+  $("ev-name").textContent = names[fleet] || "Xe mô phỏng";
   $("ev-plate").textContent = `Hồ sơ mô phỏng · ${S.driverId}`;
-  $("station-rows").innerHTML = S.mapCtx.charging_stations.slice(0, 6).map((st) => `
-    <div class="row-item"><div>🔋 <b>${st.name}</b><br>
-      <span style="font-size:10.5px;color:var(--text-muted)">${st.lat.toFixed(4)}, ${st.lng.toFixed(4)} · OSM</span></div>
-    </div>`).join("");
+  $("station-rows").replaceChildren();
+  for (const station of (S.mapCtx?.charging_stations || []).slice(0, 6)) {
+    const row = document.createElement("div");
+    row.className = "row-item";
+    addText(row, "div", `🔋 ${station.name} · ${station.lat.toFixed(4)}, ${station.lng.toFixed(4)} · OSM`);
+    $("station-rows").appendChild(row);
+  }
 }
 
-/* ================= CÀI ĐẶT ================= */
 function renderSettings() {
-  const r = S.state.rating || {};
-  $("set-rating").textContent = r.n
-    ? `★ ${r.avg} (${r.n} lượt · ${(r.five_rate * 100).toFixed(0)}% 5★)` : "chưa có lượt chấm";
-  const ms = S.state.missions || [];
-  $("mission-rows").innerHTML = ms.length ? ms.map((m) => `
-    <div style="padding:7px 0;border-top:1px solid var(--border-hairline)">
-      <b>${m.title}</b> — ${m.progress}/${m.target}
-      ${m.done ? `<span style="color:var(--status-good);font-weight:700"> ✓ ${fmtVnd(m.reward_vnd)}</span>` : ""}
-      <div class="confidence-track"><div class="confidence-fill"
-        style="width:${Math.min(100, (m.progress / Math.max(1, m.target)) * 100)}%"></div></div>
-    </div>`).join("")
-    : `<span style="color:var(--text-muted)">chưa có nhiệm vụ</span>`;
+  const rating = S.state.rating || {};
+  $("set-rating").textContent = rating.n
+    ? `★ ${rating.avg} (${rating.n} lượt · ${(rating.five_rate * 100).toFixed(0)}% 5★)`
+    : "chưa có lượt chấm";
+  const missions = S.state.missions || [];
+  $("mission-rows").replaceChildren();
+  if (!missions.length) {
+    addText($("mission-rows"), "span", "chưa có nhiệm vụ");
+    return;
+  }
+  for (const mission of missions) {
+    const row = document.createElement("div");
+    row.style.padding = "7px 0";
+    row.style.borderTop = "1px solid var(--border-hairline)";
+    addText(row, "b", `${mission.title} — ${mission.progress}/${mission.target}`);
+    $("mission-rows").appendChild(row);
+  }
 }
 
 async function fillCatalog() {
   S.catalog = await api.catalog();
   $("prov-line").textContent =
     `data/mock/realdata-v1 · engine ${S.catalog.engine_commit} · nhãn ${S.catalog.label}`;
-  $("sel-driver").innerHTML = S.catalog.drivers.map((d) =>
-    `<option value="${d.driver_id}" ${d.driver_id === S.driverId ? "selected" : ""}>
-       ${d.driver_id} (${d.fleet})</option>`).join("");
-  $("sel-date").innerHTML = S.catalog.dates.map((d) =>
-    `<option ${d === S.date ? "selected" : ""}>${d}</option>`).join("");
+  const driverSelect = $("sel-driver");
+  driverSelect.replaceChildren();
+  for (const driver of S.catalog.drivers) {
+    const option = document.createElement("option");
+    option.value = driver.driver_id;
+    option.textContent = `${driver.driver_id} (${driver.fleet})`;
+    option.selected = driver.driver_id === S.driverId;
+    driverSelect.appendChild(option);
+  }
+  const dateSelect = $("sel-date");
+  dateSelect.replaceChildren();
+  for (const date of S.catalog.dates) {
+    const option = document.createElement("option");
+    option.value = date;
+    option.textContent = date;
+    option.selected = date === S.date;
+    dateSelect.appendChild(option);
+  }
 }
 
-/* ================= HUB TRỢ LÝ (không chat — cards ở cards.js) ================= */
-function renderCardHistory() {
-  $("card-history").innerHTML = Cards.history.length
-    ? Cards.history.map((h) => `<div style="padding:4px 0;border-top:1px solid var(--border-hairline)">
-        ${h.at} · <b>${h.kind}</b> — ${h.title}</div>`).join("")
-    : "chưa có";
-}
-
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function runDayDemo() {
-  // "Một ngày của tài xế" ~90s: brief → nhận cuốc demo → nudge (sau khi trả khách) → recap
-  $("bot-sheet").classList.add("hidden");
-  switchScreen("screen-now");
-  await Cards.brief();
-  await wait(7000);
-  if (S.tripStep === 0) await startIncomingTrip();
-  await wait(3000);
-  if (S.tripStep === 1) acceptTrip();
-  await wait(6000);
-  if (S.tripStep === 2) navNext();          // đã đến điểm đón
-  await wait(6000);
-  if (S.tripStep === 3) navNext();          // hoàn thành → tự bắn nudge (xem navNext)
-  await wait(8000);
-  await Cards.recap();
-}
-
-/* ================= TRIP LIFECYCLE DEMO (port từ demo Khánh) ================= */
-const WP_COLORS = ["#00AFB9", "#F59E0B", "#8B5CF6", "#F43F5E"];
-
-function clearRoute() {
-  routeLayers.forEach((l) => map.removeLayer(l));
+/* ================= CANONICAL REPLAY RENDER ================= */
+function clearRoutes() {
+  routeLayers.forEach((layer) => map.removeLayer(layer));
   routeLayers = [];
-  if (moveTimer) clearInterval(moveTimer);
 }
 
-async function startIncomingTrip() {
-  const t = await api.tripStep(S.demoTrips.length, "INCOMING");
-  const wps = [
-    { lat: t.pickup_lat, lng: t.pickup_lng, name: `Đón: ${t.pickup_address}` },
-    { lat: t.dropoff_lat, lng: t.dropoff_lng, name: `Trả: ${t.dropoff_address}` },
-  ];
-  const route = await api.route(wps);
-  const quote = demoQuote(route);
-  S.activeRoute = { ...route, quote, wps, trip: t };
-  clearRoute();
-  // polyline 2 lớp theo brand Khánh — route ước lượng (không phải OSRM/GraphHopper thật) thì
-  // nét đứt + amber, không giả vờ là đường thật
-  const isRealRoad = route.route_is_real_road;
-  routeLayers.push(L.polyline(route.coords, { color: "#0f172a", weight: 10, opacity: 0.9 }).addTo(map));
-  routeLayers.push(L.polyline(route.coords, {
-    color: isRealRoad ? "#00AFB9" : "#F59E0B",
-    weight: 6,
-    dashArray: isRealRoad ? null : "8 8",
-  }).addTo(map));
-  wps.forEach((w, i) => routeLayers.push(L.marker([w.lat, w.lng], {
-    icon: L.divIcon({
-      html: `<div style="width:24px;height:24px;border-radius:50%;background:${WP_COLORS[i % 4]};
-        color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;
-        font-size:11px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.3)">${String.fromCharCode(65 + i)}</div>`,
-      iconSize: [24, 24], iconAnchor: [12, 12],
-    }),
-  }).addTo(map)));
-  map.fitBounds(routeLayers[1].getBounds(), { padding: [60, 60] });
-
-  $("inc-km").textContent = `${route.total_dist_km} km · ${route.total_duration_min} phút`;
-  $("inc-fare").textContent = quote.grossText;
-  $("inc-trip-payout").textContent = quote.payoutText;
-  $("inc-fare-policy").textContent =
-    `${quote.provenanceText} · share ${quote.shareText} · không cộng vào thu nhập ngày`;
-  $("inc-stops").innerHTML = wps.map((w, i) => `
-    <div class="trip-row"><div class="wp" style="background:${WP_COLORS[i % 4]}">${String.fromCharCode(65 + i)}</div>
-      <div>${w.name}</div></div>`).join("");
-  $("trip-incoming").classList.remove("hidden");
-  $("cta-area").classList.add("hidden");
-  S.tripStep = 1;
+function addText(parent, tag, text, className = "") {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = text == null ? "" : String(text);
+  parent.appendChild(node);
+  return node;
 }
 
-function animateAlong(coords, ms) {
-  if (moveTimer) clearInterval(moveTimer);
-  let i = 0;
-  const dt = Math.max(25, Math.floor(ms / coords.length));
-  moveTimer = setInterval(() => {
-    if (i < coords.length) { driverMarker.setLatLng(coords[i]); i++; }
-    else clearInterval(moveTimer);
-  }, dt);
+function renderDemoRoutes(response) {
+  clearRoutes();
+  for (const route of response.routes || []) {
+    if (!Array.isArray(route.coords) || route.coords.length < 2) continue;
+    const real = route.route_is_real_road === true;
+    routeLayers.push(L.polyline(route.coords, {
+      color: "#0f172a", weight: 9, opacity: 0.86,
+    }).addTo(map));
+    routeLayers.push(L.polyline(route.coords, {
+      color: real ? "#00AFB9" : "#F59E0B", weight: 5,
+      dashArray: real ? null : "8 8",
+    }).addTo(map));
+  }
+  const trip = response.trip;
+  const markerData = trip ? [
+    {label: "P", point: trip.pickup, color: "#00AFB9"},
+    {label: "D", point: trip.destination, color: "#F59E0B"},
+  ] : [];
+  for (const markerDataItem of markerData) {
+    const point = markerDataItem.point || {};
+    const lng = point.lng ?? point.lon;
+    if (point.lat == null || lng == null) continue;
+    const marker = L.marker([point.lat, lng], {
+      icon: L.divIcon({
+        html: `<div style="width:24px;height:24px;border-radius:50%;background:${markerDataItem.color};
+          color:#fff;border:2px solid #fff;display:flex;align-items:center;justify-content:center;
+          font-size:11px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.3)">${markerDataItem.label}</div>`,
+        iconSize: [24, 24], iconAnchor: [12, 12],
+      }),
+    }).addTo(map);
+    routeLayers.push(marker);
+  }
+  const lines = routeLayers.filter((layer) => typeof layer.getBounds === "function");
+  if (lines.length) map.fitBounds(lines[lines.length - 1].getBounds(), {padding: [60, 60]});
+  const route = (response.routes || [])[0];
+  $("demo-route-note").textContent = route
+    ? `${route.leg} · ${route.distance_km} km · ${route.duration_min} phút · ${route.source}`
+      + (route.route_is_real_road ? " · đường thật" : " · fallback hình học")
+    : "Không có leg route ở transition này.";
 }
 
-function acceptTrip() {
-  const r = S.activeRoute;
-  $("trip-incoming").classList.add("hidden");
-  $("trip-active").classList.remove("hidden");
-  $("nav-state").textContent = r.route_is_real_road
-    ? "ĐANG ĐẾN ĐIỂM ĐÓN (CHỈ ĐƯỜNG THỰC)"
-    : "ĐANG ĐẾN ĐIỂM ĐÓN (ƯỚC LƯỢNG THẲNG)";
-  $("nav-cust").textContent = r.trip.customer_name;
-  $("nav-route").textContent = r.wps.map((w) => w.name.split(":")[1]).join(" ➔ ");
-  $("nav-fare").textContent = r.quote.grossText;
-  $("nav-trip-payout").textContent = r.quote.payoutText;
-  $("nav-fare-policy").textContent = `${r.quote.provenanceText} · share ${r.quote.shareText}`;
-  $("nav-km").textContent = `${r.total_dist_km} km`;
-  $("btn-nav-next").textContent = "ĐÃ ĐẾN NƠI ĐÓN KHÁCH";
-  animateAlong(r.coords, 3200);
-  S.tripStep = 2;
+function renderDemoTrip(trip) {
+  if (!trip) {
+    $("demo-trip").textContent = "Transition này không có cuốc đang hiển thị.";
+    return;
+  }
+  const pickup = trip.pickup || {};
+  const destination = trip.destination || {};
+  $("demo-trip").textContent =
+    `Cuốc ${trip.trip_id} · ${trip.state} · ${trip.dist_km} km · gross ${fmtVnd(trip.gross_vnd)} `
+    + `· P (${pickup.lat}, ${pickup.lon ?? pickup.lng}) → D (${destination.lat}, ${destination.lon ?? destination.lng})`;
 }
 
-function navNext() {
-  if (S.tripStep === 2) {
-    $("nav-state").textContent = "ĐANG CHỞ KHÁCH";
-    $("btn-nav-next").textContent = "HOÀN THÀNH CUỐC (DEMO)";
-    animateAlong(S.activeRoute.coords, 4200);
-    S.tripStep = 3;
-  } else if (S.tripStep === 3) {
-    const r = S.activeRoute;
-    S.demoTrips.unshift({
-      name: r.trip.customer_name, km: r.total_dist_km,
-      gross: r.fare_vnd, payout: r.driver_payout_vnd,
-      src: r.source, policy: r.fare_policy_version,
+function sendDisplayAck(item) {
+  if (!item || !beginDisplayAck(S.demo, item.display_id)) return;
+  requestAnimationFrame(async () => {
+    try {
+      await api.demoAdviceDisplay(S.demo.sessionId, item.checkpoint_id, {
+        display_id: item.display_id,
+        client_event_id: `web-mount-${item.display_id}`,
+        mounted_at: new Date().toISOString(),
+      });
+      completeDisplayAck(S.demo, item.display_id, true);
+    } catch (error) {
+      completeDisplayAck(S.demo, item.display_id, false);
+      console.warn("display ACK failed", error);
+    }
+  });
+}
+
+function sendAdviceResponse(item, response) {
+  if (!item) return;
+  api.demoAdviceResponse(S.demo.sessionId, item.checkpoint_id, {
+    display_id: item.display_id,
+    client_event_id: `web-${response}-${item.display_id}`,
+    response,
+    occurred_at: new Date().toISOString(),
+  }).catch((error) => console.warn("advice response failed", error));
+}
+
+function requestDemoWhy(item, panel, button, cardStepVersion) {
+  if (!item || button.disabled) return;
+  button.disabled = true;
+  const attempt = Number(button.dataset.attempt || "0") + 1;
+  button.dataset.attempt = String(attempt);
+  const requestId = `web-why-${item.display_id}-${attempt}`;
+  panel.hidden = false;
+  panel.textContent = "Đang giải thích…";
+  api.demoAdviceWhy(S.demo.sessionId, item.checkpoint_id, {
+    display_id: item.display_id,
+    client_request_id: requestId,
+    expected_step_version: cardStepVersion,
+  }).then((response) => {
+    // A late response must never mount into a newer card or a detached card.
+    if (!panel.isConnected || response?.checkpoint_id !== item.checkpoint_id
+        || response?.display_id !== item.display_id
+        || Number(response?.step_version) !== Number(cardStepVersion)) return;
+    panel.textContent = response.status === "silent"
+      ? `Không thể giải thích lúc này (${response.silent?.reason_code || "unsafe"})`
+      : (response.explanation || "Chưa có giải thích.");
+    button.disabled = false;
+    button.textContent = response.fallback ? "Vì sao? (mẫu)" : "Ẩn giải thích";
+  }).catch((error) => {
+    if (!panel.isConnected) return;
+    panel.textContent = `Không tải được giải thích (${error.message}).`;
+    button.disabled = false;
+    button.textContent = "Thử lại Vì sao";
+  });
+}
+
+function renderDemoAdvice(advice) {
+  const slot = $("demo-advice");
+  slot.replaceChildren();
+  if (!advice || advice.status !== "ready" || !advice.items?.length) {
+    addText(slot, "span", `Advice: im lặng (${advice?.silent?.reason_code || advice?.reason_code || "no_checkpoint"})`, "note");
+    return;
+  }
+  const item = advice.items[0];
+  addText(slot, "div", item.title, "tag");
+  const actionCode = item.canonical_action?.code || "NO_ACTION";
+  addText(slot, "div", `Hành động hiện tại: ${actionCode}`, "note");
+  addText(slot, "div", item.summary, "advice-summary");
+  const source = item.provenance?.is_mock ? "MOCK" : "LIVE";
+  addText(slot, "div", `Nguồn: ${source} · presentation: ${advice.presentation_source || "template"}`, "note");
+  if (item.action_window?.start && item.action_window?.end) {
+    addText(slot, "div", `Khung: ${item.action_window.start} → ${item.action_window.end}`, "note");
+  }
+  for (const future of item.future_plan || []) {
+    const window = future.window?.start && future.window?.end
+      ? ` · ${future.window.start} → ${future.window.end}` : "";
+    addText(slot, "div", `Sắp tới: ${future.code || "NO_ACTION"}${window}`, "note");
+  }
+  const numbers = item.numbers || [];
+  if (numbers.length) {
+    const list = document.createElement("ul");
+    for (const number of numbers) {
+      const value = [number.value, number.unit].filter((part) => part != null).join(" ");
+      addText(list, "li", `${value} · ${number.source || "source unknown"}`);
+    }
+    slot.appendChild(list);
+  }
+  const why = document.createElement("div");
+  why.hidden = true;
+  why.className = "note";
+  slot.appendChild(why);
+  const actions = document.createElement("div");
+  actions.style.display = "flex";
+  actions.style.gap = "6px";
+  actions.style.marginTop = "6px";
+  for (const response of ["accepted", "dismissed"]) {
+    const button = document.createElement("button");
+    button.className = "btn ghost";
+    button.style.margin = "0";
+    button.textContent = response === "accepted" ? "Làm theo" : response === "dismissed" ? "Bỏ qua" : "Vì sao";
+    button.addEventListener("click", () => sendAdviceResponse(item, response));
+    actions.appendChild(button);
+  }
+  const whyButton = document.createElement("button");
+  whyButton.className = "btn ghost";
+  whyButton.style.margin = "0";
+  whyButton.textContent = "Vì sao";
+  whyButton.addEventListener("click", () => requestDemoWhy(
+    item, why, whyButton, S.demo.renderedStepVersion));
+  actions.appendChild(whyButton);
+  slot.appendChild(actions);
+  sendDisplayAck(item);
+}
+
+function renderDemoStep(response) {
+  const responseVersion = Number(response?.step_version);
+  if (!Number.isFinite(responseVersion) || isStaleStep(S.demo.renderedStepVersion, responseVersion)) {
+    return false;
+  }
+  S.demo.renderedStepVersion = responseVersion;
+  S.demo.stepVersion = Math.max(S.demo.stepVersion, responseVersion);
+  S.demo.lastResponse = response;
+  const driver = response.driver || {};
+  const position = driver.position || {};
+  if (position.lat != null && position.lng != null) {
+    driverMarker.setLatLng([position.lat, position.lng]);
+    map.panTo([position.lat, position.lng], {animate: false});
+  }
+  $("pill-payout").textContent = `${fmtVnd(driver.payout_vnd)} · ${response.provenance?.data_mode || "sim-engine"}`;
+  $("pill-trips").textContent = `${driver.trips_done ?? 0} cuốc`;
+  $("pill-soc").firstChild.nodeValue = `⚡ ${driver.soc_pct ?? "—"}% `;
+  $("pill-soc-tag").hidden = false;
+  $("demo-step-meta").textContent =
+    `t=${response.simulation_time_min} phút · bước ${response.step_version} · ${response.transition.kind}`;
+  renderDemoTrip(response.trip);
+  renderDemoRoutes(response);
+  renderDemoAdvice(response.advice);
+  const history = $("trip-history");
+  history.replaceChildren();
+  for (const event of (response.timeline || []).slice().reverse().slice(0, 8)) {
+    const row = document.createElement("div");
+    row.className = "row-item";
+    addText(row, "span", `${event.sequence}. t=${event.t_min} · ${event.kind}`);
+    history.appendChild(row);
+  }
+  return true;
+}
+
+async function createDemoSession() {
+  if (S.demo.sessionId) return;
+  $("demo-session-status").textContent = "Đang chạy simulator replay…";
+  try {
+    const created = await api.demoCreate(1000);
+    S.demo.sessionId = created.session_id;
+    S.demo.stepVersion = created.step_version;
+    const picker = $("demo-actor");
+    picker.replaceChildren();
+    for (const actor of created.actors || []) {
+      const option = document.createElement("option");
+      option.value = actor.actor_id;
+      option.textContent = `Actor ${actor.actor_id} · ${actor.archetype} · ${actor.fleet}`;
+      picker.appendChild(option);
+    }
+    picker.disabled = false;
+    $("demo-session-status").textContent = `Session ${created.session_id.slice(0, 8)} · chọn actor`;
+  } catch (error) {
+    $("demo-session-status").textContent = `Không tạo được session: ${error.message}`;
+  }
+}
+
+async function selectDemoActor() {
+  if (!S.demo.sessionId || !$("demo-actor").value) return;
+  try {
+    const selected = await api.demoSelect(S.demo.sessionId, Number($("demo-actor").value));
+    S.demo.actorId = selected.actor_id;
+    S.demo.stepVersion = selected.step_version;
+    $("btn-demo-next").disabled = false;
+    $("demo-session-status").textContent = `Actor ${S.demo.actorId} · replay sẵn sàng`;
+  } catch (error) {
+    $("demo-session-status").textContent = `Không chọn được actor: ${error.message}`;
+  }
+}
+
+async function nextDemoStep() {
+  if (!S.demo.sessionId || S.demo.actorId == null || S.demo.busy) return;
+  S.demo.busy = true;
+  $("btn-demo-next").disabled = true;
+  try {
+    const response = await api.demoStep(S.demo.sessionId, {
+      client_step_id: `web-${S.demo.sessionId}-${S.demo.stepVersion}`,
+      expected_step_version: S.demo.stepVersion,
     });
-    $("trip-history").innerHTML = S.demoTrips.map((t) => `
-      <div class="row-item"><div><b>${t.name}</b><br>
-        <span style="font-size:10.5px;color:var(--text-muted)">${t.km} km · route ${t.src}<br>
-          ${t.policy} · MOCK — không cộng vào thu nhập ngày</span></div>
-        <div style="text-align:right"><div class="amt">gross ${fmtVnd(t.gross)}</div>
-          <div style="font-size:10.5px;color:var(--text-muted)">payout cuốc ${fmtVnd(t.payout)}</div></div></div>`).join("");
-    $("trip-active").classList.add("hidden");
-    $("cta-area").classList.remove("hidden");
-    $("cta-text").textContent = "Tìm cuốc demo tiếp";
-    clearRoute();
-    S.tripStep = 0;
-    // UX-CARDS: nudge CHỈ sau khi trả khách xong (đang dừng — NHTSA); im lặng = không card
-    Cards.nudge({ isDriving: false });
+    renderDemoStep(response);
+    $("demo-session-status").textContent = response.provenance?.is_mock
+      ? `Actor ${response.actor_id} · MOCK simulator replay`
+      : `Actor ${response.actor_id} · replay`;
+  } catch (error) {
+    $("demo-session-status").textContent = `Next Step lỗi: ${error.message}`;
+  } finally {
+    S.demo.busy = false;
+    $("btn-demo-next").disabled = false;
   }
 }
 
 /* ================= NAV + EVENTS ================= */
 function switchScreen(id) {
-  document.querySelectorAll(".screen").forEach((s) => s.classList.add("hidden"));
+  document.querySelectorAll(".screen").forEach((screen) => screen.classList.add("hidden"));
   $(id).classList.remove("hidden");
-  document.querySelectorAll(".nav-btn").forEach((b) =>
-    b.classList.toggle("active", b.dataset.screen === id));
+  document.querySelectorAll(".nav-btn").forEach((button) =>
+    button.classList.toggle("active", button.dataset.screen === id));
   if (id === "screen-now") setTimeout(() => map.invalidateSize(), 150);
 }
 
+async function refreshAdherence() {
+  try {
+    const result = await api.adviceActions(S.driverId);
+    const slot = $("adherence-rows");
+    slot.replaceChildren();
+    if (!result.actions?.length) {
+      addText(slot, "span", "chưa có bản ghi");
+      return;
+    }
+    for (const action of result.actions.slice(0, 12)) {
+      const row = document.createElement("div");
+      row.style.padding = "5px 0";
+      row.style.borderTop = "1px solid var(--border-hairline)";
+      addText(row, "span", `${action.action} · ${action.card_kind} · ${action.date} · ${action.advice_id}`);
+      slot.appendChild(row);
+    }
+  } catch (error) {
+    $("adherence-rows").textContent = `không đọc được nhật ký (${error.message})`;
+  }
+}
+
 function bindEvents() {
-  document.querySelectorAll(".nav-btn").forEach((b) =>
-    b.addEventListener("click", () => switchScreen(b.dataset.screen)));
+  document.querySelectorAll(".nav-btn").forEach((button) =>
+    button.addEventListener("click", () => switchScreen(button.dataset.screen)));
   $("btn-menu").addEventListener("click", () => switchScreen("screen-settings"));
-  $("bot-fab").addEventListener("click", () => {
-    $("bot-sheet").classList.remove("hidden");
-    $("bot-dot").classList.add("hidden");
-    renderCardHistory();
-  });
+  $("bot-fab").addEventListener("click", () => $("bot-sheet").classList.remove("hidden"));
   $("btn-bot-close").addEventListener("click", () => $("bot-sheet").classList.add("hidden"));
-  $("bot-sheet").addEventListener("click", (e) => {
-    if (e.target === $("bot-sheet")) $("bot-sheet").classList.add("hidden");
+  $("bot-sheet").addEventListener("click", (event) => {
+    if (event.target === $("bot-sheet")) $("bot-sheet").classList.add("hidden");
   });
-  $("btn-day-demo").addEventListener("click", runDayDemo);
-  $("btn-show-brief").addEventListener("click", () => { $("bot-sheet").classList.add("hidden"); Cards.brief(); });
-  $("btn-show-nudge").addEventListener("click", () => { $("bot-sheet").classList.add("hidden"); Cards.nudge({ isDriving: S.tripStep >= 2 }); });
-  $("btn-show-recap").addEventListener("click", () => { $("bot-sheet").classList.add("hidden"); Cards.recap(); });
+  $("btn-day-demo").addEventListener("click", async () => {
+    $("bot-sheet").classList.add("hidden");
+    switchScreen("screen-now");
+    await createDemoSession();
+  });
+  $("demo-actor").addEventListener("change", selectDemoActor);
+  $("btn-demo-next").addEventListener("click", nextDemoStep);
   $("btn-adherence-refresh").addEventListener("click", refreshAdherence);
-  $("btn-cta").addEventListener("click", () => {
-    if (S.tripStep === 0) startIncomingTrip();
-  });
-  $("btn-decline").addEventListener("click", () => {
-    $("trip-incoming").classList.add("hidden");
-    $("cta-area").classList.remove("hidden");
-    clearRoute(); S.tripStep = 0;
-  });
-  $("btn-accept").addEventListener("click", acceptTrip);
-  $("btn-nav-next").addEventListener("click", navNext);
   $("btn-apply-profile").addEventListener("click", async () => {
     await loadProfile($("sel-driver").value, $("sel-date").value);
     switchScreen("screen-now");
   });
 }
 
-/* ================= ADHERENCE LOG (Cài đặt) ================= */
-async function refreshAdherence() {
-  try {
-    const r = await api.adviceActions(S.driverId);
-    $("adherence-rows").innerHTML = r.actions.length
-      ? r.actions.slice(0, 12).map((a) => `
-        <div style="padding:5px 0;border-top:1px solid var(--border-hairline)">
-          <b>${{ followed: "✅ Làm theo", dismissed: "✖ Bỏ qua", expanded: "？Vì sao" }[a.action] || a.action}</b>
-          · ${a.card_kind} · ${a.date}
-          <span style="color:var(--text-muted);font-size:10.5px">· ${a.advice_id}</span></div>`).join("")
-      : "chưa có bản ghi";
-  } catch (e) {
-    $("adherence-rows").textContent = `không đọc được nhật ký (${e.message})`;
-  }
-}
-
 /* ================= INIT ================= */
 (async function init() {
   initMap();
   bindEvents();
-  const dv = await api.defaultView();
-  Cards.init($("card-stack"), {
-    profile: () => ({ driverId: S.driverId, date: S.date }),
-    state: () => S.state,
-  });
-  await loadProfile(dv.driver_id, dv.date);
-  await fillCatalog();
-  await refreshAdherence();
-  Cards.brief();   // F1: brief tự hiện khi mở app (không cần bấm)
+  try {
+    const defaultView = await api.defaultView();
+    await loadProfile(defaultView.driver_id, defaultView.date);
+    await fillCatalog();
+    await refreshAdherence();
+    await createDemoSession();
+  } catch (error) {
+    $("demo-session-status").textContent = `Không khởi tạo được demo: ${error.message}`;
+  }
 })();

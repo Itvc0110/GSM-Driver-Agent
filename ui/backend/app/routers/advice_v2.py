@@ -26,7 +26,8 @@ router = APIRouter()
 TELEMETRY_DIR = mockdata.REPO_ROOT / "data" / "ui-telemetry"
 ORCHESTRATOR_FACTORY = ProductSolverOrchestrator
 PRESENTER_FACTORY = lambda: CheckpointPresenter(
-    mode=os.getenv("ADVICE_PRESENTATION_MODE", "template"))
+    mode=("template" if os.getenv("ADVICE_PRESENTATION_MODE", "template") == "internal_live"
+          else os.getenv("ADVICE_PRESENTATION_MODE", "template")))
 
 
 def _checkpoint_db() -> Path:
@@ -75,8 +76,19 @@ class ResponseBody(BaseModel):
 def _open_service() -> tuple[CheckpointStore, AdviceCheckpointService]:
     TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
     store = CheckpointStore(_checkpoint_db())
+    provider = None
+    if (os.getenv("ADVICE_PRESENTATION_MODE", "template") == "internal_live"
+            and os.getenv("ADVICE_AGENT_ALLOWLIST", "0") == "1"
+            and os.getenv("ADVICE_AGENT_KILL_SWITCH", "0") != "1"):
+        try:
+            from gsm_core.advisor.advice_agent import OpenAIAdviceProvider
+            provider = OpenAIAdviceProvider.from_env()
+        except Exception:
+            provider = None
     return store, AdviceCheckpointService(
-        store, ORCHESTRATOR_FACTORY(), presenter=PRESENTER_FACTORY())
+        store, ORCHESTRATOR_FACTORY(), presenter=PRESENTER_FACTORY(),
+        presentation_mode=os.getenv("ADVICE_PRESENTATION_MODE", "template"),
+        agent_provider=provider)
 
 
 @router.get("")

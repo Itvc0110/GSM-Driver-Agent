@@ -56,6 +56,7 @@ LAYER_OF: dict[str, str] = {
     "advice_artifact": "advisor", "advice_checkpoint": "advisor",
     "advice_checkpoint_event": "advisor",
     "agent_presentation_input": "advisor", "agent_presentation_output": "advisor",
+    "agent_explanation_input": "advisor", "agent_explanation_output": "advisor",
     # l1r = L1-real: mirror 13 bảng thật gsm-data-prod (re-ground — UPDATE-033, PI-1)
     "driver_statistic_daily": "l1r", "driver_online_hours_sap_id": "l1r",
     "driver_orders_rush_hours": "l1r", "driver_bike_stoppoints": "l1r",

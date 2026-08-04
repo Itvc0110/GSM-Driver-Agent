@@ -360,6 +360,34 @@ def test_atomic_lease_is_reused_and_offered_exactly_once(tmp_path):
         assert [e["event_type"] for e in store.events("ckpt-1")].count("offered") == 1
 
 
+def test_lease_pins_immutable_presentation_content(tmp_path):
+    from gsm_core.lifecycle.checkpoint_store import CheckpointStore
+
+    with CheckpointStore(tmp_path / "checkpoint.db") as store:
+        store.create_checkpoint(_checkpoint())
+        store.append_event(_event("ready", "e-ready"))
+        pinned = {
+            "presentation_artifact_id": "presentation:1",
+            "content_digest": "sha256:content-1",
+            "presentation_source": "template",
+            "template_version": "checkpoint-v2",
+            "model_version": None,
+            "prompt_version": None,
+            "schema_version": "1.0.0",
+            "verifier_version": "1.0.0",
+            "policy_version": "policy-v1",
+        }
+        first = store.acquire_presentation_lease(
+            "ckpt-1", "2026-08-03T09:00:02+07:00", presentation=pinned,
+            display_id_factory=lambda: "display-first")
+        second = store.acquire_presentation_lease(
+            "ckpt-1", "2026-08-03T09:00:03+07:00", presentation={**pinned, "content_digest": "sha256:other"},
+            display_id_factory=lambda: "display-must-not-be-used")
+
+        assert first == second
+        assert first["content_digest"] == "sha256:content-1"
+
+
 def test_concurrent_lease_acquisition_has_one_owner(tmp_path):
     from gsm_core.lifecycle.checkpoint_store import CheckpointStore
 

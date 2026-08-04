@@ -103,6 +103,11 @@ class CheckpointStore:
             expires_at TEXT NOT NULL,
             record TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS advice_explanation_requests (
+            client_request_id TEXT PRIMARY KEY,
+            context_digest TEXT NOT NULL,
+            record TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS advice_presentation_metrics (
             metric_id INTEGER PRIMARY KEY AUTOINCREMENT,
             occurred_at TEXT NOT NULL,
@@ -223,7 +228,8 @@ class CheckpointStore:
         return project_checkpoint_events(self.events(checkpoint_id))
 
     def acquire_presentation_lease(self, checkpoint_id: str, leased_at: str,
-                                   display_id_factory=None) -> dict:
+                                   display_id_factory=None,
+                                   presentation: dict | None = None) -> dict:
         """Atomically create the one presentation lease and its `offered` event."""
         factory = display_id_factory or (lambda: str(uuid.uuid4()))
         self.db.execute("BEGIN IMMEDIATE")
@@ -248,6 +254,11 @@ class CheckpointStore:
                 "display_id": display_id,
                 "leased_at": leased_at,
             }
+            if presentation:
+                # The lease stores immutable presentation identity/version metadata.  The
+                # actual artifact is content-addressed by the orchestration layer before
+                # this transaction; retrying an existing lease never re-renders text.
+                lease.update(dict(presentation))
             event = {
                 "schema_version": checkpoint.get("schema_version", "1.1.0"),
                 "event_id": f"offered:{checkpoint_id}",
@@ -392,6 +403,27 @@ class CheckpointStore:
             self.db.execute(
                 "DELETE FROM advice_generation_claims WHERE cache_key = ? AND owner_id = ?",
                 (cache_key, owner_id))
+
+    def explanation_request(self, client_request_id: str) -> dict | None:
+        row = self.db.execute(
+            "SELECT context_digest,record FROM advice_explanation_requests "
+            "WHERE client_request_id = ?", (client_request_id,)).fetchone()
+        if row is None:
+            return None
+        return {"context_digest": row[0], "record": json.loads(row[1])}
+
+    def put_explanation_request(self, client_request_id: str, context_digest: str,
+                                record: dict) -> bool:
+        existing = self.explanation_request(client_request_id)
+        if existing is not None:
+            if existing["context_digest"] != context_digest or existing["record"] != record:
+                raise ValueError("client_request_id đã dùng cho context explanation khác")
+            return False
+        with self.db:
+            self.db.execute(
+                "INSERT INTO advice_explanation_requests(client_request_id,context_digest,record) "
+                "VALUES(?,?,?)", (client_request_id, context_digest, _json(record)))
+        return True
 
     def append_presentation_metric(self, record: dict) -> None:
         required = {

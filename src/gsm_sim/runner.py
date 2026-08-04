@@ -29,9 +29,14 @@ class RunResult:
     config: Config
     policy: PolicyBundle
     grid: Grid
+    # Canonical identity emitted by World/derive_run_id.  Keeping it on the result is
+    # required for trace/session/checkpoint joins; callers that construct synthetic
+    # fixtures may leave the compatibility default empty.
+    run_id: str = ""
     env: EnvironmentContext | None = None
     congestion: CongestionField | None = None
     traj: list = field(default_factory=list)
+    trace_snapshots: list[dict] = field(default_factory=list)
     segments: list = field(default_factory=list)
     stations: list = field(default_factory=list)
     order_states: dict = field(default_factory=dict)
@@ -139,7 +144,9 @@ def run_once(cfg: Config, seed: int) -> RunResult:
     segments, trace = finalize_checkpoint_trace(world, events)
     return RunResult(seed=seed, events=events, actors=actors, orders=orders,
                      config=cfg, policy=policy, grid=grid, env=env,
+                     run_id=world.run_id,
                      congestion=congestion, traj=world.traj, segments=segments,
+                     trace_snapshots=world.trace_snapshots,
                      stations=world.stations, order_states=world.order_states,
                      **trace)
 

@@ -67,6 +67,11 @@ class World:
         self.congestion = congestion  # CongestionField | None (spatiotemporal)
         # traj: waypoint (t_min, actor_id, lat, lon, state) tại mọi transition — fallback/debug
         self.traj: list[tuple] = []
+        # Observable replay snapshots.  This is append-only diagnostic state: it is captured
+        # from the actor immediately after an existing event is logged and never drives the
+        # SimPy world or consumes an RNG draw.  The demo projection uses it instead of trying
+        # to reconstruct SOC/payout from a final actor object.
+        self.trace_snapshots: list[dict] = []
         # segments: mỗi hoạt động (enroute/on_trip/relocate/charge/rest) với t0/t1/from/to CHÍNH XÁC
         # → nền cho Gantt + TripsLayer (idle = khoảng trống giữa các segment).
         self.segments: list[dict] = []
@@ -185,6 +190,36 @@ class World:
     def log(self, actor_id: int, kind: str, cell: str = "", **detail):
         self.events.append(Event(round(self.env.now, 3), actor_id, kind, cell, detail,
                                  self.run_id))
+        actor = self.actors.get(actor_id)
+        if actor is None:
+            return
+        # Keep this snapshot deliberately data-only.  No helper below is allowed to mutate
+        # actor/world state; adding the observer must remain behavior-neutral.
+        self.trace_snapshots.append({
+            "event_index": len(self.events) - 1,
+            "t_min": round(self.env.now, 3),
+            "actor_id": actor_id,
+            "event_kind": kind,
+            "event_detail": dict(detail),
+            "state": actor.state.value,
+            "cell": actor.cell,
+            "lat": float(actor.lat),
+            "lon": float(actor.lon),
+            "soc_pct": float(actor.soc_pct),
+            "payout_vnd": int(actor.payout_vnd),
+            "gross_vnd": int(actor.gross_vnd),
+            "points": int(actor.points),
+            "trips_done": int(actor.trips_done),
+            "orders_offered": int(actor.orders_offered),
+            "orders_accepted": int(actor.orders_accepted),
+            "orders_completed": int(actor.orders_completed),
+            "orders_cancelled": int(actor.orders_cancelled),
+            "online_min": round(float(actor.online_min), 3),
+            "rest_min": round(float(actor.rest_min), 3),
+            "charge_min": round(float(actor.charge_min), 3),
+            "shift_start_min": float(actor.shift_start_min),
+            "shift_end_min": float(actor.shift_end_min),
+        })
 
     def _decision_id(self, actor_id: int, channel: str, now: float) -> str:
         """decision_id deterministic của sim (ĐA-05) — theo công thức spec
@@ -609,11 +644,6 @@ class World:
                 self.open_orders.pop(order.order_id, None)
                 self.order_open_since.pop(order.order_id, None)
                 self._order_transition(order.order_id, "MATCHED")
-                # SIM-2: ghi cùng bộ số như lúc từ chối ⇒ so sánh được cuốc NHẬN vs cuốc BỎ
-                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id,
-                         net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
-                         gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4),
-                         reason=dec.reason)
                 # ENROUTE_EXEMPT (T-045a b2): đi ĐÓN KHÁCH thì KHÔNG đặt `enroute_cell`.
                 # Đích thật của chuyến này là điểm TRẢ khách, cách đây một quãng bất định và có
                 # thể vài chục phút. Coi tài xế đang chở khách là "cung sắp tới ô Y" sẽ thổi
@@ -621,6 +651,13 @@ class World:
                 # thiếu người. Giới hạn này có nhãn, không phải bỏ sót — xem
                 # `tests/test_market_state_sim_producer.py::test_every_enroute_transition_sets_a_target`.
                 actor.state = ActorState.ENROUTE
+                # Snapshot order_matched sau boundary state mutation.  Event details remain
+                # identical; only the observer's canonical actor state changes from idle to
+                # enroute.  No RNG or simulator decision is added here.
+                self.log(actor.actor_id, "order_matched", actor.cell, order_id=order.order_id,
+                         net_vnd=round(dec.net_vnd), pickup_km=round(asg.pickup_dist_km, 2),
+                         gross_vnd=order.gross_vnd, p_accept=round(dec.p_accept, 4),
+                         reason=dec.reason)
                 self.env.process(self._serve_trip(actor, order, asg))
 
     def _serve_trip(self, actor: Actor, order, asg):
@@ -650,9 +687,9 @@ class World:
             self._seg(actor.actor_id, t_assign, self.env.now, "enroute", frm, (lat, lon),
                       order_id=order.order_id)
             self._order_transition(order.order_id, "CANCELLED_AFTER_ACCEPT")
+            actor.state = ActorState.IDLE
             self.log(actor.actor_id, "order_cancelled_after_accept", actor.cell,
                      order_id=order.order_id, wasted_min=round(spent, 2))
-            actor.state = ActorState.IDLE
             return
 
         yield self.env.timeout(pickup_min)
