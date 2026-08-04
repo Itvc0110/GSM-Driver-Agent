@@ -16,6 +16,7 @@ from gsm_core.vn_format import render_number_vn
 _REGISTRY = SchemaRegistry(Path(__file__).resolve().parents[3] / "schemas")
 _PLACEHOLDER = re.compile(r"\{\{([FNC]\d+)\}\}")
 _CJK = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
+_UNSAFE_MARKUP = re.compile(r"<\s*/?\s*[A-Za-z][^>]*>|[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 _TEMPLATE = {
     "PROTECT_ELIGIBILITY": (
@@ -118,6 +119,8 @@ def verify_agent_output(raw: Any, checkpoint: dict, *, facts: list[dict],
             errors.append(f"used_{prefix.lower()}_ids_mismatch")
 
     without_placeholders = _PLACEHOLDER.sub("", text)
+    if _UNSAFE_MARKUP.search(without_placeholders):
+        errors.append("unsafe_markup_or_control_char")
     if re.search(r"\d", without_placeholders):
         errors.append("fabricated_number")
     if _CJK.search(text):

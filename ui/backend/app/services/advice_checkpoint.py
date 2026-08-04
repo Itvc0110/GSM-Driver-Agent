@@ -354,6 +354,51 @@ class AdviceCheckpointService:
             checkpoint["checkpoint_id"], lease_time)
         return self._envelope(checkpoint, lease, surface, t_now, rendered=rendered)
 
+    def present_existing_checkpoint(self, checkpoint_id: str, *, surface: str,
+                                    generated_at: str) -> dict:
+        """Present a checkpoint already produced by a simulator trace.
+
+        This bridge deliberately skips ``ProductSolverOrchestrator.solve``.  The trace is
+        the source of the exact snapshot/input/report; this method only replays lifecycle,
+        presenter/verifier and immutable lease semantics in the existing checkpoint store.
+        """
+        checkpoint = self.store.checkpoint(checkpoint_id)
+        if checkpoint is None:
+            raise CheckpointNotFoundError(checkpoint_id)
+        if checkpoint.get("driver_id") is None:
+            raise CheckpointConflictError("checkpoint_missing_driver")
+        state = self.store.state(checkpoint_id)["state"]
+        valid_until = checkpoint.get("validity", {}).get("valid_until")
+        if valid_until is None:
+            return self._silent(surface, generated_at, "missing_validity")
+        if datetime.fromisoformat(valid_until) <= datetime.fromisoformat(generated_at):
+            if state not in PRESENTATION_TERMINAL_STATES:
+                self.store.append_event(_event(
+                    checkpoint, "expired", generated_at,
+                    event_id=f"expired:{checkpoint_id}", reason_code="expired"))
+            return self._silent(surface, generated_at, "expired")
+        if state in PRESENTATION_TERMINAL_STATES:
+            return self._silent(surface, generated_at, state)
+        if state == "created":
+            self.store.append_event(_event(
+                checkpoint, "ready", generated_at,
+                event_id=f"ready:{checkpoint_id}"))
+        elif state not in {"ready", "generated", "generation_failed"}:
+            # A replay transition is only allowed to present a checkpoint that the
+            # simulator/policy marked displayable.  In particular, queued advice must
+            # not acquire a lease merely because a Web cursor reached its timestamp.
+            return self._silent(surface, generated_at, state)
+        rendered = self._prepare_presentation(checkpoint, generated_at, allow_shadow=True)
+        if rendered is None:
+            return self._silent(surface, generated_at, "discarded_stale")
+        lease_time = (datetime.fromisoformat(generated_at)
+                      + timedelta(microseconds=1)).isoformat()
+        try:
+            lease = self.store.acquire_presentation_lease(checkpoint_id, lease_time)
+        except (KeyError, ValueError) as exc:
+            raise CheckpointConflictError(str(exc)) from exc
+        return self._envelope(checkpoint, lease, surface, generated_at, rendered=rendered)
+
     def acknowledge_display(self, checkpoint_id: str, *, display_id: str,
                             client_event_id: str, mounted_at: str) -> dict:
         return self._client_event(

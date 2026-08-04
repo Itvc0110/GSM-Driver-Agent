@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 import hashlib
 import math
@@ -55,10 +56,16 @@ class DemoSessionService:
 
     def __init__(self, *, run_factory: Callable[[int], Any] | None = None,
                  session_id_factory: Callable[[], str] | None = None,
-                 route_factory: Callable[[list[dict]], dict] | None = None):
+                 route_factory: Callable[[list[dict]], dict] | None = None,
+                 checkpoint_store_path: str | Path | None = None):
         self.run_factory = run_factory or _default_run
         self.session_id_factory = session_id_factory or (lambda: str(uuid.uuid4()))
         self.route_factory = route_factory or _default_route
+        if checkpoint_store_path is None:
+            from app.adapters import mockdata
+            checkpoint_store_path = mockdata.REPO_ROOT / "data" / "ui-telemetry" / "advice_checkpoint.db"
+        self.checkpoint_store_path = Path(checkpoint_store_path)
+        self.checkpoint_store_path.parent.mkdir(parents=True, exist_ok=True)
         self._sessions: dict[str, _DemoSession] = {}
         self._lock = threading.RLock()
 
@@ -161,7 +168,7 @@ class DemoSessionService:
         driver = transition["driver"]
         trip = transition.get("trip")
         routes = self._routes(session, driver, trip)
-        advice = DemoSessionService._advice(transition.get("checkpoint"))
+        advice = self._advice(session, transition.get("checkpoint"), transition["t_min"])
         timeline = [
             {"sequence": item["sequence"], "transition_id": item["transition_id"],
              "t_min": item["t_min"], "kind": item["kind"]}
@@ -194,15 +201,48 @@ class DemoSessionService:
         return {"driver": dict(driver["position"]), "markers": markers,
                 "is_mock": True, "data_mode": "sim-engine"}
 
-    @staticmethod
-    def _advice(checkpoint: dict | None) -> dict:
+    def _advice(self, session: _DemoSession, checkpoint: dict | None,
+                simulation_time_min: float) -> dict:
         if checkpoint is None:
             return {"status": "silent", "reason_code": "no_checkpoint"}
-        # Task 4 replaces this trace reference with the persisted AdviceEnvelopeV2 lease.
-        # Keeping the raw checkpoint separate makes the current step truthful and avoids a
-        # fake display ID before the lifecycle bridge has actually offered one.
-        return {"status": "ready", "checkpoint": checkpoint,
-                "presentation_source": "template"}
+        # The simulator has already produced the exact snapshot/input/report.  Persist and
+        # present that immutable record; never invoke ProductSolverOrchestrator on a click.
+        from app.services.advice_checkpoint import AdviceCheckpointService, _iso_for_minute
+        from gsm_core.lifecycle.checkpoint_store import CheckpointStore
+        from gsm_core.advisor.checkpoint_presenter import CheckpointPresenter
+        import os
+
+        generated_at = _iso_for_minute("2026-07-01", int(round(simulation_time_min)))
+        try:
+            artifact_by_id = {
+                item["artifact_id"]: item
+                for item in getattr(session.result, "advice_artifacts", [])
+            }
+            refs = [checkpoint.get("snapshot_ref"), checkpoint.get("solver_artifact_ref"),
+                    *(checkpoint.get("solver_input_refs") or []),
+                    *(checkpoint.get("solver_report_refs") or [])]
+            artifacts = [artifact_by_id[ref] for ref in refs if ref in artifact_by_id]
+            with CheckpointStore(self.checkpoint_store_path) as store:
+                store.create_checkpoint_bundle(artifacts, checkpoint)
+                # Replay the simulator's policy verdict exactly.  The bridge only creates
+                # a READY event for hand-built traces that did not export lifecycle events;
+                # it must not turn a queued/suppressed checkpoint into a card.
+                for event in getattr(session.result, "advice_checkpoint_events", []):
+                    if (event.get("checkpoint_id") == checkpoint.get("checkpoint_id")
+                            and event.get("event_type") != "created"):
+                        store.append_event(event)
+                presenter = CheckpointPresenter(
+                    mode=os.getenv("ADVICE_PRESENTATION_MODE", "template"))
+                advice = AdviceCheckpointService(store, presenter=presenter).present_existing_checkpoint(
+                    checkpoint["checkpoint_id"], surface=checkpoint["surface"],
+                    generated_at=generated_at)
+            return advice
+        except Exception:
+            # A failed bridge must not make replay unusable.  The canonical transition is
+            # still returned, while this step remains an honest silent/fallback response.
+            return {"status": "silent", "surface": checkpoint.get("surface", "nudge"),
+                    "generated_at": generated_at,
+                    "silent": {"reason_code": "presentation_fallback"}, "items": []}
 
     def _routes(self, session: _DemoSession, driver: dict,
                 trip: dict | None) -> list[dict]:

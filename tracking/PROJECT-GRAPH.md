@@ -235,7 +235,9 @@ files (074–091) had no graph link. Do not delete rows here without re-running 
 
 | [UPDATE-127](updates/UPDATE-127-reconcile-advice-checkpoint-merge.md) | **Hòa giải `origin/main` với AdviceCheckpoint P2–P5**: giữ cả hai visual gate V-25 theo source UPDATE-121/126, hợp nhất D-M3-17 về `FIXED`, giữ D-M3-18 `TODO`; không đổi runtime | `DONE-CODE` / docs-only | tracking / governance / UI gate | Không đóng V-25; chờ human/device verdict |
 | [UPDATE-128](updates/UPDATE-128-unified-web-demo-trace.md) | Unified Web Demo — observer-only simulator snapshots và deterministic transition projection | `DONE-CODE / VISUAL BLOCKED` | simulator / web / replay | mở server session, canonical step và Web render |
+| [UPDATE-129](updates/UPDATE-129-unified-web-demo-session.md) | Unified Web Demo — server-owned session, actor selection, cursor, version và idempotent Next Step | `DONE-CODE / VISUAL BLOCKED` | backend / web / replay | mở canonical step, Advice bridge và Web render |
 | [UPDATE-130](updates/UPDATE-130-unified-web-demo-step.md) | Unified Web Demo — canonical step envelope, trip lifecycle projection và two-leg route fallback | `DONE-CODE / VISUAL BLOCKED` | backend / web / OSRM / replay | chờ Advice bridge và Web render |
+| [UPDATE-131](updates/UPDATE-131-unified-web-demo-advice-bridge.md) | Unified Web Demo — persist/replay AdviceCheckpoint bundle, READY/validity gate, shared lease và presenter verifier guard | `DONE-CODE / VISUAL BLOCKED` | backend / lifecycle / presenter / replay | chờ Web render + displayed ACK |
 
 ## 4. Task and file routing
 

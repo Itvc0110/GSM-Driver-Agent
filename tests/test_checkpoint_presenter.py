@@ -81,6 +81,8 @@ def test_presenter_is_side_effect_free_and_agent_only_enriches_text():
     {**valid_output(), "why_template": "Cuốc này nên nhận ngay."},
     {**valid_output(), "why_template": "Chắc chắn anh/chị sẽ kiếm thêm tiền."},
     {**valid_output(), "why_template": "立即 đổi pin."},
+    {**valid_output(), "why_template": "<script>{{N1}} {{C1}}</script>"},
+    {**valid_output(), "why_template": "x\u0007 {{N1}} {{C1}}"},
     {**valid_output(), "why_template": "x" * 281},
 ])
 def test_adversarial_outputs_fall_back_without_changing_canonical_fields(bad):
