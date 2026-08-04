@@ -73,6 +73,13 @@ def bridge_qua_nua_dem(cfg):
     return _bridge(cfg, end_min=1560.0)
 
 
+# `D-QD4-03`: ngưỡng SOC truyền cho `check_shift_extend`. Đặt 0.0 CÓ CHỦ Ý — các test trong file
+# này kiểm `b0-A`/`L1-04` (trần thế giới, token), KHÔNG kiểm lan can sức khoẻ. Ngưỡng 0 làm lan can
+# `soc_low` không bao giờ bắn ⇒ chúng đo đúng thứ chúng sinh ra để đo. Lan can có test riêng ở
+# `tests/test_shift_extend_rails.py`.
+_SOC_THRESHOLD = 0.0
+
+
 def _actor(shift_end: float) -> Actor:
     a = Actor(actor_id=1, archetype="P7", fleet=FleetType.SWAP, home_cell="x",
               shift_start_min=900.0, shift_end_min=shift_end, demand_prior_sigma=0.2,
@@ -172,8 +179,11 @@ def test_shift_extend_cannot_push_past_world_end(bridge, cfg):
     # (Bản đầu của test này dùng points=60 ⇒ gap 40 ⇒ need_min 200′ > trần ⇒ hàm trả 0 ngay,
     #  test XANH mà chưa hề chạm code path — đúng mẫu "test có mà không bắt" ở T-046.)
     a.points, a.online_min = 95, 300.0
+    # `D-QD4-03`: hàm nay nhận `soc_threshold` và trả `(phút, lý do)`. Fixture cố ý ĐỨNG NGOÀI ba
+    # lan can mới (soc 100% > ngưỡng; `online_min` 300 + `need_min` ~16 = 316 < `fatigue_threshold`
+    # 480) ⇒ test này vẫn kiểm ĐÚNG thứ nó sinh ra để kiểm (`b0-A`), không bị lan can chặn hộ.
     for _ in range(20):                        # nhiều lần rút RNG để chắc chắn có lần "follow"
-        bridge.check_shift_extend(a, 1200.0)
+        bridge.check_shift_extend(a, 1200.0, _SOC_THRESHOLD)
     assert a.shift_extended_min > 0.0, (
         "test KHÔNG chạm được nhánh hoãn ca ⇒ nó không kiểm gì cả; sửa fixture, đừng để xanh giả")
     assert a.shift_end_min <= WORLD_END_MIN, (
@@ -224,7 +234,7 @@ def test_infeasible_extend_does_not_burn_claim(cfg):
     a.shift_end_min = WORLD_END_MIN      # 24:00 — không còn một phút nào để kéo
     got1 = 0.0
     for _ in range(20):                  # đủ lần để chắc chắn coin có lần True
-        got1 += b.check_shift_extend(a, now)
+        got1 += b.check_shift_extend(a, now, _SOC_THRESHOLD)[0]
     assert got1 == 0.0 and a.shift_extended_min == 0.0, (
         "fixture hỏng: lần 1 phải BẤT KHẢ THI hoàn toàn (add = 0)")
 
@@ -233,7 +243,7 @@ def test_infeasible_extend_does_not_burn_claim(cfg):
     b.world_end_min = WORLD_END_MIN + 120.0
     got2 = 0.0
     for _ in range(20):
-        got2 += b.check_shift_extend(a, now + 2.0)   # vẫn bucket [1200, 1230)
+        got2 += b.check_shift_extend(a, now + 2.0, _SOC_THRESHOLD)[0]  # vẫn bucket [1200,1230)
     assert got2 > 0.0, (
         "L1-04: quyết định bất khả thi ở lần 1 đã TIÊU token `_claim_effect` ⇒ lần 2 "
         "(cùng bucket, nay khả thi) không áp được nữa — 28% quyết định mất hẳn kiểu này")
@@ -257,13 +267,13 @@ def test_applied_decision_does_not_spawn_ghost_infeasible_event(cfg):
     now = 1200.0
     applied = 0.0
     for _ in range(20):                  # lần đầu coin=True sẽ áp ~10′ ⇒ shift_end chạm 1440
-        applied += b.check_shift_extend(a, now)
+        applied += b.check_shift_extend(a, now, _SOC_THRESHOLD)[0]
     assert applied > 0.0, "fixture yếu: chưa áp được lần nào — test không kiểm gì"
     assert a.shift_end_min == WORLD_END_MIN, "fixture lệch: chưa chạm trần thế giới"
 
     # Hỏi lại trong CÙNG bucket sau khi đã áp + chạm trần: không được sinh outcome mới.
     for _ in range(10):
-        b.check_shift_extend(a, now + 4.0)
+        b.check_shift_extend(a, now + 4.0, _SOC_THRESHOLD)
     ghosts = [o for o in b.drain_spoken_outcomes() if o[2] == "shift_extend"]
     assert ghosts == [], (
         f"{len(ghosts)} event MA cho quyết định ĐÃ ÁP — event-count sẽ lệch decision-count "

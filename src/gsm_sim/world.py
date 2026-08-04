@@ -21,6 +21,9 @@ from .dispatcher import _speed_kmh, match_batch
 from .entities import Actor, ActorState, BatteryInStation, FleetType, Station
 from .geo import Grid, cell_distance_km, grid_disk
 from .policy import PolicyBundle
+# `D-QD4-03`: MỘT nguồn cho danh sách lan can kéo ca. Chép danh sách sang world sẽ tạo nguồn sự
+# thật thứ hai — đúng lỗi `D-M3-17` (UI tự tính tầm pin bằng công thức riêng, lệch engine 1,76×).
+from .sim_metrics import EXTEND_RAILS
 
 # D-M3-01: kind event cho các nhánh KHÔNG tự log của hai kênh từng thiếu mẫu số —
 # "đã NÓI mà không theo" và "đã theo nhưng thế giới không thi hành được".
@@ -845,13 +848,40 @@ class World:
                          channel="accept_lift")
 
             # SIM-4 kênh `shift_extend`: hoãn kết ca khi SÁT mốc điểm (có trần)
-            added = self.advice.check_shift_extend(actor, now)
+            added, extend_why = self.advice.check_shift_extend(
+                actor, now, float(self.veh["swap_soc_threshold_pct"]))
             if added:
                 self.log(actor.actor_id, "advice_shift_extend", actor.cell,
                          added_min=round(added, 1), points=int(actor.points),
                          new_shift_end=round(actor.shift_end_min, 1), followed=True,
                          decision_id=self._decision_id(actor.actor_id, "shift_extend", now),
                          channel="shift_extend")
+            elif extend_why in EXTEND_RAILS:
+                # `D-QD4-03`: lan can sức khoẻ phải NHÌN THẤY ĐƯỢC. Bản trước hàm này trả `0.0`
+                # trắng và nhánh `if added:` nuốt luôn ⇒ một lan can thêm vào đây sẽ chặn ĐÚNG
+                # nhưng **không để lại dấu vết nào**: không reason, không counter, guardrail tầng 5
+                # không thấy. Đó là "cú loại im lặng" (`N5`) và "cơ chế chỉ sống trên giấy"
+                # (`D-M3-08`) — hai họ lỗi repo đã trả giá.
+                #
+                # CHỈ log khi `extend_why` là lan can, KHÔNG log cho `channel_off`/`cadence`/…:
+                # kênh tắt mà vẫn ghi event thì mọi run mặc định đổi event stream ⇒ phá tính
+                # so-sánh-được của mọi số A/B đã đo (`b0-A` cùng họ).
+                # Đối xứng từng dòng với `advice_rest_veto` ở nhánh `should_defer_rest` bên trên.
+                # ⚠ CHỈ ghi `reason`, KHÔNG ghi giá trị ngưỡng mệt. Bản đầu của tôi log kèm
+                # `fatigue_threshold_min` cho tiện đọc, và cổng `test_no_fatigue_in_payout_path`
+                # bắt đúng: `World._actor_proc` nằm trong **scope MONEY**, nơi token `fatigue*`
+                # bị cấm (spec §7.4). Cổng đúng và tôi sai — `reason` đã đủ cho `xveto_*`, con số
+                # ngưỡng chỉ là tiện nghi, và nó đổi lấy một vi phạm ranh giới.
+                #
+                # 🔴 Ghi lại vì đây là lỗi VỀ QUY TRÌNH, không phải về code: tôi từng nói với Cường
+                # rằng "cổng test_health_boundary KHÔNG chặn hướng này" — câu đó lấy từ báo cáo của
+                # một tác tử soi và tôi **không tự kiểm**. Tác tử kiểm `check_shift_extend`
+                # (`advice_bridge`, ngoài scope) nhưng không kiểm chỗ tôi sẽ LOG (`world`, trong
+                # scope). Relay một claim chưa verify là cách sai số chui vào.
+                self.log(actor.actor_id, "advice_extend_veto", actor.cell,
+                         reason=extend_why, points=int(actor.points),
+                         online_min=round(actor.online_min, 1),
+                         soc_pct=round(actor.soc_pct, 1), channel="shift_extend")
 
             adv = self.advice.consult(actor, now, self._actor_demand_hint, actor.shift_end_min)
             if adv is not None:

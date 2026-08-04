@@ -56,6 +56,13 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
   lại được ở UI — im lặng. Nay có cổng: `SOFT_TOPICS` (thời tiết · `rest_nudge` · giao thông) vắng
   khoá khỏi `adherence_view`, `followed` bị 422. Xem §1.2c +
   `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md`.
+  🔴 **Bổ sung 2026-08-04 — ranh giới này có HAI CHIỀU, không chỉ một** (`D-QD4-03`, UPDATE-138).
+  Suốt thời gian dài chỉ chiều *"khuyên NGHỈ"* được canh. Chiều ngược — *"khuyên CHẠY THÊM"* — có
+  **0 lan can sức khoẻ** trong khi kênh nghỉ có ba, dù `policy_locks.py:40-42` **tự xếp hai cần
+  gạt CÙNG HỌ** (*"kéo dài thời gian làm việc vì tiền"*). Câu §1.2c đổi dấu vẫn đúng: cải thiện
+  `shift_extend_adherence` = nhiều tài xế hơn đồng ý làm dài giờ hơn. Nay `check_shift_extend` có
+  `soc_low`/`fatigued`/`would_exceed_fatigue` + event `advice_extend_veto` vào guardrail tầng 5.
+  **Bài học chung: khi kiểm một ranh giới, hỏi luôn "chiều ngược lại của nó được canh chưa?"**
 - Mock data **phải gắn nhãn mock**. Mọi số trong repo là MOCK; **GSM sẽ không cấp thêm dữ liệu**.
 
 ---
@@ -64,11 +71,11 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ```
 local HEAD  = 51e877e (UPDATE-135/129) + cây làm việc UPDATE-137 CHƯA commit
-suite       = 1232 passed / 4 skipped / **5 FAILED** + **1 file KHÔNG THU ĐƯỢC**
-              (đo 2026-08-04 SAU khi rebase lên PR #5 của Khánh)
-              uv run pytest -q                  -> 1045 / 5 fail / 4 skip  (20′23″)
+suite       = 1246 passed / 4 skipped / **5 FAILED** + **1 file KHÔNG THU ĐƯỢC**
+              (đo 2026-08-04 SAU UPDATE-138)
+              uv run pytest -q                  -> 1058 / 5 fail / 4 skip  (20′09″)
               uv run pytest -q ui/backend/tests -> ⛔ **Interrupted: collection error**
-                 phải thêm `--ignore=ui/backend/tests/test_demo_advice_ack.py` -> 187 passed
+                 phải thêm `--ignore=ui/backend/tests/test_demo_advice_ack.py` -> 188 passed
               🔴 CẢ 5 FAIL + lỗi collection đều ĐỎ SẴN trên origin/main — đã chứng minh bằng
                 `git worktree add <tmp> origin/main` rồi chạy ở đó (KHÔNG có việc của tôi):
                   K-01 (3): cadence QUEUE≠PRESENT · 2× checkpoint_trace thiếu `__init__.py`

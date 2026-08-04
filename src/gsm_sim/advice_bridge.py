@@ -905,30 +905,78 @@ class AdviceActionBridge:
 
     # ---------- SIM-4 kênh 3: hoãn kết ca khi sát mốc điểm ----------
 
-    def check_shift_extend(self, actor: Actor, now_min: float) -> float:
-        """Trả số phút hoãn kết ca (0 = không hoãn).
+    def check_shift_extend(self, actor: Actor, now_min: float,
+                           soc_threshold: float) -> tuple[float, str]:
+        """Trả `(số phút hoãn kết ca, lý do)` — `(0.0, reason)` nghĩa KHÔNG hoãn.
 
         Chỉ hoãn khi **sát mốc điểm kế tiếp** — nếu không thì hoãn chỉ làm tài xế mệt thêm mà
         không thêm thưởng. Có TRẦN tổng thời gian hoãn để không biến thành "chạy vô hạn".
+
+        ## BA LAN CAN SỨC KHOẺ (`D-QD4-03`, Cường chốt 2026-08-04 — phương án (b))
+
+        Bản trước hàm này **không có lan can nào**, trong khi `should_defer_rest` — kênh mà chính
+        `policy_locks.py:40-42` xếp **CÙNG HỌ** (*"kéo dài thời gian làm việc vì tiền"*) — có ba.
+        Hệ quả đo được: nó *có* đọc `actor.online_min`, nhưng làm **mẫu số năng suất**
+        (`rate = points/online_h`) chứ không phải cổng mệt ⇒ **tài xế mệt mà năng suất cao vẫn
+        được khuyên kéo ca**.
+
+        Vì sao đây là ranh giới chứ không phải tinh chỉnh: lập luận §1.2c (*"một khi
+        `rest_adherence` tồn tại như một con số, nó sẽ được nhìn như thứ cần cải thiện"*) áp
+        **nguyên văn** cho `shift_extend_adherence`, chỉ đổi dấu — "cải thiện" ở đây nghĩa là
+        **nhiều tài xế hơn đồng ý làm dài giờ hơn**. Và repo đang tự mâu thuẫn: guardrail tầng 5
+        (`SPAN_P90_RISE_TOL`) **tố giác** khi `work_span_p90` tăng, còn `adherence_view` **tính là
+        thành tích** cái tỷ lệ làm nó tăng.
+
+          1. **`soc_low`** — pin dưới ngưỡng đổi ⇒ không khuyên chạy thêm. Khuyên kéo ca khi pin
+             sắp cạn là khuyên một việc có thể không làm được, và đẩy rủi ro `battery_stranded`.
+          2. **`fatigued`** — `online_min > fatigue_threshold_min` ⇒ tài xế **đã** quá ngưỡng.
+          3. **`would_exceed_fatigue`** — `online_min + need_min > fatigue_threshold_min` ⇒ chính
+             **lời khuyên này** sẽ đẩy họ qua ngưỡng.
+
+        ⚠ Vì sao cần CẢ (2) LẪN (3), tách reason riêng: hoãn nghỉ chỉ **đổi thời điểm** nghỉ, còn
+        kéo ca **thêm giờ làm**. Nên với kênh này, cái hại nằm ở chỗ lời khuyên **ĐẨY** tài xế qua
+        ngưỡng — không chỉ ở chỗ họ đã qua. Chỉ có (2) thì lọt đúng ca đáng chặn nhất: `online_min`
+        còn dưới ngưỡng 10′, `need_min` = 40′, kết thúc ở ngưỡng + 30′. Hai reason tách riêng để
+        guardrail tầng 5 đếm phân biệt *"đã mệt"* với *"lời khuyên làm mệt"*.
+
+        ⚠ **`online_min` là PROXY của mệt, KHÔNG phải phút lái thật** — nó **gộp cả thời gian
+        nghỉ** (`world.py`, ghi ở `D-M3-19`). `should_defer_rest:763` đã dùng cùng proxy, nên giữ
+        đối xứng là đúng; nhưng đừng đọc hai lan can này như đo mệt thật. Nợ: tách `drive_min` khỏi
+        `online_min` cho cả HAI kênh cùng lúc — sửa một bên là tạo bất đối xứng mới.
+
+        ⚠ Mọi nhánh trả `(0.0, reason)`, kể cả nhánh không phải lan can: world dùng `reason` để
+        đếm `veto_calls_n` (mẫu số). Đọc count veto trần mà không có mẫu số là đọc sai — xem
+        `sim_metrics.rest_rails_audit`.
         """
         if not (self.ch_shift_extend and self.covers(actor)):
-            return 0.0
+            return 0.0, "channel_off"
+        # --- lan can 1 & 2 đặt TRƯỚC mọi thứ khác, kể cả trần và cadence: đây là "không có gì để
+        # nói", và nén một lời khuyên KHÔNG TỒN TẠI là sai (nguyên tắc R-08 ở should_defer_rest).
+        if actor.soc_pct <= soc_threshold:
+            return 0.0, "soc_low"
+        if actor.online_min > actor.fatigue_threshold_min:
+            return 0.0, "fatigued"
         if actor.shift_extended_min >= self.extend_max_min:
-            return 0.0
+            return 0.0, "extend_cap"
         gap = self.policy.next_tier_gap(int(actor.points))
         if not gap:
-            return 0.0                        # đã ở mốc cao nhất → không có gì để với
+            return 0.0, "no_tier"             # đã ở mốc cao nhất → không có gì để với
         gap_points = int(gap[0])
         # ước lượng điểm/giờ từ CHÍNH tài xế này (không nhìn tương lai)
         online_h = max(0.5, actor.online_min / 60.0)
         rate = actor.points / online_h
         if rate <= 0:
-            return 0.0
+            return 0.0, "no_rate"
         need_min = gap_points / rate * 60.0
+        # --- lan can 3: đứng TRƯỚC `cap_unreachable` có chủ ý. Khi một lời khuyên vừa vượt trần
+        # kinh tế vừa đẩy tài xế qua ngưỡng mệt, lý do được báo phải là lý do SỨC KHOẺ — nếu không
+        # thì bảng veto sẽ nói "hết trần" cho đúng những ca mà lan can sức khoẻ mới là thứ chặn.
+        if actor.online_min + need_min > actor.fatigue_threshold_min:
+            return 0.0, "would_exceed_fatigue"
         if need_min > self.extend_max_min - actor.shift_extended_min:
-            return 0.0                        # không với tới trong trần cho phép
+            return 0.0, "cap_unreachable"     # không với tới trong trần cho phép
         if not self.cadence_allows(actor, "shift_extend", now_min):
-            return 0.0                        # ĐA-04: hết cooldown/ngân sách ⇒ im
+            return 0.0, "cadence"             # ĐA-04: hết cooldown/ngân sách ⇒ im
         rule_input = {
             "driver_id": f"d-{actor.actor_id}", "t_now": _iso(now_min),
             "points_now": int(actor.points), "gap_points": gap_points,
@@ -963,7 +1011,7 @@ class AdviceActionBridge:
             # QUYẾT ĐỊNH (sai 2,1×; 0,311 là đơn vị LẦN HỎI — đừng trộn hai đơn vị).
             self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
                                      followed=False, reason="not_followed")
-            return 0.0
+            return 0.0, "not_followed"
         add = min(need_min * 1.15, self.extend_max_min - actor.shift_extended_min)
         # b0-A: KHÔNG hoãn quá lúc thế giới dừng. Kéo ca tới 25:00 khi `time.end_min = 24:00` là
         # lời khuyên **không thể thực hiện được**: không sinh thêm cuốc nào, nhưng vẫn tiêu ngân
@@ -979,7 +1027,7 @@ class AdviceActionBridge:
             # nhưng cắt luôn dấu vết ĐO LƯỜNG thì thành một lỗi mẫu số khác.
             self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
                                      followed=True, reason="infeasible_world_end")
-            return 0.0
+            return 0.0, "infeasible_world_end"
         # L1-04 (2026-07-30, UPDATE-107): `_claim_effect` phải đứng SAU clamp khả thi.
         # Bản trước nó đứng TRƯỚC ⇒ lời khuyên bất khả thi vẫn TIÊU token, và vì token đã
         # cháy nên mọi lần hỏi lại trong cùng bucket 30′ trả 0.0 ⇒ quyết định mất hẳn —
@@ -987,14 +1035,14 @@ class AdviceActionBridge:
         # §2b). Ngữ nghĩa R-01 GIỮ NGUYÊN: "MỘT quyết định = MỘT lần ÁP TÁC ĐỘNG" — token
         # cháy khi tác động ĐƯỢC ÁP, không phải khi lời khuyên được nói.
         if not self._claim_effect(actor, "shift_extend", now_min):
-            return 0.0                        # R-01: một quyết định = một lần kéo ca
+            return 0.0, "claimed"             # R-01: một quyết định = một lần kéo ca
         # Kết cục của quyết định này sẽ được world log trực tiếp (event mang added_min) —
         # đánh dấu để các lần hỏi lại cùng bucket không sinh event `infeasible` MA sau khi
         # `shift_end_min` đã chạm trần (xem `mark_outcome_logged`).
         self.mark_outcome_logged(actor, "shift_extend", now_min, "extend")
         actor.shift_extended_min += add
         actor.shift_end_min += add
-        return add
+        return add, ""
 
     def _capture_checkpoint(self, solver_name: str, actor: Actor, now_min: float,
                             solver_input: dict, solver_report: dict,

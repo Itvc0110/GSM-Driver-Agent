@@ -327,6 +327,10 @@ def system_guardrail(result) -> dict:
 # ---------------------------------------------------------------------------
 
 REST_RAILS = ("soc_low", "fatigued", "defer_cap")
+# `D-QD4-03` — lan can của kênh KÉO CA. `defer_cap` không có ở đây vì trần kéo ca
+# (`extend_cap`/`cap_unreachable`) là ràng buộc KINH TẾ, không phải lan can sức khoẻ; gộp nó vào
+# sẽ thổi `xveto_fired_n` bằng những lần chặn chẳng liên quan gì tới sức khoẻ.
+EXTEND_RAILS = ("soc_low", "fatigued", "would_exceed_fatigue")
 _DRIVE_KINDS = frozenset({"enroute", "on_trip", "relocate"})
 _RECOVERY_KINDS = frozenset({"rest", "charge"})
 # Ngưỡng break DẪN XUẤT từ phân phối nghỉ của world (uniform[REST_MIN, REST_MAX]) —
@@ -353,6 +357,37 @@ def rest_rails_audit(result) -> dict:
             out[f"veto_{r}_n"] += 1
     out["veto_calls_n"] = calls
     out["veto_fired_n"] = sum(out[f"veto_{r}_n"] for r in REST_RAILS)
+    return out
+
+
+def extend_rails_audit(result) -> dict:
+    """`D-QD4-03` — đối xứng của `rest_rails_audit` cho kênh KÉO CA.
+
+    Vì sao kênh này cần audit riêng chứ không gộp: hai kênh chặn theo **hai chiều ngược nhau**.
+    `rest_rails` đếm số lần advisor **không dám hoãn nghỉ**; `extend_rails` đếm số lần advisor
+    **không dám bảo chạy thêm**. Gộp vào một con số sẽ triệt tiêu lẫn nhau và mất đúng thông tin
+    cần đọc.
+
+    Tiền tố `xveto_` (không phải `veto_`) để `full_report` không đè khoá của `rest_rails_audit` —
+    hai bộ đếm sống cạnh nhau trong cùng một dict.
+
+    ⚠ `xveto_calls_n` **KHÔNG** thuộc `parallel.SCOPE_KEYS`, và đó là **có chủ ý** — đừng "sửa".
+    `SCOPE_KEYS` loại `n_actors_scope` vì Δ của nó luôn 0 (hai arm dùng cùng tập actor) nên gắn
+    `significant` cho nó là vô nghĩa. `xveto_calls_n` thì **khác arm thật**: advisor làm tài xế
+    online lâu hơn ⇒ nhiều lần poll hơn ⇒ một Δ có ý nghĩa ở đây là **thông tin**, không phải
+    nhiễu. Nó là mẫu số *khi đọc `xveto_fired_n`*, không phải mẫu số theo nghĩa `SCOPE_KEYS`.
+    """
+    out = {f"xveto_{r}_n": 0 for r in EXTEND_RAILS}
+    calls = 0
+    for e in result.events:
+        if e.kind != "advice_extend_veto":
+            continue
+        calls += 1
+        r = e.detail.get("reason")
+        if r in EXTEND_RAILS:
+            out[f"xveto_{r}_n"] += 1
+    out["xveto_calls_n"] = calls
+    out["xveto_fired_n"] = sum(out[f"xveto_{r}_n"] for r in EXTEND_RAILS)
     return out
 
 
@@ -429,6 +464,10 @@ def health_guardrail(result, actor_ids: set[int] | None = None) -> dict:
     out = {"rest_min_total": round(sum(a.rest_min for a in acts), 1),
            "n_actors_scope": len(acts)}
     out.update(rest_rails_audit(result))
+    # `D-QD4-03`: lan can kênh KÉO CA phải vào cùng bảng guardrail tầng 5. Không nối ở đây thì
+    # `extend_rails_audit` là một hàm không caller — đúng họ `D-M3-13` (tầng 5 có hàm gộp nhưng
+    # KHÔNG có nguồn dữ liệu ⇒ TREO trên mọi pair mà không ai biết vì sao).
+    out.update(extend_rails_audit(result))
     out.update(continuous_work(result))
     return out
 
