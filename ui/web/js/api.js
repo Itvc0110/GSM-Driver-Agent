@@ -19,6 +19,16 @@ async function post(url, body) {
   return r.json();
 }
 
+async function put(url, body) {
+  const r = await fetch(BASE + url, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(`${url} -> ${r.status}`);
+  return r.json();
+}
+
 export const api = {
   defaultView: () => get("/api/v1/driver/default-view"),
   catalog: () => get("/api/v1/driver/catalog"),
@@ -48,6 +58,18 @@ export const api = {
     post(`/api/v2/advice/${encodeURIComponent(checkpointId)}/display`, body),
   adviceV2Response: (checkpointId, body) =>
     post(`/api/v2/advice/${encodeURIComponent(checkpointId)}/response`, body),
+  // Unified observer replay: the server owns actor selection, cursor and canonical state.
+  demoCreate: (seed = 1000) => post("/api/v1/demo/sessions", {seed}),
+  demoSelect: (sessionId, actorId) =>
+    put(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/driver`, {actor_id: actorId}),
+  demoState: (sessionId) =>
+    get(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/state`),
+  demoStep: (sessionId, body) =>
+    post(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/steps`, body),
+  demoAdviceDisplay: (sessionId, checkpointId, body) =>
+    post(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/advice/${encodeURIComponent(checkpointId)}/display`, body),
+  demoAdviceResponse: (sessionId, checkpointId, body) =>
+    post(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/advice/${encodeURIComponent(checkpointId)}/response`, body),
   mapContext: (date, hour, driverId) =>
     get(`/api/v1/map-context?date=${date}&hour=${hour}${driverId ? `&driver_id=${driverId}` : ""}`),
   tripStep: (idx, step) => get(`/api/v1/trip/step?trip_index=${idx}&step=${step}`),

@@ -238,6 +238,7 @@ files (074–091) had no graph link. Do not delete rows here without re-running 
 | [UPDATE-129](updates/UPDATE-129-unified-web-demo-session.md) | Unified Web Demo — server-owned session, actor selection, cursor, version và idempotent Next Step | `DONE-CODE / VISUAL BLOCKED` | backend / web / replay | mở canonical step, Advice bridge và Web render |
 | [UPDATE-130](updates/UPDATE-130-unified-web-demo-step.md) | Unified Web Demo — canonical step envelope, trip lifecycle projection và two-leg route fallback | `DONE-CODE / VISUAL BLOCKED` | backend / web / OSRM / replay | chờ Advice bridge và Web render |
 | [UPDATE-131](updates/UPDATE-131-unified-web-demo-advice-bridge.md) | Unified Web Demo — persist/replay AdviceCheckpoint bundle, READY/validity gate, shared lease và presenter verifier guard | `DONE-CODE / VISUAL BLOCKED` | backend / lifecycle / presenter / replay | chờ Web render + displayed ACK |
+| [UPDATE-132](updates/UPDATE-132-unified-web-demo-web-render.md) | Unified Web Demo — server-owned actor picker/Next Step, canonical map/trip/advice render, demo ACK và legacy-flow removal | `DONE-CODE / VISUAL BLOCKED` | web / backend / replay / lifecycle | human V-25 visual + narrow E2E smoke |
 
 ## 4. Task and file routing
 

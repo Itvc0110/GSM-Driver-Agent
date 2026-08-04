@@ -5,6 +5,8 @@ from __future__ import annotations
 import threading
 import uuid
 from dataclasses import dataclass, field
+import copy
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Callable
 import hashlib
@@ -41,10 +43,38 @@ class _DemoSession:
     lock: threading.RLock = field(default_factory=threading.RLock, repr=False)
 
 
+@lru_cache(maxsize=6)
 def _default_run(seed: int):
-    # Import lazily so importing the Web app does not eagerly construct the simulator.
-    from app.routers.sim import _run
-    return _run(seed)
+    """Build one cached, observer-only demo run.
+
+    The production simulator config keeps advice tracing off.  The demo makes a deep copy
+    and enables only existing S1/S2 trace callsites with zero adherence and no action
+    override.  That gives the replay real checkpoint artifacts while keeping simulator
+    dynamics and the shared config untouched; a click still only moves the cursor.
+    """
+    from app.routers.sim import _cfg
+    from gsm_sim.config import Config
+    from gsm_sim.runner import run_once
+
+    base = _cfg()
+    config = Config(copy.deepcopy(base.data), base.root_dir)
+    advice = config.data.setdefault("advice", {})
+    advice["enabled"] = True
+    advice["coverage"] = "all"
+    advice["single_actor_id"] = None
+    advice["positioning_overrides"] = "off"
+    advice["channels"] = {
+        "shift_plan": True, "accept_lift": True,
+        "shift_extend": False, "rest_window": False,
+    }
+    # Capture recommendations without forcing an actor to follow them.  The trace is
+    # diagnostic, not a second treatment arm, and never owns simulator behaviour.
+    advice["adherence_by_archetype"] = {
+        archetype: 0.0 for archetype in ("P1", "P2", "P3", "P4", "P5", "P6", "P7")
+    }
+    config.data.setdefault("checkpoint_shadow", {})["enabled"] = True
+    config.data["checkpoint_shadow"]["presentation_mode"] = "template"
+    return run_once(config, int(seed))
 
 
 class DemoSessionService:
@@ -110,6 +140,48 @@ class DemoSessionService:
         session = self._get(session_id)
         with session.lock:
             return self._summary(session)
+
+    def _checkpoint_for_actor(self, session: _DemoSession, checkpoint_id: str) -> dict:
+        if session.selected_actor_id is None:
+            raise DemoSessionConflict("chưa chọn actor")
+        checkpoint = next((item for item in session.traces[session.selected_actor_id]["checkpoints"]
+                           if item.get("checkpoint_id") == checkpoint_id), None)
+        if checkpoint is None:
+            raise DemoSessionNotFound("checkpoint không thuộc actor/session")
+        return checkpoint
+
+    def acknowledge_demo_display(self, session_id: str, checkpoint_id: str, *,
+                                 display_id: str, client_event_id: str,
+                                 mounted_at: str) -> dict:
+        """Record mounted ACK for an explicitly internal demo replay.
+
+        This endpoint is intentionally separate from the v2 feature flag: the demo bridge
+        already served a trace-backed template envelope, while ``ADVICE_V2_ENABLED=0`` keeps
+        the product polling API disabled.  Both paths write the same checkpoint stream.
+        """
+        session = self._get(session_id)
+        with session.lock:
+            self._checkpoint_for_actor(session, checkpoint_id)
+            from app.services.advice_checkpoint import AdviceCheckpointService
+            from gsm_core.lifecycle.checkpoint_store import CheckpointStore
+            with CheckpointStore(self.checkpoint_store_path) as store:
+                return AdviceCheckpointService(store).acknowledge_display(
+                    checkpoint_id, display_id=display_id,
+                    client_event_id=client_event_id, mounted_at=mounted_at)
+
+    def record_demo_response(self, session_id: str, checkpoint_id: str, *,
+                             display_id: str, client_event_id: str, response: str,
+                             occurred_at: str) -> dict:
+        session = self._get(session_id)
+        with session.lock:
+            self._checkpoint_for_actor(session, checkpoint_id)
+            from app.services.advice_checkpoint import AdviceCheckpointService
+            from gsm_core.lifecycle.checkpoint_store import CheckpointStore
+            with CheckpointStore(self.checkpoint_store_path) as store:
+                return AdviceCheckpointService(store).record_response(
+                    checkpoint_id, display_id=display_id,
+                    client_event_id=client_event_id, response=response,
+                    occurred_at=occurred_at)
 
     def advance(self, session_id: str, *, client_step_id: str,
                 expected_step_version: int) -> dict:

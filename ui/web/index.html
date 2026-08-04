@@ -34,50 +34,22 @@
       <span class="mock-badge">Dữ liệu mô phỏng — không phải số thật GSM</span>
     </div>
 
-    <!-- UX-CARDS: proactive advice cards (DIRECTIVES §12) -->
-    <div id="card-stack"></div>
-
-    <div id="cta-area" style="position:absolute;bottom:104px;left:14px;right:14px;z-index:500">
-      <button class="cta" id="btn-cta" title="Demo vòng đời cuốc trên lộ trình OSRM">
-        ⚡ <span id="cta-text">Mở nhận chuyến (demo)</span>
-      </button>
-    </div>
-
-    <!-- Trip lifecycle demo (port từ demo Stitch của Khánh) -->
-    <div id="trip-incoming" class="trip-card hidden">
+    <!-- Unified observer replay. The backend owns cursor, trip state, route and advice. -->
+    <div id="demo-panel" class="trip-card" style="bottom:96px;left:14px;right:14px;z-index:500">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="tag">CUỐC DEMO · lộ trình OSRM thật</span>
-        <b id="inc-km" style="color:var(--accent);font-size:12px">–</b>
+        <span class="tag">SIMULATOR REPLAY · MOCK</span>
+        <span class="note" id="demo-session-status">Đang tạo phiên…</span>
       </div>
-      <div id="inc-stops"></div>
-      <div class="grid-2" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border-hairline)">
-        <div>
-          <div style="font-size:10px;color:var(--text-muted)">Cước gross (demo)</div>
-          <div id="inc-fare" style="font-size:19px;font-weight:700">–</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--text-muted)">Payout cuốc (demo)</div>
-          <div id="inc-trip-payout" style="font-size:19px;font-weight:700">–</div>
-        </div>
+      <div class="grid-2" style="margin-top:8px;align-items:end">
+        <label style="font-size:11px;color:var(--text-muted)">Tài xế
+          <select id="demo-actor" disabled style="display:block;width:100%;margin-top:4px"></select>
+        </label>
+        <button class="btn" id="btn-demo-next" disabled>Next Step</button>
       </div>
-      <div class="note" id="inc-fare-policy" style="margin-top:6px">–</div>
-      <div class="grid-2" style="margin-top:10px">
-        <button class="btn ghost" style="margin:0" id="btn-decline">Từ chối</button>
-        <button class="btn" style="margin:0" id="btn-accept">Chấp nhận</button>
-      </div>
-    </div>
-
-    <div id="trip-active" class="trip-card hidden">
-      <span class="tag" id="nav-state">ĐANG ĐẾN ĐIỂM ĐÓN</span>
-      <div style="font-size:12px;margin-top:8px">Khách: <b id="nav-cust">–</b></div>
-      <div style="font-size:12px;margin-top:4px;color:var(--text-secondary)" id="nav-route">–</div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <div><span class="note">Gross</span><br><b id="nav-fare" style="font-size:17px">–</b></div>
-        <div style="text-align:right"><span class="note">Payout cuốc</span><br><b id="nav-trip-payout" style="font-size:17px">–</b></div>
-        <span style="font-size:10.5px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-weight:700" id="nav-km">–</span>
-      </div>
-      <div class="note" id="nav-fare-policy" style="margin-top:5px">–</div>
-      <button class="btn" id="btn-nav-next">ĐÃ ĐẾN NƠI ĐÓN KHÁCH</button>
+      <div class="note" id="demo-step-meta" style="margin-top:8px">Chọn tài xế để bắt đầu replay.</div>
+      <div id="demo-trip" style="font-size:12px;margin-top:5px"></div>
+      <div id="demo-route-note" class="note" style="margin-top:4px"></div>
+      <div id="demo-advice" class="card" style="margin-top:8px;padding:9px;background:rgba(255,255,255,.82)"></div>
     </div>
 
     <button id="bot-fab" title="Trợ Lý Xanh">🤖<span class="dot hidden" id="bot-dot"></span></button>
@@ -116,10 +88,10 @@
   <section id="screen-trips" class="screen hidden">
     <div class="screen-pad">
       <h1>Chuyến của tôi</h1>
-      <span class="mock-badge">Phiên demo — vòng đời cuốc mô phỏng</span>
+      <span class="mock-badge">Phiên replay — state từ simulator backend</span>
       <div id="trip-history"><div class="silent-box" style="margin-top:12px">
         <span class="big-ico">🛵</span>Chưa có cuốc demo nào trong phiên này.<br>
-        Sang <b>Xanh Now</b> bấm "Mở nhận chuyến" để chạy thử vòng đời cuốc.
+        Sang <b>Xanh Now</b> chọn tài xế và bấm <b>Next Step</b> để replay transition.
       </div></div>
     </div>
   </section>
@@ -198,12 +170,8 @@
         Trợ lý KHÔNG chat — advice tự xuất hiện dạng thẻ đúng lúc (trước ca · lúc dừng xe · sau ca).
         Ở đây bạn xem lại thẻ hôm nay hoặc chạy demo.
       </p>
-      <button class="btn" id="btn-day-demo">▶ Demo "Một ngày của tài xế" (~90 giây)</button>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button class="btn ghost" style="margin:0" id="btn-show-brief">🌅 Brief</button>
-        <button class="btn ghost" style="margin:0" id="btn-show-nudge">⚡ Nudge</button>
-        <button class="btn ghost" style="margin:0" id="btn-show-recap">🌙 Recap</button>
-      </div>
+      <button class="btn" id="btn-day-demo">▶ Mở Unified Replay</button>
+      <div class="note" style="margin-top:8px">Mỗi lần Next Step tiến đúng một transition actor-facing; không dựng cuốc hoặc advice ở phía trình duyệt.</div>
       <div class="section-label">Thẻ đã hiện trong phiên</div>
       <div id="card-history" style="font-size:12px;color:var(--text-secondary)">chưa có</div>
       <button class="btn ghost" id="btn-bot-close">Đóng</button>

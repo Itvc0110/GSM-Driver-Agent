@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -29,6 +31,21 @@ class StepBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     client_step_id: str = Field(min_length=1, max_length=160)
     expected_step_version: int = Field(ge=0)
+
+
+class DemoDisplayBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    display_id: str = Field(min_length=1)
+    client_event_id: str = Field(min_length=1)
+    mounted_at: datetime
+
+
+class DemoResponseBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    display_id: str = Field(min_length=1)
+    client_event_id: str = Field(min_length=1)
+    response: str = Field(pattern=r"^(accepted|dismissed|expanded)$")
+    occurred_at: datetime
 
 
 def _error(exc: Exception) -> HTTPException:
@@ -72,5 +89,27 @@ def next_step(session_id: str, body: StepBody):
         return DEMO_SESSIONS.advance(
             session_id, client_step_id=body.client_step_id,
             expected_step_version=body.expected_step_version)
+    except Exception as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/sessions/{session_id}/advice/{checkpoint_id}/display")
+def demo_display(session_id: str, checkpoint_id: str, body: DemoDisplayBody):
+    try:
+        return DEMO_SESSIONS.acknowledge_demo_display(
+            session_id, checkpoint_id, display_id=body.display_id,
+            client_event_id=body.client_event_id,
+            mounted_at=body.mounted_at.isoformat())
+    except Exception as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/sessions/{session_id}/advice/{checkpoint_id}/response")
+def demo_response(session_id: str, checkpoint_id: str, body: DemoResponseBody):
+    try:
+        return DEMO_SESSIONS.record_demo_response(
+            session_id, checkpoint_id, display_id=body.display_id,
+            client_event_id=body.client_event_id, response=body.response,
+            occurred_at=body.occurred_at.isoformat())
     except Exception as exc:
         raise _error(exc) from exc
