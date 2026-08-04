@@ -125,7 +125,10 @@ intentionally **not** claimed: they remain `WAITING-VERDICT`/open gates.
 
 **Interfaces:**
 - Web sends only `create session`, `select actor`, and `Next Step` with `client_step_id`/`expected_step_version`.
-- Web renders the canonical response and sends mounted ACK through existing `/api/v2/advice/{checkpoint_id}/display` when a real lease is present.
+- Web renders the canonical response and sends mounted ACK after DOM insertion. Product Advice
+  v2 uses `/api/v2/advice/{checkpoint_id}/display`; the internal trace-backed demo uses its
+  scoped `/api/v1/demo/sessions/{session_id}/advice/{checkpoint_id}/display` endpoint while
+  `ADVICE_V2_ENABLED=0`, writing the same lease/event store without enabling product polling.
 
 - [ ] Add RED Node tests proving no `tripStep` state or `/api/v1/trip/step` call remains in the demo flow, retries reuse step response, and silent advice renders no action buttons/fake IDs.
 - [ ] Add RED DOM-level helper tests for text-only rendering of Agent reason/why; no raw `innerHTML` for model-owned strings.
