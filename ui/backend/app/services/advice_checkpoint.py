@@ -17,7 +17,14 @@ import time
 import uuid
 
 from app.adapters import advisor, mockdata
-from gsm_core.advisor.checkpoint_presenter import CheckpointPresenter, PresentationText
+from gsm_core.advisor.advice_agent import (
+    AgentRequest, AdviceAgentProvider, ProviderResult, build_agent_request,
+)
+from gsm_core.advisor.checkpoint_presenter import (
+    CheckpointPresenter, PresentationText, _render, build_agent_input,
+    build_explanation_input, verify_agent_output, verify_explanation_output,
+)
+from gsm_core.advisor.presentation_strategy import decide_presentation
 from gsm_core.features.from_l1r import derive_shift_plan_input_l1r
 from gsm_core.lifecycle.checkpoint import normalize_solver_decision
 from gsm_core.lifecycle.checkpoint import (
@@ -72,6 +79,14 @@ class ProductSolverResult:
     solver_set: list[str] = field(default_factory=list)
     reasons: dict[str, str] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class PreparedPresentation:
+    text: PresentationText
+    numbers: list[dict]
+    caveats: list[dict]
+    metadata: dict
 
 
 def _default_l1r() -> dict[str, list[dict]]:
@@ -258,10 +273,26 @@ class AdviceCheckpointService:
 
     def __init__(self, store: CheckpointStore,
                  orchestrator: ProductSolverOrchestrator | None = None,
-                 presenter: CheckpointPresenter | None = None):
+                 presenter: CheckpointPresenter | None = None,
+                 *, presentation_mode: str | None = None,
+                 agent_provider: AdviceAgentProvider | None = None,
+                 why_agent_enabled: bool | None = None):
         self.store = store
         self.orchestrator = orchestrator or ProductSolverOrchestrator()
         self.presenter = presenter or CheckpointPresenter(mode="template")
+        self.presentation_mode = presentation_mode or __import__("os").getenv(
+            "ADVICE_PRESENTATION_MODE", "template")
+        if self.presentation_mode not in {"template", "shadow", "internal_live"}:
+            raise ValueError("ADVICE_PRESENTATION_MODE chỉ nhận template|shadow|internal_live")
+        self.agent_provider = agent_provider
+        self.why_agent_enabled = (
+            why_agent_enabled if why_agent_enabled is not None else
+            __import__("os").getenv("ADVICE_WHY_AGENT_ENABLED", "0") == "1")
+        # Preserve direct P5 shadow fixtures while the new strategy is opt-in via an
+        # explicit mode/provider.  Production default remains template-only.
+        self._legacy_shadow = (
+            presentation_mode is None and agent_provider is None
+            and self.presenter.mode == "shadow")
 
     def get_advice(self, *, surface: str, driver_id: str, date: str, now_min: int,
                    shift_start_min: int, shift_end_min: int,
@@ -346,12 +377,17 @@ class AdviceCheckpointService:
                 checkpoint, "expired", t_now,
                 event_id=f"expired:{checkpoint['checkpoint_id']}", reason_code="expired"))
             return self._silent(surface, t_now, "expired")
-        rendered = self._prepare_presentation(checkpoint, t_now, allow_shadow=True)
+        rendered = self._prepare_presentation(
+            checkpoint, t_now, allow_shadow=True, is_driving=is_driving)
         if rendered is None:
-            return self._silent(surface, t_now, "discarded_stale")
-        lease_time = (datetime.fromisoformat(t_now) + timedelta(microseconds=1)).isoformat()
+            return self._silent(surface, t_now,
+                                "unsafe_while_moving" if is_driving else "discarded_stale")
+        presentation_artifact = self._persist_presentation_artifact(
+            checkpoint, surface, rendered, t_now)
+        lease_time = (datetime.fromisoformat(t_now) + timedelta(microseconds=5)).isoformat()
         lease = self.store.acquire_presentation_lease(
-            checkpoint["checkpoint_id"], lease_time)
+            checkpoint["checkpoint_id"], lease_time,
+            presentation=self._lease_presentation_metadata(presentation_artifact))
         return self._envelope(checkpoint, lease, surface, t_now, rendered=rendered)
 
     def present_existing_checkpoint(self, checkpoint_id: str, *, surface: str,
@@ -381,6 +417,13 @@ class AdviceCheckpointService:
             return self._silent(surface, generated_at, "expired")
         if state in PRESENTATION_TERMINAL_STATES:
             return self._silent(surface, generated_at, state)
+        if state in {"offered", "displayed"}:
+            # A replay retry must return the immutable lease presentation.  Do not
+            # regenerate text merely because the cursor revisited this transition.
+            lease = self.store.lease(checkpoint_id)
+            if lease is None:
+                return self._silent(surface, generated_at, "missing_lease")
+            return self._envelope(checkpoint, lease, surface, generated_at)
         if state == "created":
             self.store.append_event(_event(
                 checkpoint, "ready", generated_at,
@@ -390,13 +433,19 @@ class AdviceCheckpointService:
             # simulator/policy marked displayable.  In particular, queued advice must
             # not acquire a lease merely because a Web cursor reached its timestamp.
             return self._silent(surface, generated_at, state)
-        rendered = self._prepare_presentation(checkpoint, generated_at, allow_shadow=True)
+        rendered = self._prepare_presentation(
+            checkpoint, generated_at, allow_shadow=True, is_driving=is_driving)
         if rendered is None:
-            return self._silent(surface, generated_at, "discarded_stale")
+            return self._silent(surface, generated_at,
+                                "unsafe_while_moving" if is_driving else "discarded_stale")
+        presentation_artifact = self._persist_presentation_artifact(
+            checkpoint, surface, rendered, generated_at)
         lease_time = (datetime.fromisoformat(generated_at)
-                      + timedelta(microseconds=1)).isoformat()
+                      + timedelta(microseconds=5)).isoformat()
         try:
-            lease = self.store.acquire_presentation_lease(checkpoint_id, lease_time)
+            lease = self.store.acquire_presentation_lease(
+                checkpoint_id, lease_time,
+                presentation=self._lease_presentation_metadata(presentation_artifact))
         except (KeyError, ValueError) as exc:
             raise CheckpointConflictError(str(exc)) from exc
         return self._envelope(checkpoint, lease, surface, generated_at, rendered=rendered)
@@ -470,82 +519,459 @@ class AdviceCheckpointService:
         return facts, numbers, caveats
 
     def _prepare_presentation(self, checkpoint: dict, generated_at: str, *,
-                              allow_shadow: bool) -> tuple[PresentationText, list[dict], list[dict]] | None:
+                              allow_shadow: bool,
+                              is_driving: bool = False) -> PreparedPresentation | None:
         facts, numbers, caveats = self._presentation_inputs(checkpoint)
-        presenter = self.presenter if allow_shadow else CheckpointPresenter(mode="template")
         template = CheckpointPresenter(mode="template").present(
             checkpoint, facts=facts, numbers=numbers, caveats=caveats)
-        if allow_shadow and presenter.mode == "shadow" and presenter.agent is not None:
-            material = {
-                "fingerprint": checkpoint.get("fingerprint") or checkpoint["checkpoint_id"],
-                "facts_digest": hashlib.sha256(json.dumps(
-                    {"facts": facts, "numbers": numbers, "caveats": caveats},
-                    sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
-                "locale": "vi-VN",
-                "prompt_version": "checkpoint-presenter-v1",
-                "model_version": str(getattr(
-                    presenter.agent, "model_version", type(presenter.agent).__name__)),
-                "policy_version": advisor.policy().version,
-            }
-            cache_key = hashlib.sha256(json.dumps(
-                material, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
-            cached = self.store.generation_cache_get(cache_key, generated_at)
-            if cached is not None:
-                self._record_shadow_metric(
-                    checkpoint, generated_at, cache_hit=True, avoided_calls=1,
-                    fallback=cached.get("shadow_output") is None)
-                rendered = PresentationText(
-                    title=template.title, summary=template.summary, why=template.why,
-                    fallback_used=True,
-                    verify_errors=tuple(cached.get("verify_errors") or ()),
-                    agent_output=cached.get("agent_output"),
-                    shadow_output=cached.get("shadow_output"))
-                return rendered, numbers, caveats
-            owner_id = str(uuid.uuid4())
-            valid_until = checkpoint["validity"]["valid_until"]
-            if not self.store.claim_generation(
-                    cache_key, owner_id, generated_at, valid_until):
-                self._record_shadow_metric(
-                    checkpoint, generated_at, cache_hit=False, avoided_calls=1,
-                    fallback=True)
-                return template, numbers, caveats
-            started = time.perf_counter()
-            rendered = presenter.present(
-                checkpoint, facts=facts, numbers=numbers, caveats=caveats)
-            latency_ms = (time.perf_counter() - started) * 1000
-            state = self.store.state(checkpoint["checkpoint_id"])["state"]
-            stale = (state in PRESENTATION_TERMINAL_STATES
-                     or datetime.fromisoformat(checkpoint["validity"]["valid_until"])
-                     <= datetime.fromisoformat(generated_at))
-            evaluation = build_artifact_record(
-                "agent_shadow_output", {
-                    "checkpoint_id": checkpoint["checkpoint_id"],
-                    "status": "discarded_stale" if stale else
-                              "verified" if rendered.shadow_output is not None else "fallback",
-                    "agent_output": rendered.agent_output,
-                    "shadow_output": rendered.shadow_output,
-                    "verify_errors": list(rendered.verify_errors),
-                }, checkpoint["data_mode"], checkpoint["is_mock"], generated_at)
-            self.store.put_artifact_record(evaluation)
-            usage = getattr(presenter.agent, "last_usage", None) or {}
+        template_result = PreparedPresentation(
+            template, numbers, caveats,
+            {"presentation_source": "template", "template_version": "checkpoint-template-v1",
+             "model_version": None, "prompt_version": None,
+             "schema_version": "1.0.0", "verifier_version": "checkpoint-verifier-v1"})
+
+        # A direct P5 shadow presenter remains available for old replay fixtures.  New
+        # callers use the deterministic strategy/provider path below.
+        if allow_shadow and self._legacy_shadow:
+            return self._prepare_legacy_shadow(
+                checkpoint, generated_at, template_result, facts, numbers, caveats)
+
+        decision = decide_presentation(
+            checkpoint, facts=facts, numbers=numbers, caveats=caveats,
+            mode=self.presentation_mode,
+            provider_enabled=self.agent_provider is not None,
+            is_driving=is_driving)
+        if decision.strategy != "LLM" or not allow_shadow or self.agent_provider is None:
+            return template_result if decision.strategy != "SILENT" else None
+        return self._prepare_agent_generation(
+            checkpoint, generated_at, template_result, facts, numbers, caveats,
+            reason_code=decision.reason_code)
+
+    def _prepare_legacy_shadow(
+            self, checkpoint: dict, generated_at: str,
+            template_result: PreparedPresentation, facts: list[dict],
+            numbers: list[dict], caveats: list[dict]) -> PreparedPresentation | None:
+        presenter = self.presenter
+        material = {
+            "request_type": "proactive",
+            "fingerprint": checkpoint.get("fingerprint") or checkpoint["checkpoint_id"],
+            "facts_digest": hashlib.sha256(json.dumps(
+                {"facts": facts, "numbers": numbers, "caveats": caveats},
+                sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
+            "locale": "vi-VN", "prompt_version": "checkpoint-presenter-v1",
+            "model_version": str(getattr(
+                presenter.agent, "model_version", type(presenter.agent).__name__)),
+            "schema_version": "1.0.0", "verifier_version": "checkpoint-verifier-v1",
+            "policy_version": advisor.policy().version,
+        }
+        cache_key = hashlib.sha256(json.dumps(
+            material, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        cached = self.store.generation_cache_get(cache_key, generated_at)
+        if cached is not None:
             self._record_shadow_metric(
-                checkpoint, generated_at, cache_hit=False, avoided_calls=0,
-                stale_discard=stale, fallback=rendered.shadow_output is None,
-                latency_ms=latency_ms,
-                input_tokens=usage.get("input_tokens"),
-                output_tokens=usage.get("output_tokens"),
-                cost_usd=usage.get("cost_usd"))
-            if stale:
-                self.store.release_generation_claim(cache_key, owner_id)
-                return None
-            self.store.put_generation_cache(cache_key, owner_id, {
+                checkpoint, generated_at, cache_hit=True, avoided_calls=1,
+                fallback=cached.get("shadow_output") is None)
+            rendered = PresentationText(
+                title=template_result.text.title, summary=template_result.text.summary,
+                why=template_result.text.why, fallback_used=True,
+                verify_errors=tuple(cached.get("verify_errors") or ()),
+                agent_output=cached.get("agent_output"),
+                shadow_output=cached.get("shadow_output"))
+            return PreparedPresentation(rendered, numbers, caveats,
+                                        template_result.metadata)
+        owner_id = str(uuid.uuid4())
+        valid_until = checkpoint["validity"]["valid_until"]
+        if not self.store.claim_generation(cache_key, owner_id, generated_at, valid_until):
+            self._record_shadow_metric(
+                checkpoint, generated_at, cache_hit=False, avoided_calls=1, fallback=True)
+            return template_result
+        started = time.perf_counter()
+        rendered = presenter.present(
+            checkpoint, facts=facts, numbers=numbers, caveats=caveats)
+        latency_ms = (time.perf_counter() - started) * 1000
+        state = self.store.state(checkpoint["checkpoint_id"])["state"]
+        stale = (state in PRESENTATION_TERMINAL_STATES
+                 or datetime.fromisoformat(checkpoint["validity"]["valid_until"])
+                 <= datetime.fromisoformat(generated_at))
+        evaluation = build_artifact_record(
+            "agent_shadow_output", {
+                "checkpoint_id": checkpoint["checkpoint_id"],
+                "status": "discarded_stale" if stale else
+                          "verified" if rendered.shadow_output is not None else "fallback",
                 "agent_output": rendered.agent_output,
                 "shadow_output": rendered.shadow_output,
                 "verify_errors": list(rendered.verify_errors),
-            }, valid_until)
+            }, checkpoint["data_mode"], checkpoint["is_mock"], generated_at)
+        self.store.put_artifact_record(evaluation)
+        usage = getattr(presenter.agent, "last_usage", None) or {}
+        self._record_shadow_metric(
+            checkpoint, generated_at, cache_hit=False, avoided_calls=0,
+            stale_discard=stale, fallback=rendered.shadow_output is None,
+            latency_ms=latency_ms, input_tokens=usage.get("input_tokens"),
+            output_tokens=usage.get("output_tokens"), cost_usd=usage.get("cost_usd"))
+        if stale:
+            self.store.release_generation_claim(cache_key, owner_id)
+            return None
+        self.store.put_generation_cache(cache_key, owner_id, {
+            "agent_output": rendered.agent_output,
+            "shadow_output": rendered.shadow_output,
+            "verify_errors": list(rendered.verify_errors),
+        }, valid_until)
+        return PreparedPresentation(rendered, numbers, caveats, template_result.metadata)
+
+    def _prepare_agent_generation(
+            self, checkpoint: dict, generated_at: str,
+            template_result: PreparedPresentation, facts: list[dict],
+            numbers: list[dict], caveats: list[dict], *,
+            reason_code: str) -> PreparedPresentation | None:
+        provider = self.agent_provider
+        assert provider is not None
+        try:
+            input_payload = build_agent_input(
+                checkpoint, facts=facts, numbers=numbers, caveats=caveats)
+        except Exception:
+            return template_result
+        model_version = str(getattr(provider, "model_version", "unknown"))
+        material = {
+            "request_type": "proactive",
+            "fingerprint": checkpoint.get("fingerprint") or checkpoint["checkpoint_id"],
+            "facts_digest": hashlib.sha256(json.dumps(
+                {"facts": facts, "numbers": numbers, "caveats": caveats},
+                sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
+            "locale": "vi-VN", "surface": checkpoint.get("surface", "nudge"),
+            "prompt_version": "advice-checkpoint-v1", "model_version": model_version,
+            "schema_version": input_payload["schema_version"],
+            "verifier_version": "checkpoint-verifier-v1",
+            "policy_version": advisor.policy().version,
+        }
+        cache_key = hashlib.sha256(json.dumps(
+            material, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        cached = self.store.generation_cache_get(cache_key, generated_at)
+        if cached is not None:
+            self._record_shadow_metric(
+                checkpoint, generated_at, cache_hit=True, avoided_calls=1,
+                fallback=cached.get("status") != "verified")
+            return self._prepared_from_agent_cache(
+                template_result, cached, numbers, caveats)
+        owner_id = str(uuid.uuid4())
+        valid_until = checkpoint["validity"]["valid_until"]
+        if not self.store.claim_generation(cache_key, owner_id, generated_at, valid_until):
+            self._record_shadow_metric(
+                checkpoint, generated_at, cache_hit=False, avoided_calls=1, fallback=True)
+            return template_result
+        try:
+            generation_started_at = (
+                datetime.fromisoformat(generated_at) + timedelta(microseconds=1)).isoformat()
+            self.store.append_event(_event(
+                checkpoint, "generation_started", generation_started_at,
+                event_id=f"generation_started:{checkpoint['checkpoint_id']}:{cache_key[:12]}",
+                reason_code=reason_code))
+        except ValueError:
+            self.store.release_generation_claim(cache_key, owner_id)
+            return template_result
+        started = time.perf_counter()
+        errors: list[str] = []
+        accepted = None
+        usage: dict = {}
+        provider_result: ProviderResult | Any | None = None
+        try:
+            request = build_agent_request(
+                input_payload, request_type="proactive",
+                prompt_version=material["prompt_version"],
+                policy_version=material["policy_version"], model_version=model_version)
+            provider_result = provider.generate(request)
+            raw = provider_result.output if isinstance(provider_result, ProviderResult) \
+                else provider_result
+            accepted, errors = verify_agent_output(
+                raw, checkpoint, facts=facts, numbers=numbers, caveats=caveats)
+            if accepted is None and hasattr(provider, "repair"):
+                repaired = provider.repair(request, errors)
+                accepted, errors = verify_agent_output(
+                    repaired, checkpoint, facts=facts, numbers=numbers, caveats=caveats)
+            if isinstance(provider_result, ProviderResult):
+                usage = provider_result.usage or {}
+        except Exception as exc:
+            errors = [f"provider_error:{type(exc).__name__}"]
+        latency_ms = (time.perf_counter() - started) * 1000
+        state = self.store.state(checkpoint["checkpoint_id"])["state"]
+        stale = (state in PRESENTATION_TERMINAL_STATES
+                 or datetime.fromisoformat(checkpoint["validity"]["valid_until"])
+                 <= datetime.fromisoformat(generated_at) or state == "superseded")
+        if stale:
+            self.store.release_generation_claim(cache_key, owner_id)
+            evaluation = build_artifact_record(
+                "agent_shadow_output", {
+                    "checkpoint_id": checkpoint["checkpoint_id"],
+                    "status": "discarded_stale", "reason_code": reason_code,
+                    "agent_output": accepted, "verify_errors": errors,
+                }, checkpoint["data_mode"], checkpoint["is_mock"], generated_at)
+            self.store.put_artifact_record(evaluation)
+            self._record_shadow_metric(
+                checkpoint, generated_at, cache_hit=False, avoided_calls=0,
+                stale_discard=True, fallback=True, latency_ms=latency_ms,
+                input_tokens=usage.get("input_tokens"),
+                output_tokens=usage.get("output_tokens"),
+                cost_usd=usage.get("cost_usd"))
+            return None
+        if accepted is None:
+            try:
+                generation_finished_at = (
+                    datetime.fromisoformat(generated_at) + timedelta(microseconds=2)).isoformat()
+                self.store.append_event(_event(
+                    checkpoint, "generation_failed", generation_finished_at,
+                    event_id=f"generation_failed:{checkpoint['checkpoint_id']}:{cache_key[:12]}",
+                    reason_code=errors[0] if errors else "verifier_rejected"))
+            except ValueError:
+                pass
+            status = "fallback"
+            prepared = template_result
         else:
-            rendered = template
-        return rendered, numbers, caveats
+            try:
+                generation_finished_at = (
+                    datetime.fromisoformat(generated_at) + timedelta(microseconds=2)).isoformat()
+                self.store.append_event(_event(
+                    checkpoint, "generated", generation_finished_at,
+                    event_id=f"generated:{checkpoint['checkpoint_id']}:{cache_key[:12]}",
+                    reason_code=reason_code))
+            except ValueError:
+                self.store.release_generation_claim(cache_key, owner_id)
+                return template_result
+            rendered_text = _render(accepted, facts, numbers, caveats)
+            status = "verified"
+            prepared = PreparedPresentation(
+                PresentationText(
+                    title=template_result.text.title,
+                    summary=rendered_text["summary"], why=rendered_text["why"],
+                    fallback_used=False, verify_errors=(),
+                    agent_output=accepted, shadow_output=None),
+                numbers, caveats,
+                {"presentation_source": "agent", "template_version": None,
+                 "model_version": model_version,
+                 "prompt_version": material["prompt_version"],
+                 "schema_version": input_payload["schema_version"],
+                 "verifier_version": material["verifier_version"]})
+        evaluation = build_artifact_record(
+            "agent_shadow_output", {
+                "checkpoint_id": checkpoint["checkpoint_id"], "status": status,
+                "reason_code": reason_code, "agent_output": accepted,
+                "verify_errors": errors,
+            }, checkpoint["data_mode"], checkpoint["is_mock"], generated_at)
+        self.store.put_artifact_record(evaluation)
+        self._record_shadow_metric(
+            checkpoint, generated_at, cache_hit=False, avoided_calls=0,
+            fallback=accepted is None, latency_ms=latency_ms,
+            input_tokens=usage.get("input_tokens"),
+            output_tokens=usage.get("output_tokens"), cost_usd=usage.get("cost_usd"))
+        self.store.put_generation_cache(cache_key, owner_id, {
+            "status": status, "agent_output": accepted,
+            "summary": prepared.text.summary, "why": prepared.text.why,
+            "verify_errors": errors, "metadata": prepared.metadata,
+        }, valid_until)
+        # In shadow mode the driver still receives the deterministic template.  The
+        # verified output is retained only in the evaluation artifact/cache.
+        if self.presentation_mode == "shadow":
+            return template_result
+        return prepared
+
+    @staticmethod
+    def _prepared_from_agent_cache(template_result: PreparedPresentation,
+                                   cached: dict, numbers: list[dict],
+                                   caveats: list[dict]) -> PreparedPresentation:
+        if cached.get("status") != "verified":
+            return template_result
+        metadata = dict(cached.get("metadata") or {})
+        rendered = PresentationText(
+            title=template_result.text.title,
+            summary=cached.get("summary") or template_result.text.summary,
+            why=cached.get("why") or template_result.text.why,
+            fallback_used=False, verify_errors=(),
+            agent_output=cached.get("agent_output"), shadow_output=None)
+        return PreparedPresentation(rendered, numbers, caveats, metadata)
+
+    def explain_why(self, checkpoint_id: str, *, display_id: str,
+                    client_request_id: str, generated_at: str,
+                    is_driving: bool = False) -> dict:
+        """Lazily explain an already-offered card; never solve or create a checkpoint."""
+        if not client_request_id:
+            raise ValueError("client_request_id không được rỗng")
+        checkpoint = self.store.checkpoint(checkpoint_id)
+        if checkpoint is None:
+            raise CheckpointNotFoundError(checkpoint_id)
+        lease = self.store.lease(checkpoint_id)
+        if lease is None or lease.get("display_id") != display_id:
+            raise CheckpointConflictError("stale_or_unknown_lease")
+        if is_driving:
+            return {"status": "silent", "checkpoint_id": checkpoint_id,
+                    "display_id": display_id, "client_request_id": client_request_id,
+                    "silent": {"reason_code": "unsafe_while_moving"}}
+
+        state = self.store.state(checkpoint_id)["state"]
+        validity_until = checkpoint.get("validity", {}).get("valid_until")
+        historical = state in {"expired", "superseded", "accepted", "dismissed"}
+        if validity_until:
+            try:
+                historical = historical or datetime.fromisoformat(validity_until) \
+                    <= datetime.fromisoformat(generated_at)
+            except (TypeError, ValueError):
+                historical = True
+        artifact = (self.store.artifact(lease.get("presentation_artifact_id"))
+                    if lease.get("presentation_artifact_id") else None)
+        item = ((artifact or {}).get("payload") or {}).get("item") or {
+            "title": "Lời khuyên", "summary": "Lời khuyên đã được tạo từ trạng thái có nguồn.",
+        }
+        facts, numbers, caveats = self._presentation_inputs(checkpoint)
+        try:
+            input_payload = build_explanation_input(
+                checkpoint, display_id=display_id, facts=facts, numbers=numbers,
+                caveats=caveats, presentation=item, checkpoint_status=state,
+                is_historical=historical)
+        except Exception:
+            input_payload = None
+
+        context_digest = hashlib.sha256(json.dumps({
+            "checkpoint_id": checkpoint_id, "display_id": display_id,
+            "content_digest": lease.get("content_digest"),
+            "historical": historical, "schema_version": "1.0.0",
+        }, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        previous = self.store.explanation_request(client_request_id)
+        if previous is not None:
+            if previous["context_digest"] != context_digest:
+                raise CheckpointConflictError("client_request_id explanation context conflict")
+            return previous["record"]
+
+        response: dict
+        if input_payload is None:
+            response = self._why_fallback(
+                checkpoint_id, display_id, client_request_id, historical,
+                reason="invalid_context")
+        elif not self.why_agent_enabled or self.agent_provider is None:
+            response = self._why_fallback(
+                checkpoint_id, display_id, client_request_id, historical,
+                reason="llm_disabled")
+        else:
+            response = self._generate_why(
+                checkpoint, lease, input_payload, facts, numbers, caveats,
+                client_request_id=client_request_id, generated_at=generated_at,
+                historical=historical)
+        try:
+            self.store.put_explanation_request(client_request_id, context_digest, response)
+        except ValueError as exc:
+            raise CheckpointConflictError(str(exc)) from exc
+        try:
+            self.store.append_event(_event(
+                checkpoint, "expanded", generated_at,
+                event_id=f"expanded:{client_request_id}", display_id=display_id,
+                actor="driver", origin="client",
+                payload={"client_request_id": client_request_id,
+                         "is_historical": historical}))
+        except ValueError:
+            # Explanation is a side channel.  A terminal transition must not erase the
+            # already-returnable response; duplicate/cross-state events are audited.
+            pass
+        return response
+
+    @staticmethod
+    def _why_fallback(checkpoint_id: str, display_id: str, client_request_id: str,
+                      historical: bool, *, reason: str) -> dict:
+        text = ("Lời giải thích này dựa trên trạng thái và kế hoạch tại thời điểm hiển thị. "
+                "Hành động và thời gian phía trên do hệ thống tính toán.")
+        if historical:
+            text += " Đây là giải thích lịch sử, không phải lời khuyên hiện hành."
+        return {
+            "status": "ready", "checkpoint_id": checkpoint_id,
+            "display_id": display_id, "client_request_id": client_request_id,
+            "explanation": text, "used_fact_ids": [], "used_number_ids": [],
+            "used_caveat_ids": [], "presentation_source": "template",
+            "is_historical": historical, "no_reoffer": historical,
+            "fallback": True, "reason_code": reason,
+        }
+
+    def _generate_why(self, checkpoint: dict, lease: dict, input_payload: dict,
+                      facts: list[dict], numbers: list[dict], caveats: list[dict], *,
+                      client_request_id: str, generated_at: str,
+                      historical: bool) -> dict:
+        provider = self.agent_provider
+        assert provider is not None
+        model_version = str(getattr(provider, "model_version", "unknown"))
+        material = {
+            "request_type": "why_explanation",
+            "checkpoint_fingerprint": checkpoint.get("fingerprint") or checkpoint["checkpoint_id"],
+            "display_id": lease["display_id"], "content_digest": lease.get("content_digest"),
+            "facts_digest": hashlib.sha256(json.dumps(
+                {"facts": facts, "numbers": numbers, "caveats": caveats},
+                sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
+            "locale": input_payload["locale"], "prompt_version": "advice-why-v1",
+            "model_version": model_version, "schema_version": input_payload["schema_version"],
+            "verifier_version": "checkpoint-verifier-v1",
+        }
+        cache_key = "why_explanation:" + hashlib.sha256(json.dumps(
+            material, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        cached = self.store.generation_cache_get(cache_key, generated_at)
+        if cached is not None:
+            cached_response = dict(cached.get("response") or {})
+            cached_response["client_request_id"] = client_request_id
+            return cached_response
+        claim_owner = str(uuid.uuid4())
+        now = datetime.fromisoformat(generated_at)
+        valid_until = checkpoint.get("validity", {}).get("valid_until")
+        expiry = max(
+            datetime.fromisoformat(valid_until) if valid_until else now,
+            now + timedelta(days=1))
+        if not self.store.claim_generation(cache_key, claim_owner, generated_at,
+                                           expiry.isoformat()):
+            return self._why_fallback(
+                checkpoint["checkpoint_id"], lease["display_id"], client_request_id,
+                historical, reason="generation_claim_busy")
+        accepted = None
+        errors: list[str] = []
+        try:
+            request = build_agent_request(
+                input_payload, request_type="explain_why",
+                prompt_version=material["prompt_version"],
+                policy_version=advisor.policy().version, model_version=model_version)
+            provider_result = provider.generate(request)
+            raw = provider_result.output if isinstance(provider_result, ProviderResult) \
+                else provider_result
+            accepted, errors = verify_explanation_output(
+                raw, checkpoint, display_id=lease["display_id"],
+                facts=facts, numbers=numbers, caveats=caveats)
+        except Exception as exc:
+            errors = [f"provider_error:{type(exc).__name__}"]
+        if accepted is None:
+            response = self._why_fallback(
+                checkpoint["checkpoint_id"], lease["display_id"], client_request_id,
+                historical, reason=errors[0] if errors else "verifier_rejected")
+        else:
+            explanation = _render({
+                "reason_template": accepted["explanation_template"],
+                "why_template": accepted["explanation_template"],
+            }, facts, numbers, caveats)["why"]
+            response = {
+                "status": "ready", "checkpoint_id": checkpoint["checkpoint_id"],
+                "display_id": lease["display_id"], "client_request_id": client_request_id,
+                "explanation": explanation,
+                "used_fact_ids": accepted["used_fact_ids"],
+                "used_number_ids": accepted["used_number_ids"],
+                "used_caveat_ids": accepted["used_caveat_ids"],
+                "presentation_source": "agent", "is_historical": historical,
+                "no_reoffer": historical, "fallback": False,
+            }
+        artifact = build_artifact_record(
+            "agent_explanation", {
+                "checkpoint_id": checkpoint["checkpoint_id"],
+                "display_id": lease["display_id"],
+                "request_type": "why_explanation",
+                "status": "verified" if accepted is not None else "fallback",
+                "output": accepted,
+                "reason_code": response.get("reason_code"),
+                "model_version": model_version,
+                "prompt_version": material["prompt_version"],
+                "verifier_version": material["verifier_version"],
+            }, checkpoint["data_mode"], checkpoint["is_mock"], generated_at)
+        self.store.put_artifact_record(artifact)
+        self.store.put_generation_cache(cache_key, claim_owner,
+                                        {"response": response}, expiry.isoformat())
+        return response
 
     def _record_shadow_metric(
             self, checkpoint: dict, occurred_at: str, *, cache_hit: bool,
@@ -566,20 +992,58 @@ class AdviceCheckpointService:
             "cost_usd": cost_usd,
         })
 
-    def _envelope(self, checkpoint: dict, lease: dict, surface: str,
-                  generated_at: str,
-                  rendered: tuple[PresentationText, list[dict], list[dict]] | None = None
-                  ) -> dict:
+    def _persist_presentation_artifact(
+            self, checkpoint: dict, surface: str,
+            rendered: PreparedPresentation,
+            created_at: str) -> dict:
+        presentation, numbers, caveats = rendered.text, rendered.numbers, rendered.caveats
+        metadata = rendered.metadata
+        item = self._presentation_item(
+            checkpoint, surface, presentation, numbers, caveats, display_id=None)
+        payload = {
+            "schema_version": "1.0.0",
+            "presentation_source": metadata.get("presentation_source", "template"),
+            "template_version": metadata.get("template_version"),
+            "model_version": metadata.get("model_version"),
+            "prompt_version": metadata.get("prompt_version"),
+            "verifier_version": metadata.get("verifier_version", "checkpoint-verifier-v1"),
+            "policy_version": advisor.policy().version,
+            "title": presentation.title,
+            "summary": presentation.summary,
+            "why": presentation.why,
+            "item": item,
+        }
+        record = build_artifact_record(
+            "presentation", payload, checkpoint["data_mode"],
+            checkpoint["is_mock"], created_at)
+        self.store.put_artifact_record(record)
+        return record
+
+    @staticmethod
+    def _lease_presentation_metadata(record: dict) -> dict:
+        payload = record["payload"]
+        return {
+            "presentation_artifact_id": record["artifact_id"],
+            "content_digest": record["digest"],
+            "presentation_source": payload["presentation_source"],
+            "template_version": payload["template_version"],
+            "model_version": payload["model_version"],
+            "prompt_version": payload["prompt_version"],
+            "schema_version": payload["schema_version"],
+            "verifier_version": payload["verifier_version"],
+            "policy_version": payload["policy_version"],
+        }
+
+    @staticmethod
+    def _presentation_item(checkpoint: dict, surface: str,
+                           presentation: PresentationText, numbers: list[dict],
+                           caveats: list[dict], display_id: str | None) -> dict:
         action = checkpoint.get("current_action") or {"code": "NO_ACTION",
                                                        "label_id": "action.no_action"}
-        rendered = rendered or self._prepare_presentation(
-            checkpoint, generated_at, allow_shadow=False)
-        assert rendered is not None
-        presentation, numbers, caveats = rendered
         caveat_ids = [item["id"] for item in caveats]
-        item = {
+        return {
             "checkpoint_id": checkpoint["checkpoint_id"],
-            "display_id": lease["display_id"],
+            "display_id": display_id,
             "topic": checkpoint["topic"],
             "surface": surface,
             "canonical_action": action,
@@ -604,8 +1068,33 @@ class AdviceCheckpointService:
             "solver_set": checkpoint["solver_set"],
             "response_options": ["accepted", "dismissed", "expanded"],
         }
+
+    def _envelope(self, checkpoint: dict, lease: dict, surface: str,
+                  generated_at: str,
+                  rendered: PreparedPresentation | None = None
+                  ) -> dict:
+        source = lease.get("presentation_source", "template")
+        artifact_id = lease.get("presentation_artifact_id")
+        if artifact_id:
+            artifact = self.store.artifact(artifact_id)
+            if artifact is not None and artifact.get("digest") == lease.get("content_digest"):
+                payload = artifact.get("payload") or {}
+                pinned_item = dict(payload.get("item") or {})
+                if pinned_item.get("checkpoint_id") == checkpoint["checkpoint_id"]:
+                    pinned_item["display_id"] = lease["display_id"]
+                    return {"status": "ready", "surface": surface,
+                            "generated_at": generated_at,
+                            "presentation_source": source,
+                            "items": [pinned_item]}
+        rendered = rendered or self._prepare_presentation(
+            checkpoint, generated_at, allow_shadow=False)
+        assert rendered is not None
+        presentation, numbers, caveats = rendered.text, rendered.numbers, rendered.caveats
+        item = self._presentation_item(
+            checkpoint, surface, presentation, numbers, caveats,
+            display_id=lease["display_id"])
         return {"status": "ready", "surface": surface,
-                "generated_at": generated_at, "presentation_source": "template",
+                "generated_at": generated_at, "presentation_source": source,
                 "items": [item]}
 
     @staticmethod

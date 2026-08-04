@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gsm-driver-agent/ui/contracts/advice_why",
+  "title": "AdviceWhyEnvelope",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "status": {"enum": ["ready", "silent"]},
+    "session_id": {"type": "string"},
+    "step_version": {"type": "integer", "minimum": 0},
+    "expected_step_version": {"type": ["integer", "null"], "minimum": 0},
+    "checkpoint_id": {"type": "string", "minLength": 1},
+    "display_id": {"type": "string", "minLength": 1},
+    "client_request_id": {"type": "string", "minLength": 1},
+    "explanation": {"type": "string", "minLength": 1, "maxLength": 280},
+    "used_fact_ids": {"type": "array", "items": {"type": "string"}},
+    "used_number_ids": {"type": "array", "items": {"type": "string"}},
+    "used_caveat_ids": {"type": "array", "items": {"type": "string"}},
+    "presentation_source": {"enum": ["template", "agent"]},
+    "is_historical": {"type": "boolean"},
+    "no_reoffer": {"type": "boolean"},
+    "fallback": {"type": "boolean"},
+    "reason_code": {"type": "string"},
+    "silent": {"type": "object", "additionalProperties": false,
+      "properties": {"reason_code": {"type": "string"}},
+      "required": ["reason_code"]}
+  },
+  "required": ["status", "checkpoint_id", "display_id", "client_request_id"],
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "ready"}}},
+     "then": {"required": ["explanation", "presentation_source", "is_historical"]}},
+    {"if": {"properties": {"status": {"const": "silent"}}},
+     "then": {"required": ["silent"], "not": {"required": ["explanation"]}}}
+  ]
+}

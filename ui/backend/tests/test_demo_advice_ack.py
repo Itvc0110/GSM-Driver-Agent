@@ -31,6 +31,6 @@ def test_demo_display_ack_and_response_share_checkpoint_lease(tmp_path):
         display_id=item["display_id"], client_event_id="accept-1",
         response="accepted", occurred_at="2026-07-01T08:20:02+07:00")
     assert response["event_type"] == "accepted"
-    with CheckpointStore(tmp_path / "checkpoint.db") as store:
+    with CheckpointStore(service.checkpoint_path("ack-session")) as store:
         event_types = [event["event_type"] for event in store.events(checkpoint["checkpoint_id"])]
     assert event_types[-2:] == ["displayed", "accepted"]

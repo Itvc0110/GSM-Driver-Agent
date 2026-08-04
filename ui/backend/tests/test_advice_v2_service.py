@@ -65,6 +65,29 @@ def test_get_retry_reuses_lease_and_does_not_imply_display(tmp_path):
         assert first["items"][0]["numbers"][0]["artifact_ref"]
 
 
+def test_lease_replays_pinned_presentation_artifact_without_rerender(tmp_path):
+    from app.services.advice_checkpoint import AdviceCheckpointService
+
+    with CheckpointStore(tmp_path / "checkpoint.db") as store:
+        service = AdviceCheckpointService(store, FakeOrchestrator(_solver_result()))
+        first = _get(service)
+        card = first["items"][0]
+        lease = store.lease(card["checkpoint_id"])
+
+        assert lease["presentation_artifact_id"].startswith("presentation:")
+        artifact = store.artifact(lease["presentation_artifact_id"])
+        assert artifact is not None
+        assert artifact["digest"] == lease["content_digest"]
+        assert artifact["payload"]["summary"] == card["summary"]
+
+        def rerender_must_not_run(*args, **kwargs):
+            raise AssertionError("lease retry must not rerender presentation")
+
+        service._prepare_presentation = rerender_must_not_run
+        second = _get(service)
+        assert second["items"][0] == card
+
+
 def test_mounted_ack_and_response_are_idempotent_and_lease_bound(tmp_path):
     from app.services.advice_checkpoint import (
         AdviceCheckpointService,

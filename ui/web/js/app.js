@@ -3,12 +3,14 @@
 // not construct trips, advance a cursor, calculate SOC/payout or ask an agent for advice.
 
 import { api, fmtVnd } from "./api.js";
+import { beginDisplayAck, completeDisplayAck, isStaleStep } from "./demo_guards.js";
 
 const S = {
   driverId: null, date: null, state: null, history: null, mapCtx: null, catalog: null,
   demo: {
     sessionId: null, actorId: null, stepVersion: 0, busy: false,
-    ackedDisplayIds: new Set(), lastResponse: null,
+    renderedStepVersion: 0, ackedDisplayIds: new Set(), pendingDisplayIds: new Set(),
+    lastResponse: null,
   },
 };
 
@@ -275,14 +277,20 @@ function renderDemoTrip(trip) {
 }
 
 function sendDisplayAck(item) {
-  if (!item || S.demo.ackedDisplayIds.has(item.display_id)) return;
-  S.demo.ackedDisplayIds.add(item.display_id);
-  requestAnimationFrame(() => api.demoAdviceDisplay(
-    S.demo.sessionId, item.checkpoint_id, {
-      display_id: item.display_id,
-      client_event_id: `web-mount-${item.display_id}`,
-      mounted_at: new Date().toISOString(),
-    }).catch((error) => console.warn("display ACK failed", error)));
+  if (!item || !beginDisplayAck(S.demo, item.display_id)) return;
+  requestAnimationFrame(async () => {
+    try {
+      await api.demoAdviceDisplay(S.demo.sessionId, item.checkpoint_id, {
+        display_id: item.display_id,
+        client_event_id: `web-mount-${item.display_id}`,
+        mounted_at: new Date().toISOString(),
+      });
+      completeDisplayAck(S.demo, item.display_id, true);
+    } catch (error) {
+      completeDisplayAck(S.demo, item.display_id, false);
+      console.warn("display ACK failed", error);
+    }
+  });
 }
 
 function sendAdviceResponse(item, response) {
@@ -295,6 +303,36 @@ function sendAdviceResponse(item, response) {
   }).catch((error) => console.warn("advice response failed", error));
 }
 
+function requestDemoWhy(item, panel, button, cardStepVersion) {
+  if (!item || button.disabled) return;
+  button.disabled = true;
+  const attempt = Number(button.dataset.attempt || "0") + 1;
+  button.dataset.attempt = String(attempt);
+  const requestId = `web-why-${item.display_id}-${attempt}`;
+  panel.hidden = false;
+  panel.textContent = "Đang giải thích…";
+  api.demoAdviceWhy(S.demo.sessionId, item.checkpoint_id, {
+    display_id: item.display_id,
+    client_request_id: requestId,
+    expected_step_version: cardStepVersion,
+  }).then((response) => {
+    // A late response must never mount into a newer card or a detached card.
+    if (!panel.isConnected || response?.checkpoint_id !== item.checkpoint_id
+        || response?.display_id !== item.display_id
+        || Number(response?.step_version) !== Number(cardStepVersion)) return;
+    panel.textContent = response.status === "silent"
+      ? `Không thể giải thích lúc này (${response.silent?.reason_code || "unsafe"})`
+      : (response.explanation || "Chưa có giải thích.");
+    button.disabled = false;
+    button.textContent = response.fallback ? "Vì sao? (mẫu)" : "Ẩn giải thích";
+  }).catch((error) => {
+    if (!panel.isConnected) return;
+    panel.textContent = `Không tải được giải thích (${error.message}).`;
+    button.disabled = false;
+    button.textContent = "Thử lại Vì sao";
+  });
+}
+
 function renderDemoAdvice(advice) {
   const slot = $("demo-advice");
   slot.replaceChildren();
@@ -304,11 +342,18 @@ function renderDemoAdvice(advice) {
   }
   const item = advice.items[0];
   addText(slot, "div", item.title, "tag");
+  const actionCode = item.canonical_action?.code || "NO_ACTION";
+  addText(slot, "div", `Hành động hiện tại: ${actionCode}`, "note");
   addText(slot, "div", item.summary, "advice-summary");
   const source = item.provenance?.is_mock ? "MOCK" : "LIVE";
   addText(slot, "div", `Nguồn: ${source} · presentation: ${advice.presentation_source || "template"}`, "note");
   if (item.action_window?.start && item.action_window?.end) {
     addText(slot, "div", `Khung: ${item.action_window.start} → ${item.action_window.end}`, "note");
+  }
+  for (const future of item.future_plan || []) {
+    const window = future.window?.start && future.window?.end
+      ? ` · ${future.window.start} → ${future.window.end}` : "";
+    addText(slot, "div", `Sắp tới: ${future.code || "NO_ACTION"}${window}`, "note");
   }
   const numbers = item.numbers || [];
   if (numbers.length) {
@@ -321,28 +366,38 @@ function renderDemoAdvice(advice) {
   }
   const why = document.createElement("div");
   why.hidden = true;
-  addText(why, "div", item.why, "note");
+  why.className = "note";
   slot.appendChild(why);
   const actions = document.createElement("div");
   actions.style.display = "flex";
   actions.style.gap = "6px";
   actions.style.marginTop = "6px";
-  for (const response of ["accepted", "dismissed", "expanded"]) {
+  for (const response of ["accepted", "dismissed"]) {
     const button = document.createElement("button");
     button.className = "btn ghost";
     button.style.margin = "0";
     button.textContent = response === "accepted" ? "Làm theo" : response === "dismissed" ? "Bỏ qua" : "Vì sao";
-    button.addEventListener("click", () => {
-      sendAdviceResponse(item, response);
-      if (response === "expanded") why.hidden = !why.hidden;
-    });
+    button.addEventListener("click", () => sendAdviceResponse(item, response));
     actions.appendChild(button);
   }
+  const whyButton = document.createElement("button");
+  whyButton.className = "btn ghost";
+  whyButton.style.margin = "0";
+  whyButton.textContent = "Vì sao";
+  whyButton.addEventListener("click", () => requestDemoWhy(
+    item, why, whyButton, S.demo.renderedStepVersion));
+  actions.appendChild(whyButton);
   slot.appendChild(actions);
   sendDisplayAck(item);
 }
 
 function renderDemoStep(response) {
+  const responseVersion = Number(response?.step_version);
+  if (!Number.isFinite(responseVersion) || isStaleStep(S.demo.renderedStepVersion, responseVersion)) {
+    return false;
+  }
+  S.demo.renderedStepVersion = responseVersion;
+  S.demo.stepVersion = Math.max(S.demo.stepVersion, responseVersion);
   S.demo.lastResponse = response;
   const driver = response.driver || {};
   const position = driver.position || {};
@@ -367,6 +422,7 @@ function renderDemoStep(response) {
     addText(row, "span", `${event.sequence}. t=${event.t_min} · ${event.kind}`);
     history.appendChild(row);
   }
+  return true;
 }
 
 async function createDemoSession() {
@@ -413,7 +469,6 @@ async function nextDemoStep() {
       client_step_id: `web-${S.demo.sessionId}-${S.demo.stepVersion}`,
       expected_step_version: S.demo.stepVersion,
     });
-    S.demo.stepVersion = response.step_version;
     renderDemoStep(response);
     $("demo-session-status").textContent = response.provenance?.is_mock
       ? `Actor ${response.actor_id} · MOCK simulator replay`

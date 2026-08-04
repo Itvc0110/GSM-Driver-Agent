@@ -12,6 +12,7 @@ from app.services.demo_session import (
     DemoSessionConflict,
     DemoSessionNotFound,
 )
+from app.services.advice_checkpoint import CheckpointConflictError, CheckpointNotFoundError
 
 
 router = APIRouter()
@@ -48,11 +49,22 @@ class DemoResponseBody(BaseModel):
     occurred_at: datetime
 
 
+class DemoWhyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    display_id: str = Field(min_length=1)
+    client_request_id: str = Field(min_length=1, max_length=160)
+    expected_step_version: int | None = Field(default=None, ge=0)
+
+
 def _error(exc: Exception) -> HTTPException:
     if isinstance(exc, DemoSessionNotFound):
         status = 410 if "completed" in str(exc) else 404
         return HTTPException(status_code=status, detail=str(exc))
     if isinstance(exc, DemoSessionConflict):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, CheckpointNotFoundError):
+        return HTTPException(status_code=404, detail=str(exc))
+    if isinstance(exc, CheckpointConflictError):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, ValueError):
         return HTTPException(status_code=422, detail=str(exc))
@@ -111,5 +123,16 @@ def demo_response(session_id: str, checkpoint_id: str, body: DemoResponseBody):
             session_id, checkpoint_id, display_id=body.display_id,
             client_event_id=body.client_event_id, response=body.response,
             occurred_at=body.occurred_at.isoformat())
+    except Exception as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/sessions/{session_id}/advice/{checkpoint_id}/why")
+def demo_why(session_id: str, checkpoint_id: str, body: DemoWhyBody):
+    try:
+        return DEMO_SESSIONS.explain_demo_why(
+            session_id, checkpoint_id, display_id=body.display_id,
+            client_request_id=body.client_request_id,
+            expected_step_version=body.expected_step_version)
     except Exception as exc:
         raise _error(exc) from exc

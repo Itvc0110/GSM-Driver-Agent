@@ -70,6 +70,8 @@ export const api = {
     post(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/advice/${encodeURIComponent(checkpointId)}/display`, body),
   demoAdviceResponse: (sessionId, checkpointId, body) =>
     post(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/advice/${encodeURIComponent(checkpointId)}/response`, body),
+  demoAdviceWhy: (sessionId, checkpointId, body) =>
+    post(`/api/v1/demo/sessions/${encodeURIComponent(sessionId)}/advice/${encodeURIComponent(checkpointId)}/why`, body),
   mapContext: (date, hour, driverId) =>
     get(`/api/v1/map-context?date=${date}&hour=${hour}${driverId ? `&driver_id=${driverId}` : ""}`),
   tripStep: (idx, step) => get(`/api/v1/trip/step?trip_index=${idx}&step=${step}`),

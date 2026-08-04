@@ -21,6 +21,41 @@ const eventId = () => globalThis.crypto?.randomUUID?.()
 
 export const mountEventId = (displayId) => `mount-${displayId}`;
 
+// Dynamic advice, provenance and route text must never be interpreted as markup.
+// Keep the legacy card renderer on the same safe DOM path as the demo renderer.
+const node = (tag, className, value) => {
+  const el = document.createElement(tag);
+  if (className) el.className = className;
+  if (value !== undefined && value !== null) el.textContent = String(value);
+  return el;
+};
+
+const append = (parent, ...children) => {
+  children.filter(Boolean).forEach((child) => parent.appendChild(child));
+  return parent;
+};
+
+const numberValue = (number) => number?.unit === "vnd"
+  ? fmtVnd(number.value)
+  : `${number?.value ?? ""}${number?.unit ? ` ${number.unit}` : ""}`;
+
+const numberTable = (numbers, {useName = false} = {}) => {
+  const table = node("table", "num-table");
+  const body = node("tbody");
+  (numbers || []).forEach((number) => {
+    const row = node("tr");
+    append(row,
+      node("td", null, useName
+        ? String(number.name || number.id || "").replaceAll("_", " ")
+        : number.id),
+      node("td", null, numberValue(number)),
+      node("td", null, number.source));
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  return table;
+};
+
 export function v2CardView(item) {
   return {
     title: item.title,
@@ -67,28 +102,27 @@ export const Cards = {
 
   _renderV2(item) {
     const view = v2CardView(item);
-    const el = document.createElement("div");
-    el.className = "adv-card enter";
-    const rows = (view.numbers || []).map((n) => `
-      <tr><td>${n.id}</td><td>${n.unit === "vnd" ? fmtVnd(n.value) : `${n.value} ${n.unit}`}</td>
-      <td>${n.source}</td></tr>`).join("");
+    const el = node("div", "adv-card enter");
+    const head = node("div", "adv-head");
+    const kind = node("span", "adv-kind",
+      `${KIND_ICON[item.surface] || ""} ${KIND_LABEL[item.surface] || item.surface} · Trợ Lý Xanh`);
+    append(head, kind);
     const mock = view.provenance?.is_mock === true;
-    el.innerHTML = `
-      <div class="adv-head">
-        <span class="adv-kind">${KIND_ICON[item.surface]} ${KIND_LABEL[item.surface]} · Trợ Lý Xanh</span>
-        ${mock ? `<span class="mock-badge">mô phỏng</span>` : ""}
-      </div>
-      <b class="adv-title">${view.title}</b>
-      <p class="adv-msg">${view.summary}</p>
-      <div class="adv-why hidden"><p>${view.why}</p>
-        <table class="num-table">${rows}</table>
-        <div class="meta">${view.confidenceBand} · ${view.provenance.data_mode} · ${view.provenance.policy_version}</div>
-      </div>
-      <div class="adv-actions">
-        <button class="adv-btn follow">✅ Làm theo</button>
-        <button class="adv-btn dismiss">✖ Bỏ qua</button>
-        <button class="adv-btn why">？Vì sao</button>
-      </div>`;
+    if (mock) head.appendChild(node("span", "mock-badge", "mô phỏng"));
+    const why = node("div", "adv-why hidden");
+    append(why, node("p", null, view.why), numberTable(view.numbers));
+    const provenance = view.provenance || {};
+    why.appendChild(node("div", "meta",
+      `${view.confidenceBand || ""} · ${provenance.data_mode || ""} · ${provenance.policy_version || ""}`));
+    const actions = node("div", "adv-actions");
+    append(actions,
+      node("button", "adv-btn follow", "✅ Làm theo"),
+      node("button", "adv-btn dismiss", "✖ Bỏ qua"),
+      node("button", "adv-btn why", "？Vì sao"));
+    const action = view.action?.code || "NO_ACTION";
+    append(el, head, node("b", "adv-title", view.title),
+      node("p", "adv-msg", `Hành động hiện tại: ${action}`),
+      node("p", "adv-msg", view.summary), why, actions);
     while (this.mount.children.length >= 2) this.mount.firstChild.remove();
     this.mount.appendChild(el);
 
@@ -123,24 +157,32 @@ export const Cards = {
   // nó vẫn vẽ "Làm theo"/"Bỏ qua" với advice_id BỊA (`brief-{date}`) ⇒ một cú bấm tạo
   // decision+followed cho lời khuyên advisor CHƯA TỪNG ĐƯA ⇒ adherence sản phẩm 100% giả.
   // Backend nay cũng từ chối (422) — hai tầng, vì client cũ/curl vẫn gọi được.
-  _render(kind, adviceId, title, message, extraHtml, confidence, actionable = true) {
-    const el = document.createElement("div");
-    el.className = "adv-card enter";
-    el.innerHTML = `
-      <div class="adv-head">
-        <span class="adv-kind">${KIND_ICON[kind]} ${KIND_LABEL[kind]} · Trợ Lý Xanh</span>
-        <span class="mock-badge">mô phỏng</span>
-      </div>
-      <b class="adv-title">${title}</b>
-      <p class="adv-msg">${message}</p>
-      ${confidence != null ? `<div class="confidence-track"><div class="confidence-fill" style="width:${confidence * 100}%"></div></div>` : ""}
-      <div class="adv-why hidden">${extraHtml || ""}</div>
-      <div class="adv-actions">
-        ${actionable ? `<button class="adv-btn follow">✅ Làm theo</button>
-        <button class="adv-btn dismiss">✖ Bỏ qua</button>` : ""}
-        ${extraHtml ? `<button class="adv-btn why">？Vì sao</button>` : ""}
-        ${actionable ? "" : `<button class="adv-btn close">Đã hiểu</button>`}
-      </div>`;
+  _render(kind, adviceId, title, message, extraContent, confidence, actionable = true) {
+    const el = node("div", "adv-card enter");
+    const head = node("div", "adv-head");
+    append(head,
+      node("span", "adv-kind", `${KIND_ICON[kind] || ""} ${KIND_LABEL[kind] || kind} · Trợ Lý Xanh`),
+      node("span", "mock-badge", "mô phỏng"));
+    const why = node("div", "adv-why hidden");
+    if (extraContent) why.appendChild(extraContent);
+    const actions = node("div", "adv-actions");
+    if (actionable) {
+      append(actions,
+        node("button", "adv-btn follow", "✅ Làm theo"),
+        node("button", "adv-btn dismiss", "✖ Bỏ qua"));
+    }
+    if (extraContent) actions.appendChild(node("button", "adv-btn why", "？Vì sao"));
+    if (!actionable) actions.appendChild(node("button", "adv-btn close", "Đã hiểu"));
+    append(el, head, node("b", "adv-title", title), node("p", "adv-msg", message));
+    if (confidence != null) {
+      const track = node("div", "confidence-track");
+      const fill = node("div", "confidence-fill");
+      const width = Math.max(0, Math.min(100, Number(confidence) * 100));
+      fill.style.width = `${Number.isFinite(width) ? width : 0}%`;
+      track.appendChild(fill);
+      el.appendChild(track);
+    }
+    append(el, why, actions);
     const close = (cls, act) => {
       this.logAction(adviceId, act, kind);
       el.classList.add(cls);
@@ -169,14 +211,17 @@ export const Cards = {
   },
 
   _whyHtml(item) {
-    const rows = (item.numbers || []).map((n) => `
-      <tr><td>${n.name.replaceAll("_", " ")}</td>
-          <td>${n.unit === "vnd" ? fmtVnd(n.value) : n.value + " " + (n.unit || "")}</td>
-          <td>${n.source}</td></tr>`).join("");
-    return `<table class="num-table">${rows}</table>
-      <div class="meta" style="font-size:10.5px;color:var(--text-muted);margin-top:6px">
-        solver ${item.solver} · mã ${item.reason_code} · độ tin ${(item.confidence * 100).toFixed(0)}%
-        ${item.caveat ? `<br>⚠ ${item.caveat}` : ""}</div>`;
+    const fragment = document.createDocumentFragment();
+    fragment.appendChild(numberTable(item.numbers, {useName: true}));
+    const meta = node("div", "meta",
+      `solver ${item.solver || ""} · mã ${item.reason_code || ""} · độ tin ${
+        (Number(item.confidence || 0) * 100).toFixed(0)}%`);
+    meta.style.fontSize = "10.5px";
+    meta.style.color = "var(--text-muted)";
+    meta.style.marginTop = "6px";
+    if (item.caveat) meta.appendChild(node("div", null, `⚠ ${item.caveat}`));
+    fragment.appendChild(meta);
+    return fragment;
   },
 
   // -------- BRIEF (F1): mốc hôm nay + advice S1 đầu ca --------
