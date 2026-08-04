@@ -110,7 +110,7 @@ def test_topic_DUOC_DO_van_nhan_followed():
 def test_GET_actions_mang_topic_va_co_mem_ra_toi_UI(topic, mem):
     """🔴 Nợ do soi độc lập bắt (2026-08-03) — và nó là lỗi **cycle này tự tạo**.
 
-    UPDATE-128 sửa `ui/web/index.html` để **HỨA** rằng khối *"Nhật ký làm-theo"* phân biệt khuyên
+    UPDATE-135 sửa `ui/web/index.html` để **HỨA** rằng khối *"Nhật ký làm-theo"* phân biệt khuyên
     mềm (*"chỉ có nút Ẩn, và cú bấm đó chỉ nghĩa đừng nhắc nữa"*). Nhưng `GET /advice/actions`
     **bỏ rơi `topic`** khi dựng row ⇒ UI **không có dữ liệu** để phân biệt. Tức tôi viết một lời hứa
     vào UI mà không nối đường dữ liệu cho nó — đúng họ lỗi *"tài liệu quảng cáo cơ chế không có
@@ -194,7 +194,7 @@ def test_POST_be_mat_RONG_HON_GET_va_phai_vay():
 
 @pytest.mark.parametrize("topic", ["brief", "nudge", "recap"])
 def test_MOI_nhanh_cua_GET_advice_deu_KHOP_contract(topic):
-    """Vi phạm contract **có từ TRƯỚC** UPDATE-128: nhánh IM LẶNG thiếu cả ba field
+    """Vi phạm contract **có từ TRƯỚC** UPDATE-135: nhánh IM LẶNG thiếu cả ba field
     `scenario_id`/`seed`/`data_mode` mà `ui/contracts/advice.json` khai `required`. Khánh và tôi
     độc lập tìm ra và sửa hai cách (đã đo: cùng cho seed 7000). Cổng này quét **mọi nhánh** bằng
     chính schema trong repo — không phải danh sách field tôi tự nhớ."""
@@ -239,7 +239,7 @@ def test_cards_js_THUC_SU_doc_co_cua_server():
 
     Nay neo vào **chính biểu thức quyết định chế độ**. ⚠ Vẫn là cổng trên VĂN BẢN NGUỒN, không phải
     test hành vi — repo không có runner JS. Nói rõ giới hạn đó ở đây thay vì để người đọc tưởng nó
-    mạnh hơn; fix thật cần jsdom/node và là một quyết định hạ tầng (ghi ở UPDATE-128 §7d)."""
+    mạnh hơn; fix thật cần jsdom/node và là một quyết định hạ tầng (ghi ở UPDATE-135 §7d)."""
     code = _cards_js_khong_comment()
     assert re.search(r"\bis_soft_advice\b", code), (
         "`cards.js` KHÔNG còn chỗ nào (ngoài chú thích) đọc `is_soft_advice` ⇒ client lại tự "

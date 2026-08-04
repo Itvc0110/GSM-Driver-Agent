@@ -81,7 +81,7 @@ DEFAULT_TOPIC = "brief"
 #
 # 🔴 Và Khánh đúng ở một điểm quan trọng hơn tôi tưởng lúc đầu. Docstring test của anh ấy:
 # *"V1 chỉ nhận ba legacy surface; **safety priority không do client khai**"*. Đó chính là phản biện
-# đúng cho lỗ `F1` mà soi độc lập bắt ở UPDATE-128: tôi để `is_soft_advice` suy từ **query param do
+# đúng cho lỗ `F1` mà soi độc lập bắt ở UPDATE-135: tôi để `is_soft_advice` suy từ **query param do
 # CLIENT chọn**, nên một GET là đủ dán nhãn "khuyên mềm" lên một thẻ kinh tế. Bề mặt hẹp của Khánh
 # **bịt lỗ đó từ gốc** — client không khai được nữa thì không dán nhãn sai được nữa.
 #
@@ -199,7 +199,7 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
                        is_driving=is_driving)
     # `is_soft_advice`: SERVER trả lời "thẻ này có phải khuyên mềm không", client KHÔNG tự suy.
     #
-    # Bản đầu của UPDATE-128 để `cards.js` chép danh sách `SOFT_TOPICS` sang JS — tức **nguồn sự
+    # Bản đầu của UPDATE-135 để `cards.js` chép danh sách `SOFT_TOPICS` sang JS — tức **nguồn sự
     # thật thứ hai** cho một ranh giới đạo đức, đúng thứ `D-M3-17` vừa trả giá (UI tự tính tầm pin
     # bằng công thức riêng, lệch engine 1,76× mà 1.000 test không thấy vì không test nào so hai
     # bên). Thêm topic mềm mà quên sửa JS thì thẻ đó vẫn vẽ nút "Làm theo". Nay client chỉ đọc
@@ -227,7 +227,7 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
     # im lặng `no_soft_producer`) NAY LÀ CODE CHẾT và đã bị xoá. Bề mặt GET hẹp của Khánh
     # (`TopicGet` = 3 topic client) chặn cả hai ca **ở pydantic, trước khi vào hàm**.
     #
-    # Đây là kết quả TỐT HƠN bản của tôi, và đáng ghi lại vì sao: lỗ `F1` (soi độc lập UPDATE-128)
+    # Đây là kết quả TỐT HƠN bản của tôi, và đáng ghi lại vì sao: lỗ `F1` (soi độc lập UPDATE-135)
     # là *"cờ đạo đức suy từ query param do CLIENT chọn"*. Tôi vá bằng cách trả im lặng khi client
     # hỏi topic mềm — tức vẫn để client khai. Khánh **bỏ hẳn quyền khai đó**. Nguyên tắc của anh ấy
     # viết trong test: *"safety priority không do client khai"*.
@@ -493,7 +493,7 @@ def get_actions(driver_id: str | None = Query(None), limit: int = Query(50, ge=1
         rows.append({"advice_id": e["decision_id"], "driver_id": e["driver_id"],
                      "date": p.get("date"), "action": p.get("action"),
                      "card_kind": p.get("card_kind"), "at_min": p.get("at_min"),
-                     # `topic` + `is_soft_advice`: soi độc lập 2026-08-03 bắt được — UPDATE-128 sửa
+                     # `topic` + `is_soft_advice`: soi độc lập 2026-08-03 bắt được — UPDATE-135 sửa
                      # `index.html` để HỨA rằng khối "Nhật ký làm-theo" phân biệt khuyên mềm, nhưng
                      # endpoint này **bỏ rơi `topic`** khi dựng row ⇒ UI không có dữ liệu để phân
                      # biệt. Tức tôi viết một lời hứa vào UI mà không nối đường dữ liệu cho nó —

@@ -97,7 +97,7 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
 > vào đúng tín hiệu báo lỗi, và người sau sẽ đi "sửa" một ranh giới đang chạy đúng. Nên topic mềm
 > phải **không xuất hiện** trong view.
 >
-> **Đã thi hành bằng máy** (UPDATE-128, sever-restore 4/4 mũi bắn): registry
+> **Đã thi hành bằng máy** (UPDATE-135, sever-restore 4/4 mũi bắn): registry
 > `src/gsm_core/lifecycle/advice_topics.py` · lọc ở **CẢ HAI** vòng của `adherence_view` (lọc một
 > vòng để hở vòng kia là đúng họ lỗi (c)#1) · cổng **fail-closed** `tests/test_advice_topic_registry.py`
 > — topic chưa phân loại ⇒ ĐỎ, không im lặng rơi vào bảng đo.
@@ -142,7 +142,7 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
 > đúng cái sai mà đoạn trên vừa cấm — và lần này hậu quả không phải một con số lệch mà là một thước
 > nghe-lời cho lời khuyên sức khoẻ.
 >
-> ### ✅ Trạng thái 2026-08-04 (UPDATE-130) — đọc trước khi lập kế hoạch join
+> ### ✅ Trạng thái 2026-08-04 (UPDATE-137) — đọc trước khi lập kế hoạch join
 >
 > Bảng ba cột ở trên là **ảnh chụp lúc phát hiện**; thực tế còn **từ vựng thứ TƯ** —
 > `cadence.SAFETY_TOPICS = {"safety"}`, cùng khái niệm với `safety_reserved` nhưng khác tên, ở khác

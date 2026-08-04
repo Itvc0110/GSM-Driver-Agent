@@ -1,6 +1,6 @@
 """CỔNG: `OSRM_BASE_URL` phải có người ĐỌC, và không mirror nào được sai tên miền.
 
-Hai lỗi thật, tìm ra 2026-08-03 bằng cách **gọi thật** chứ không đọc code (UPDATE-128):
+Hai lỗi thật, tìm ra 2026-08-03 bằng cách **gọi thật** chứ không đọc code (UPDATE-135):
 
 1. `.env` và `.env.example` mô tả `OSRM_BASE_URL` như tầng 1 của routing driver-app, nhưng
    `try_osrm()` **viết cứng** host ⇒ sửa biến không đổi hành vi. Cường hỏi *"có cần cập nhật
@@ -189,7 +189,7 @@ def test_moi_waypoint_deu_vao_URL(monkeypatch):
 # DOCSTRING** của `_osrm_source` ⇒ xoá sạch nhãn khỏi CODE mà cổng vẫn XANH nhờ lời giải thích.
 # Đúng bẫy #2 của repo: test khắc lời giải thích thành bằng chứng.
 #
-# ⚠ Và nó bắt được một chỗ tôi **KHAI QUÁ**: UPDATE-128 §7c ghi cổng này đã được *"viết lại: gọi
+# ⚠ Và nó bắt được một chỗ tôi **KHAI QUÁ**: UPDATE-135 §7c ghi cổng này đã được *"viết lại: gọi
 # thật `try_osrm` với `urlopen` giả"*. Sự thật là tôi **THÊM** `test_nhan_source_dung_MIRROR_NAO_
 # THUC_SU_tra_loi` (ở trên) mà **để nguyên** cổng grep cũ — hai test cùng tên chủ đề, một cái thật
 # một cái trang trí, và bản ghi nói như thể chỉ còn cái thật. Nay xoá hẳn cái cũ: giữ nó lại chỉ để

@@ -1,4 +1,4 @@
-# UPDATE-128 — Khoá ngoài kiểm bằng GỌI THẬT + ranh giới "KHUYÊN MỀM KHÔNG ĐO"
+# UPDATE-135 — Khoá ngoài kiểm bằng GỌI THẬT + ranh giới "KHUYÊN MỀM KHÔNG ĐO"
 
 Ngày: **2026-08-03** · Người: Cường (agent) · Trạng thái: **DONE-CODE** · Chờ verdict: **`V-26`**
 
@@ -273,7 +273,7 @@ thiếu ít nhất hai bước, và cái thứ tư thiếu cả bốn.
 
 `SCOPE` **không đổi** (không mở/đóng feature nào). `TODO` +4 mục (`SOFT-ADVICE-01/02`, `D-ENV-01/02`)
 và sửa dòng `D-M3-04`. `DEFERRED` +`D-M3-19`. `PENDING-REVIEW` +`V-26`. `PROJECT-GRAPH` +node
-UPDATE-128, **và sửa một lỗi đánh số còn sót từ lần rebase với Khánh**: nhãn `UPDATE-120` trỏ file
+UPDATE-135, **và sửa một lỗi đánh số còn sót từ lần rebase với Khánh**: nhãn `UPDATE-120` trỏ file
 `UPDATE-121-*`. `BOOTSTRAP-SESSION` §1 (ranh giới +tầng ba) · §2 (24 mục PENDING) · §3 hàng 4
 (D-M3-04) · **§5 bẫy #12 MỚI** · §"Vừa xong".
 

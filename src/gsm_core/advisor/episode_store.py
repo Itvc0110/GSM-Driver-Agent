@@ -65,9 +65,9 @@ class EpisodeStore:
                    ("feature", "state_digest", "solver_report_refs", "advice_spec",
                     "message", "confidence", "route", "fallback_used", "residual_path",
                     "verify") if k in ep}
-        # `N1` (UPDATE-129): nâng `advice_spec.action_type` lên `payload["topic"]`.
+        # `N1` (UPDATE-136): nâng `advice_spec.action_type` lên `payload["topic"]`.
         #
-        # Đây là đường ghi THỨ BA vào event log (UI · sim · pipeline). UPDATE-128 chỉ bịt đường UI
+        # Đây là đường ghi THỨ BA vào event log (UI · sim · pipeline). UPDATE-135 chỉ bịt đường UI
         # (validator 422 ở `routers/advice.py`), nên **mọi quyết định pipeline có `topic=None`** ⇒
         # `classify(None)` = `"measured"` ⇒ chúng mặc định vào bảng ĐO. Nếu pipeline sinh một lời
         # khuyên KHUYÊN MỀM thì nó bị đo im lặng — đúng ranh giới §1.2c cấm.

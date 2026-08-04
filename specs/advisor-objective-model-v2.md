@@ -136,7 +136,7 @@ sức khoẻ. Cùng lập luận đã dùng để huỷ `C2`, chỉ ở tầng t
 
 | Đại lượng | Được đo? | Cơ chế enforce | Có thật chưa? |
 | --- | --- | --- | --- |
-| **KHUYÊN MỀM** (thời tiết · `rest_nudge` gợi ý nghỉ · giao thông) | 🚫 **KHÔNG** — 0 mẫu số, 0 `followed` | registry `SOFT_TOPICS`; `adherence_view` **vắng khoá** (không phải `None`) ở CẢ HAI vòng; `POST /advice/action` 422 | ✅ **CÓ từ 2026-08-03** (UPDATE-128; sever-restore 4/4 mũi bắn) |
+| **KHUYÊN MỀM** (thời tiết · `rest_nudge` gợi ý nghỉ · giao thông) | 🚫 **KHÔNG** — 0 mẫu số, 0 `followed` | registry `SOFT_TOPICS`; `adherence_view` **vắng khoá** (không phải `None`) ở CẢ HAI vòng; `POST /advice/action` 422 | ✅ **CÓ từ 2026-08-03** (UPDATE-135; sever-restore 4/4 mũi bắn) |
 | **Nhịp nói** của khuyên mềm (`dismissed` = *"đừng nhắc nữa"*) | ✅ CÓ — và **phải** có | ĐA-04 `cadence.evaluate` (giữ nguyên) | ✅ CÓ |
 | Topic chưa phân loại | — | **fail-closed**: `classify()` → `"unknown"` ⇒ test ĐỎ | ✅ **CÓ từ 2026-08-03** |
 

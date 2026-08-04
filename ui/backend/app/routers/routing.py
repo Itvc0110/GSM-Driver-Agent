@@ -64,7 +64,7 @@ OSRM_DE_BASE_URL = "http://routing.openstreetmap.de/routed-car"
 def osrm_endpoints(wp_str: str) -> List[str]:
     """Danh sách mirror OSRM sẽ thử, theo thứ tự.
 
-    Hai thứ được sửa ở đây (kiểm bằng gọi thật 2026-08-03, UPDATE-128):
+    Hai thứ được sửa ở đây (kiểm bằng gọi thật 2026-08-03, UPDATE-135):
 
     1. **`OSRM_BASE_URL` trước đây KHÔNG ai đọc ở đường runtime.** `.env`/`.env.example` mô tả nó
        như tầng 1 của routing, nhưng file này viết cứng host ⇒ Cường sửa biến thì hành vi endpoint
@@ -97,7 +97,7 @@ _OSRM_HOST_SOURCE = {
 def _osrm_source(url: str) -> str:
     """Nhãn nguồn suy từ **HOST thật** của URL đã trả lời, không từ so chuỗi.
 
-    Bản đầu của UPDATE-128 làm `"openstreetmap_de_osrm_real" if OSRM_DE_BASE_URL in osrm_url else
+    Bản đầu của UPDATE-135 làm `"openstreetmap_de_osrm_real" if OSRM_DE_BASE_URL in osrm_url else
     "project_osrm_real"` — so CHUỖI CÓ SCHEME. Soi độc lập 2026-08-03 tái lập được: đặt
     `OSRM_BASE_URL=https://routing.openstreetmap.de/routed-car` (https, mirror A viết cứng là
     http) ⇒ dữ liệu đến TỪ openstreetmap.de mà nhãn nói `project_osrm_real`. Và self-host

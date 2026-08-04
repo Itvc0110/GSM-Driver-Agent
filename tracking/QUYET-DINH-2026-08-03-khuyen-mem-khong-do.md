@@ -1,6 +1,6 @@
 # QUYẾT ĐỊNH 2026-08-03 — KHUYÊN MỀM KHÔNG ĐO
 
-Ngày: **2026-08-03** · Người quyết: **Cường** · Ghi bởi: agent (UPDATE-128) · Trạng thái: **HIỆU LỰC**
+Ngày: **2026-08-03** · Người quyết: **Cường** · Ghi bởi: agent (UPDATE-135) · Trạng thái: **HIỆU LỰC**
 
 ## 0. Chỉ thị nguyên văn
 
@@ -262,7 +262,7 @@ verify `sha256`) — **13/13 mũi bị bắt**: gỡ cổng mềm · map 422→4
 `conflict` ⇒ bị nuốt · rút `rest` khỏi `SOFT_TOPICS` · rút `safety_reserved` · đẩy `energy` khỏi
 bảng được đo · `is_soft` luôn `False` · `classify` luôn trả `"measured"` · thêm topic mới ở producer ·
 đổi tên hàm producer · gỡ nhánh fail-closed · fail-closed nuốt luôn `dismissed` · checkpoint không
-tồn tại bị nuốt thành lỗi ranh giới. Bảng đầy đủ + cách chọn mũi: `UPDATE-130` §Kiểm chứng.
+tồn tại bị nuốt thành lỗi ranh giới. Bảng đầy đủ + cách chọn mũi: `UPDATE-137` §Kiểm chứng.
 
 Ba mũi canh **hướng ngược**: một cổng ranh giới cũng hỏng khi nó đóng quá tay (chặn cả `dismissed`
 ⇒ tài xế kẹt với thẻ không tắt được) hoặc khi nó nuốt mọi lỗi thành 422 (đọc log sẽ tưởng ranh giới
@@ -310,4 +310,4 @@ cũng là tối ưu hoá trên sức khoẻ không?*
 - `tracking/PHAN-QUYET-2026-07-29-diem3-met-nghi.md` — phán quyết gốc
 - `specs/simulation/d-m3-04-multiday-prereg-locked.json` — prereg + `luat_quyet_dinh`
 - `specs/adherence-measurement.md` — bản đồ hai đường đo
-- `tracking/updates/UPDATE-128-*.md` — bằng chứng thi công + sever-restore
+- `tracking/updates/UPDATE-135-*.md` — bằng chứng thi công + sever-restore

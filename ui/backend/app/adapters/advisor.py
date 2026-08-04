@@ -180,7 +180,7 @@ def provenance(date: str, now_min: int) -> dict:
 
     Tách ra thành hàm public vì `routers/advice.py` **cũng** phải trả chúng: nhánh im lặng của
     endpoint (cadence nén) tự dựng dict riêng và **thiếu cả ba** — vi phạm contract có từ trước
-    UPDATE-128, soi độc lập 2026-08-03 bắt được (`jsonschema` báo *"'scenario_id' is a required
+    UPDATE-135, soi độc lập 2026-08-03 bắt được (`jsonschema` báo *"'scenario_id' is a required
     property"*), và **không cổng nào phủ**.
 
     Sửa bằng cách chia sẻ MỘT hàm thay vì chép ba chuỗi sang router — chép là dựng nguồn sự thật

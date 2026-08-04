@@ -29,7 +29,7 @@ Ngày: 2026-07-31 (chốt acceptance 2026-08-01) · Trạng thái: **🟢 PHÉP 
 >
 > Ranh giới **vô điều kiện** đã có hiệu lực ngay (không chờ phép đo này): **UI không có trace đồng
 > ý/không đồng ý cho khuyên mềm** — xem `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` và
-> `specs/advisor-objective-model-v2.md` §1.2c. Đã thi hành bằng cổng (UPDATE-128).
+> `specs/advisor-objective-model-v2.md` §1.2c. Đã thi hành bằng cổng (UPDATE-135).
 
 ## Vấn đề — đã xác nhận bằng grep, không phải claim
 
@@ -141,7 +141,7 @@ trũng cầu rồi quay lại giờ vàng, tức `C2′`), không phải hiệu 
    lỗi thay vì mở rộng sim"*) nên nó **chờ Cường bật đèn** dù prereg đã khoá sẵn.
    ✅ **ĐÈN ĐÃ BẬT 2026-08-03** (xem khung đầu file) — nhưng là **Cycle B riêng**: nó đổi hành vi
    sim và thêm một đường đo, nên theo `CLAUDE.md` §4b cần plan riêng, không trộn vào cycle docs
-   (UPDATE-128). Ước: ~1,5h người + ~4,2h máy.
-5. ✅ **XONG 2026-08-03 (UPDATE-128)**: `luat_quyet_dinh` đã đăng ký vào prereg **trước khi đo**.
+   (UPDATE-135). Ước: ~1,5h người + ~4,2h máy.
+5. ✅ **XONG 2026-08-03 (UPDATE-135)**: `luat_quyet_dinh` đã đăng ký vào prereg **trước khi đo**.
    Đây là tiên quyết mới do chỉ thị 2026-08-03 sinh ra — không có nó thì kết quả đo dù đúng vẫn
    không dùng được để quyết định gì, vì tiêu chí sẽ được chọn sau khi thấy số.

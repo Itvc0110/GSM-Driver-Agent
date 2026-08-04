@@ -267,7 +267,7 @@ def test_budget_counts_decisions_not_events(tmp_path, monkeypatch):
     "Làm theo"(followed) từng tiêu HAI suất — 3 card là advisor im cả ngày. Đúng họ lỗi
     decision-vs-event mà Cycle W đã trả giá 4 lượt review."""
     _patch(tmp_path, monkeypatch)
-    # UPDATE-128: dùng topic THẬT thay cho `f"topic-{i}"` bịa. Boundary nay từ chối topic chưa
+    # UPDATE-135: dùng topic THẬT thay cho `f"topic-{i}"` bịa. Boundary nay từ chối topic chưa
     # phân loại (fail-closed — một topic lạ sẽ im lặng rơi vào nhóm ĐƯỢC ĐO, và nếu nó thực ra là
     # khuyên mềm thì ta vừa tạo một thước nghe-lời cho lời khuyên sức khoẻ). Đổi này làm test
     # MẠNH hơn: nó chứng minh việc đếm ngân sách đúng trên **từ vựng topic thật**, chứ không phải
@@ -316,7 +316,7 @@ def test_shift_budget_exhausted_silences_ui(tmp_path, monkeypatch):
     Đây là nửa UI của cùng luật mà sim dùng — memory dựng từ event log thay vì RAM, nhưng
     gọi cùng `cadence.evaluate`. Không có test này thì "một luật" chỉ đúng ở sim."""
     _patch(tmp_path, monkeypatch)
-    # 6 topic THẬT khác nhau (xem ghi chú UPDATE-128 ở test trên). KHÔNG dùng `bonus` trong vòng
+    # 6 topic THẬT khác nhau (xem ghi chú UPDATE-135 ở test trên). KHÔNG dùng `bonus` trong vòng
     # lặp: lượt GET cuối hỏi `topic=bonus` và phải im vì **ngân sách ca** cạn — nếu `bonus` cũng
     # nằm trong vòng thì `topic_cooldown` bắn trước và test đo sai cơ chế.
     # HỢP NHẤT PR #4: bản của tôi dùng 6 topic PHÂN BIỆT (`positioning`/`accept_lift`/…) — nhưng

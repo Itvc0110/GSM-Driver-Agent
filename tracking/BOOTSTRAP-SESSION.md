@@ -63,7 +63,7 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 ## §2. STATE hiện tại (2026-07-30)
 
 ```
-local HEAD  = 51e877e (UPDATE-128/129) + cây làm việc UPDATE-130 CHƯA commit
+local HEAD  = 51e877e (UPDATE-135/129) + cây làm việc UPDATE-137 CHƯA commit
 suite       = 1184 passed / 4 skipped / **3 FAILED** (đo 2026-08-04 SAU khi sửa soi độc lập)
               uv run pytest -q                  -> 1022 / 3 fail / 4 skip  (22′05″)
               uv run pytest -q ui/backend/tests -> 162  / 0 fail / 0 skip
@@ -75,13 +75,13 @@ suite       = 1184 passed / 4 skipped / **3 FAILED** (đo 2026-08-04 SAU khi s�
                 Cái đầu là **bất đồng CHÍNH SÁCH** (code cố ý QUEUE mọi thẻ chữ khi đang lái, kể cả
                 safety; test đòi PRESENT) — thuộc claim Khánh, KHÔNG tự sửa. Hai cái sau: `scripts/`
                 thiếu `__init__.py`
-              ⚠ ĐỪNG TIN hai số này nếu vừa có ai thêm test — ĐO LẠI. Trong UPDATE-128 con số UI
+              ⚠ ĐỪNG TIN hai số này nếu vừa có ai thêm test — ĐO LẠI. Trong UPDATE-135 con số UI
                 stale BA LẦN (101→108→111→115) vì viết bằng tay rồi không đếm lại
               ⚠ chỉ khởi động suite khi ĐÃ NGỪNG sửa file nó thu — pytest import lúc collection,
                 sửa sau đó ⇒ kết quả đo CODE CŨ. 2026-08-04 tôi lại sập bẫy này (sửa
                 `ui/contracts/advice_v2.json` giữa chừng, mà một test trong `tests/` đọc nó lúc
                 runtime) ⇒ phải HUỶ và chạy lại từ đầu, mất ~25′ máy. Lần thứ HAI
-UPDATE       = 125 file (ĐẾM 2026-08-04), mới nhất UPDATE-130 (104 UIUX + 105 codex + 120 routing = remote/Khánh)
+UPDATE       = 125 file (ĐẾM 2026-08-04), mới nhất UPDATE-137 (104 UIUX + 105 codex + 120 routing = remote/Khánh)
               ⚠ 125 ≠ 130 vì dãy số THIẾU vài số (013–018) và có số TRÙNG (121, 125 dùng hai lần
                 do song song với remote). Đừng suy số file từ số cao nhất — đếm bằng lệnh:
                 `(Get-ChildItem tracking\updates -Filter "UPDATE-*.md" | Measure-Object).Count`
@@ -121,7 +121,7 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
-- **UPDATE-130 `QĐ-4`** — ranh giới KHUYÊN MỀM hoá ra hở ở **đường ghi thứ TƯ**: AdviceCheckpoint
+- **UPDATE-137 `QĐ-4`** — ranh giới KHUYÊN MỀM hoá ra hở ở **đường ghi thứ TƯ**: AdviceCheckpoint
   **v2** (đến từ PR #4 của Khánh) có **store riêng** và **từ vựng `topic` riêng giao với registry =
   RỖNG**, nên `classify()` không chạm được một event nào của nó — trong khi `rest` được sinh thật
   (`checkpoint.py:134`, S7) và nhận được `response: accepted`. Tức **trace đồng ý cho lời khuyên
@@ -132,14 +132,14 @@ test của **đường sản phẩm** (`D-M3-09`).
   contract Khánh + mọi bản ghi cũ). Sever 8/8. Bài học **khác** 5 lần trước của cùng họ lỗi: không
   phải một người quên nối, mà **hai người nối hai nửa khác nhau** ⇒ *"mỗi người kín phần mình"
   không cộng lại thành kín*.
-- **UPDATE-129** — cycle nợ sau vòng soi độc lập: tuyên bố *"đã thi hành bằng máy"* của UPDATE-128
+- **UPDATE-136** — cycle nợ sau vòng soi độc lập: tuyên bố *"đã thi hành bằng máy"* của UPDATE-135
   chỉ đúng **một phần**. `adherence_view` **fail-OPEN với topic chưa khai** (`is_soft("unknown")` =
   `False` ⇒ topic lạ đi thẳng vào bảng đo) · đường **pipeline** không ghi `topic` · cú loại **im
   lặng** · scanner regex chỉ quét 3 file và **mù với `channel=<biến>`**. Nay: fail-closed +
   `adherence_drops()` + **TREO** khi có `unknown`/`mixed` + scanner AST khai được vùng mù + pin
   `SOFT_MONG_DOI` chống **THU HẸP** registry (mọi cổng khác tự tham chiếu `SOFT_TOPICS` nên mù với
   việc bỏ bớt — *"0 test chạy" trông y hệt "0 test hỏng"*).
-- **UPDATE-128** — hai việc. **(a) Khoá ngoài: kiểm bằng GỌI THẬT cả 9 khoá/endpoint**, và cách đó
+- **UPDATE-135** — hai việc. **(a) Khoá ngoài: kiểm bằng GỌI THẬT cả 9 khoá/endpoint**, và cách đó
   tìm ra ba lỗi mà đọc code không thấy: `OSRM_BASE_URL` **không ai đọc** ở runtime (chỉ script ma
   trận offline đọc) dù `.env`/`.env.example` mô tả nó là tầng 1 · mirror OSRM thứ hai **sai tên
   miền** (`router.project.osrm.org` — TLS hostname mismatch ⇒ **chưa từng chạy được**) · và

@@ -500,7 +500,7 @@ def adherence_audit(result, run_id: str | None = None) -> dict:
     lifecycle = (P.sim_events_to_lifecycle(result.events, run_id) if run_id
                  else P.sim_events_to_lifecycle(result.events))
     view = P.adherence_view(lifecycle)
-    # `N5` (UPDATE-129): `adherence_view` loại quyết định bằng `continue` ⇒ cú loại KHÔNG để lại dấu
+    # `N5` (UPDATE-136): `adherence_view` loại quyết định bằng `continue` ⇒ cú loại KHÔNG để lại dấu
     # vết, và cổng dưới đây chỉ kiểm `event_decided == 0 and decided > 0` nên **không thể thấy một
     # khoá VẮNG MẶT**. Nếu producer sinh topic lạ hoặc trộn topic thì mẫu số tụt mà không ai biết —
     # đúng hình dạng `D-M3-01` (số sai sống qua 39 artifact vì không cơ chế nào kêu).
@@ -611,7 +611,7 @@ def adherence_flags(by_channel: dict,
             out.append(f"{ch}: event_decided=0 trong khi decided={d} — một nửa bộ đo "
                        f"hai-đơn-vị chết im lặng (event_adherence sẽ là None)")
 
-    # `N5` (UPDATE-129) — cổng cho thứ KHÔNG có mặt trong `by_channel`.
+    # `N5` (UPDATE-136) — cổng cho thứ KHÔNG có mặt trong `by_channel`.
     #
     # Mọi kiểm ở trên soi các khoá ĐANG CÓ. Nhưng `adherence_view` **loại** quyết định có topic
     # chưa khai / trộn topic, nên chúng **vắng mặt** — và một khoá vắng thì không vòng lặp nào ở

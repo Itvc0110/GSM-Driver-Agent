@@ -17,7 +17,7 @@
     "at_min": { "type": "integer", "minimum": 0, "maximum": 1439, "description": "phút trong ngày sim/demo lúc bấm (0-1439; 1440 sinh T24:00:00 — W-4)" },
     "is_soft_advice": {
       "type": "boolean",
-      "description": "CHỈ có ở đường ĐỌC (`GET /advice/actions`) — SERVER trả lời hàng này có phải KHUYÊN MỀM không. UI dùng nó để KHÔNG trình bày một `dismissed` của thẻ mềm như 'tài xế không đồng ý' (đó là vai-2 bị cấm); thẻ mềm hiện '🔇 Đã ẩn' + ghi chú 'không tính vào tỷ lệ nghe lời'. Thêm 2026-08-03 (UPDATE-128) sau khi soi độc lập bắt được: `index.html` đã HỨA phân biệt khuyên mềm nhưng endpoint bỏ rơi `topic` ⇒ UI không có dữ liệu để phân biệt. Client KHÔNG được tự tra danh sách topic mềm — nguồn duy nhất là `src/gsm_core/lifecycle/advice_topics.py`."
+      "description": "CHỈ có ở đường ĐỌC (`GET /advice/actions`) — SERVER trả lời hàng này có phải KHUYÊN MỀM không. UI dùng nó để KHÔNG trình bày một `dismissed` của thẻ mềm như 'tài xế không đồng ý' (đó là vai-2 bị cấm); thẻ mềm hiện '🔇 Đã ẩn' + ghi chú 'không tính vào tỷ lệ nghe lời'. Thêm 2026-08-03 (UPDATE-135) sau khi soi độc lập bắt được: `index.html` đã HỨA phân biệt khuyên mềm nhưng endpoint bỏ rơi `topic` ⇒ UI không có dữ liệu để phân biệt. Client KHÔNG được tự tra danh sách topic mềm — nguồn duy nhất là `src/gsm_core/lifecycle/advice_topics.py`."
     },
     "client_ts": { "type": "string", "description": "ISO timestamp máy client (chỉ để debug, không dùng phân tích)" },
     "is_mock": { "type": "boolean", "const": true }

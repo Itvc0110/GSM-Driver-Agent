@@ -1,4 +1,4 @@
-# UPDATE-129 — CYCLE NỢ: ranh giới khuyên mềm nay phủ **cả ba** đường ghi
+# UPDATE-136 — CYCLE NỢ: ranh giới khuyên mềm nay phủ **cả ba** đường ghi
 
 Ngày: **2026-08-03** · Người: Cường (agent) · Trạng thái: **DONE-CODE** · Chờ verdict: **`V-26`**
 
@@ -6,7 +6,7 @@ Ngày: **2026-08-03** · Người: Cường (agent) · Trạng thái: **DONE-COD
 
 ## 1. Vì sao có cycle này
 
-`UPDATE-128` dựng ranh giới **KHUYÊN MỀM KHÔNG ĐO** và tuyên bố nó được thi hành bằng máy. Hai vòng
+`UPDATE-135` dựng ranh giới **KHUYÊN MỀM KHÔNG ĐO** và tuyên bố nó được thi hành bằng máy. Hai vòng
 soi đa tác tử cho thấy tuyên bố đó **đúng một phần**. Cường đồng ý gộp các nợ thành một cycle.
 
 Sáu nợ, và **bốn cái cùng một họ duy nhất** — thứ repo đã trả giá 5 lần và cycle trước lại mắc thêm:
@@ -14,7 +14,7 @@ Sáu nợ, và **bốn cái cùng một họ duy nhất** — thứ repo đã tr
 > **ranh giới được khai là kín, nhưng chỉ phủ một phần đường chạy.**
 
 Có **ba** đường ghi vào event log: **UI** (`routers/advice.py`) · **sim** (`world.py` → `channel=`) ·
-**pipeline** (`episode_store.py`). UPDATE-128 chỉ bịt đường UI (validator 422). Cycle này bịt hai
+**pipeline** (`episode_store.py`). UPDATE-135 chỉ bịt đường UI (validator 422). Cycle này bịt hai
 đường còn lại, và **chuyển chỗ enforce từ đường GHI sang đường ĐỌC** — vì chỉ đường đọc mới phủ được
 cả ba producer lẫn dữ liệu cũ.
 
@@ -51,7 +51,7 @@ qua **39 artifact** vì không ai chặn.
 Tổng **1.086**. Delta **+10** đúng bằng số test mới của registry ⇒ **behavior-neutral đo được**:
 `adherence_view` + `adherence_flags` + `episode_store` đều đổi mà **không test sim nào đổi kết quả**.
 
-Đếm test của 4 file cổng — **lệnh, không ghi tay** (bài học UPDATE-128: số stale 3 lần):
+Đếm test của 4 file cổng — **lệnh, không ghi tay** (bài học UPDATE-135: số stale 3 lần):
 
 ```bash
 uv run pytest -q --collect-only tests/test_advice_topic_registry.py \
@@ -62,11 +62,11 @@ uv run pytest -q --collect-only tests/test_advice_topic_registry.py \
 
 ### 🔴 SEVER-RESTORE THẬT — và lượt đầu chỉ 2/6
 
-Bốn bước bắt buộc (UPDATE-128 §5c): *tiêm file nguồn thật · chạy `pytest` thật · restore · verify
+Bốn bước bắt buộc (UPDATE-135 §5c): *tiêm file nguồn thật · chạy `pytest` thật · restore · verify
 `sha256`*. Kết quả cuối: **6/6 mũi bị bắt**, `git grep MUTANT` = 0.
 
 Nhưng lượt đầu **2/6**, và **bốn cái không bắt đều do PHÉP THỬ của tôi hỏng, không phải cổng hỏng** —
-đúng sự phân biệt tôi vừa hứa ở UPDATE-128 sẽ luôn làm:
+đúng sự phân biệt tôi vừa hứa ở UPDATE-135 sẽ luôn làm:
 
 | Mũi | Vì sao lượt đầu vô nghĩa |
 | --- | --- |
@@ -131,7 +131,7 @@ từ registry.** Khi thi công thì lộ ra kết quả **tốt hơn cả hai b�
 kỹ docstring test của Khánh: *"V1 chỉ nhận ba legacy surface; **safety priority không do client
 khai**"*.
 
-🔴 **Câu đó chính là phản biện đúng cho lỗ `F1` của tôi.** `F1` (soi độc lập, UPDATE-128) là *"cờ đạo
+🔴 **Câu đó chính là phản biện đúng cho lỗ `F1` của tôi.** `F1` (soi độc lập, UPDATE-135) là *"cờ đạo
 đức suy từ query param do CLIENT chọn"* — một GET đủ dán nhãn "khuyên mềm" lên thẻ kinh tế. Tôi vá
 bằng cách **trả im lặng** khi client hỏi topic mềm, tức **vẫn để client khai**. Khánh **bỏ hẳn quyền
 khai đó**. Vá gốc, không vá triệu chứng.

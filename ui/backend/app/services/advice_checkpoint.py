@@ -472,7 +472,7 @@ class AdviceCheckpointService:
         # 🔴 QĐ-4 bước 2 (Cường chốt 2026-08-04) — RANH GIỚI KHUYÊN MỀM, không phải chi tiết kỹ thuật.
         #
         # Đây là đường ghi THỨ TƯ vào một store hành vi (UI v1 · sim · pipeline · **v2**). Ba đường
-        # kia đã bị chặn từ UPDATE-128/129; đường này thì chưa, vì v2 có store riêng
+        # kia đã bị chặn từ UPDATE-135/129; đường này thì chưa, vì v2 có store riêng
         # (`CheckpointStore`) và từ vựng topic riêng — hai bên **giao nhau = RỖNG**, nên
         # `classify()` không chạm được một event nào của v2.
         #

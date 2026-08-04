@@ -39,7 +39,7 @@ class LLMUnavailable(RuntimeError):
 def _strip_inline_comment(v: str) -> str:
     """Cắt chú thích `# …` ở CUỐI giá trị, tôn trọng dấu nháy.
 
-    🔴 Vì sao cần (soi độc lập 2026-08-03, UPDATE-128 — lỗi do chính cycle đó tạo ra):
+    🔴 Vì sao cần (soi độc lập 2026-08-03, UPDATE-135 — lỗi do chính cycle đó tạo ra):
     `.env.example` viết chú thích **cùng dòng** với biến. Ai làm đúng lời dặn dòng 1 của file đó
     (*"copy thành .env và điền giá trị thật"*) sẽ nhận:
 
@@ -64,7 +64,7 @@ def _strip_inline_comment(v: str) -> str:
     if v.startswith("#"):
         # `KEY=            # ghi chú` ⇒ biến để TRỐNG chờ điền. Đây là dạng phổ biến nhất và là
         # dạng nguy hiểm nhất: chuỗi chú thích truthy vượt qua mọi guard `if not key`. Ba khoá
-        # (`WEATHER`/`JINA`/`STADIA`) đã mang dạng này TRƯỚC UPDATE-128 — tức bug có sẵn, chỉ chưa
+        # (`WEATHER`/`JINA`/`STADIA`) đã mang dạng này TRƯỚC UPDATE-135 — tức bug có sẵn, chỉ chưa
         # ai copy `.env.example` nên chưa nổ.
         return ""
     m = re.search(r"\s#", v)

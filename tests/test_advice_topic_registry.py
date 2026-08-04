@@ -156,7 +156,7 @@ def test_F3_danh_doi_khai_tuong_minh_loai_CA_quyet_dinh():
 # ---------- N9 + N5: topic CHƯA KHAI bị loại (fail-closed) và cú loại KÊU TO ----------
 
 def test_N9_topic_CHUA_KHAI_khong_duoc_vao_mau_so():
-    """🔴 `N9` — UPDATE-128 chỉ loại topic MỀM, nên topic **chưa khai** đi thẳng vào nhóm ĐƯỢC ĐO
+    """🔴 `N9` — UPDATE-135 chỉ loại topic MỀM, nên topic **chưa khai** đi thẳng vào nhóm ĐƯỢC ĐO
     (`is_soft("unknown")` = `False`). Đo được trên store dev bẩn: 52 event mềm bị loại đúng, nhưng
     khoá `khong_khai_bao` **vẫn lọt vào view** ⇒ tầng đọc **fail-OPEN** trong khi tài liệu đã khai
     nó là fail-closed.
@@ -217,7 +217,7 @@ def test_N5_topic_CHUA_KHAI_va_TRON_phai_TREO():
 # ---------- N1: đường ghi thứ BA (pipeline) phải mang topic ----------
 
 def test_N1_episode_store_mang_topic_ra_event_log(tmp_path):
-    """🔴 `N1` — đường ghi THỨ BA vào event log (UI · sim · **pipeline**). UPDATE-128 chỉ bịt đường
+    """🔴 `N1` — đường ghi THỨ BA vào event log (UI · sim · **pipeline**). UPDATE-135 chỉ bịt đường
     UI (validator 422), nên mọi quyết định pipeline có `topic=None` ⇒ `classify(None)` = `measured`
     ⇒ chúng **mặc định vào bảng đo**. Nếu pipeline sinh một lời khuyên khuyên mềm thì nó bị đo im
     lặng — đúng ranh giới §1.2c cấm.

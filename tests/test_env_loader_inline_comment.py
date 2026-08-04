@@ -1,6 +1,6 @@
 """🔴 CỔNG: `.env.example` copy thành `.env` phải cho GIÁ TRỊ DÙNG ĐƯỢC, không phải giá trị rác.
 
-Lỗi thật, do soi độc lập tìm ra 2026-08-03 — và nó là lỗi **do chính UPDATE-128 làm nặng thêm**:
+Lỗi thật, do soi độc lập tìm ra 2026-08-03 — và nó là lỗi **do chính UPDATE-135 làm nặng thêm**:
 tôi thêm chú thích dài **cùng dòng** với biến trong `.env.example`, trong khi `load_env` chỉ
 `split("=", 1)` rồi `strip()` mà **không cắt chú thích**. Ai làm đúng lời dặn dòng 1 của file đó
 (*"copy thành .env và điền giá trị thật"*) nhận được:

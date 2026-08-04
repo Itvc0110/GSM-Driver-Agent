@@ -48,7 +48,7 @@ MEASURED_TOPICS: frozenset[str] = frozenset({
     "bonus",            # mặc định LỊCH SỬ của `AdviceAction.topic`; còn trong test/dữ liệu cũ
     # --- từ vựng của PIPELINE (`advice_spec.action_type`, `templates._advice_spec`) ---
     # `online` = *"cứ chạy tiếp"* — mặc định của `_advice_spec(action=None)`. Lời khuyên KINH TẾ,
-    # đo mức nghe lời là hợp lệ. Khai ở đây từ UPDATE-129 (`N1`): trước đó `episode_store` không
+    # đo mức nghe lời là hợp lệ. Khai ở đây từ UPDATE-136 (`N1`): trước đó `episode_store` không
     # ghi `topic` nên mọi quyết định pipeline có `topic=None` và **mặc định** vào bảng đo.
     # ⚠ `rest_window`/`shift_plan` mà pipeline cũng dùng đã có ở dưới — KHÔNG khai lại.
     "online",

@@ -1,13 +1,13 @@
-# UPDATE-130 — QĐ-4: hợp nhất taxonomy `topic`, bịt đường ghi THỨ TƯ (AdviceCheckpoint v2)
+# UPDATE-137 — QĐ-4: hợp nhất taxonomy `topic`, bịt đường ghi THỨ TƯ (AdviceCheckpoint v2)
 
 - **Ngày:** 2026-08-04
 - **Người thực hiện:** AI agent, theo yêu cầu Cường (*"(b), viết docs lại cẩn thận để khi Khánh chạm code thì phải đọc qua"* → *"làm tiếp luôn đi"*)
 - **Loại:** fix (ranh giới sản phẩm) + docs
-- **TODO / User story liên quan:** QĐ-1/QĐ-4 (`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b) · `D-QD4-01` · `D-QD4-02` · nối tiếp UPDATE-128/129
+- **TODO / User story liên quan:** QĐ-1/QĐ-4 (`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b) · `D-QD4-01` · `D-QD4-02` · nối tiếp UPDATE-135/129
 
 ## Tóm tắt
 
-Ranh giới *"khuyên mềm KHÔNG đo mức nghe lời"* được UPDATE-128/129 bịt ở **ba** đường ghi (UI v1 ·
+Ranh giới *"khuyên mềm KHÔNG đo mức nghe lời"* được UPDATE-135/129 bịt ở **ba** đường ghi (UI v1 ·
 sim · pipeline). Đọc lại logic sau khi rebase lên PR #4 thì lộ ra **đường thứ TƯ** — AdviceCheckpoint
 v2 — nằm hoàn toàn ngoài: store riêng, từ vựng `topic` riêng **giao với registry = RỖNG**, và `rest`
 được sinh thật. Hệ quả: một checkpoint `rest` nhận được `response: accepted`, tức **trace đồng ý cho
@@ -72,7 +72,7 @@ giới **vĩnh viễn không được phép** ⇒ `CheckpointSoftAdviceError` l�
 ### Fail-closed cả ở tầng GHI — bất nhất tự tìm ra khi tự soi
 
 Bản đầu của cổng dùng `is_soft(topic)`, tức chỉ chặn topic **đã khai là mềm**. Topic **chưa khai**
-(`classify() == "unknown"`) đi lọt. Nhưng tầng ĐỌC (`adherence_view`, UPDATE-129) thì **loại** topic
+(`classify() == "unknown"`) đi lọt. Nhưng tầng ĐỌC (`adherence_view`, UPDATE-136) thì **loại** topic
 chưa khai — Cường chốt 2026-08-03 *"TREO kết quả, như D-M3-10"*.
 
 ⇒ Ranh giới có **hai tiêu chuẩn cho cùng một tình huống**, và cái lỏng hơn luôn là cái quyết định.
@@ -128,7 +128,7 @@ Cổng `test_QD4_ghim_khoang_HO_…` **đổi vai** trong update này: từ *"gh
 | `docs/reports/week2/AUDIT-CHECKLIST-cho-Khanh.md` | sửa | **Phần 6** — báo tường minh cho Khánh: mình sửa gì trong PR #4 của bạn, và **3 việc cần bạn** (Flutter không vẽ nút "Làm theo" cho thẻ mềm · kiểm DB v2 cũ · xác nhận `rest` mềm hay kinh tế) |
 | `ui/web/tests/cards_soft_gate.mjs` | **tạo** | **`Nợ 7`** — cổng khuyên mềm ở tầng CLIENT, node thuần, **zero dependency** (12 phép kiểm) |
 | `tests/test_cards_js_soft_gate.py` | **tạo** | bọc cổng JS vào suite pytest (3 test, gồm test chống rút ruột) |
-| `tracking/TODO.md`, `PROJECT-GRAPH.md`, `PENDING-REVIEW.md`, `BOOTSTRAP-SESSION.md` | sửa | `SOFT-ADVICE-03` · node UPDATE-129 (**thiếu**, bổ sung) + node UPDATE-130 · `V-27` · state |
+| `tracking/TODO.md`, `PROJECT-GRAPH.md`, `PENDING-REVIEW.md`, `BOOTSTRAP-SESSION.md` | sửa | `SOFT-ADVICE-03` · node UPDATE-136 (**thiếu**, bổ sung) + node UPDATE-137 · `V-27` · state |
 
 ## Docs đã cập nhật kèm theo
 

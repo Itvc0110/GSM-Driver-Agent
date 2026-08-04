@@ -164,12 +164,12 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
     # Khi nó xảy ra, ta chọn **loại cả quyết định** thay vì giữ phần được đo. Tức có thể mất một
     # `decided` hợp lệ. Chọn vậy vì hai sai không cùng hạng: mất một mẫu số là **mất độ chính xác
     # của phép đo**, còn để `followed` mềm vào tử số là **phá một ranh giới đã chốt**.
-    # 🔴 UPDATE-129 (`N9`): tiêu chí loại đổi từ `is_soft` sang `classify(...) != "measured"`.
+    # 🔴 UPDATE-136 (`N9`): tiêu chí loại đổi từ `is_soft` sang `classify(...) != "measured"`.
     #
-    # Bản UPDATE-128 chỉ loại topic MỀM, nên topic **CHƯA KHAI** (`classify` → `"unknown"`) đi thẳng
+    # Bản UPDATE-135 chỉ loại topic MỀM, nên topic **CHƯA KHAI** (`classify` → `"unknown"`) đi thẳng
     # vào nhóm ĐƯỢC ĐO — `is_soft("unknown")` trả `False`. Đo được trên store dev bẩn: 52 event mềm
     # bị loại đúng, nhưng khoá `khong_khai_bao` **vẫn lọt vào view**. Tức tầng đọc **fail-OPEN**
-    # trong khi UPDATE-128 đã khai nó là fail-closed. Boundary 422 của router chỉ chặn topic lạ MỚI
+    # trong khi UPDATE-135 đã khai nó là fail-closed. Boundary 422 của router chỉ chặn topic lạ MỚI
     # qua đường UI — không chặn bản ghi cũ, đường sim, và đường pipeline (`episode_store`).
     #
     # Vì sao fail-closed là đúng hướng: một topic lạ **có thể là khuyên mềm ai đó quên khai**. Đo nó
