@@ -16,6 +16,7 @@
 | `0785728` | trace artifact/checkpoint bridge, READY/validity gate, lease, verifier hardening |
 | `f7d1b8c` | Web actor picker/Next Step/canonical render và demo ACK endpoints |
 | `1def318` | `presentation_source=template` contract field |
+| `546f732` | fail-closed `unsafe_while_moving` gate for replay advice |
 
 ## Focused verification evidence
 
