@@ -355,7 +355,7 @@ class AdviceCheckpointService:
         return self._envelope(checkpoint, lease, surface, t_now, rendered=rendered)
 
     def present_existing_checkpoint(self, checkpoint_id: str, *, surface: str,
-                                    generated_at: str) -> dict:
+                                    generated_at: str, is_driving: bool = False) -> dict:
         """Present a checkpoint already produced by a simulator trace.
 
         This bridge deliberately skips ``ProductSolverOrchestrator.solve``.  The trace is
@@ -367,6 +367,8 @@ class AdviceCheckpointService:
             raise CheckpointNotFoundError(checkpoint_id)
         if checkpoint.get("driver_id") is None:
             raise CheckpointConflictError("checkpoint_missing_driver")
+        if is_driving:
+            return self._silent(surface, generated_at, "unsafe_while_moving")
         state = self.store.state(checkpoint_id)["state"]
         valid_until = checkpoint.get("validity", {}).get("valid_until")
         if valid_until is None:

@@ -109,3 +109,22 @@ def test_demo_step_with_no_checkpoint_is_silent(tmp_path):
     step = service.advance("silent-session", client_step_id="step-1",
                            expected_step_version=0)
     assert step["advice"] == {"status": "silent", "reason_code": "no_checkpoint"}
+
+
+def test_demo_does_not_present_advice_while_actor_is_moving(tmp_path):
+    from app.services.demo_session import DemoSessionService
+
+    checkpoint, artifacts = _checkpoint_bundle()
+    result = _result(checkpoint, artifacts)
+    result.trace_snapshots[0]["state"] = "enroute"
+    service = DemoSessionService(
+        run_factory=lambda seed: result,
+        session_id_factory=lambda: "moving-session",
+        checkpoint_store_path=tmp_path / "checkpoint.db",
+    )
+    service.create()
+    service.select_actor("moving-session", 7)
+    step = service.advance("moving-session", client_step_id="step-1",
+                           expected_step_version=0)
+    assert step["advice"]["status"] == "silent"
+    assert step["advice"]["silent"]["reason_code"] == "unsafe_while_moving"

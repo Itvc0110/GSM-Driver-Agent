@@ -240,7 +240,9 @@ class DemoSessionService:
         driver = transition["driver"]
         trip = transition.get("trip")
         routes = self._routes(session, driver, trip)
-        advice = self._advice(session, transition.get("checkpoint"), transition["t_min"])
+        advice = self._advice(
+            session, transition.get("checkpoint"), transition["t_min"],
+            is_driving=transition.get("driver", {}).get("state") in {"enroute", "on_trip"})
         timeline = [
             {"sequence": item["sequence"], "transition_id": item["transition_id"],
              "t_min": item["t_min"], "kind": item["kind"]}
@@ -274,7 +276,7 @@ class DemoSessionService:
                 "is_mock": True, "data_mode": "sim-engine"}
 
     def _advice(self, session: _DemoSession, checkpoint: dict | None,
-                simulation_time_min: float) -> dict:
+                simulation_time_min: float, *, is_driving: bool) -> dict:
         if checkpoint is None:
             return {"status": "silent", "reason_code": "no_checkpoint"}
         # The simulator has already produced the exact snapshot/input/report.  Persist and
@@ -307,7 +309,7 @@ class DemoSessionService:
                     mode=os.getenv("ADVICE_PRESENTATION_MODE", "template"))
                 advice = AdviceCheckpointService(store, presenter=presenter).present_existing_checkpoint(
                     checkpoint["checkpoint_id"], surface=checkpoint["surface"],
-                    generated_at=generated_at)
+                    generated_at=generated_at, is_driving=is_driving)
             return advice
         except Exception:
             # A failed bridge must not make replay unusable.  The canonical transition is
