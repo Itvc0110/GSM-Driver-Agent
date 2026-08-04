@@ -252,6 +252,189 @@ def test_N1_moi_action_type_cua_pipeline_deu_da_phan_loai():
         assert classify(act) == "measured", act
 
 
+# ---------- QĐ-4: BỐN từ vựng `topic` cho MỘT khái niệm — ghim khoảng hở tới khi hợp nhất ----------
+
+# Từ vựng của AdviceCheckpoint **v2** (`ui/contracts/advice_v2.json`). Chép ở đây CÓ CHỦ Ý: bảng
+# này là thứ so với contract; suy nó TỪ contract thì cổng thành đồng nhất thức, không bao giờ đỏ.
+V2_TOPICS_DA_BIET = {
+    "bonus_eligibility", "energy", "rest", "shift_boundary",
+    "shift_timing", "positioning_sim_only", "policy_info", "safety_reserved",
+}
+# Từ vựng thứ TƯ: `cadence.SAFETY_TOPICS`. Nó dùng `"safety"`, v2 dùng `"safety_reserved"` — hai tên
+# cho cùng một khái niệm, ở hai file, không ai nối.
+CADENCE_SAFETY_DA_BIET = {"safety"}
+
+# Topic v2 thuộc lớp MỀM theo QĐ-1 (nói vì đúng cho tài xế, KHÔNG đo mức nghe lời). Ghi sẵn ở đây để
+# bước 2 của QĐ-4 có đích rõ ràng, và để ai đọc cổng này thấy ngay ranh giới nằm ở đâu.
+V2_THUOC_LOP_MEM = {"rest", "safety_reserved"}
+
+
+def test_QD4_ghim_khoang_HO_giua_cac_tu_vung_topic():
+    """🔴 CỔNG CHO NGƯỜI SẮP CHẠM `advice_v2.json` / `checkpoint.py` / `cadence.py`.
+
+    **Đọc `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b trước khi sửa test này.**
+
+    Hiện có **BỐN** không gian `topic` cho cùng một khái niệm, và chúng **giao nhau = RỖNG**:
+    registry (`advice_topics.py`) · client v1 (`CLIENT_TOPICS`) · AdviceCheckpoint v2 ·
+    `cadence.SAFETY_TOPICS`. Hệ quả đo được 2026-08-04: ranh giới *"khuyên mềm KHÔNG đo"* —
+    enforce bằng `classify()` trên registry — **không chạm được một event nào của v2**, nên một
+    checkpoint `rest` (sinh bởi S7, `checkpoint.py:135`) nhận được `response: accepted`. Tức
+    **trace đồng ý cho lời khuyên NGHỈ đang được ghi**, đúng thứ QĐ-1 cấm.
+
+    Cường chốt 2026-08-04: **hợp nhất (phương án (b))**, không chỉ ánh xạ-rồi-chặn.
+
+    ⚠ Cổng này **GHIM khoảng hở đang có**, không đòi nó bằng 0 — nếu đòi ngay thì suite đỏ và việc
+    bị chặn. Nhưng nó **bắn ngay** khi ai thêm/bớt một topic ở bất kỳ từ vựng nào, tức không ai
+    chạm được vào vùng này mà không đọc quyết định. Đó là lý do nó là CỔNG chứ không phải comment:
+    *comment thì đọc hay không tuỳ người; cổng đỏ thì bắt buộc.*
+    """
+    import json
+
+    sch = json.loads((ROOT / "ui/contracts/advice_v2.json").read_text(encoding="utf-8"))
+
+    def tim_enum(o):
+        if isinstance(o, dict):
+            for k, v in o.items():
+                if k == "topic" and isinstance(v, dict) and "enum" in v:
+                    return set(v["enum"])
+                r = tim_enum(v)
+                if r:
+                    return r
+        elif isinstance(o, list):
+            for x in o:
+                r = tim_enum(x)
+                if r:
+                    return r
+        return None
+
+    v2 = tim_enum(sch)
+    assert v2, "không tìm thấy enum `topic` trong `advice_v2.json`"
+    assert v2 == V2_TOPICS_DA_BIET, (
+        f"Từ vựng topic của **v2** vừa đổi:\n"
+        f"  thêm : {sorted(v2 - V2_TOPICS_DA_BIET)}\n"
+        f"  bớt  : {sorted(V2_TOPICS_DA_BIET - v2)}\n"
+        f"⚠ ĐỌC `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b TRƯỚC KHI SỬA DÒNG NÀY. "
+        f"Mỗi topic v2 phải được quyết định: nó ĐƯỢC ĐO mức nghe lời, hay là KHUYÊN MỀM (không đo)? "
+        f"Thêm một topic mà không quyết định là để mặc định quyết hộ — và mặc định hiện tại là "
+        f"'ghi trace accepted', tức phá ranh giới QĐ-1.")
+
+    from gsm_core.lifecycle.cadence import SAFETY_TOPICS
+    assert set(SAFETY_TOPICS) == CADENCE_SAFETY_DA_BIET, (
+        f"`cadence.SAFETY_TOPICS` đổi: {sorted(set(SAFETY_TOPICS))}. Đây là từ vựng topic THỨ TƯ "
+        f"(dùng `safety`, còn v2 dùng `safety_reserved`) — việc hợp nhất QĐ-4 phải gom cả nó.")
+
+
+def test_QD4_buoc2_RANH_GIOI_DA_KIN_tren_ca_bon_tu_vung():
+    """✅ Bước 2 của QĐ-4 đã xong — cổng này **đổi vai**: từ *"ghim khoảng hở"* thành *"chứng minh
+    ranh giới đã kín"*.
+
+    Trước bước 2, bốn từ vựng giao nhau = RỖNG nên `classify()` không chạm được event v2 nào.
+    Nay **mọi** topic của v2 và của `cadence` đều nằm trong registry, tức có đúng MỘT nơi quyết định
+    topic nào được đo mức nghe lời.
+
+    ⚠ Hợp nhất ở đây là hợp nhất **THẨM QUYỀN**, không phải đổi tên: `advice_v2.json` và dữ liệu đã
+    lưu giữ nguyên chuỗi cũ. Đổi tên sẽ phá contract của Khánh và mọi bản ghi lịch sử."""
+    chua_khai = sorted(V2_TOPICS_DA_BIET - ALL_TOPICS)
+    assert not chua_khai, (
+        f"topic v2 CHƯA nằm trong registry: {chua_khai} ⇒ `classify()` không chạm tới, và ranh "
+        f"giới khuyên mềm hở lại ở đường v2. Đọc `QUYET-DINH-2026-08-03…` §6b.")
+
+    from gsm_core.lifecycle.cadence import SAFETY_TOPICS
+    thieu = sorted(set(SAFETY_TOPICS) - ALL_TOPICS)
+    assert not thieu, f"từ vựng thứ TƯ (`cadence.SAFETY_TOPICS`) chưa vào registry: {thieu}"
+
+    assert V2_THUOC_LOP_MEM <= SOFT_TOPICS, (
+        f"`{sorted(V2_THUOC_LOP_MEM - SOFT_TOPICS)}` phải thuộc lớp MỀM. `rest` sinh bởi S7 "
+        f"(`checkpoint.py:135`) và `safety_reserved` là cảnh báo an toàn — đo mức nghe lời của "
+        f"chúng là biến sức khoẻ/an toàn thành chỉ tiêu tối ưu (§1.2c).")
+
+    # Đối chứng: KHÔNG được xếp cả cụm v2 vào mềm cho tiện — thế là mất phép đo của kênh kinh tế.
+    for t in ("bonus_eligibility", "energy", "shift_boundary", "shift_timing"):
+        assert classify(t) == "measured", f"{t} là lời khuyên KINH TẾ, phải được đo"
+
+
+def test_QD4_PRODUCER_that_cua_v2_khong_sinh_duoc_topic_ngoai_registry():
+    """🔴 Vùng mù còn lại của scanner, bịt riêng vì nó là **producer**, không phải contract.
+
+    `_scan_topics` bắt `topic="x"` (kwarg), `{"topic": "x"}` (dict) và `X_TOPICS = (...)`. Nhưng
+    `checkpoint.py::_topic_for_action` sinh topic bằng **`return "bonus_eligibility"`** — một dạng
+    thứ tư mà scanner không nhìn. Nó chính là nơi mọi topic v2 ra đời.
+
+    Hai cổng kia (pin enum contract + `⊆ ALL_TOPICS`) chỉ đóng vòng khi người thêm topic **cũng**
+    sửa `advice_v2.json`. Ai thêm một nhánh `return "fatigue"` mà chưa động vào contract thì lọt cả
+    hai. Cổng này neo thẳng vào hàm, nên không phụ thuộc thứ tự người ta sửa file."""
+    import ast
+
+    src = (ROOT / "src/gsm_core/lifecycle/checkpoint.py").read_text(encoding="utf-8")
+    fn = next((n for n in ast.walk(ast.parse(src))
+               if isinstance(n, ast.FunctionDef) and n.name == "_topic_for_action"), None)
+    assert fn is not None, (
+        "`_topic_for_action` biến mất/đổi tên — nếu ánh xạ solver→topic dời đi chỗ khác thì cổng "
+        "này đang canh một hàm không còn tồn tại. Trỏ lại nó, đừng xoá.")
+    sinh_ra = {n.value.value for n in ast.walk(fn)
+               if isinstance(n, ast.Return) and isinstance(n.value, ast.Constant)
+               and isinstance(n.value.value, str)}
+    assert len(sinh_ra) >= 6, f"chỉ đọc được {sinh_ra} — AST đã mục, cổng thành trang trí"
+    chua_khai = sorted(sinh_ra - ALL_TOPICS)
+    assert not chua_khai, (
+        f"`_topic_for_action` sinh topic CHƯA phân loại: {chua_khai}. Đây là đường ghi v2 — mặc "
+        f"định của nó là 'ghi được trace accepted', tức phá ranh giới QĐ-1. Khai vào "
+        f"MEASURED_TOPICS (lời khuyên kinh tế) hay SOFT_TOPICS (khuyên mềm)? Đọc "
+        f"`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b.")
+
+
+def test_QD4_ANH_XA_THAT_cua_producer_khop_voi_nhan_trong_registry():
+    """🔴 Cổng sinh ra từ một lỗi THẬT của tôi (soi độc lập 2026-08-04).
+
+    Registry cũ khai `shift_timing` = *"EXTEND/đổi giờ"* và `shift_boundary` = *"END ca. Kinh tế."*.
+    Thực tế `_topic_for_action` route **CẢ END LẪN EXTEND** → `shift_boundary`, còn `shift_timing`
+    là nhánh mặc định cuối. ⇒ **nửa EXTEND rơi qua khe giữa hai dòng comment và chưa từng được xét**
+    khi tôi phân loại 8 topic v2 — trong khi "khuyên tài xế chạy thêm" là đúng thứ cần xét kỹ nhất
+    (`D-QD4-03`).
+
+    Comment sai nguy hiểm hơn comment thiếu: nó làm người đọc TIN là đã xét. Cổng này neo nhãn vào
+    hành vi thật của producer, nên nhãn không tự trôi khỏi code được nữa."""
+    from gsm_core.lifecycle.checkpoint import _topic_for_action
+
+    # (code, solver) -> topic. Viết CỨNG, cố ý không suy từ hàm — nếu suy thì thành đồng nhất thức.
+    ANH_XA_MONG_DOI = {
+        ("PROTECT_ELIGIBILITY", "S1"): "bonus_eligibility",
+        ("REPOSITION_SIM_ONLY", "S4"): "positioning_sim_only",
+        ("REST", "S2"): "rest",          # ← đường THẬT của sản phẩm (S7 không chạy ở product)
+        ("REST", "S7"): "rest",
+        ("SWAP", "S2"): "energy",
+        ("END", "S2"): "shift_boundary",
+        ("EXTEND", "S2"): "shift_boundary",   # ← KHÔNG phải `shift_timing`
+        ("ONLINE", "S2"): "shift_timing",
+        ("NO_ACTION", "S2"): "shift_timing",
+    }
+    thuc_te = {k: _topic_for_action(k[0], k[1]) for k in ANH_XA_MONG_DOI}
+    lech = {k: (v, ANH_XA_MONG_DOI[k]) for k, v in thuc_te.items() if v != ANH_XA_MONG_DOI[k]}
+    assert not lech, (
+        f"ánh xạ producer đổi (thực tế, mong đợi): {lech}. Mỗi ô đổi là một lời khuyên đổi lớp đo "
+        f"— sửa `ANH_XA_MONG_DOI` CÓ CHỦ Ý và xét lại phân loại của topic đích.")
+
+    # EXTEND và END dùng CHUNG một khoá ⇒ không tách lớp đo cho riêng EXTEND được. Ghim sự thật này
+    # để `D-QD4-03` (a)/(c) không bị ai tưởng là sửa một dòng registry là xong.
+    assert _topic_for_action("EXTEND", "S2") == _topic_for_action("END", "S2"), (
+        "END và EXTEND nay đã tách — `D-QD4-03` có thể xử riêng EXTEND, cập nhật lại nợ đó")
+
+
+def test_QD4_rest_cua_v2_NHAP_NHANG_va_ta_chon_MEM_co_chu_y():
+    """Ghi lại một quyết định KHÔNG chắc chắn, để người sau không tưởng nó hiển nhiên.
+
+    `checkpoint.py:135` — `if solver == "S7" or code == "REST": return "rest"` — gộp HAI khái niệm
+    mà registry vốn tách: `rest_window` (HOÃN nghỉ = đổi THỜI ĐIỂM = `C2′`, kinh tế, ĐƯỢC ĐO) và
+    `rest_nudge` (GỢI Ý nghỉ, MỀM). Từ cái tên không phân giải được.
+
+    Chọn MỀM vì ranh giới fail-closed: xếp nhầm một lời khuyên kinh tế vào mềm thì **mất một mẫu
+    số**; xếp nhầm một lời khuyên sức khoẻ vào được-đo thì **phá một ranh giới đã chốt**. Hai sai
+    không cùng hạng. → nợ tách đôi: `D-QD4-01`."""
+    assert classify("rest") == "soft"
+    assert classify("rest_window") == "measured", "HOÃN nghỉ vẫn là kênh thời-điểm, vẫn được đo"
+    assert classify("rest_nudge") == "soft"
+
+
 # ---------- (2) fail-closed: topic lạ phải ĐỎ, không im lặng rơi vào 'được đo' ----------
 
 def test_topic_chua_khai_thi_classify_tra_unknown():
@@ -394,7 +577,9 @@ def test_KHONG_QUYET_DUOC_khong_chua_cho_DA_giai_duoc():
 # ---------- (3) chống THU HẸP registry (N4) ----------
 
 # Bảng kỳ vọng VIẾT CỨNG — cố ý KHÔNG suy từ registry.
-SOFT_MONG_DOI = {"weather", "rest_nudge", "traffic"}
+SOFT_MONG_DOI = {"weather", "rest_nudge", "traffic",
+                 # QĐ-4 bước 2: từ vựng v2 + cadence nhập vào lớp mềm
+                 "rest", "safety_reserved", "safety"}
 
 
 def test_pin_SOFT_TOPICS_chong_thu_hep():

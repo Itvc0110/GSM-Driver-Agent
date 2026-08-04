@@ -214,8 +214,17 @@ def adherence_view(events) -> dict[tuple[str | None, str, str | None], dict]:
         topic = (e.get("payload") or {}).get("topic")
         # Phải lọc ở CẢ HAI vòng — vòng decision và vòng event là hai đường vào view khác nhau;
         # lọc một vòng để hở vòng kia là đúng họ lỗi `L4-01` (hai tên cho "advisor đã nói", sửa
-        # một nửa rồi tưởng xong). Kiểm theo topic của event HOẶC của quyết định mà nó thuộc về.
-        if classify(topic) != "measured" or e["decision_id"] in _soft_dids:
+        # một nửa rồi tưởng xong).
+        #
+        # ⚠ Điều kiện ở đây CHỈ là `in _soft_dids`, KHÔNG kèm `classify(topic) != "measured"` nữa —
+        # dù bản đầu có cả hai. Lý do bỏ vế thứ hai không phải gọn hơn mà là **nó THỪA và đã đánh
+        # lừa chính phép thử của tôi**: `_soft_dids` gom topic từ CẢ `states` LẪN mọi event, còn
+        # `decision_state` tạo row cho mọi `decision_id` — nên "event có topic không-được-đo" luôn
+        # kéo theo "did nằm trong `_soft_dids`" (đã chứng minh bằng đo). Khi sever-restore tiêm vào
+        # MỘT trong hai vế, vế kia vẫn lọc ⇒ cổng XANH ⇒ tôi suýt đọc thành *"cổng không bắn"*.
+        # Hai điều kiện dư thừa che nhau làm mutation test **nói dối**. Một điểm enforce, một điểm
+        # để sever.
+        if e["decision_id"] in _soft_dids:
             continue
         agg = _row((e.get("run_id"), e["driver_id"], topic))
         agg["event_decided" if et in _EVENT_SPOKEN else "event_followed"] += 1

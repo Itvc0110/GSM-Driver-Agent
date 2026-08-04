@@ -63,18 +63,30 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 ## §2. STATE hiện tại (2026-07-30)
 
 ```
-local HEAD  = 844988f+  (UPDATE-114/115 đã đẩy); UPDATE-116 commit ngay sau
-suite       = 1076 passed / 4 skipped / 0 failed  (đo 2026-08-03: 961 + 115 UI)
-              uv run pytest -q                  -> 961 / 4 skip  (20′07″)
-              uv run pytest -q ui/backend/tests -> 115 / 0 skip
+local HEAD  = 51e877e (UPDATE-128/129) + cây làm việc UPDATE-130 CHƯA commit
+suite       = 1184 passed / 4 skipped / **3 FAILED** (đo 2026-08-04 SAU khi sửa soi độc lập)
+              uv run pytest -q                  -> 1022 / 3 fail / 4 skip  (22′05″)
+              uv run pytest -q ui/backend/tests -> 162  / 0 fail / 0 skip
+              🔴 3 F là ĐỎ SẴN sau PR #4 (`K-01`), KHÔNG do cycle nào của tôi — đã chứng minh bằng
+                `git stash push -u` rồi chạy đúng 3 test đó trên cây sạch ⇒ vẫn 3 failed:
+                  tests/test_cadence_policy.py::test_safety_topic_presents_even_while_driving
+                  tests/test_checkpoint_trace.py::test_shadow_comparator_ignores_only_diagnostic_metadata
+                  tests/test_checkpoint_trace.py::test_run_once_wires_shadow_trace_without_changing_semantic_outcomes
+                Cái đầu là **bất đồng CHÍNH SÁCH** (code cố ý QUEUE mọi thẻ chữ khi đang lái, kể cả
+                safety; test đòi PRESENT) — thuộc claim Khánh, KHÔNG tự sửa. Hai cái sau: `scripts/`
+                thiếu `__init__.py`
               ⚠ ĐỪNG TIN hai số này nếu vừa có ai thêm test — ĐO LẠI. Trong UPDATE-128 con số UI
                 stale BA LẦN (101→108→111→115) vì viết bằng tay rồi không đếm lại
-              ⚠ chỉ khởi động suite khi ĐÃ NGỪNG sửa file nó thu — pytest import lúc
-                collection, sửa sau đó ⇒ kết quả đo CODE CŨ (đã trả giá 15′ máy 2026-08-03)
-UPDATE       = 116 file, mới nhất UPDATE-128 (104 UIUX + 105 codex review + 120 routing là của remote/Khánh)
-              ⚠ 116 ≠ 122 vì dãy số THIẾU 6 số (013–018). Đừng suy số file từ số cao nhất —
-                soi độc lập 2026-08-03 bắt được dòng này ghi 115 (đếm bằng ký ức, không bằng `ls`)
-PENDING      = 24 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-26 mới 2026-08-03):
+              ⚠ chỉ khởi động suite khi ĐÃ NGỪNG sửa file nó thu — pytest import lúc collection,
+                sửa sau đó ⇒ kết quả đo CODE CŨ. 2026-08-04 tôi lại sập bẫy này (sửa
+                `ui/contracts/advice_v2.json` giữa chừng, mà một test trong `tests/` đọc nó lúc
+                runtime) ⇒ phải HUỶ và chạy lại từ đầu, mất ~25′ máy. Lần thứ HAI
+UPDATE       = 125 file (ĐẾM 2026-08-04), mới nhất UPDATE-130 (104 UIUX + 105 codex + 120 routing = remote/Khánh)
+              ⚠ 125 ≠ 130 vì dãy số THIẾU vài số (013–018) và có số TRÙNG (121, 125 dùng hai lần
+                do song song với remote). Đừng suy số file từ số cao nhất — đếm bằng lệnh:
+                `(Get-ChildItem tracking\updates -Filter "UPDATE-*.md" | Measure-Object).Count`
+                Dòng này đã sai HAI lần vì đếm bằng ký ức (2026-08-03 ghi 115; 2026-08-04 ghi 118)
+PENDING      = 26 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-27 mới 2026-08-04):
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
               V-20 (PHAN-QUYET đảo C2 — Cường đã hạ xuống THỬ NGHIỆM, chờ chốt văn bản)
@@ -83,10 +95,15 @@ PENDING      = 24 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-26 m�
               V-23 (hai bản PDF Week 2 Report — brief 6 trang + kỹ thuật 30 trang)
               V-24 (routing 3 tầng của KHÁNH — OSRM→GraphHopper→đường thẳng trung thực)
               V-25 (số tầm pin trên UI ĐỔI: 77 → 43,8 km; xe hơi hiện "chưa có cơ sở")
-              V-26 (ranh giới KHUYÊN MỀM KHÔNG ĐO + luật quyết định của D-M3-04 —
-                    tôi DỊCH câu nói của Cường thành tiêu chí máy chấm được; dịch lệch
-                    thì phải sửa TRƯỚC Cycle B, vì sửa sau khi thấy số là vi phạm prereg)
+              V-26 (ranh giới KHUYÊN MỀM KHÔNG ĐO — phần (b) luật quyết định D-M3-04 đã ĐÓNG
+                    2026-08-03; CÒN LẠI chỉ (a): Cường đọc văn bản QUYET-DINH rồi xác nhận)
+              V-27 (QĐ-4 — hai quyết định, KHÔNG phải xem màn hình:
+                    (a) `rest` của v2 xếp MỀM hay KINH TẾ? nó gộp `rest_window` (HOÃN nghỉ,
+                        được đo) với `rest_nudge` (mềm); tôi chọn MỀM vì fail-closed nhưng
+                        KHÔNG chắc → `D-QD4-01`
+                    (b) defer bước 3 `CheckpointStore` vào đường đo chung → `D-QD4-02`)
               ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
+              ⚠ K-01 là mục cho KHÁNH, không phải Cường — đừng gộp vào 26
 ```
 
 🔴 **BẮT BUỘC: luôn chạy CẢ HAI lệnh khi nói "suite xanh".** `pyproject.toml` có
@@ -104,6 +121,24 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-130 `QĐ-4`** — ranh giới KHUYÊN MỀM hoá ra hở ở **đường ghi thứ TƯ**: AdviceCheckpoint
+  **v2** (đến từ PR #4 của Khánh) có **store riêng** và **từ vựng `topic` riêng giao với registry =
+  RỖNG**, nên `classify()` không chạm được một event nào của nó — trong khi `rest` được sinh thật
+  (`checkpoint.py:134`, S7) và nhận được `response: accepted`. Tức **trace đồng ý cho lời khuyên
+  NGHỈ đang được ghi**. ⚠ Điều dễ hiểu sai: **chưa con số nào sai** (`adherence_view` không thấy
+  store v2) — nhưng dữ liệu **tích luỹ**, nên dạng lỗi này **nguy hiểm hơn** một số sai: ngày ai đó
+  tính adherence trên store này, tỷ lệ hiện ra ngay với lịch sử đầy đủ, không ai phải làm gì sai
+  thêm. Cường chốt **(b) hợp nhất**; đã hợp nhất **THẨM QUYỀN chứ không đổi tên** (đổi tên phá
+  contract Khánh + mọi bản ghi cũ). Sever 8/8. Bài học **khác** 5 lần trước của cùng họ lỗi: không
+  phải một người quên nối, mà **hai người nối hai nửa khác nhau** ⇒ *"mỗi người kín phần mình"
+  không cộng lại thành kín*.
+- **UPDATE-129** — cycle nợ sau vòng soi độc lập: tuyên bố *"đã thi hành bằng máy"* của UPDATE-128
+  chỉ đúng **một phần**. `adherence_view` **fail-OPEN với topic chưa khai** (`is_soft("unknown")` =
+  `False` ⇒ topic lạ đi thẳng vào bảng đo) · đường **pipeline** không ghi `topic` · cú loại **im
+  lặng** · scanner regex chỉ quét 3 file và **mù với `channel=<biến>`**. Nay: fail-closed +
+  `adherence_drops()` + **TREO** khi có `unknown`/`mixed` + scanner AST khai được vùng mù + pin
+  `SOFT_MONG_DOI` chống **THU HẸP** registry (mọi cổng khác tự tham chiếu `SOFT_TOPICS` nên mù với
+  việc bỏ bớt — *"0 test chạy" trông y hệt "0 test hỏng"*).
 - **UPDATE-128** — hai việc. **(a) Khoá ngoài: kiểm bằng GỌI THẬT cả 9 khoá/endpoint**, và cách đó
   tìm ra ba lỗi mà đọc code không thấy: `OSRM_BASE_URL` **không ai đọc** ở runtime (chỉ script ma
   trận offline đọc) dù `.env`/`.env.example` mô tả nó là tầng 1 · mirror OSRM thứ hai **sai tên

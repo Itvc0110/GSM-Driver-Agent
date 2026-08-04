@@ -69,7 +69,7 @@
       "properties": {
         "checkpoint_id": {"type": "string", "pattern": "^ckpt-"},
         "display_id": {"type": "string", "minLength": 1},
-        "topic": {"enum": ["bonus_eligibility", "energy", "rest", "shift_boundary", "shift_timing", "positioning_sim_only", "policy_info", "safety_reserved"]},
+        "topic": {"description": "🔴 QĐ-4 (Cường chốt 2026-08-04): mọi topic ở đây PHẢI được phân loại trong src/gsm_core/lifecycle/advice_topics.py — MEASURED (lời khuyên kinh tế, đo mức nghe lời là hợp lệ) hoặc SOFT (khuyên mềm: KHÔNG đo, và POST /response từ chối 'accepted' bằng 422). Hiện 'rest' và 'safety_reserved' thuộc lớp SOFT. Thêm một topic vào enum này mà không phân loại sẽ làm ba cổng ở tests/test_advice_topic_registry.py ĐỎ. Đọc tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md §6b trước khi sửa.", "enum": ["bonus_eligibility", "energy", "rest", "shift_boundary", "shift_timing", "positioning_sim_only", "policy_info", "safety_reserved"]},
         "surface": {"enum": ["brief", "nudge", "recap"]},
         "canonical_action": {"$ref": "#/$defs/action"},
         "action_window": {"$ref": "#/$defs/window"},

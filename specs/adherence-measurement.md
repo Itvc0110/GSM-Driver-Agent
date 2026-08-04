@@ -112,6 +112,50 @@ chính là tín hiệu quý (nói-một-đằng-làm-một-nẻo).
 > việc thống nhất `topic` giữa sim và sản phẩm phải tôn trọng lớp — không được gộp một topic mềm vào
 > một topic được đo để "cho join được".
 
+> ## 🔴 BỔ SUNG 2026-08-04 — (c)#2 nay có LÝ DO THỨ HAI, và nó nặng hơn lý do đầu
+>
+> §(c)#2 nêu việc thống nhất `topic` là **điều kiện để hai đường đo JOIN được** — một lý do về **phép
+> đo**. Sau khi rebase PR #4 (AdviceCheckpoint v2) thì lộ ra lý do thứ hai, thuộc về **ranh giới đạo
+> đức**:
+>
+> **Một ranh giới không thể phủ hai từ vựng rời nhau.**
+>
+> Nay có **BA** không gian `topic` cho cùng một khái niệm:
+>
+> | Nguồn | Từ vựng |
+> | --- | --- |
+> | sản phẩm v1 | `brief · nudge · recap` (+ `bonus` lịch sử) |
+> | registry / sim / pipeline | `positioning · shift_plan · accept_lift · shift_extend · rest_window · online` + **mềm**: `weather · rest_nudge · traffic` |
+> | **AdviceCheckpoint v2** | `bonus_eligibility · energy · **rest** · shift_boundary · shift_timing · positioning_sim_only · policy_info · **safety_reserved**` |
+>
+> Cột ba **giao với hai cột kia = RỖNG**. Nên ranh giới *"khuyên mềm không đo"* — enforce bằng
+> `classify()` trên registry — **không chạm được** một event nào của v2. Đo được: một checkpoint
+> `rest` (sinh bởi S7) nhận `response: accepted`, tức **trace đồng ý cho lời khuyên nghỉ đang được
+> ghi**. Chưa sinh số sai (store v2 riêng, `adherence_view` không thấy), nhưng dữ liệu **tích luỹ**.
+>
+> ⇒ **Cường chốt 2026-08-04: hợp nhất (phương án (b))**, không chọn cách rẻ hơn là ánh xạ-rồi-chặn —
+> vì ánh xạ để lại hai từ vựng, tức để nguyên nguồn gốc của lỗ. Chi tiết + thứ tự thi công:
+> `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b.
+>
+> ⚠ Ràng buộc mới cho việc hợp nhất, ngoài ràng buộc "tôn trọng lớp" ở trên: **`rest` và
+> `safety_reserved` của v2 thuộc lớp MỀM**. Gộp chúng vào một topic được đo để "cho join được" là
+> đúng cái sai mà đoạn trên vừa cấm — và lần này hậu quả không phải một con số lệch mà là một thước
+> nghe-lời cho lời khuyên sức khoẻ.
+>
+> ### ✅ Trạng thái 2026-08-04 (UPDATE-130) — đọc trước khi lập kế hoạch join
+>
+> Bảng ba cột ở trên là **ảnh chụp lúc phát hiện**; thực tế còn **từ vựng thứ TƯ** —
+> `cadence.SAFETY_TOPICS = {"safety"}`, cùng khái niệm với `safety_reserved` nhưng khác tên, ở khác
+> file. Cả bốn nay **đã nhập registry**: mỗi topic có đúng MỘT nơi quyết định nó được đo hay không.
+>
+> **Nhưng đó là hợp nhất THẨM QUYỀN, không phải hợp nhất TÊN.** Các chuỗi giữ nguyên, và **hai đường
+> đo vẫn CHƯA join được** — §(c)#2 vẫn mở, cùng với ĐÍNH CHÍNH 2026-07-30 và `D-R22` (adherence sản
+> phẩm = *cú bấm tự khai*; adherence sim = *đổi hành vi thật* — cùng tên, cùng field, khác nghĩa).
+>
+> ⇒ Ai định làm bước join: mở `D-QD4-02` trong `DEFERRED.md` trước. Nó ghi hai điều kiện bắt buộc,
+> trong đó có việc **kiểm DB v2 cũ** — bản ghi tạo trước 2026-08-04 có thể mang `accepted` trên topic
+> mềm, và một phép join tin rằng store sạch sẽ hồi sinh đúng con số mà ranh giới này cấm.
+
 ## Đường 1 — EXPLICIT (ý định, UI) — ✅ ĐÃ CÓ từ UPDATE-067
 
 - Nút **Làm theo / Bỏ qua / Vì sao** trên mỗi card → POST `advice_action` (contract v1.0),

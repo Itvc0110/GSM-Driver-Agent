@@ -157,6 +157,144 @@ mẫu số — im lặng, và im lặng đúng hướng có hại. Cổng này b
 
 ---
 
+## 6b. 🔴 QĐ-4 (2026-08-04) — HỢP NHẤT TAXONOMY: ranh giới phải phủ **đường v2**
+
+> **⚠ KHÁNH ĐỌC PHẦN NÀY TRƯỚC KHI CHẠM `advice_checkpoint.py` / `checkpoint.py` / `advice_v2.json`.**
+
+### Lỗ tìm ra khi đọc lại logic sau rebase PR #4
+
+Ranh giới QĐ-1 phủ **ba** đường ghi (UI v1 · sim · pipeline). PR #4 mang vào **đường thứ TƯ** —
+AdviceCheckpoint v2 — và nó nằm **hoàn toàn ngoài**:
+
+```
+GET  /advice/v2/checkpoints   → thẻ
+     cards.js render          → nút "Làm theo" / "Bỏ qua"
+POST /advice/v2/{id}/response → response: accepted | dismissed | expanded
+     record_response()        → CheckpointStore.append_event()
+```
+
+Ba sự thật, mỗi cái tự nó đủ để ranh giới không chạm tới:
+
+| # | Sự thật | Bằng chứng |
+| --- | --- | --- |
+| 1 | **Store riêng** | `advice_checkpoint.py:257` ghi nguyên văn *"independent from the legacy v1 lifecycle store"*. v2 → `CheckpointStore`; ranh giới của tôi sống trong `AdviceEventLog` → `adherence_view` |
+| 2 | **Từ vựng topic thứ ba, giao nhau RỖNG** | v2: `bonus_eligibility · energy · **rest** · shift_boundary · shift_timing · positioning_sim_only · policy_info · **safety_reserved**`. Registry: `brief · nudge · recap · bonus · online · positioning · shift_plan · accept_lift · shift_extend · rest_window · weather · rest_nudge · traffic`. **Giao = ∅** |
+| 3 | **`rest` được sinh THẬT** | `checkpoint.py:135` — `if solver == "S7" or code == "REST": return "rest"`. S7 chính là solver khung nghỉ. `:386` xếp `rest` vào **ưu tiên 1** ⇒ hiện sớm |
+
+### Mức độ — nói cho chính xác
+
+**Hôm nay CHƯA có con số nào sai.** `adherence_view` không bao giờ thấy event v2, nên không tồn tại
+tỷ lệ nghe lời nào cho `rest`.
+
+**Nhưng cái TRACE thì đang được ghi.** Tài xế bấm "Làm theo" trên thẻ `rest` ⇒ `CheckpointStore` lưu
+`event_type="accepted"` cho topic `rest`. Đó **chính là** thứ QĐ-1 cấm — dữ liệu có thật, chỉ chưa ai
+tính tỷ lệ từ nó.
+
+⇒ Dạng này **nguy hiểm hơn** một con số sai: nó im lặng và **tích luỹ**. Ngày ai đó viết một hàm
+adherence trên `CheckpointStore`, tỷ lệ hiện ra ngay với lịch sử đầy đủ — **không ai phải làm gì sai
+thêm**.
+
+### Không ai cẩu thả — và vì sao điều đó đáng ghi
+
+Hai người làm song song, **mỗi người kín phần mình**. Tôi bịt v1 + sim + pipeline; Khánh xây v2 sạch
+theo thiết kế của anh ấy — và `safety_reserved` trong enum cho thấy anh ấy **có** nghĩ về ranh giới
+an toàn, chỉ bằng một từ vựng khác.
+
+Đây là lần thứ **sáu** cùng một họ lỗi trong hai ngày: *ranh giới khai là kín, chỉ phủ một phần đường
+chạy*. Năm lần trước do **một người quên nối**; lần này do **hai người nối hai nửa khác nhau**. Bài
+học khác hẳn: với hai nhánh song song, "mỗi người kín phần mình" **không** cộng lại thành kín.
+
+### CƯỜNG CHỐT 2026-08-04: phương án **(b) — HỢP NHẤT hai từ vựng thành MỘT**
+
+Không chọn (a) *"ánh xạ v2 → registry rồi chặn"* (rẻ hơn, kín ngay, nhưng để lại **hai** từ vựng —
+tức để nguyên nguồn gốc của lỗ). Không chọn (c) *"v2 tự có ranh giới riêng"*.
+
+Hợp nhất chính là việc mà `specs/adherence-measurement.md` §(c)#2 đã nêu là **điều kiện để hai đường
+đo join được** — nay nó có thêm một lý do thứ hai: **ranh giới đạo đức không thể phủ hai từ vựng rời
+nhau.**
+
+### Thi công — ba bước, và bước 1 là CỔNG chứ không phải chú thích
+
+| Bước | Việc | Vì sao thứ tự này |
+| --- | --- | --- |
+| **1** | **Cổng ĐỎ khi từ vựng v2 và registry lệch nhau** + docs tại chỗ | Comment thì đọc hay không tuỳ người; **cổng đỏ thì bắt buộc**. Đây là câu trả lời đúng cho yêu cầu *"để khi Khánh chạm code thì phải đọc qua"* |
+| **2** | Ánh xạ 8 topic v2 ↔ registry; `rest`/`safety_reserved` → `SOFT_TOPICS`; `record_response` từ chối `accepted` cho topic mềm | Kín ranh giới ở đường thứ tư |
+| **3** | `CheckpointStore` vào đường đo chung | Điều kiện để hai đường đo join (§(c)#2) |
+
+⚠ **Ranh giới thi công:** bước 2–3 chạm code Khánh (`advice_checkpoint.py`, `checkpoint.py`,
+`advice_v2.json`). Quy ước *"không tự sửa code PR owner"* vẫn áp — Cường đã duyệt hướng, nhưng
+**Khánh cần biết trước khi tôi động vào**, và đó là lý do bước 1 đi trước.
+
+### ✅ Kết quả thi công (2026-08-04) — bước 1 + 2 XONG, bước 3 DEFER có điều kiện
+
+**Điều đã đổi trong code của v2 — đúng ba chỗ, và không chỗ nào đổi tên hay đổi contract:**
+
+| Chỗ | Đổi gì | Điều KHÔNG đổi |
+| --- | --- | --- |
+| `advice_topics.py` | 8 topic v2 + `cadence.SAFETY_TOPICS` nhập registry; `rest`, `safety_reserved`, `safety` → `SOFT_TOPICS`, 6 topic kinh tế → `MEASURED_TOPICS` | **Không đổi một chuỗi nào**. `advice_v2.json` và mọi bản ghi đã lưu giữ nguyên tên |
+| `advice_checkpoint.py` | `record_response` ném `CheckpointSoftAdviceError` khi `response == "accepted"` trên topic **mềm** *hoặc* **chưa khai** (fail-closed, hai thông điệp khác nhau) | `dismissed` / `expanded` **vẫn nhận đủ** — xem §4 hai vai của `dismissed`. Checkpoint không tồn tại vẫn ra **404**, không bị nuốt thành 422 |
+| `advice_v2.py` | lỗi trên → **422**, đặt TRƯỚC `except CheckpointConflictError` | 404/409/503 giữ nguyên |
+
+> **Hợp nhất ở đây là hợp nhất THẨM QUYỀN, không phải hợp nhất TÊN.** Cái phải là MỘT là *nơi quyết
+> định topic nào được đo mức nghe lời*. Đổi tên sẽ phá contract của Khánh và mọi bản ghi lịch sử —
+> đắt hơn nhiều so với thứ nó giải quyết.
+
+**Vì sao 422 chứ không phải 409:** `409 conflict` nghĩa *"trạng thái không cho phép LÚC NÀY"* — hàm ý
+thử lại có thể được. Đây là ranh giới **vĩnh viễn không được phép**. Dùng lại `CheckpointConflictError`
+sẽ dạy người đọc log rằng cứ thử lại là qua. Hai lớp lỗi khác nhau vì hai bản chất khác nhau.
+
+**Bốn cổng canh, xếp theo thứ tự ai chạm code sẽ đụng cái nào trước:**
+
+| Cổng | Bắn khi | Ở đâu |
+| --- | --- | --- |
+| `test_QD4_PRODUCER_that_cua_v2_...` | thêm một nhánh `return "<topic mới>"` vào `_topic_for_action` mà chưa phân loại | `tests/test_advice_topic_registry.py` |
+| `test_QD4_ghim_khoang_HO_...` | enum `topic` trong `advice_v2.json` thêm/bớt phần tử | nt |
+| `test_QD4_buoc2_RANH_GIOI_DA_KIN_...` | một topic v2 (hoặc `cadence`) không nằm trong registry | nt |
+| `test_v2_soft_advice_no_trace.py` | ranh giới ở `record_response`/router bị gỡ hoặc map sai mã | `ui/backend/tests/` |
+
+Cổng producer tồn tại riêng vì scanner AST chỉ nhìn `topic="x"`, `{"topic": "x"}` và `X_TOPICS = (...)`
+— nó **không nhìn `return "x"`**, mà đó chính là nơi mọi topic v2 ra đời. Ba cổng kia chỉ đóng vòng
+khi người thêm topic **cũng** sửa `advice_v2.json`; ai thêm `return "fatigue"` mà chưa động contract
+thì lọt cả ba.
+
+**Không phải cổng trang trí:** sever-restore thật (tiêm vào file nguồn · chạy pytest thật · restore ·
+verify `sha256`) — **13/13 mũi bị bắt**: gỡ cổng mềm · map 422→409 · đặt `except` ranh giới sau
+`conflict` ⇒ bị nuốt · rút `rest` khỏi `SOFT_TOPICS` · rút `safety_reserved` · đẩy `energy` khỏi
+bảng được đo · `is_soft` luôn `False` · `classify` luôn trả `"measured"` · thêm topic mới ở producer ·
+đổi tên hàm producer · gỡ nhánh fail-closed · fail-closed nuốt luôn `dismissed` · checkpoint không
+tồn tại bị nuốt thành lỗi ranh giới. Bảng đầy đủ + cách chọn mũi: `UPDATE-130` §Kiểm chứng.
+
+Ba mũi canh **hướng ngược**: một cổng ranh giới cũng hỏng khi nó đóng quá tay (chặn cả `dismissed`
+⇒ tài xế kẹt với thẻ không tắt được) hoặc khi nó nuốt mọi lỗi thành 422 (đọc log sẽ tưởng ranh giới
+bắn trong khi chỉ là gõ nhầm ID). Cổng chỉ bắt một hướng là cổng nửa vời.
+
+⚠ **Một nhánh đã bị GỠ chứ không phải thêm:** `POST /{id}/display` từng bắt `CheckpointSoftAdviceError`
+— nhưng `acknowledge_display` **không thể ném nó** (hiển thị một thẻ không phải sự đồng thuận). Một
+`except` không bao giờ chạy chính là họ lỗi repo đã trả giá 5 lần (`D-R12`, Lỗi #9): code tự quảng
+cáo một nhánh không có đường chạy, rồi người sau đọc nó như một bảo đảm đang hoạt động.
+
+**Bước 3 (`CheckpointStore` vào đường đo chung) DEFER — `D-QD4-02`.** Nó **không** cần cho ranh giới:
+sau bước 2, v2 không ghi được trace đồng thuận cho topic mềm, nên dù mai có ai tính adherence trên
+store này thì dữ liệu đã sạch từ gốc. Bước 3 là **tính năng đo**, và nó kéo theo cả việc join hai
+đường đo (`adherence-measurement.md` §(c)#2 + ĐÍNH CHÍNH 2026-07-30) — một cycle riêng, lớn hơn hẳn.
+Gộp vào đây sẽ làm cycle mất tính review-được.
+
+⚠ **Dữ liệu đã tích luỹ TRƯỚC bản vá:** máy Cường **không có** `data/ui-telemetry/advice_checkpoint.db`
+(kiểm 2026-08-04 — chỉ có `advice_lifecycle.db`), nên **chưa có bản ghi nào bị nhiễm ở đây**. Máy
+Khánh thì **chưa kiểm** — nếu có DB v2 cũ, bước 3 phải lọc `accepted` trên topic mềm trước khi tính
+bất kỳ tỷ lệ nào, chứ không được tin là store sạch.
+
+### ✅ CƯỜNG CHỐT 2026-08-04 (đóng V-26 và V-27a)
+
+| Mục | Verdict nguyên văn | Hệ quả |
+| --- | --- | --- |
+| **V-26** — bản dịch câu nói của Cường thành ba mệnh đề máy chấm được | *"tôi xác nhận bạn dịch đúng"* | **ĐÓNG.** QĐ-1/QĐ-2 vô điều kiện, QĐ-3 có điều kiện vào `D-M3-04` — đúng như văn bản. Không còn chỗ nào của quyết định này là suy diễn của agent |
+| **V-27(a)** — `rest` của v2 xếp lớp nào | *"rest của v2 để là khuyên mềm"* | **ĐÓNG.** `rest` ở lại `SOFT_TOPICS`. `D-QD4-01` **không còn là câu hỏi phân loại** — chỉ còn là nợ kỹ thuật *"tách topic theo NGUỒN nếu mai sau có producer thật cho `rest_nudge`"* |
+
+⚠ Điều này **không** đóng `V-28` (`D-QD4-03` — kênh EXTEND đang được đo, 0 lan can mệt). Đó là câu
+hỏi khác và nặng hơn: nó hỏi ngược lại chiều — *đo mức nghe lời của lời khuyên **kéo dài ca** có phải
+cũng là tối ưu hoá trên sức khoẻ không?*
+
 ## 7. Nợ mở còn lại
 
 | Mã | Nội dung | Ai |

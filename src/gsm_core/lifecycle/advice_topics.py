@@ -65,6 +65,39 @@ MEASURED_TOPICS: frozenset[str] = frozenset({
     # khoá này sang SOFT_TOPICS. ĐỪNG chuyển trước khi có số — và đừng giữ nó ở đây sau khi có
     # số âm chỉ vì "đã viết ở đây rồi".
     "rest_window",
+    # --- từ vựng của ADVICE CHECKPOINT v2 (`ui/contracts/advice_v2.json`, `checkpoint.py`) ---
+    # QĐ-4 (Cường chốt 2026-08-04): HỢP NHẤT. Trước đó v2 có từ vựng RIÊNG, giao với registry = RỖNG
+    # ⇒ ranh giới `classify()` **không chạm được một event nào của v2**, và một checkpoint `rest`
+    # nhận được `response: accepted` — tức TRACE ĐỒNG Ý cho lời khuyên NGHỈ đang được ghi.
+    #
+    # ⚠ Hợp nhất ở đây là hợp nhất **THẨM QUYỀN**, không phải đổi tên: `advice_v2.json` và dữ liệu
+    # đã lưu giữ nguyên chuỗi cũ. Đổi tên sẽ phá contract của Khánh và mọi bản ghi lịch sử — đắt hơn
+    # nhiều so với cái nó giải quyết. Cái phải là MỘT là **nơi quyết định topic nào được đo**.
+    "bonus_eligibility",     # S1 — mốc thưởng. Kinh tế (`bonus_feasibility.py`: 0 hit
+                             # rest/fatigue/soc/safety).
+    # `energy` = SWAP. Xếp ĐƯỢC ĐO vẫn đứng, nhưng KHÔNG phải vì lý do tôi viết ban đầu
+    # ("pin là điều kiện chạy, không phải sức khoẻ người") — `soc_low` được chính repo gọi là
+    # **lan can sức khoẻ** ở §1.2b và ở `sim_metrics.REST_RAILS`. Lý do ĐÚNG: pin có **kênh tác hại
+    # được mô hình hoá** (`world.py` log `battery_stranded`, `metrics.py` đếm nó), còn mệt thì
+    # KHÔNG có kênh nào (`D-SIM-16`). Đo mức nghe lời của lời khuyên đổi pin không tạo ra tỷ giá
+    # sức-khoẻ↔tiền vì hậu quả của nó đã nằm trong hàm mục tiêu một cách hợp lệ.
+    "energy",
+    # 🔴 `shift_boundary` gộp **END + EXTEND** — `checkpoint.py:138-141` trả cùng chuỗi này cho cả
+    # hai. Comment cũ của tôi ghi "END ca. Kinh tế." và ghi EXTEND ở dòng `shift_timing` bên dưới:
+    # **cả hai đều SAI**, và nửa EXTEND rơi qua khe giữa hai dòng comment ⇒ nó chưa từng được xét
+    # khi tôi phân loại. Soi độc lập 2026-08-04 bắt được.
+    # ⚠ EXTEND ("chạy thêm để với mốc thưởng") là **câu hỏi mở**, không phải kinh tế thuần — xem
+    # `D-QD4-03`. Nó ở đây vì giữ NGUYÊN TRẠNG chờ Cường quyết (`V-28`), không phải vì đã xét.
+    "shift_boundary",
+    # `shift_timing` KHÔNG phải "EXTEND/đổi giờ" — nó là **nhánh mặc định cuối** của
+    # `_topic_for_action`, hứng ONLINE · NO_ACTION · PROTECT_ELIGIBILITY(non-S1) ·
+    # REPOSITION_SIM_ONLY(non-S4). Đo được: `S2 EXTEND -> shift_boundary`, không lần nào ra đây.
+    "shift_timing",
+    "positioning_sim_only",  # S4 vị trí — chỉ sim (`ProductSolverOrchestrator` không gọi S4).
+    # ⚠ `policy_info` KHÔNG có producer nào: grep toàn repo cho đúng 2 hit — dòng khai này và bảng
+    # ghim trong test. Nó tới từ enum contract chứ không từ code sinh ra thẻ. Giữ để enum v2 và
+    # registry không lệch, nhưng đừng đọc nó như bằng chứng rằng kênh này tồn tại.
+    "policy_info",
 })
 
 # Chủ đề KHUYÊN MỀM — nói vì đúng cho tài xế, KHÔNG kèm claim tiền, KHÔNG đo mức nghe lời.
@@ -72,6 +105,28 @@ SOFT_TOPICS: frozenset[str] = frozenset({
     "weather",          # cảnh báo thời tiết (Khánh sở hữu implement — chưa có thẻ nào hôm nay)
     "rest_nudge",       # GỢI Ý nghỉ khi làm quá sức (khác `rest_window` = HOÃN nghỉ)
     "traffic",          # cảnh báo mật độ giao thông — cùng họ với thời tiết
+    # --- QĐ-4: từ vựng v2 + cadence, phần thuộc lớp MỀM ---
+    # `rest` — ĐÍNH CHÍNH 2026-08-04 (soi độc lập). Bản đầu tôi viết nó "nhập nhằng vì gộp
+    # `rest_window` với `rest_nudge`, sinh bởi S7". **Sai ở cả producer lẫn bản chất:**
+    #
+    # · **S7 KHÔNG chạy ở sản phẩm.** `ProductSolverOrchestrator` chỉ gọi S1 (`bonus_feasibility`)
+    #   và S2 (`shift_dp`); contract chốt bằng máy: `advice_v2.json` → `solver_set.enum=["S1","S2"]`.
+    #   Ở sản phẩm, `rest` sinh từ **S2** qua nhánh `code == "REST"` (`checkpoint.py:134`).
+    # · **Không producer nào sinh `rest_nudge`.** S7 (`solvers/idle_reduction.py`) là *"dời nghỉ/sạc
+    #   vào khung nhu cầu thấp"* — HOÃN, và input của nó không có trường mệt/sức khoẻ nào nên nó
+    #   **không thể** biết tài xế quá sức. S2's REST là **sàn nghỉ tối thiểu** (`rest_min_per_4h`)
+    #   đặt vào bucket demand thấp. Cả hai đều là lời khuyên **THỜI ĐIỂM**.
+    #
+    # ⇒ `rest` không nhập nhằng vì gộp hai thứ — nó **đặt chỗ trước cho một thứ chưa tồn tại**.
+    #
+    # Vẫn giữ MỀM, và nay có lý do MẠNH HƠN lý do ban đầu: `_topic_for_action` route theo
+    # `code == "REST"`, nên **bất kỳ** solver nào mai sau trả action `REST` — kể cả một producer
+    # mệt-mỏi thật — đều rơi vào khoá này. Xếp MEASURED là mở một cửa **vĩnh viễn** cho lời khuyên
+    # sức khoẻ chui vào bảng đo, đổi lấy mẫu số của một lát cắt S2 hôm nay. Hai sai không cùng hạng
+    # (§1.2c). Giá đang trả + phương án tách theo NGUỒN: `D-QD4-01`.
+    "rest",
+    "safety_reserved",  # v2 — cảnh báo an toàn. Sức khoẻ/an toàn ⇒ không đo mức nghe lời.
+    "safety",           # `cadence.SAFETY_TOPICS` — từ vựng THỨ TƯ, cùng khái niệm `safety_reserved`
 })
 
 ALL_TOPICS: frozenset[str] = MEASURED_TOPICS | SOFT_TOPICS

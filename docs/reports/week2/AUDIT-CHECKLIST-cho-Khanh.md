@@ -140,6 +140,79 @@ biết lý do chọn hệ số 1,1 thì cho mình biết trước khi sửa.
 
 ---
 
+## Phần 6 — 🔴 MÌNH ĐÃ SỬA CODE CỦA BẠN (2026-08-04) — đọc trước khi chạm lại `advice_checkpoint`
+
+Cường duyệt hướng, nhưng đây vẫn là code trong PR #4 của bạn nên mình báo tường minh.
+
+**Chuyện gì:** repo có một ranh giới sản phẩm đã chốt — *lời khuyên sức khoẻ/an toàn (nghỉ, thời
+tiết, an toàn) **không được đo mức nghe lời***. Lý do không phải UI: một khi `rest_adherence` tồn tại
+như một con số, nó sẽ được nhìn như thứ cần cải thiện, và *"cải thiện tỷ lệ tài xế chịu nghỉ"* là tối
+ưu hoá trên sức khoẻ — đúng thứ `specs/advisor-objective-model-v2.md` §1.2b cấm.
+
+Ranh giới đó được thi hành bằng `classify()` trên một registry. Nhưng **AdviceCheckpoint v2 dùng từ
+vựng `topic` riêng, giao với registry = RỖNG** — nên `classify()` không chạm được một event nào của
+v2, và một checkpoint `rest` (sinh bởi S7, `checkpoint.py:134`) **nhận được `response: accepted`**.
+Tức hệ thống đang ghi *trace đồng ý cho lời khuyên NGHỈ*.
+
+**Nói cho công bằng: không phải bạn cẩu thả.** `safety_reserved` trong enum cho thấy bạn **có** nghĩ
+về ranh giới an toàn — chỉ bằng một cách gọi khác. Mình bịt v1 + sim + pipeline, bạn xây v2 sạch theo
+thiết kế của bạn. Bài học là về **hai nhánh song song**, không về ai đó làm ẩu: *"mỗi người kín phần
+mình" không cộng lại thành kín.*
+
+**Ba chỗ mình sửa** (chi tiết: `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b):
+
+| File | Đổi gì | KHÔNG đổi gì |
+| --- | --- | --- |
+| `src/gsm_core/lifecycle/advice_topics.py` | 8 topic v2 nhập registry; `rest` + `safety_reserved` → lớp MỀM | — |
+| `ui/backend/app/services/advice_checkpoint.py` | `record_response` từ chối `accepted` cho topic mềm/chưa khai | `dismissed`, `expanded` **vẫn nhận đủ** |
+| `ui/backend/app/routers/advice_v2.py` | lỗi đó → **422** | 404/409/503 nguyên vẹn |
+
+⚠ **Mình KHÔNG đổi một tên nào.** `advice_v2.json` giữ nguyên mọi chuỗi, dữ liệu đã lưu giữ nguyên.
+Cái được hợp nhất là **thẩm quyền** (nơi quyết định topic nào được đo), không phải từ vựng — đổi tên
+sẽ phá contract của bạn và mọi bản ghi lịch sử.
+
+**Bốn việc cần bạn:**
+
+1. 🔴 **Flutter đang vẽ nút "Làm theo" VÔ ĐIỀU KIỆN — và đây là lỗ ĐANG SỐNG, không phải giả định.**
+   `advice_checkpoint_card.dart:91-92`: `onPressed: () => widget.onResponse('accepted')` — không
+   đọc cờ mềm nào. Cộng với `advice_v2.json` khai `response_options` là
+   `const ["accepted","dismissed","expanded"]` (hằng, không theo topic).
+   **Vì sao nó live chứ không phải tương lai:** thẻ `rest` **sinh được hôm nay** — `shift_dp` (S2)
+   trả action `REST` khi tới sàn nghỉ tối thiểu (`rest_min_per_4h`), và `_topic_for_action` route
+   `code == "REST"` → `rest`. Tài xế gặp thẻ đó, bấm "Làm theo", **ăn 422**.
+   ⇒ Backend chặn được DỮ LIỆU nhưng không chặn được CÂU HỎI, và cái nút chính là câu hỏi. QĐ-1
+   nói *"UI không nên có trace đồng ý làm theo hay không"* — vế UI hiện **chưa** được thi hành ở v2.
+   **Cần:** envelope mang cờ `is_soft_advice` (như `GET /advice/actions` của v1 đã có) và card chỉ
+   vẽ nút Ẩn khi cờ bật. Web v1 đã làm đúng — xem `ui/web/js/cards.js` chế độ `soft` và cổng
+   `ui/web/tests/cards_soft_gate.mjs`.
+2. **Máy bạn có `data/ui-telemetry/advice_checkpoint.db` cũ không?** Máy Cường không có (đã kiểm).
+   Nếu bạn có, bản ghi tạo **trước 2026-08-04** có thể mang `accepted` trên topic `rest` — phải lọc
+   trước khi ai đó tính bất kỳ tỷ lệ nào từ store đó (`D-QD4-02`).
+3. **`rest` của v2 mình xếp vào MỀM.** ⚠ Bản đầu của phần này mình viết *"nó gộp `rest_window` với
+   `rest_nudge`, sinh bởi S7"* — **sai cả producer lẫn bản chất**, soi độc lập bắt được và mình đã
+   kiểm lại: ở sản phẩm **S7 không chạy** (`ProductSolverOrchestrator` chỉ S1+S2), nên `rest` sinh
+   từ **S2**; và **không producer nào sinh `rest_nudge`** — cả S7 lẫn S2 đều khuyên **thời điểm**.
+   Kết luận MỀM giữ nguyên nhưng vì lý do khác: `_topic_for_action` route theo `code == "REST"`, nên
+   **mọi** solver mai sau trả `REST` đều rơi vào khoá này — xếp MEASURED là mở cửa vĩnh viễn cho
+   lời khuyên sức khoẻ vào bảng đo. Nếu bạn định thêm một solver sinh `REST` thì nói mình trước
+   (`D-QD4-01`).
+
+4. 🔴 **Việc thứ tư, và nó lớn hơn ba việc trên — `D-QD4-03` / `V-28`.** Kênh **EXTEND** ("chạy thêm
+   để với mốc thưởng") đang **được đo mức nghe lời** và **không có một lan can mệt nào**
+   (`check_shift_extend` chỉ kiểm trần/mốc/năng suất/cadence), trong khi kênh **nghỉ** có ba
+   (`soc_low`/`fatigued`/`defer_cap`). Mà `policy_locks.py:40-42` lại khoá
+   `advice.shift_extend_max_min` **ngang hàng** `rest_defer_max_min` với comment *"cùng họ: kéo dài
+   thời gian làm việc vì tiền"* — tức repo **tự xếp** nó là đòn bẩy sức khoẻ.
+   Đây là **đối xứng ngược của QĐ-1**: nếu đo "tỷ lệ tài xế chịu nghỉ" là tối ưu hoá trên sức khoẻ,
+   thì đo "tỷ lệ tài xế chịu chạy thêm" cũng vậy — chỉ đổi dấu. Mình **không tự sửa** (đổi phạm vi
+   đo là quyết định sản phẩm, và kênh này đã có số thật). Chờ Cường chốt; bạn có ý kiến thì nói.
+
+**Nếu bạn thêm/đổi một topic v2**, ba cổng sẽ ĐỎ với thông điệp trỏ về văn bản quyết định:
+`tests/test_advice_topic_registry.py` (`test_QD4_*`) và `ui/backend/tests/test_v2_soft_advice_no_trace.py`.
+Cổng đỏ thay vì comment là cố ý — comment thì đọc hay không tuỳ người.
+
+---
+
 ## Ký tắt
 
 | Phần | Người kiểm | Trạng thái |
@@ -149,4 +222,5 @@ biết lý do chọn hệ số 1,1 thì cho mình biết trước khi sửa.
 | Phần 3 (2 câu hỏi) | Khánh | ⬜ |
 | Phần 4 (danh sách dễ báo sai) | Khánh | ⬜ |
 | Phần 5 (`D-M3-17`) | Khánh | ⬜ |
+| **Phần 6 (QĐ-4 — mình sửa code v2 của bạn; 3 việc cần bạn)** | **Khánh** | ⬜ |
 | Bản PDF cuối | Cường | ⬜ |

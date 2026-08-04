@@ -16,6 +16,7 @@ from app.services.advice_checkpoint import (
     AdviceCheckpointService,
     CheckpointConflictError,
     CheckpointNotFoundError,
+    CheckpointSoftAdviceError,
     ProductSolverOrchestrator,
 )
 from gsm_core.advisor.checkpoint_presenter import CheckpointPresenter
@@ -116,6 +117,10 @@ def post_display(checkpoint_id: str, body: DisplayBody):
             mounted_at=body.mounted_at.isoformat())
     except CheckpointNotFoundError as exc:
         raise HTTPException(status_code=404, detail="checkpoint_not_found") from exc
+    # KHÔNG bắt `CheckpointSoftAdviceError` ở đây: `acknowledge_display` không thể ném nó (HIỂN THỊ
+    # một thẻ không phải sự đồng thuận — ranh giới QĐ-4 chỉ chặn `accepted`). Một `except` không bao
+    # giờ chạy chính là họ lỗi repo đã trả giá 5 lần (`D-R12`, Lỗi #9): code tự quảng cáo một nhánh
+    # không có đường chạy, rồi người sau đọc nó như một bảo đảm đang hoạt động.
     except CheckpointConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     finally:
@@ -135,6 +140,10 @@ def post_response(checkpoint_id: str, body: ResponseBody):
             occurred_at=body.occurred_at.isoformat())
     except CheckpointNotFoundError as exc:
         raise HTTPException(status_code=404, detail="checkpoint_not_found") from exc
+    # QĐ-4: 422 chứ KHÔNG phải 409 — 409 nghĩa "thử lại có thể được", còn đây là ranh giới
+    # vĩnh viễn. Đặt TRƯỚC `CheckpointConflictError` vì cả hai cùng kế thừa `ValueError`.
+    except CheckpointSoftAdviceError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except CheckpointConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     finally:

@@ -33,6 +33,7 @@ from gsm_core.lifecycle.checkpoint import (
     evaluate_checkpoint,
     select_primary_candidate,
 )
+from gsm_core.lifecycle.advice_topics import classify
 from gsm_core.lifecycle.checkpoint_store import CheckpointStore, build_artifact_record
 from gsm_core.schema_registry import L1R_ENTITIES, SchemaRegistry
 from gsm_core.solvers import bonus_feasibility, shift_dp
@@ -247,6 +248,15 @@ class CheckpointConflictError(ValueError):
     pass
 
 
+class CheckpointSoftAdviceError(ValueError):
+    """Cố ghi một dấu vết ĐỒNG THUẬN cho lời khuyên KHUYÊN MỀM (QĐ-1/QĐ-4).
+
+    Lớp RIÊNG chứ không dùng lại `CheckpointConflictError`: conflict là *"trạng thái không cho phép
+    lúc này"* (409, thử lại có thể được); còn đây là *"việc này vĩnh viễn không được phép"* (422).
+    Gộp hai cái sẽ dạy người đọc rằng cứ thử lại là qua — sai hẳn bản chất một ranh giới.
+    """
+
+
 def _event(checkpoint: dict, event_type: str, occurred_at: str, *,
            event_id: str, display_id: str | None = None,
            actor: str = "advisor", origin: str = "product",
@@ -459,6 +469,60 @@ class AdviceCheckpointService:
     def record_response(self, checkpoint_id: str, *, display_id: str,
                         client_event_id: str, response: str,
                         occurred_at: str) -> dict:
+        # 🔴 QĐ-4 bước 2 (Cường chốt 2026-08-04) — RANH GIỚI KHUYÊN MỀM, không phải chi tiết kỹ thuật.
+        #
+        # Đây là đường ghi THỨ TƯ vào một store hành vi (UI v1 · sim · pipeline · **v2**). Ba đường
+        # kia đã bị chặn từ UPDATE-128/129; đường này thì chưa, vì v2 có store riêng
+        # (`CheckpointStore`) và từ vựng topic riêng — hai bên **giao nhau = RỖNG**, nên
+        # `classify()` không chạm được một event nào của v2.
+        #
+        # Hậu quả đo được 2026-08-04: một checkpoint `rest` nhận được `response: accepted` ⇒ hệ
+        # thống ĐANG GHI TRACE ĐỒNG Ý cho lời khuyên NGHỈ — đúng thứ QĐ-1 cấm. Chưa sinh số sai
+        # (store v2 chưa vào `adherence_view`), nhưng dữ liệu **tích luỹ**: ngày ai đó tính
+        # adherence trên store này, tỷ lệ hiện ra ngay với lịch sử đầy đủ.
+        #
+        # ⚠ ĐÍNH CHÍNH (soi độc lập 2026-08-04): bản đầu của comment này ghi *"`rest` sinh bởi S7"*.
+        # SAI ở đường sản phẩm — `ProductSolverOrchestrator` chỉ chạy S1/S2 (xem `:176`, `:210`), và
+        # contract cấm solver khác (`advice_v2.json` → `solver_set.enum=["S1","S2"]`). Ở đây `rest`
+        # sinh từ **S2** qua nhánh `code == "REST"` (`checkpoint.py:134`). S7 chỉ sống ở sim.
+        # Lỗ hổng có thật, nhưng qua một producer khác — và cổng đầu-cuối bản đầu vì thế đã canh
+        # một kịch bản BẤT KHẢ. Đã sửa: `ui/backend/tests/test_v2_soft_advice_no_trace.py`.
+        #
+        # `dismissed`/`expanded` VẪN nhận: `dismissed` = *"đừng nhắc nữa"* (nhịp nói), không phải
+        # *"tôi không đồng ý"*; chặn nó sẽ làm tài xế mất cách tắt thẻ phiền. Chỉ `accepted` bị cấm —
+        # nó chỉ có MỘT nghĩa, và nghĩa đó là sự đồng thuận, tức thước nghe-lời.
+        # Xem `tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b.
+        if response == "accepted":
+            checkpoint = self.store.checkpoint(checkpoint_id)
+            topic = (checkpoint or {}).get("topic")
+            # `topic is None` ⇒ để `_client_event` trả `CheckpointNotFoundError` (404) — không nuốt
+            # một checkpoint không tồn tại thành lỗi ranh giới, vì hai thứ đó cần hai thông điệp.
+            lop = classify(topic) if topic is not None else "measured"
+            if lop == "soft":
+                raise CheckpointSoftAdviceError(
+                    f"topic {topic!r} là KHUYÊN MỀM — không ghi được `accepted`. Khuyên mềm được "
+                    f"nói vì đúng cho tài xế, KHÔNG kèm phép đo mức nghe lời: đo nó là biến sức "
+                    f"khoẻ/an toàn thành chỉ tiêu để tối ưu (§1.2c). Dùng `dismissed` nếu ý là "
+                    f"'đừng nhắc nữa' — đó là nhịp nói, không phải sự đồng thuận.")
+            # FAIL-CLOSED cho topic CHƯA KHAI — cùng luật với `adherence_view` (Cường chốt
+            # 2026-08-03: *"TREO kết quả, như D-M3-10"*). Nếu ở đây fail-OPEN thì ranh giới có hai
+            # tiêu chuẩn cho cùng một tình huống: tầng ĐỌC loại topic lạ, tầng GHI lại nhận nó.
+            #
+            # Đánh đổi đã cân, không phải chọn cho gọn: chặn ở đây là lỗi **thấy được** (một cú bấm
+            # nhận 422), còn cho qua là lỗi **im lặng** — và nếu topic lạ đó hoá ra là lời khuyên sức
+            # khoẻ (`fatigue`, `hydration`…) thì cái im lặng ấy chính là trace đồng thuận mà QĐ-1
+            # cấm. Không cùng hạng.
+            #
+            # Trong thực tế nhánh này **không tới được ở bản ship**: topic chỉ sinh từ
+            # `_topic_for_action`, và ba cổng ở `tests/test_advice_topic_registry.py` ĐỎ ngay khi có
+            # topic chưa khai. Nó là lan can cho khoảng thời gian giữa "vừa thêm topic" và "chạy
+            # test" — đúng khoảng mà mọi lỗi họ này đã chui qua.
+            if lop == "unknown":
+                raise CheckpointSoftAdviceError(
+                    f"topic {topic!r} CHƯA được phân loại trong `advice_topics.py` ⇒ chưa ai quyết "
+                    f"nó là lời khuyên KINH TẾ (đo mức nghe lời được) hay KHUYÊN MỀM (không đo). "
+                    f"Fail-closed: không ghi `accepted` cho tới khi có người quyết. Đọc "
+                    f"`tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md` §6b.")
         return self._client_event(
             checkpoint_id, display_id=display_id, client_event_id=client_event_id,
             event_type=response, occurred_at=occurred_at, actor="driver")

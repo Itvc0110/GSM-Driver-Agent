@@ -68,7 +68,12 @@ def test_query_is_surface_only_and_envelope_matches_closed_contract(monkeypatch,
     response = client.get("/api/v2/advice", params=_query())
     assert response.status_code == 200
     body = response.json()
-    schema = json.loads((ROOT / "ui/contracts/advice_v2.json").read_text())
+    # `encoding="utf-8"` là BẮT BUỘC, không phải cho gọn: `read_text()` không khai encoding sẽ dùng
+    # cp1252 trên Windows ⇒ `UnicodeDecodeError` ngay khi contract có một ký tự tiếng Việt. Bảy
+    # contract còn lại trong `ui/contracts/` ĐỀU đã có tiếng Việt (advice.json: 796 byte phi-ASCII);
+    # `advice_v2.json` từng là cái duy nhất ASCII thuần, nên dòng này xanh **nhờ may**. Nó đỏ ngay
+    # khi QĐ-4 thêm cảnh báo ranh giới bằng tiếng Việt vào đó — tức bug tiềm ẩn, không phải hồi quy.
+    schema = json.loads((ROOT / "ui/contracts/advice_v2.json").read_text(encoding="utf-8"))
     validate(body, schema)
     assert len(body["items"]) == 1
 
