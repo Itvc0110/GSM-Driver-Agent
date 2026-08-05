@@ -57,14 +57,9 @@ MEASURED_TOPICS: frozenset[str] = frozenset({
     "shift_plan",       # TẮT theo ĐA-07 (đo ra có hại) nhưng vẫn là kênh ĐƯỢC ĐO khi bật
     "accept_lift",
     "shift_extend",
-    # `rest_window` = HOÃN nghỉ (đổi THỜI ĐIỂM, không đổi lượng) = `C2′`. Nó nằm ở đây một cách
-    # CÓ ĐIỀU KIỆN: Cường 2026-08-03 chọn *"thử D-M3-04 trước, nếu có ý nghĩa thì giữ, không thì
-    # revert và khuyên mềm"*. Luật quyết định đã đăng ký TRƯỚC khi đo trong
-    # `specs/simulation/d-m3-04-multiday-prereg-locked.json` → `luat_quyet_dinh`.
-    # ⚠ Nếu D-M3-04 cho Δ ≤ 0 hoặc ns (là nhánh prereg DỰ ĐOÁN TRƯỚC, vì world β=0) thì chuyển
-    # khoá này sang SOFT_TOPICS. ĐỪNG chuyển trước khi có số — và đừng giữ nó ở đây sau khi có
-    # số âm chỉ vì "đã viết ở đây rồi".
-    "rest_window",
+    # ⚠ `rest_window` ĐÃ RỜI khỏi đây 2026-08-05 — xem `SOFT_TOPICS` bên dưới. Giữ lại dòng ghi
+    # chú này vì nó là chỗ người ta sẽ tìm: kênh HOÃN nghỉ (`C2′`) từng nằm ở nhóm ĐƯỢC ĐO một
+    # cách CÓ ĐIỀU KIỆN, và điều kiện đó nay đã được giải bằng phép đo `D-M3-04` (UPDATE-140).
     # --- từ vựng của ADVICE CHECKPOINT v2 (`ui/contracts/advice_v2.json`, `checkpoint.py`) ---
     # QĐ-4 (Cường chốt 2026-08-04): HỢP NHẤT. Trước đó v2 có từ vựng RIÊNG, giao với registry = RỖNG
     # ⇒ ranh giới `classify()` **không chạm được một event nào của v2**, và một checkpoint `rest`
@@ -105,6 +100,27 @@ SOFT_TOPICS: frozenset[str] = frozenset({
     "weather",          # cảnh báo thời tiết (Khánh sở hữu implement — chưa có thẻ nào hôm nay)
     "rest_nudge",       # GỢI Ý nghỉ khi làm quá sức (khác `rest_window` = HOÃN nghỉ)
     "traffic",          # cảnh báo mật độ giao thông — cùng họ với thời tiết
+    # 🔒 `rest_window` — CHUYỂN VÀO ĐÂY 2026-08-05 theo `luat_quyet_dinh` đã KHOÁ của `D-M3-04`
+    # (`specs/simulation/d-m3-04-multiday-prereg-locked.json`). Đây là thi hành một luật đăng ký
+    # TRƯỚC khi đo, không phải một lựa chọn sau khi thấy số.
+    #
+    # Điều kiện REVERT: *"Δ ≤ 0, HOẶC ns, HOẶC bất kỳ STOP-A..D bắn"*. Đo 100 seed
+    # (`research/audit/2026-07-27-current-state/45-dm304-multiday.json`) trúng **HAI** đường độc lập:
+    #   · Δ payout = **−429đ**, CI95 [−1142, +290] ⇒ **ns**
+    #   · **STOP-C BẮN** — `rest_min_total` giảm **6,6%** (3879′ → 3621′), CI [−291, −226]
+    #
+    # ⚠ Vì sao đây KHÔNG phải "kênh thất bại": prereg đăng ký TRƯỚC rằng Δ ≤ 0 là kỳ vọng ĐÚNG của
+    # mô hình (world β=0 — không mô hình hoá hậu quả mệt). Δ đo được **nằm trong** khoảng dự đoán
+    # đã khoá [−1.500, +500]. Phép đo THÀNH CÔNG; mô hình dự đoán đúng.
+    #
+    # ⚠ Nhưng phần đáng nói hơn Δ tiền: kênh này **ăn vào nghỉ** một cách rõ ràng
+    # (`work_span_p90` +42′, `drive_min_p90` +20′, đều CI không chứa 0). Đó là hại SỨC KHOẺ, và nó
+    # KHÔNG mất đi khi kênh thành khuyên mềm. Kênh đang TẮT ở config sản phẩm — **giữ TẮT** cho tới
+    # khi `D-M3-04-FIX` xong (xem `specs/simulation/d-m3-04-root-cause-delta-am.md`).
+    #
+    # 🚫 Câu ĐƯỢC phép nói: *"trong world không có hậu quả mệt, kênh nghỉ là chi phí thuần"*.
+    # 🚫 Câu KHÔNG được nói: *"gợi ý nghỉ vô giá trị ngoài đời"* — khác nhau ở β, thứ ta có 0 dữ liệu.
+    "rest_window",
     # --- QĐ-4: từ vựng v2 + cadence, phần thuộc lớp MỀM ---
     # `rest` — ĐÍNH CHÍNH 2026-08-04 (soi độc lập). Bản đầu tôi viết nó "nhập nhằng vì gộp
     # `rest_window` với `rest_nudge`, sinh bởi S7". **Sai ở cả producer lẫn bản chất:**

@@ -15,7 +15,8 @@ import h3
 import numpy as np
 import simpy
 
-from .behavior import IdleAction, choose_idle_action, choose_station, decide_accept
+from .behavior import (IdleAction, choose_idle_action, choose_station, consider_relocate,
+                       decide_accept)
 from .config import Config
 from .dispatcher import _speed_kmh, match_batch
 from .entities import Actor, ActorState, BatteryInStation, FleetType, Station
@@ -41,6 +42,26 @@ _SPOKEN_OUTCOME_KIND = {
 # để guardrail tầng 5 DẪN XUẤT ngưỡng break từ cùng nguồn sự thật (đổi phân phối nghỉ mà
 # không căn lại ngưỡng ⇒ test T7 đỏ, không đổi nghĩa im lặng).
 REST_MIN_MINUTES, REST_MAX_MINUTES = 20.0, 45.0
+
+
+def rest_commit_gate(actor: Actor, now_min: float) -> str | None:
+    """D-M3-04-FIX — cổng thi hành CAM KẾT nghỉ. Gọi ở decision point idle, SAU bản năng.
+
+    Trả `"kept"` (tới giờ X ⇒ ép REST), `"broken"` (bận trọn giờ X ⇒ quyền nghỉ trả lại,
+    `rest_commit_broken=True` chặn mọi phủ quyết tới khi nghỉ THẬT xảy ra), hoặc `None`.
+    Hàm module thuần trên Actor để unit-test được không cần dựng World; 0 RNG, 0 tiền.
+    """
+    due = actor.rest_commit_due_min
+    if due is None:
+        return None
+    if now_min >= due + 60.0:                 # giờ X đã trôi qua trọn vẹn
+        actor.rest_commit_due_min = None
+        actor.rest_commit_broken = True
+        return "broken"
+    if now_min >= due:                        # đang TRONG giờ X — decision point kế = ép
+        actor.rest_commit_due_min = None
+        return "kept"
+    return None
 
 
 @dataclass
@@ -832,6 +853,23 @@ class World:
             action, target = choose_idle_action(actor, now, self.grid, self.veh, hour, hint,
                                                 self.rng, self.cfg.get("behavior", {}) or {})
 
+            # --- D-M3-04-FIX: thi hành CAM KẾT nghỉ (đặt SAU bản năng — cùng kỷ luật CRN
+            # với comment SIM-3 dưới: bản năng luôn tiêu RNG y World A, gate chỉ GHI ĐÈ).
+            # Chỉ ghi đè WAIT/RELOCATE/REST — GO_SWAP/GO_CHARGE/END_SHIFT là ràng buộc vật
+            # lý/ca (bước 1-2 của cây), ép nghỉ đè lên chúng là đổi pin trễ / kẹt ca; nếu vì
+            # thế mà giờ X trôi qua thì cam kết VỠ và quyền nghỉ trả lại — trung thực hơn.
+            rest_forced = False
+            if action in (IdleAction.WAIT, IdleAction.RELOCATE, IdleAction.REST):
+                fired = rest_commit_gate(actor, now)
+                if fired == "kept":
+                    self.log(actor.actor_id, "advice_rest_commit_kept", actor.cell,
+                             channel="rest_window", from_action=action.value)
+                    action, target, rest_forced = IdleAction.REST, None, True
+                elif fired == "broken":
+                    # log-only: KHÔNG decision_id/followed (không lọt mẫu số adherence — T8)
+                    self.log(actor.actor_id, "advice_rest_commit_broken", actor.cell,
+                             channel="rest_window")
+
             # --- SIM-3: hỏi advisor (nếu tài xế này được phủ + tới hạn) ---
             # ĐẶT SAU `choose_idle_action` CÓ CHỦ Ý: hành vi bản năng vẫn được tính (và tiêu
             # RNG) y như World A ⇒ bật advice KHÔNG dịch dòng ngẫu nhiên của actor. Advice
@@ -954,20 +992,38 @@ class World:
                          channel=topic_s, reason=reason_s,
                          decision_id=self._decision_id(aid_s, topic_s, t_s) + "-sup")
 
-            # --- D-SIM-03 kênh `rest_window`: dồn nghỉ/đổi pin vào khung vắng khách (solver S7) ---
-            # Chỉ HOÃN, không bao giờ ÉP nghỉ: nếu bản năng chưa muốn nghỉ thì không can thiệp.
-            if action in (IdleAction.REST, IdleAction.GO_SWAP, IdleAction.GO_CHARGE):
-                defer, why = self.advice.should_defer_rest(
+            # --- D-SIM-03 kênh `rest_window`: dồn nghỉ vào khung vắng khách (solver S7) ---
+            # D-M3-04-FIX (2026-08-05): viết lại theo verdict UPDATE-140 + FIX-PRE.
+            #   · CHỈ còn REST — hai nhánh GO_SWAP/GO_CHARGE là CODE CHẾT (0/41 lượt, `soc_low`
+            #     chặn trước; `D-M3-06`), giữ chúng là nói dối về phạm vi cơ chế.
+            #   · Hoãn = CAM KẾT (bridge ghi `rest_commit_due_min`, cộng quota MỘT lần), và
+            #     nhánh rơi KHÔNG được là WAIT — bản cũ `action := WAIT` biến 86% nghỉ thành
+            #     chờ rỗng không sinh thêm đơn nào (FIX-PRE: dòng đó là TOÀN BỘ cơ chế).
+            #   · `rest_forced` (cổng cam kết ở trên) thì KHÔNG hỏi lại — hỏi lại là để bridge
+            #     tái-hoãn đúng cái nghỉ nó vừa hứa.
+            if action == IdleAction.REST and not rest_forced:
+                defer, why, alt = self.advice.should_defer_rest(
                     actor, now, hour, self._actor_demand_hint,
-                    float(self.veh["swap_soc_threshold_pct"]))
+                    float(self.veh["swap_soc_threshold_pct"]),
+                    lambda a: consider_relocate(a, self.grid, hour, hint, self.rng,
+                                                self.cfg.get("behavior", {}) or {}))
                 if defer:
-                    actor.rest_deferred_min += 2.0
-                    self.log(actor.actor_id, "advice_rest_window", actor.cell,
-                             deferred_from=action.value, reason=why, followed=True,
-                             deferred_total_min=round(actor.rest_deferred_min, 1),
-                             decision_id=self._decision_id(actor.actor_id, "rest_window", now),
-                             channel="rest_window")
-                    action, target = IdleAction.WAIT, None
+                    if why != "committed":
+                        # cam kết MỚI — log MỘT lần (không phải mỗi tick như bản cũ);
+                        # tick tiếp theo trước giờ X đi nhánh why="committed", không log lại.
+                        self.log(actor.actor_id, "advice_rest_window", actor.cell,
+                                 deferred_from=action.value, reason=why, followed=True,
+                                 commit_hour=int(actor.rest_commit_due_min // 60) % 24,
+                                 alt_action=alt[0].value,
+                                 deferred_total_min=round(actor.rest_deferred_min, 1),
+                                 decision_id=self._decision_id(actor.actor_id, "rest_window", now),
+                                 channel="rest_window")
+                    # `reloc_reason` để relocate-do-hoãn TRUY VẾT được trên event/segment —
+                    # không có nó thì nhánh rơi trông y hệt demand_seek của bản năng, và mũi
+                    # sever "lùi về WAIT" không có gì để bắt (bài học j8/UPDATE-138: cổng chỉ
+                    # kiểm hai đầu, bỏ khúc giữa).
+                    action, target = alt
+                    reloc_reason = "rest_defer"
                 else:
                     # D-M3-05 guardrail tầng 5: kết cục KHÔNG-defer cũng phải quan sát được —
                     # veto lan can (soc_low/fatigued/defer_cap) là bằng chứng "lan can còn
@@ -1009,6 +1065,15 @@ class World:
             elif action in (IdleAction.GO_SWAP, IdleAction.GO_CHARGE):
                 yield from self._do_charge(actor, action)
             elif action == IdleAction.REST:
+                # D-M3-04-FIX: nghỉ THẬT xảy ra ⇒ cam kết (nếu còn mở — nghỉ sớm tự nguyện,
+                # vd `commit_rest_early`/mệt thật) được xoá + quyền nghỉ phục hồi. Nghỉ do
+                # cổng ép ("kept") đã xoá cam kết ở gate nên không log `cleared` lần hai.
+                # Kênh OFF: hai field luôn None/False ⇒ khối này bất động (behavior-neutral).
+                if actor.rest_commit_due_min is not None:
+                    actor.rest_commit_due_min = None
+                    self.log(actor.actor_id, "advice_rest_commit_cleared", actor.cell,
+                             channel="rest_window")
+                actor.rest_commit_broken = False
                 actor.state = ActorState.REST
                 self.log(actor.actor_id, "rest", actor.cell)
                 t0 = now

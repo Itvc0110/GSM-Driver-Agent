@@ -96,6 +96,10 @@ MANIFEST: dict[tuple[str, str], str] = {
     ('src/gsm_sim/sim_metrics.py', 'cost_summary'): "MONEY",
     ('src/gsm_sim/sim_metrics.py', 'driver_metrics'): "MONEY",
     ('src/gsm_sim/sim_metrics.py', 'fairness_metrics'): "MONEY",
+    # Digest tất định STOP-D (chuyển từ scripts/ lên 2026-08-05, UPDATE-140): ĐỌC payout_vnd để
+    # băm, không tính tiền. Xếp MONEY (mặc định nghiêm) CÓ CHỦ Ý: nếu ai đó sau này đưa trạng thái
+    # mệt vào digest chung với payout thì cổng phải đòi một diff manifest review được.
+    ('src/gsm_sim/sim_metrics.py', 'fingerprint_actors'): "MONEY",
     ('src/gsm_sim/trajectory.py', 'detect_flaws'): "MONEY",
     ('src/gsm_sim/world.py', 'World.__init__'): "MONEY",
     ('src/gsm_sim/world.py', 'World._actor_proc'): "MONEY",

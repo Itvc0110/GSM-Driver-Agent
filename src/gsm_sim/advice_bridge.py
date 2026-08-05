@@ -748,50 +748,84 @@ class AdviceActionBridge:
         return int(w["hour"]) if w else None
 
     def should_defer_rest(self, actor: Actor, now_min: float, hour: int,
-                          demand_hint_fn, soc_threshold: float) -> tuple[bool, str]:
-        """Có nên HOÃN nghỉ/đổi pin để dồn vào khung vắng khách không?
+                          demand_hint_fn, soc_threshold: float,
+                          alt_action_fn=None) -> tuple[bool, str, tuple | None]:
+        """Có nên HOÃN nghỉ để dồn vào khung vắng khách không? Trả `(defer, why, alt)`.
 
-        BA LAN CAN — thiếu bất kỳ cái nào là biến lời khuyên thành có hại:
-          1. **SOC thấp** ⇒ KHÔNG hoãn. Hoãn đổi pin làm tài xế hết pin giữa đường
-             (`battery_stranded`) — hỏng nặng hơn mọi lợi ích idle.
-          2. **Mệt thật** (`online_min > fatigue_threshold_min`) ⇒ KHÔNG hoãn. Sức khoẻ tài xế
-             không phải biến để tối ưu.
-          3. **Trần hoãn** `rest_defer_max_min` ⇒ không đẩy nghỉ đi vô hạn.
+        ⚠ D-M3-04-FIX (2026-08-05) — hoãn là **CAM KẾT**, không phải phủ quyết. Bản phủ quyết cũ
+        biến 86% nghỉ thành CHỜ RỖNG mà không sinh thêm đơn nào (UPDATE-140; FIX-PRE chứng minh
+        `action := WAIT` là TOÀN BỘ cơ chế, bit-identical 30/30 seed). Hai đổi lớn:
+
+        - `alt_action_fn(actor) -> (IdleAction, target)` — hành động THAY THẾ trong lúc chờ tới
+          giờ đã hứa. Trả WAIT nghĩa là không có việc gì có ích ⇒ **KHÔNG hoãn**, cho nghỉ ngay
+          (Cường: *"không có việc ≠ không hoãn"*). Kiểm TRƯỚC cadence/coin — lời khuyên không
+          tồn tại thì không nén (đúng lý lẽ R-08 bên dưới).
+        - Khi coin nghe: **cam kết** được ghi (`rest_commit_due_min` = đầu giờ X, phút tuyệt đối
+          trong ngày — sống sót ca vắt đêm) và `rest_deferred_min` cộng MỘT LẦN đúng khoảng hoãn.
+          World ép nghỉ ở decision point kế trong giờ X (`rest_commit_gate`); bận trọn giờ X ⇒
+          quyền nghỉ trả lại (`rest_commit_broken` ⇒ rail dưới chặn mọi phủ quyết tới khi nghỉ
+          THẬT xảy ra).
+
+        LAN CAN — thiếu bất kỳ cái nào là biến lời khuyên thành có hại (thứ tự CÓ CHỦ Ý:
+        sức khoẻ đứng TRÊN cam kết — đang cam kết mà mệt thật thì nghỉ ngay):
+          1. **SOC thấp** ⇒ KHÔNG hoãn (hoãn đổi pin ⇒ `battery_stranded`).
+          2. **Mệt thật** (`online_min > fatigue_threshold_min`) ⇒ KHÔNG hoãn.
+          3. **Quyền đã trả** (`rest_commit_broken`) ⇒ KHÔNG hoãn tới khi nghỉ thật.
+          4. **Trần hoãn** `rest_defer_max_min` ⇒ không đẩy nghỉ đi vô hạn.
         """
+        alt_action_fn = alt_action_fn or (lambda _a: (IdleAction.WAIT, None))
         if actor.soc_pct <= soc_threshold:
-            return False, "soc_low"
+            return False, "soc_low", None
         if actor.online_min > actor.fatigue_threshold_min:
-            return False, "fatigued"
+            return False, "fatigued", None
+        # Cam kết ĐANG MỞ: quyết định đã ra — tiếp tục né REST bằng hành động có ích, KHÔNG
+        # coin lại (re-roll adherence), KHÔNG cộng thêm quota. Hết việc có ích ⇒ nghỉ sớm
+        # (world nhánh REST sẽ xoá cam kết — kết cục `commit_cleared`).
+        if actor.rest_commit_due_min is not None:
+            alt = alt_action_fn(actor)
+            if alt is None or alt[0] == IdleAction.WAIT:
+                return False, "commit_rest_early", None
+            return True, "committed", alt
+        if actor.rest_commit_broken:
+            return False, "commit_broken", None
         if actor.rest_deferred_min >= self.rest_defer_max_min:
-            return False, "defer_cap"
+            return False, "defer_cap", None
         target = self.rest_window_hour(actor, now_min, demand_hint_fn)
         if target is None or target == hour:
-            return False, "no_window" if target is None else "at_window"
+            return False, "no_window" if target is None else "at_window", None
         # chỉ hoãn nếu khung đó còn Ở PHÍA TRƯỚC trong ca
         minutes_to = ((target - hour) % 24) * 60
         if minutes_to <= 0 or now_min + minutes_to > actor.shift_end_min:
-            return False, "window_past"
+            return False, "window_past", None
         if actor.rest_deferred_min + minutes_to > self.rest_defer_max_min:
-            return False, "defer_cap"
+            return False, "defer_cap", None
+        # D-M3-04-FIX: nhánh rơi không được là WAIT — kiểm TRƯỚC cadence/coin.
+        alt = alt_action_fn(actor)
+        if alt is None or alt[0] == IdleAction.WAIT:
+            return False, "no_alt_action", None
         # R-08: hỏi nhịp SAU khi biết thật sự có khung để hoãn (xem comment ở accept_lift).
-        # Ba lan can trên (soc_low/fatigued/defer_cap) và hai kiểm khung (no_window/
-        # window_past) đều là "không có gì để nói" — nén ở đó là nén một lời khuyên KHÔNG
-        # TỒN TẠI.
+        # Các lan can trên và hai kiểm khung (no_window/window_past) + no_alt_action đều là
+        # "không có gì để nói" — nén ở đó là nén một lời khuyên KHÔNG TỒN TẠI.
         if not self.cadence_allows(actor, "rest_window", now_min):
-            return False, ""                  # ĐA-04: nhịp chung quyết định
+            return False, "", None            # ĐA-04: nhịp chung quyết định
         self.cadence_note_spoken(actor, "rest_window", now_min)
         # D-M3-01: kênh này từng là kênh DUY NHẤT không rút coin (4 kênh kia đều rút) ⇒
         # adherence hiệu dụng cắm cứng 1,0, tức MỌI tài xế luôn nghe lời khuyên hoãn nghỉ.
-        # Chốt 2026-07-30: `rest_window` là DEMAND-TIMING — ở trong bảng tiền, chịu cadence
-        # VÀ chịu coin như mọi kênh khác.
+        # Chốt 2026-07-30: `rest_window` chịu cadence VÀ chịu coin như mọi kênh khác
+        # (nay là khuyên MỀM — event không vào mẫu số adherence, nhưng coin vẫn mô hình hoá
+        # việc tài xế có nghe hay không).
         # `material_revision` = nội dung ĐỊNH TÍNH (hoãn tới GIỜ NÀO), không phải con số
         # nhích từng tick: đổi giờ đích ⇒ coin mới; cùng giờ đích ⇒ cùng coin (ĐA-04).
         rev = f"defer_to_{target:02d}h"
         if not self.coin_follows(actor, "rest_window", now_min, rev):
             self.note_spoken_outcome(actor, "rest_window", now_min, rev,
                                      followed=False, reason="not_followed")
-            return False, "not_followed"
-        return True, rev
+            return False, "not_followed", None
+        # CAM KẾT: book một lần, đúng đại lượng. `(now - now%60) + minutes_to` = ĐẦU giờ X
+        # tính bằng phút tuyệt đối trong ngày (minutes_to đo giữa hai ĐẦU giờ).
+        actor.rest_commit_due_min = (now_min - now_min % 60.0) + minutes_to
+        actor.rest_deferred_min += float(minutes_to)
+        return True, rev, alt
 
     # ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên nâng tỷ lệ ----------
 

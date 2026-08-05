@@ -225,6 +225,119 @@ def run_pair(cfg: Config, seed: int, channels: dict | None = None,
                       system_b=_system_metrics(rb, aid, health_actor_ids=touched))
 
 
+def _mean_dicts(rows: list[dict]) -> dict:
+    """Trung bình theo khoá của nhiều dict metric. Khoá không phải số ⇒ lấy giá trị đầu.
+
+    Dùng để nén NHIỀU NGÀY thành MỘT hàng/seed. Vì sao phải nén: prereg `D-M3-04` khoá
+    *"bootstrap resample theo SEED, không theo ngày — các ngày KHÔNG độc lập (cùng actor mang
+    memory sang)"*. `bootstrap_ci` resample theo phần tử của list truyền vào, nên chỉ cần bảo đảm
+    **một phần tử = một seed** là bootstrap tự đúng chiều; không phải sửa `bootstrap_ci`.
+    """
+    if not rows:
+        return {}
+    out: dict = {}
+    for k in rows[0]:
+        vals = [r[k] for r in rows if k in r]
+        nums = [v for v in vals if isinstance(v, (int, float)) and not isinstance(v, bool)]
+        out[k] = round(st.mean(nums), 4) if len(nums) == len(vals) and nums else vals[0]
+    return out
+
+
+def _merge_adherence(rows: list[dict]) -> dict:
+    """Gộp `adherence_audit` của nhiều ngày thành MỘT (cộng đếm, nối flag).
+
+    Cộng chứ không trung bình: `decided`/`followed` là ĐẾM, và cổng thống kê `D-M3-10` được thiết
+    kế cho TỔNG (xem docstring `aggregate_adherence`). Trung bình hoá sẽ làm mẫu số nhỏ đi 3 lần
+    và cổng |z|>4 mất hết công suất.
+    """
+    by_ch: dict[str, dict] = {}
+    by_arche: dict[str, dict] = {}
+    flags: list[str] = []
+    for r in rows:
+        for ch, v in (r.get("by_channel") or {}).items():
+            row = by_ch.setdefault(ch, {"decided": 0, "followed": 0, "dismissed": 0,
+                                        "suppressed": 0, "event_decided": 0,
+                                        "event_followed": 0})
+            for k in row:
+                row[k] += int(v.get(k) or 0)
+        for key, v in (r.get("by_channel_archetype") or {}).items():
+            row = by_arche.setdefault(key, {"decided": 0, "followed": 0})
+            row["decided"] += int(v.get("decided") or 0)
+            row["followed"] += int(v.get("followed") or 0)
+        for f in r.get("flags") or []:
+            if f not in flags:
+                flags.append(f)
+    return {"by_channel": by_ch, "by_channel_archetype": by_arche, "flags": flags}
+
+
+def run_pair_multiday(cfg: Config, seed: int, *, days: int, channels_a: dict,
+                      channels_b: dict, metric_days: list[int],
+                      coverage: str = "all", archetype: str = "P4") -> PairResult:
+    """A/B **NHIỀU NGÀY** cho `D-M3-04` — trả MỘT `PairResult` cho MỘT seed.
+
+    Prereg: `specs/simulation/d-m3-04-multiday-prereg-locked.json` (khoá 2026-08-01; đính chính
+    ba điểm 2026-08-05 **trước khi đo**).
+
+    ## Vì sao không dùng được `run_pair`
+
+    `run_pair` gọi `run_once` — **một ngày**. Nhưng can thiệp cần đo (`rest_window`) chỉ sống từ
+    **ngày thứ hai**: `planned_rest_hour` chỉ được nuôi ở `multiday.py:233` và chỉ khi `d > 0`
+    (đo trước khi khoá prereg: decided **0/12/11** theo ngày 0/1/2). Đo một ngày là đo một kênh
+    INERT.
+
+    ## Ba ràng buộc của prereg mà hàm này thi hành
+
+    1. **`metric_days` BỎ ngày 0.** Ngày 0 chưa có `DriverMemory` ⇒ `planned_rest_hour` vẫn None
+       ⇒ gộp vào là pha loãng chính thứ cần đo.
+    2. **MỘT `PairResult`/seed** (xem `_mean_dicts`) ⇒ bootstrap theo SEED.
+    3. **`channels` khai TƯỜNG MINH cho CẢ HAI arm** — xem cảnh báo dưới.
+
+    ## 🔴 Vì sao `channels_a` là tham số BẮT BUỘC, không có mặc định `None`
+
+    `_cfg_with` chỉ ghi `advice.channels`/`positioning_overrides` khi `channels is not None`
+    (`:88`). Truyền `None` cho arm A ⇒ nó **thừa kế im lặng** `positioning_overrides: wait_only`
+    từ `configs/pilot_dongda.yaml`. Kết quả *tình cờ đúng* với prereg (nền A = `wait_only`) nhưng
+    **vì lý do sai**: ngày ai đó đổi config, arm A đổi theo mà không phép đo nào biết. Bắt buộc
+    khai ⇒ nền của cả hai arm nằm trong artifact, đọc lại được.
+
+    🔴 **KHÔNG dùng `CHANNEL_LADDER["rest_window"]`** — nó bật kèm `shift_plan: True`, mà
+    `shift_plan` đã bị ĐA-07/UPDATE-087 TẮT vì **có hại** ⇒ đo trên đó là đo hai can thiệp trộn
+    nhau. Prereg cấm tường minh (`thiet_ke.KHONG_dung`).
+    """
+    from .multiday import run_multiday
+    from .sim_metrics import adherence_audit, touched_actors
+
+    if not metric_days:
+        raise ValueError("`metric_days` rỗng — không có ngày nào để đo")
+    if max(metric_days) >= days:
+        raise ValueError(f"`metric_days`={metric_days} vượt quá `days`={days}")
+
+    md_a = run_multiday(_cfg_with(cfg, enabled=True, actor_id=None,
+                                  channels=channels_a, coverage=coverage), seed, days=days)
+    md_b = run_multiday(_cfg_with(cfg, enabled=True, actor_id=None,
+                                  channels=channels_b, coverage=coverage), seed, days=days)
+
+    aid = pick_target(md_a.days[0], archetype)
+    # Tập BỊ CHẠM lấy từ arm B rồi áp cho CẢ HAI arm (khuôn `run_pair:218-220`), gộp qua các ngày
+    # đo — tầng 5 phải chấm trên `touched_actors`, KHÔNG trên tổng cohort (UPDATE-114 lỗ (b):
+    # kênh chạm ~10% tài xế ⇒ chấm trên tổng pha loãng ~10× xuống dưới nhiễu seed).
+    touched: set[int] = set()
+    for d in metric_days:
+        touched |= touched_actors(md_b.days[d])
+    touched = touched or None
+
+    return PairResult(
+        seed=seed, actor_id=aid,
+        adherence_a=_merge_adherence([adherence_audit(md_a.days[d]) for d in metric_days]),
+        adherence_b=_merge_adherence([adherence_audit(md_b.days[d]) for d in metric_days]),
+        a=_mean_dicts([_driver_metrics(md_a.days[d], aid) for d in metric_days]),
+        b=_mean_dicts([_driver_metrics(md_b.days[d], aid) for d in metric_days]),
+        system_a=_mean_dicts([_system_metrics(md_a.days[d], aid, health_actor_ids=touched)
+                              for d in metric_days]),
+        system_b=_mean_dicts([_system_metrics(md_b.days[d], aid, health_actor_ids=touched)
+                              for d in metric_days]))
+
+
 def assert_crn(cfg: Config, seed: int, actor_id: int) -> bool:
     """CRN phải đúng: cùng seed ⇒ **cùng danh sách đơn** ở hai nhánh.
 
@@ -426,7 +539,9 @@ def nominal_adherence(cfg: Config) -> dict[str, float]:
     return {**DEFAULT_ADHERENCE, **(adv.get("adherence_by_archetype") or {})}
 
 
-def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | None = None) -> dict:
+def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | None = None,
+                        *, control_clean_channels: tuple[str, ...] | None = None,
+                        gate_both_arms: bool = False) -> dict:
     """Gộp adherence của arm B qua các seed + cổng BẤT KHẢ (`D-M3-10`).
 
     Vì sao phải gộp thay vì lấy per-seed: ngưỡng 0,02 của luật gốc là ngưỡng cho TỔNG.
@@ -438,6 +553,26 @@ def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | Non
 
     `nominal`: adherence danh nghĩa của RUN (xem `nominal_adherence`) — None thì rơi về
     `DEFAULT_ADHERENCE`, chỉ đúng khi run không override `adherence_by_archetype`.
+
+    ## `control_clean_channels` — DET-01 thu hẹp (`D-M3-04`, Cường chốt 2026-08-05)
+
+    `None` (mặc định) = hành vi CŨ: arm A không được có quyết định ở **bất kỳ** kênh nào. Đúng khi
+    arm A là `advice.enabled=false` — đó là mọi đường hiện hành (`run_pair:213`).
+
+    Truyền một tuple = arm A chỉ phải sạch ở **những kênh đó**. Cần cho `D-M3-04`, nơi prereg định
+    nghĩa `arm_A = positioning wait_only` — tức advice **BẬT**, luôn có quyết định `positioning`.
+    Với hành vi cũ, cổng sẽ TREO **100% số seed** và phép đo không bao giờ chạy được.
+
+    ⚠ Đây là **sửa nghĩa một cổng đã khoá trong prereg** — đã ghi vào
+    `d-m3-04-multiday-prereg-locked.json` → `dinh_chinh_TRUOC_KHI_DO_2026_08_05` **trước khi chạy
+    một seed nào**. Làm sau khi thấy số thì không phân biệt được với "nới cổng cho verdict đẹp".
+    Lý lẽ: DET-01 sinh ra để bảo đảm arm đối chứng **sạch khỏi CAN THIỆP ĐANG ĐO**; nền `wait_only`
+    giống nhau ở hai arm nên nó triệt tiêu trong hiệu số.
+
+    ## `gate_both_arms` — STOP-A
+
+    `False` (mặc định) = cổng thống kê |z|>4 chỉ soi **arm B**, như trước. `True` = soi **cả hai** —
+    prereg `D-M3-04` STOP-A nói *"TREO ở BẤT KỲ arm nào"*, mà bản cũ chỉ đọc `adherence_b`.
     """
     from .advice_bridge import DEFAULT_ADHERENCE
     from .sim_metrics import adherence_stat_flags
@@ -479,9 +614,12 @@ def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | Non
         adh_a = getattr(pr, "adherence_a", None) or {}
         dirty = {ch: int(r.get("decided") or 0)
                  for ch, r in (adh_a.get("by_channel") or {}).items()
-                 if int(r.get("decided") or 0) > 0}
+                 if int(r.get("decided") or 0) > 0
+                 and (control_clean_channels is None or ch in control_clean_channels)}
         if dirty:
-            msg = (f"seed {pr.seed}: arm ĐỐI CHỨNG (advice off) có quyết định {dirty} — "
+            pham_vi = ("mọi kênh" if control_clean_channels is None
+                       else f"kênh đang đo {list(control_clean_channels)}")
+            msg = (f"seed {pr.seed}: arm ĐỐI CHỨNG có quyết định {dirty} ({pham_vi}) — "
                    f"arm A KHÔNG SẠCH, mọi Δ của seed này là rác (DET-01)")
             if msg not in flags:
                 flags.append(msg)
@@ -495,6 +633,22 @@ def aggregate_adherence(pairs: list[PairResult], nominal: dict[str, float] | Non
     for f in adherence_stat_flags(tot_arche, nominal):
         if f not in flags:
             flags.append(f)
+    # STOP-A của `D-M3-04`: *"TREO ở BẤT KỲ arm nào"*. Bản cũ chỉ gộp `adherence_b` (`:452`) ⇒ arm
+    # A hoàn toàn không qua cổng thống kê. Với `run_pair` thì vô hại (arm A advice-off, không có
+    # quyết định nào để chấm), nhưng `D-M3-04` có arm A BẬT positioning ⇒ arm đó cũng có thước
+    # adherence riêng, và một thước hỏng ở arm A làm hỏng Δ y như ở arm B.
+    if gate_both_arms:
+        tot_arche_a: dict[str, dict] = {}
+        for pr in pairs:
+            adh_a = getattr(pr, "adherence_a", None) or {}
+            for key, r in (adh_a.get("by_channel_archetype") or {}).items():
+                row = tot_arche_a.setdefault(key, {"decided": 0, "followed": 0})
+                row["decided"] += int(r.get("decided") or 0)
+                row["followed"] += int(r.get("followed") or 0)
+        for f in adherence_stat_flags(tot_arche_a, nominal):
+            msg = f"[arm A] {f}"
+            if msg not in flags:
+                flags.append(msg)
     return {"by_channel": tot, "flags_per_seed": flags,
             # ⚠ ĐỌC CÁI NÀY TRƯỚC KHI TIN Δ CỦA ARM: có flag ⇒ thước đo của arm đó hỏng
             # ⇒ TREO kết quả, không phải "ghi chú nhỏ" (D-M3-10).

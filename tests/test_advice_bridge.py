@@ -273,32 +273,45 @@ def test_rest_window_defaults_off(base_cfg):
     assert base_cfg.get("advice.channels")["rest_window"] is False
 
 
+# D-M3-04-FIX 2026-08-05: `should_defer_rest` trả 3-tuple `(defer, why, alt)` — ba test lan can
+# dưới đây sửa CÓ CHỦ Ý theo chữ ký mới (unpack 3). Ngữ nghĩa lan can KHÔNG đổi.
+
+def _no_commit(a):
+    """Các test rail giả định KHÔNG có cam kết mở/vỡ tồn dư từ test khác trên cùng actor."""
+    a.rest_commit_due_min, a.rest_commit_broken = None, False
+    return a
+
+
 def test_guardrail_soc_low_never_defers(base_cfg, run_a):
     """LAN CAN 1: pin thấp ⇒ KHÔNG hoãn đi đổi pin. Hoãn = tài xế hết pin giữa đường
     (`battery_stranded`) — hỏng nặng hơn mọi lợi ích tiết kiệm idle."""
-    a = run_a.actors[0]
+    a = _no_commit(run_a.actors[0])
     b = _rest_bridge(base_cfg, a.actor_id)
     a.soc_pct, a.online_min = 10.0, 60.0
-    defer, why = b.should_defer_rest(a, a.shift_start_min + 60, 10, lambda ac, h: {"c": 1.0}, 20.0)
+    defer, why, _ = b.should_defer_rest(a, a.shift_start_min + 60, 10,
+                                        lambda ac, h: {"c": 1.0}, 20.0)
     assert not defer and why == "soc_low"
 
 
 def test_guardrail_fatigue_never_defers(base_cfg, run_a):
     """LAN CAN 2: mệt thật ⇒ luôn cho nghỉ. Sức khoẻ tài xế không phải biến để tối ưu."""
-    a = run_a.actors[0]
+    a = _no_commit(run_a.actors[0])
     b = _rest_bridge(base_cfg, a.actor_id)
     a.soc_pct, a.online_min = 90.0, a.fatigue_threshold_min + 30
-    defer, why = b.should_defer_rest(a, a.shift_start_min + 60, 10, lambda ac, h: {"c": 1.0}, 20.0)
+    defer, why, _ = b.should_defer_rest(a, a.shift_start_min + 60, 10,
+                                        lambda ac, h: {"c": 1.0}, 20.0)
     assert not defer and why == "fatigued"
 
 
 def test_guardrail_defer_cap(base_cfg, run_a):
-    """LAN CAN 3: có TRẦN hoãn — không đẩy nghỉ đi vô hạn."""
-    a = run_a.actors[0]
+    """LAN CAN 4: có TRẦN hoãn — không đẩy nghỉ đi vô hạn. (D-M3-04-FIX: trần nay đếm
+    KHOẢNG HOÃN THẬT cộng một lần lúc cam kết, không phải +2′/tick.)"""
+    a = _no_commit(run_a.actors[0])
     b = _rest_bridge(base_cfg, a.actor_id)
     a.soc_pct, a.online_min = 90.0, 60.0
     a.rest_deferred_min = b.rest_defer_max_min + 1
-    defer, why = b.should_defer_rest(a, a.shift_start_min + 60, 10, lambda ac, h: {"c": 1.0}, 20.0)
+    defer, why, _ = b.should_defer_rest(a, a.shift_start_min + 60, 10,
+                                        lambda ac, h: {"c": 1.0}, 20.0)
     assert not defer and why == "defer_cap"
 
 

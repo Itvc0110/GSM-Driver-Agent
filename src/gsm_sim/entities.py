@@ -94,10 +94,21 @@ class Actor:
     # `idle_min` tổng không đủ: S7 cần biết chờ nhiều Ở KHUNG GIỜ NÀO mới chỉ được khung
     # đáng dồn nghỉ vào.
     idle_by_hour: dict = field(default_factory=dict)
-    rest_deferred_min: float = 0.0   # D-SIM-03: tổng phút đã hoãn nghỉ theo lời khuyên
+    rest_deferred_min: float = 0.0   # D-SIM-03: tổng phút đã hoãn nghỉ theo lời khuyên.
+    # ⚠ D-M3-04-FIX (2026-08-05): đổi cách đếm — cộng MỘT LẦN đúng khoảng hoãn lúc CAM KẾT,
+    # không phải +2′/tick như bản cũ; trần `rest_defer_max_min` (POLICY_LOCKED) nay đếm đúng
+    # đại lượng nó canh.
     # D-SIM-10: khung giờ nên dồn nghỉ, do solver S7 rút ra từ idle NGÀY HÔM QUA.
     # None ở ngày đầu (chưa có lịch sử) — đó là đúng, không phải thiếu sót.
     planned_rest_hour: int | None = None
+    # D-M3-04-FIX: hoãn nghỉ = CAM KẾT, không phải phủ quyết (UPDATE-140: bản phủ quyết biến
+    # 86% nghỉ thành CHỜ RỖNG mà không sinh thêm đơn nào).
+    #   `rest_commit_due_min`  — phút tuyệt-đối-trong-ngày của ĐẦU giờ đã hứa nghỉ; None = không
+    #                            có cam kết mở. Dùng phút (không phải giờ) để sống sót ca vắt đêm.
+    #   `rest_commit_broken`   — cam kết đã VỠ (bận trọn giờ X) ⇒ quyền nghỉ đã trả lại: cấm
+    #                            phủ quyết mọi bản năng nghỉ cho tới khi nghỉ THẬT xảy ra.
+    rest_commit_due_min: float | None = None
+    rest_commit_broken: bool = False
     shift_extended_min: float = 0.0   # SIM-4: số phút đã hoãn kết ca theo lời khuyên
 
     @property
@@ -155,6 +166,11 @@ class Actor:
         self.mission_progress = {}
         self.demand_prior = {}
         self.enroute_cell = None               # T-045a: đích di chuyển là trạng thái NGÀY
+        # D-M3-04-FIX: cam kết nghỉ là trạng thái NGÀY — dòng TƯỜNG MINH (không nhét vào
+        # _DAILY_RESET_FLOAT vì giá trị reset là None/False, không phải 0.0). Bẫy D-E10-01:
+        # quên dòng này ⇒ ngày 2 mở màn với cam kết tồn dư của hôm qua.
+        self.rest_commit_due_min = None
+        self.rest_commit_broken = False
         # tenure TĂNG 1 mỗi sáng — thời gian trôi là danh tính động duy nhất
         self.tenure_days += 1
         self.state = ActorState.OFFLINE

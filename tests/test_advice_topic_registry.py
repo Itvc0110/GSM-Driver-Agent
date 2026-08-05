@@ -248,8 +248,10 @@ def test_N1_moi_action_type_cua_pipeline_deu_da_phan_loai():
     assert classify(mac_dinh) == "measured", (
         f"`action_type` mặc định của pipeline là {mac_dinh!r} nhưng chưa phân loại ⇒ MỌI quyết "
         f"định pipeline không có action sẽ bị loại khỏi mẫu số và TREO mọi lần đo")
-    for act in ("rest_window", "shift_plan"):
-        assert classify(act) == "measured", act
+    # `rest_window` ĐÃ RỜI sang SOFT 2026-08-05 (`D-M3-04` REVERT) ⇒ pipeline sinh `action_type`
+    # đó nay bị LOẠI khỏi mẫu số. Đúng thiết kế: khuyên mềm không có mẫu số.
+    assert classify("shift_plan") == "measured"
+    assert classify("rest_window") == "soft"
 
 
 # ---------- QĐ-4: BỐN từ vựng `topic` cho MỘT khái niệm — ghim khoảng hở tới khi hợp nhất ----------
@@ -431,8 +433,11 @@ def test_QD4_rest_cua_v2_NHAP_NHANG_va_ta_chon_MEM_co_chu_y():
     số**; xếp nhầm một lời khuyên sức khoẻ vào được-đo thì **phá một ranh giới đã chốt**. Hai sai
     không cùng hạng. → nợ tách đôi: `D-QD4-01`."""
     assert classify("rest") == "soft"
-    assert classify("rest_window") == "measured", "HOÃN nghỉ vẫn là kênh thời-điểm, vẫn được đo"
     assert classify("rest_nudge") == "soft"
+    # 2026-08-05: `rest_window` cũng thành MỀM (`D-M3-04` REVERT). Ba khoá nay CÙNG lớp — nên sự
+    # nhập nhằng của `rest` KHÔNG còn hậu quả về phân loại. `D-QD4-01` vì thế **tự tiêu**, đúng
+    # điều kiện mở lại đã ghi: *"tự tiêu nếu D-M3-04 REVERT"*.
+    assert classify("rest_window") == "soft"
 
 
 # ---------- (2) fail-closed: topic lạ phải ĐỎ, không im lặng rơi vào 'được đo' ----------
@@ -579,7 +584,11 @@ def test_KHONG_QUYET_DUOC_khong_chua_cho_DA_giai_duoc():
 # Bảng kỳ vọng VIẾT CỨNG — cố ý KHÔNG suy từ registry.
 SOFT_MONG_DOI = {"weather", "rest_nudge", "traffic",
                  # QĐ-4 bước 2: từ vựng v2 + cadence nhập vào lớp mềm
-                 "rest", "safety_reserved", "safety"}
+                 "rest", "safety_reserved", "safety",
+                 # `D-M3-04` REVERT 2026-08-05 — thi hành `luat_quyet_dinh` đã khoá TRƯỚC khi đo.
+                 # Đo 100 seed: Δ = −429đ ns (trong khoảng dự đoán đã khoá [−1.500, +500]) VÀ
+                 # STOP-C bắn (`rest_min_total` −6,6%). Hai đường độc lập cùng dẫn tới REVERT.
+                 "rest_window"}
 
 
 def test_pin_SOFT_TOPICS_chong_thu_hep():
@@ -604,15 +613,26 @@ def test_pin_SOFT_TOPICS_chong_thu_hep():
 
 def test_hai_tap_KHONG_giao_nhau():
     assert not (MEASURED_TOPICS & SOFT_TOPICS)
-    assert is_soft("weather") and not is_soft("rest_window")
+    assert is_soft("weather") and not is_soft("nudge")
 
 
-def test_rest_window_dang_o_nhanh_CO_DIEU_KIEN():
-    """`rest_window` (HOÃN nghỉ = `C2′`) hiện ở nhóm ĐƯỢC ĐO vì Cường chọn *"thử D-M3-04 trước"*
-    (2026-08-03). Test này KHÔNG khẳng định đó là đích cuối — nó ghim trạng thái hiện tại để việc
-    chuyển sang khuyên mềm là một thay đổi TƯỜNG MINH, có người sửa test, chứ không phải một cái
-    trượt tay. Luật quyết định: `specs/simulation/d-m3-04-multiday-prereg-locked.json`."""
-    assert "rest_window" in MEASURED_TOPICS
-    assert "rest_nudge" in SOFT_TOPICS, (
-        "`rest_nudge` (GỢI Ý nghỉ khi quá sức) khác `rest_window` (HOÃN nghỉ) — cái đầu là "
-        "khuyên mềm, cái sau là kênh thời-điểm đang chờ D-M3-04")
+def test_rest_window_DA_REVERT_sang_khuyen_mem():
+    """✅ `D-M3-04` đã chạy và nhánh CÓ ĐIỀU KIỆN đã được giải — 2026-08-05.
+
+    Bản trước của test này ghim `rest_window in MEASURED_TOPICS` với lý do *"ghim trạng thái hiện
+    tại để việc chuyển sang khuyên mềm là một thay đổi TƯỜNG MINH, có người sửa test, chứ không
+    phải một cái trượt tay"*. **Cổng đã làm đúng việc**: nó đỏ khi tôi chuyển, và tôi phải sửa nó
+    có chủ ý — đúng như thiết kế.
+
+    Kết quả phép đo (100 seed, `research/audit/2026-07-27-current-state/45-dm304-multiday.json`)
+    trúng **HAI** điều kiện REVERT độc lập của `luat_quyet_dinh` (khoá 2026-08-03, TRƯỚC khi đo):
+      · Δ payout = **−429đ**, CI95 [−1142, +290] ⇒ **ns**
+      · **STOP-C bắn** — `rest_min_total` −6,6% (3879′ → 3621′), CI [−291, −226]
+
+    ⚠ Δ **nằm trong** khoảng dự đoán đã khoá [−1.500, +500] ⇒ phép đo THÀNH CÔNG, mô hình dự đoán
+    đúng. Đây KHÔNG phải "kênh thất bại"."""
+    assert "rest_window" in SOFT_TOPICS
+    assert "rest_window" not in MEASURED_TOPICS
+    assert "rest_nudge" in SOFT_TOPICS
+    # Ba khoá họ "nghỉ" nay CÙNG một lớp ⇒ không còn ranh giới nào phụ thuộc việc phân biệt chúng.
+    assert {classify(t) for t in ("rest", "rest_nudge", "rest_window")} == {"soft"}

@@ -167,15 +167,36 @@ def choose_idle_action(
     if fatigue > 1.0 and rng.random() < 0.3:
         return (IdleAction.REST, None)
 
-    # 5. Cân nhắc relocate sang cell lân cận có kỳ vọng đơn cao hơn rõ rệt
-    #
-    # T-045d — SỐT RUỘT: `demand_hint` là PRIOR cache theo (actor, giờ), không bao giờ cập nhật
-    # từ trải nghiệm. Nếu ô hiện tại là cực đại địa phương thì `best_cell == actor.cell` suốt cả
-    # giờ ⇒ tài xế ngồi im hàng giờ dù không đơn nào (đo được 244 phút). Người thật không vậy:
-    # rỗi lâu = bằng chứng mình sai chỗ ⇒ đi XA HƠN và bớt kén.
-    #
-    # Đây là BẢN NĂNG, không phải lời khuyên: chỉ nới bán kính/hạ ngưỡng, KHÔNG cấp thêm thông
-    # tin nào về cầu. Giá trị của advisor vẫn là positioning CÓ THÔNG TIN (Q-08).
+    # 5. Cân nhắc relocate — tách thành `consider_relocate` (D-M3-04-FIX, 2026-08-05) vì nó
+    # kiêm luôn vai "cây hành vi với REST bị che": nhánh rơi của hoãn-nghỉ gọi đúng hàm này.
+    return consider_relocate(actor, grid, hour, demand_hint, rng, cfg_behavior)
+
+
+def consider_relocate(
+    actor: Actor,
+    grid: Grid,
+    hour: int,
+    demand_hint: dict[str, float] | None,
+    rng,
+    cfg_behavior: dict | None = None,
+) -> tuple[IdleAction, str | None]:
+    """Bước 5 của cây idle: relocate sang cell lân cận có kỳ vọng đơn cao hơn rõ rệt, else WAIT.
+
+    Extraction THUẦN từ `choose_idle_action` (D-M3-04-FIX): thứ tự rút RNG giữ nguyên từng draw —
+    cổng behavior-neutral fingerprint 5 seed phải IDENTICAL. Đây cũng là "hành động thay thế có
+    ích" mà đường hoãn-nghỉ dùng làm nhánh rơi: các bước 1/2 (SOC, hết ca) đã được kiểm trước khi
+    REST được chọn, nên lựa chọn thay thế thực duy nhất là relocate; trả WAIT nghĩa là KHÔNG có
+    việc gì có ích ⇒ bên gọi không được hoãn (Cường chốt 2026-08-05: "không có việc ≠ không hoãn").
+
+    T-045d — SỐT RUỘT: `demand_hint` là PRIOR cache theo (actor, giờ), không bao giờ cập nhật
+    từ trải nghiệm. Nếu ô hiện tại là cực đại địa phương thì `best_cell == actor.cell` suốt cả
+    giờ ⇒ tài xế ngồi im hàng giờ dù không đơn nào (đo được 244 phút). Người thật không vậy:
+    rỗi lâu = bằng chứng mình sai chỗ ⇒ đi XA HƠN và bớt kén.
+
+    Đây là BẢN NĂNG, không phải lời khuyên: chỉ nới bán kính/hạ ngưỡng, KHÔNG cấp thêm thông
+    tin nào về cầu. Giá trị của advisor vẫn là positioning CÓ THÔNG TIN (Q-08).
+    """
+    cfg_behavior = cfg_behavior or {}
     ring, bar, p_move, give_up = 1, 1.25, 0.5, False
     if bool(cfg_behavior.get("idle_impatience_enabled", True)):
         step = float(cfg_behavior.get("idle_impatience_step_min", 30.0))

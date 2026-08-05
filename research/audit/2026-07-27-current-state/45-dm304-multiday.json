@@ -1,0 +1,742 @@
+{
+ "what": "D-M3-04 multiday A/B — kênh rest_window",
+ "mock": true,
+ "prereg": "specs/simulation/d-m3-04-multiday-prereg-locked.json",
+ "smoke": false,
+ "config": "C:\\Users\\Cuong\\OneDrive - Hanoi University of Science and Technology\\Documents\\GitHub\\My\\GSM-Driver-Agent\\configs\\pilot_dongda.yaml",
+ "days": 3,
+ "metric_days": [
+  1,
+  2
+ ],
+ "metric_chinh": "payout_mean_all",
+ "channels_a": {
+  "shift_plan": false,
+  "accept_lift": false,
+  "shift_extend": false,
+  "rest_window": false,
+  "positioning_overrides": "wait_only"
+ },
+ "channels_b": {
+  "shift_plan": false,
+  "accept_lift": false,
+  "shift_extend": false,
+  "rest_window": true,
+  "positioning_overrides": "wait_only"
+ },
+ "control_clean_channels": [
+  "rest_window"
+ ],
+ "gate_both_arms": true,
+ "seeds": [
+  7000,
+  7001,
+  7002,
+  7003,
+  7004,
+  7005,
+  7006,
+  7007,
+  7008,
+  7009,
+  7010,
+  7011,
+  7012,
+  7013,
+  7014,
+  7015,
+  7016,
+  7017,
+  7018,
+  7019,
+  7020,
+  7021,
+  7022,
+  7023,
+  7024,
+  7025,
+  7026,
+  7027,
+  7028,
+  7029,
+  7030,
+  7031,
+  7032,
+  7033,
+  7034,
+  7035,
+  7036,
+  7037,
+  7038,
+  7039,
+  7040,
+  7041,
+  7042,
+  7043,
+  7044,
+  7045,
+  7046,
+  7047,
+  7048,
+  7049,
+  7050,
+  7051,
+  7052,
+  7053,
+  7054,
+  7055,
+  7056,
+  7057,
+  7058,
+  7059,
+  7060,
+  7061,
+  7062,
+  7063,
+  7064,
+  7065,
+  7066,
+  7067,
+  7068,
+  7069,
+  7070,
+  7071,
+  7072,
+  7073,
+  7074,
+  7075,
+  7076,
+  7077,
+  7078,
+  7079,
+  7080,
+  7081,
+  7082,
+  7083,
+  7084,
+  7085,
+  7086,
+  7087,
+  7088,
+  7089,
+  7090,
+  7091,
+  7092,
+  7093,
+  7094,
+  7095,
+  7096,
+  7097,
+  7098,
+  7099
+ ],
+ "n": 100,
+ "min_seeds": 100,
+ "stop_a_b": {
+  "by_channel": {
+   "positioning": {
+    "decided": 15810,
+    "followed": 7695,
+    "dismissed": 0,
+    "suppressed": 0,
+    "event_decided": 15810,
+    "event_followed": 7695,
+    "decision_adherence": 0.48671726755218214,
+    "event_adherence": 0.48671726755218214
+   },
+   "rest_window": {
+    "decided": 2986,
+    "followed": 1726,
+    "dismissed": 0,
+    "suppressed": 0,
+    "event_decided": 2986,
+    "event_followed": 1726,
+    "decision_adherence": 0.5780308104487609,
+    "event_adherence": 0.5780308104487609
+   }
+  },
+  "flags_per_seed": [],
+  "verdict": "OK"
+ },
+ "stop_c": {
+  "a_mean": {
+   "rest_min_total": 3878.97,
+   "veto_calls_n": 241.28,
+   "veto_fired_n": 174.0,
+   "veto_soc_low_n": 121.61,
+   "veto_fatigued_n": 52.4,
+   "veto_defer_cap_n": 0.0,
+   "work_span_p50": 298.79,
+   "work_span_p90": 440.46,
+   "work_span_max": 640.21,
+   "drive_min_p50": 202.9,
+   "drive_min_p90": 319.9,
+   "drive_min_max": 437.65,
+   "n_actors_scope": 89.23
+  },
+  "b_mean": {
+   "rest_min_total": 3621.03,
+   "veto_calls_n": 233.34,
+   "veto_fired_n": 182.57,
+   "veto_soc_low_n": 121.94,
+   "veto_fatigued_n": 52.63,
+   "veto_defer_cap_n": 8.0,
+   "work_span_p50": 312.79,
+   "work_span_p90": 482.75,
+   "work_span_max": 679.78,
+   "drive_min_p50": 210.55,
+   "drive_min_p90": 339.48,
+   "drive_min_max": 455.9,
+   "n_actors_scope": 89.23
+  },
+  "flags": [
+   "rest_min_total giảm 6.6% (A=3879′ → B=3621′) — advice đang ăn vào nghỉ"
+  ],
+  "verdict": "TREO — sức khoẻ suy giảm"
+ },
+ "stop_d": {
+  "day0": {
+   "run1": "22b46a9f5bb8139d",
+   "run2": "22b46a9f5bb8139d",
+   "identical": true
+  },
+  "day1": {
+   "run1": "22fec56ce2c101da",
+   "run2": "22fec56ce2c101da",
+   "identical": true
+  },
+  "pass": true
+ },
+ "compare": {
+  "n_seeds": 100,
+  "n_insufficient": false,
+  "driver": {
+   "payout_vnd": {
+    "mean_a": 279647.09,
+    "mean_b": 279450.01,
+    "delta_mean": -197.09,
+    "ci95": [
+     -3150.68,
+     2792.8
+    ],
+    "significant": false,
+    "n_positive": 38
+   },
+   "trip_payout_vnd": {
+    "mean_a": 168224.38,
+    "mean_b": 164423.11,
+    "delta_mean": -3801.26,
+    "ci95": [
+     -8671.98,
+     1317.23
+    ],
+    "significant": false,
+    "n_positive": 42
+   },
+   "day_bonus_vnd": {
+    "mean_a": 3750.0,
+    "mean_b": 3450.0,
+    "delta_mean": -300.0,
+    "ci95": [
+     -1800.0,
+     1350.0
+    ],
+    "significant": false,
+    "n_positive": 13
+   },
+   "trips_completed": {
+    "mean_a": 8.99,
+    "mean_b": 8.82,
+    "delta_mean": -0.17,
+    "ci95": [
+     -0.45,
+     0.12
+    ],
+    "significant": false,
+    "n_positive": 35
+   },
+   "acceptance_rate": {
+    "mean_a": 0.8,
+    "mean_b": 0.79,
+    "delta_mean": -0.01,
+    "ci95": [
+     -0.02,
+     0.01
+    ],
+    "significant": false,
+    "n_positive": 50
+   },
+   "completion_rate": {
+    "mean_a": 0.95,
+    "mean_b": 0.94,
+    "delta_mean": -0.0,
+    "ci95": [
+     -0.01,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 32
+   },
+   "utilization": {
+    "mean_a": 0.25,
+    "mean_b": 0.25,
+    "delta_mean": -0.01,
+    "ci95": [
+     -0.01,
+     0.0
+    ],
+    "significant": false,
+    "n_positive": 45
+   },
+   "idle_min": {
+    "mean_a": 188.65,
+    "mean_b": 202.3,
+    "delta_mean": 13.64,
+    "ci95": [
+     8.56,
+     18.73
+    ],
+    "significant": true,
+    "n_positive": 70
+   },
+   "online_min": {
+    "mean_a": 527.07,
+    "mean_b": 527.84,
+    "delta_mean": 0.78,
+    "ci95": [
+     -1.65,
+     3.21
+    ],
+    "significant": false,
+    "n_positive": 47
+   },
+   "offers": {
+    "mean_a": 12.12,
+    "mean_b": 12.05,
+    "delta_mean": -0.07,
+    "ci95": [
+     -0.53,
+     0.39
+    ],
+    "significant": false,
+    "n_positive": 41
+   },
+   "declined": {
+    "mean_a": 2.5,
+    "mean_b": 2.58,
+    "delta_mean": 0.08,
+    "ci95": [
+     -0.14,
+     0.3
+    ],
+    "significant": false,
+    "n_positive": 45
+   },
+   "points": {
+    "mean_a": 56.08,
+    "mean_b": 55.27,
+    "delta_mean": -0.8,
+    "ci95": [
+     -2.17,
+     0.62
+    ],
+    "significant": false,
+    "n_positive": 35
+   }
+  },
+  "system": {
+   "payout_mean_all": {
+    "delta_mean": -429.2802,
+    "ci95": [
+     -1142.3147,
+     289.6384
+    ],
+    "significant": false
+   },
+   "trips_mean_all": {
+    "delta_mean": -0.0144,
+    "ci95": [
+     -0.0348,
+     0.0051
+    ],
+    "significant": false
+   },
+   "net_mean_all": {
+    "delta_mean": -429.2802,
+    "ci95": [
+     -1142.3147,
+     289.6384
+    ],
+    "significant": false
+   },
+   "cost_mean_all": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "payout_mean_P1": {
+    "delta_mean": -54.6353,
+    "ci95": [
+     -1644.647,
+     1482.3642
+    ],
+    "significant": false
+   },
+   "net_mean_P1": {
+    "delta_mean": -54.6353,
+    "ci95": [
+     -1644.647,
+     1482.3642
+    ],
+    "significant": false
+   },
+   "payout_mean_P2": {
+    "delta_mean": 589.5011,
+    "ci95": [
+     -1936.9602,
+     3163.1672
+    ],
+    "significant": false
+   },
+   "net_mean_P2": {
+    "delta_mean": 589.5011,
+    "ci95": [
+     -1936.9602,
+     3163.1672
+    ],
+    "significant": false
+   },
+   "payout_mean_P3": {
+    "delta_mean": -6191.322,
+    "ci95": [
+     -11285.7187,
+     -868.2091
+    ],
+    "significant": true
+   },
+   "net_mean_P3": {
+    "delta_mean": -6191.322,
+    "ci95": [
+     -11285.7187,
+     -868.2091
+    ],
+    "significant": true
+   },
+   "payout_mean_P4": {
+    "delta_mean": 241.4624,
+    "ci95": [
+     -603.2377,
+     1101.9378
+    ],
+    "significant": false
+   },
+   "net_mean_P4": {
+    "delta_mean": 241.4624,
+    "ci95": [
+     -603.2377,
+     1101.9378
+    ],
+    "significant": false
+   },
+   "payout_mean_P5": {
+    "delta_mean": -2294.0391,
+    "ci95": [
+     -4601.9462,
+     -37.7911
+    ],
+    "significant": true
+   },
+   "net_mean_P5": {
+    "delta_mean": -2294.0391,
+    "ci95": [
+     -4601.9462,
+     -37.7911
+    ],
+    "significant": true
+   },
+   "payout_mean_P6": {
+    "delta_mean": -1315.3266,
+    "ci95": [
+     -2464.3381,
+     -200.8689
+    ],
+    "significant": true
+   },
+   "net_mean_P6": {
+    "delta_mean": -1315.3266,
+    "ci95": [
+     -2464.3381,
+     -200.8689
+    ],
+    "significant": true
+   },
+   "payout_mean_P7": {
+    "delta_mean": 2257.8961,
+    "ci95": [
+     -1154.3623,
+     5668.9154
+    ],
+    "significant": false
+   },
+   "net_mean_P7": {
+    "delta_mean": 2257.8961,
+    "ci95": [
+     -1154.3623,
+     5668.9154
+    ],
+    "significant": false
+   },
+   "served_rate": {
+    "delta_mean": -0.0011,
+    "ci95": [
+     -0.0026,
+     0.0003
+    ],
+    "significant": false
+   },
+   "orders_completed": {
+    "delta_mean": -1.3,
+    "ci95": [
+     -3.135,
+     0.4551
+    ],
+    "significant": false
+   },
+   "others_payout_vnd": {
+    "delta_mean": -38438.165,
+    "ci95": [
+     -102622.9211,
+     25988.8406
+    ],
+    "significant": false
+   },
+   "others_trips": {
+    "delta_mean": -1.13,
+    "ci95": [
+     -3.035,
+     0.71
+    ],
+    "significant": false
+   },
+   "swap_wait_mean": {
+    "delta_mean": -0.0287,
+    "ci95": [
+     -0.3046,
+     0.2413
+    ],
+    "significant": false
+   },
+   "total_payout_vnd": {
+    "delta_mean": -38635.25,
+    "ci95": [
+     -102808.3484,
+     26067.4077
+    ],
+    "significant": false
+   },
+   "expired_n": {
+    "delta_mean": 1.42,
+    "ci95": [
+     -0.31,
+     3.1051
+    ],
+    "significant": false
+   },
+   "wait_median_min": {
+    "delta_mean": 0.0001,
+    "ci95": [
+     -0.0003,
+     0.0004
+    ],
+    "significant": false
+   },
+   "gini_payout": {
+    "delta_mean": 0.0009,
+    "ci95": [
+     -0.0006,
+     0.0025
+    ],
+    "significant": false
+   },
+   "station_hhi": {
+    "delta_mean": -0.0022,
+    "ci95": [
+     -0.0071,
+     0.0028
+    ],
+    "significant": false
+   },
+   "supply_cell_hhi": {
+    "delta_mean": -0.0001,
+    "ci95": [
+     -0.0003,
+     0.0001
+    ],
+    "significant": false
+   },
+   "starved_hours_n": {
+    "delta_mean": 0.005,
+    "ci95": [
+     -0.025,
+     0.04
+    ],
+    "significant": false
+   },
+   "rest_min_total": {
+    "delta_mean": -257.9395,
+    "ci95": [
+     -290.7023,
+     -226.2304
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "n_actors_scope": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "role": "MẪU SỐ — số tài xế trong phạm vi chấm tầng 5, KHÔNG phải kết quả"
+   },
+   "veto_soc_low_n": {
+    "delta_mean": 0.335,
+    "ci95": [
+     -0.365,
+     1.06
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "veto_fatigued_n": {
+    "delta_mean": 0.24,
+    "ci95": [
+     -0.4751,
+     0.96
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "veto_defer_cap_n": {
+    "delta_mean": 7.995,
+    "ci95": [
+     7.52,
+     8.4951
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "veto_calls_n": {
+    "delta_mean": -7.94,
+    "ci95": [
+     -8.94,
+     -6.945
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "veto_fired_n": {
+    "delta_mean": 8.57,
+    "ci95": [
+     7.4699,
+     9.6851
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "xveto_soc_low_n": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "xveto_fatigued_n": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "xveto_would_exceed_fatigue_n": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "xveto_calls_n": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "xveto_fired_n": {
+    "delta_mean": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "significant": false
+   },
+   "work_span_p50": {
+    "delta_mean": 13.9935,
+    "ci95": [
+     12.125,
+     15.9286
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "work_span_p90": {
+    "delta_mean": 42.288,
+    "ci95": [
+     37.5094,
+     47.0825
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "work_span_max": {
+    "delta_mean": 39.571,
+    "ci95": [
+     29.1266,
+     50.4942
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "drive_min_p50": {
+    "delta_mean": 7.6495,
+    "ci95": [
+     6.3569,
+     8.947
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "drive_min_p90": {
+    "delta_mean": 19.584,
+    "ci95": [
+     15.8305,
+     23.3945
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   },
+   "drive_min_max": {
+    "delta_mean": 18.253,
+    "ci95": [
+     11.2759,
+     25.1411
+    ],
+    "one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"
+   }
+  },
+  "min_seeds_for_sig": 100
+ },
+ "verdict": "TREO — ['STOP-C (tầng 5)']",
+ "canh_bao_doc": [
+  "Tầng 5 ở cột RIÊNG — CẤM quy ra VND (prereg cam_vinh_vien).",
+  "n_insufficient của compare() tính theo hằng 30, KHÔNG theo min_seeds — đọc n/min_seeds.",
+  "Khi REVERT: được nói 'trong world không có hậu quả mệt, kênh nghỉ là chi phí thuần'; KHÔNG được nói 'gợi ý nghỉ vô giá trị ngoài đời'.",
+  "KHÔNG trích trần 71%/≤29% cho chế độ multiday (prereg vung_mu_khai_truoc)."
+ ]
+}

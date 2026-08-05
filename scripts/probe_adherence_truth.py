@@ -43,21 +43,10 @@ KIND_OF_CHANNEL = {
 }
 
 
-def fingerprint_actors(result) -> str:
-    """Digest PER-ACTOR của quỹ đạo + tiền + nghỉ.
-
-    Thay `assert_crn`: nó chỉ so `(order_id, t_min, pickup_cell, gross_vnd)` của đơn,
-    mà đơn sinh ngoài world ⇒ trả True dù actor lệch hết. Cái này bắt được nhiễm stream.
-    """
-    segs: dict[int, list] = collections.defaultdict(list)
-    for s in result.segments:
-        segs[s["actor_id"]].append((s["kind"], round(float(s["t0"]), 3), round(float(s["t1"]), 3)))
-    rows = []
-    for a in sorted(result.actors, key=lambda x: x.actor_id):
-        rows.append((a.actor_id, sorted(segs.get(a.actor_id, [])),
-                     round(float(a.payout_vnd), 6), int(a.trips_done),
-                     round(float(a.rest_min), 6)))
-    return hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()[:16]
+# `fingerprint_actors` ĐÃ CHUYỂN lên `gsm_sim.sim_metrics` (2026-08-05, `D-M3-04` STOP-D).
+# Import lại thay vì giữ bản sao: cổng STOP-D của prereg phải dùng ĐÚNG hàm mà probe này dùng —
+# hai bản sao hơi khác nhau là cách một cổng tất định âm thầm mất hiệu lực.
+from gsm_sim.sim_metrics import fingerprint_actors  # noqa: E402,F401
 
 
 def projection_adherence(result) -> dict[str, tuple[int, int]]:

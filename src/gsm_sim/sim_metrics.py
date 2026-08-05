@@ -357,7 +357,58 @@ def rest_rails_audit(result) -> dict:
             out[f"veto_{r}_n"] += 1
     out["veto_calls_n"] = calls
     out["veto_fired_n"] = sum(out[f"veto_{r}_n"] for r in REST_RAILS)
+    # D-M3-04-FIX: sổ CAM KẾT — hoãn nghỉ nay là lời hứa có kết cục, và kết cục phải đếm được:
+    #   made    = cam kết ghi (event `advice_rest_window`, log MỘT lần lúc coin nghe)
+    #   kept    = tới giờ X, cổng ép nghỉ diễn ra
+    #   broken  = bận trọn giờ X ⇒ quyền nghỉ trả lại
+    #   cleared = nghỉ sớm tự nguyện trước giờ X (hết việc có ích / mệt thật)
+    # Bảo toàn: made ≥ kept + broken + cleared; phần dư = cam kết còn mở lúc hết ngày.
+    # Thiếu sổ này thì "hoãn = cam kết" là cơ chế sống trên giấy (D-R12) — không ai chứng minh
+    # được lời hứa CÓ được thi hành.
+    # ⚠ `advice_rest_window` là kind DÙNG CHUNG với bản ghi không-theo của nhánh drain
+    # (D-M3-01: cùng kind, khác cờ `followed` — tách kind là tách mẫu số). Đếm made mà không
+    # lọc `followed=True` là đếm cả lời khuyên bị TỪ CHỐI thành cam kết (bắt được 2026-08-05:
+    # 5 event nhưng chỉ 2 cam kết thật trên seed 7000).
+    kinds = {"advice_rest_commit_kept": "commit_kept_n",
+             "advice_rest_commit_broken": "commit_broken_n",
+             "advice_rest_commit_cleared": "commit_cleared_n"}
+    out["commit_made_n"] = 0
+    for k in kinds.values():
+        out[k] = 0
+    for e in result.events:
+        if e.kind == "advice_rest_window" and e.detail.get("followed") is True:
+            out["commit_made_n"] += 1
+        else:
+            k = kinds.get(e.kind)
+            if k:
+                out[k] += 1
     return out
+
+
+def fingerprint_actors(result) -> str:
+    """Digest PER-ACTOR của quỹ đạo + tiền + nghỉ. **MỘT nguồn** cho mọi cổng tất định.
+
+    Chuyển từ `scripts/probe_adherence_truth.py` lên đây 2026-08-05 (`D-M3-04` STOP-D). Trước đó
+    nó sống trong `scripts/`, tức một cổng STOP của prereg lại phụ thuộc một hàm nằm ngoài thư
+    viện — không import được từ `src/`, và ai đó rất dễ viết bản thứ hai hơi khác.
+
+    Thay `assert_crn` (`parallel.py`): hàm đó chỉ so `(order_id, t_min, pickup_cell, gross_vnd)`
+    của ĐƠN, mà đơn sinh NGOÀI world ⇒ trả `True` dù mọi quỹ đạo actor đã lệch (`D-M3-02`). Cái
+    này bắt được nhiễm RNG stream.
+    """
+    import hashlib
+    import json as _json
+
+    segs: dict[int, list] = {}
+    for s in result.segments:
+        segs.setdefault(s["actor_id"], []).append(
+            (s["kind"], round(float(s["t0"]), 3), round(float(s["t1"]), 3)))
+    rows = []
+    for a in sorted(result.actors, key=lambda x: x.actor_id):
+        rows.append((a.actor_id, sorted(segs.get(a.actor_id, [])),
+                     round(float(a.payout_vnd), 6), int(a.trips_done),
+                     round(float(a.rest_min), 6)))
+    return hashlib.sha256(_json.dumps(rows, sort_keys=True).encode()).hexdigest()[:16]
 
 
 def extend_rails_audit(result) -> dict:
