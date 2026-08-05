@@ -70,12 +70,17 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 ## §2. STATE hiện tại (2026-07-30)
 
 ```
-local HEAD  = 51e877e (UPDATE-135/129) + cây làm việc UPDATE-137 CHƯA commit
-suite       = 1246 passed / 4 skipped / **5 FAILED** + **1 file KHÔNG THU ĐƯỢC**
-              (đo 2026-08-04 SAU UPDATE-138)
-              uv run pytest -q                  -> 1058 / 5 fail / 4 skip  (20′09″)
+local HEAD  = cây làm việc UPDATE-140..142 CHƯA commit (Cycle B REVERT + Q-16/FIX-PRE + D-M3-04-FIX)
+suite       = 1283 passed / 4 skipped / **5 FAILED** + **1 file KHÔNG THU ĐƯỢC**
+              (đo 2026-08-05 SAU UPDATE-142)
+              uv run pytest -q                  -> 1091 / 5 fail / 4 skip  (22-56′ tuỳ tải máy
+                 ⚠ đã dài hơn hẳn vì test multiday — đừng tưởng treo)
               uv run pytest -q ui/backend/tests -> ⛔ **Interrupted: collection error**
-                 phải thêm `--ignore=ui/backend/tests/test_demo_advice_ack.py` -> 188 passed
+                 phải thêm `--ignore=ui/backend/tests/test_demo_advice_ack.py` -> 192 passed
+              ⚠ 2026-08-05: K-03 từng phình 4→5 mục vì `fingerprint_actors` (UPDATE-140 chuyển nó
+                 từ scripts/ vào src/ ⇒ lọt tầm quét money-manifest) — ĐÃ phân loại (MONEY, có
+                 chú thích trong manifest) ⇒ K-03 về đúng 4 mục CỦA KHÁNH. Bài học: chuyển hàm
+                 vào src/ là ĐỔI TẦM QUÉT của cổng, phải chạy test_health_boundary sau đó
               🔴 CẢ 5 FAIL + lỗi collection đều ĐỎ SẴN trên origin/main — đã chứng minh bằng
                 `git worktree add <tmp> origin/main` rồi chạy ở đó (KHÔNG có việc của tôi):
                   K-01 (3): cadence QUEUE≠PRESENT · 2× checkpoint_trace thiếu `__init__.py`
@@ -142,6 +147,27 @@ test của **đường sản phẩm** (`D-M3-09`).
 
 ### Vừa xong (3 cycle cuối)
 
+- **UPDATE-142 `D-M3-04-FIX`** — hoãn nghỉ nay là **CAM KẾT** (ghi "nghỉ ở giờ X", ép ở decision
+  point kế trong giờ X, bận trọn giờ thì trả quyền nghỉ ngay) và **nhánh rơi không được là WAIT**
+  (không có việc có ích ⇒ không hoãn, cho nghỉ luôn). A/B chẩn đoán 30 seed **đạt cả ba
+  acceptance**: `rest_min` Δ **−244 → +10,9 ns** · `idle_min` **+209,5 → −66,8 ns** ·
+  `work_span_p90` **+42,3 → −2,9 ns** ⇒ kênh thôi ăn vào nghỉ. Sổ cam kết: made 2,0/ngày ·
+  kept 2,0 — lời hứa được giữ. `D-M3-06` gỡ cùng cycle. Sever 7/7 · fingerprint OFF 15/15 ·
+  16 test đỏ-trước. ⚠ Kênh **vẫn TẮT + MỀM** (Q-16a) — bật lại như lời khuyên kinh tế cần
+  **prereg MỚI**. Visual `BLOCKED` → `V-30` (dashboard chưa replay multiday).
+- **UPDATE-141 Q-16 + FIX-PRE** — Cường chốt giữ TẮT + duyệt hướng FIX; phép kiểm phân biệt cắt
+  riêng `world.py:970` cho **B″ ≡ A bit-identical 30/30 seed** ⇒ dòng đó là TOÀN BỘ cơ chế,
+  bridge không nhiễm RNG world. Ba ô đọc kết quả khai TRƯỚC khi chạy.
+- **UPDATE-140 Cycle B `D-M3-04`** — phép đo multiday 100 seed chạy xong ⇒ **REVERT thi hành**
+  (`rest_window` MEASURED → SOFT): Δ **−429,3đ ns** [−1 142; +290] **và** STOP-C bắn
+  (`rest_min_total` −6,6%) — hai đường REVERT độc lập của `luat_quyet_dinh` khoá TRƯỚC khi đo; Δ nằm
+  TRONG kỳ vọng đã khoá ⇒ **phép đo thành công, không phải kênh thất bại**. 🔴 Ba bài học phải nhớ:
+  (1) **ba lần một phiên** kết luận từ n nhỏ rồi bị bác (n=5 "hàng đợi trạm" · n=3 "nghỉ→sạc" ·
+  "85% lượt kéo ca") — CI ở n<30 không được vào câu kết luận; (2) **đọc nhánh `if` TRƯỚC khi khai
+  thác số tổng hợp** — cơ chế thật là MỘT dòng `world.py:970` (`action := WAIT`): hoãn nghỉ = đứng
+  chờ, 86% nghỉ mất đi thành chờ rỗng, đơn **ns** ⇒ kênh đốt sức khoẻ không đổi lấy gì; (3) REVERT
+  **không sửa cái hại** — kênh vẫn hại sức khoẻ, giữ TẮT (`D-M3-04-FIX` sev CAO, chặn bởi
+  `D-M3-04-FIX-PRE`). `D-QD4-01` tự tiêu. `Q-16` chờ Cường. Sever 12/12.
 - **UPDATE-137 `QĐ-4`** — ranh giới KHUYÊN MỀM hoá ra hở ở **đường ghi thứ TƯ**: AdviceCheckpoint
   **v2** (đến từ PR #4 của Khánh) có **store riêng** và **từ vựng `topic` riêng giao với registry =
   RỖNG**, nên `classify()` không chạm được một event nào của nó — trong khi `rest` được sinh thật
@@ -223,7 +249,7 @@ test của **đường sản phẩm** (`D-M3-09`).
 | 1 | ~~**`L1-04`**~~ | — | ✅ **XONG (UPDATE-107)** — n=100 BÁC giả thuyết "28% mất hẳn": Δ=0 tuyệt đối; đó là gap LOGGING đã đóng bởi `D-M3-01`. Fix giữ (đúng `R-01`). ⚠ Kèm flaw #6 SUITE bắt: event MA sau khi áp — đã sửa (`mark_outcome_logged`) |
 | 2 | ~~**Cổng THỐNG KÊ**~~ | — | ✅ **XONG (UPDATE-107)** — z Poisson-binomial `\|z\| > 4` NỐI vào `run_ladder` thật; null đọc từ **nominal của run** (không hardcode); không treo oan arm tuân-thủ-tuyệt-đối |
 | 3 | 🔴 **`E10` advisor-cũng-nhiễu** — **quan trọng nhất còn lại** | ~1–1,5 ngày | ✅ **XONG — nhưng ĐỌC SỐ CỦA UPDATE-113, KHÔNG phải 110.** ⚠ Thước adherence của UPDATE-110 SAI (trộn *tài xế đồng ý* với *hệ thống thực thi được*); sửa thước ⇒ **mọi số đo lại và giảm**: `B_oracle` **+3.939đ** [2.854, 5.033] · `hist` **+3.401đ** · `real` **+3.126đ** · `wait` +174đ **SỤP**. Lớp đổi **CÒN-MỘT-PHẦN → KQ-GIỮ** (CI của Δ vs oracle chứa 0). **+6.016đ của UPDATE-087 KHÔNG tái lập được** (CI mới không chứa nó) ⇒ `D-E10-06`. Phát biểu YẾU, bắt buộc kèm caveat L1+L2+`D-E10-07` |
-| 4 | **`D-M3-04`** multiday A/B cho `rest_window` — nay là **PHÉP THỬ CÓ ĐIỀU KIỆN** | ~4–6 giờ | 🟢 **CƯỜNG BẬT ĐÈN 2026-08-03**: *"thử D-M3-04 trước, nếu có ý nghĩa thì giữ, không thì revert và khuyên mềm"*. Luật quyết định đã đăng ký **TRƯỚC khi đo** (prereg → `luat_quyet_dinh`): GIỮ ⟺ Δ dương SIG + tầng 5 không suy giảm + 0 STOP; REVERT ⟺ Δ ≤ 0 / ns / STOP bắn. ⚠ **REVERT là nhánh prereg DỰ ĐOÁN TRƯỚC** (world β=0) ⇒ nếu nó xảy ra thì phép đo THÀNH CÔNG, không phải kênh thất bại. Là **Cycle B riêng** (đổi hành vi sim + thêm đường đo ⇒ `CLAUDE.md` §4b đòi plan riêng). Chi tiết cũ: 3 câu hỏi thiết kế Cường đã duyệt (TB ngày 2..N bootstrap theo SEED · days=3 n=100 · prereg mới cho dải T thấp); acceptance đã sửa theo 5 lỗ UPDATE-114. ⚠ Trong cycle phải **nối `health_guardrail(actor_ids=…)` vào `aggregate_health_guardrail`** — cơ chế có, đường chạy chưa (đúng họ lỗi (a), đừng lặp) |
+| 4 | ~~**`D-M3-04`**~~ multiday A/B cho `rest_window` | — | ✅ **XONG (UPDATE-140, 2026-08-05) — verdict = REVERT, ĐÃ THI HÀNH.** 100 seed × 3 ngày × 2 arm; kênh nói 2 986 lần (hết inert). Trúng **HAI** đường REVERT độc lập của `luat_quyet_dinh` khoá trước: Δ **−429,3đ ns** [−1 142; +290] (TRONG kỳ vọng đã khoá [−1 500, +500] ⇒ phép đo **THÀNH CÔNG**) **và** **STOP-C BẮN** (`rest_min_total` −6,6%). `rest_window` nay là **khuyên MỀM** (`SOFT_TOPICS`); `D-QD4-01` **tự tiêu**. 🔴 Đọc thêm ở UPDATE-140: (a) kênh **VẪN hại sức khoẻ** sau REVERT ⇒ `D-M3-04-FIX` sev CAO (giữ TẮT; hoãn phải là CAM KẾT; nhánh rơi không được là `WAIT` — cơ chế nằm ở `world.py:970`, nghỉ −244′ → chờ rỗng +209,5′ = **86%**, đơn **ns**); (b) 🔴 **ba lần một phiên kết luận từ n nhỏ rồi bị bác** — CI ở n=3/n=5 KHÔNG được xuất hiện trong câu kết luận, và **đọc nhánh `if` TRƯỚC khi khai thác số tổng hợp**; (c) `Q-16` chờ Cường: giữ TẮT? duyệt hướng FIX? |
 | 5 | Cycle **đường SẢN PHẨM** — 13 finding sev CAO | phần lớn đã xong | ✅ **6/6 finding NẶNG đã xử lý** (kiểm bằng code 2026-08-01): `L3-03` tie-break `observed_at` ✓ · `L4-01` `displayed` vào máy trạng thái ✓ · `L4-04` `CLIENT_TOPICS`+`DEFAULT_TOPIC="brief"` ✓ · `L4-07` card im lặng dùng cờ `actionable` ✓ · `L4-09` `shift_start_min` thành Query param ✓ · `L4-03` = **`V-21` chờ Cường** (3 lựa chọn, 2 trong đó đổi CHÍNH SÁCH). Còn: `cards.js` `KIND_HOURS` vẫn ánh xạ 3 mốc giờ — nhưng là **PLACEHOLDER có nhãn**, chờ `ĐA-06 AdviceEnvelopeV2` mang chủ đề thật |
 | 6 | 🔴 **`D-M3-18`** — 40/150 tài xế là XE HƠI, repo chỉ có tham số tiêu hao XE MÁY | ~2–4 giờ | **TODO sev CAO** — backend+web đã gắn cờ, **app Flutter chưa đọc cờ** nên tài xế xe hơi trên app vẫn thấy số vô căn cứ (phần Khánh). Fix thật: thêm **field đội pin** vào view + tham số tiêu hao cho ô tô |
 | 7 | **`E9`** chọn lọc TRONG kênh | ~1 ngày | chờ |
