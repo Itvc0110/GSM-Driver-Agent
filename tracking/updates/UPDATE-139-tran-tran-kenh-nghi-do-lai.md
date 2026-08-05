@@ -5,6 +5,30 @@
 - **Loại:** research / đính chính số — **KHÔNG đổi một dòng code sản phẩm**
 - **Liên quan:** `D-M3-04` (Cycle B) · `D-M3-06` · nối tiếp đính chính số 85% ở UPDATE-138
 
+> ### 🔴 ĐÍNH CHÍNH 2026-08-05 (cùng ngày, khi mở prereg để thi công Cycle B) — TÔI ĐÃ NÓI QUÁ ĐỘ MỚI
+>
+> Update này trình bày *"trần ≤29% do lan can sức khoẻ"* như một **phát hiện mới**. **Không phải.**
+> `specs/simulation/d-m3-04-multiday-prereg-locked.json` → `vung_mu_khai_truoc`, **khoá 2026-08-01**,
+> đã ghi nguyên văn:
+>
+> > *"Trần 71,0% lan can là số MỘT NGÀY — **KHÔNG trích cho chế độ multiday** (trong multiday kênh
+> > chỉ hiện thực 2–5,7% cơ hội, và **chặn chính là `at_window`/`window_past`, không phải lan can
+> > sức khoẻ**)"*
+>
+> Và `d-m3-04-multiday-ab-brief.md:76-78` cũng ghi y hệt. Tức tác giả prereg (chính tôi, 4 ngày
+> trước) **đã biết và đã khai** — tôi chỉ quên nó khi viết update này.
+>
+> **Cái update này thật sự đóng góp, sau khi trừ phần không mới:**
+> 1. **Con số** — vùng mù được khai *định tính* (*"chặn chính là at_window/window_past"*); đây là
+>    lần đầu nó được **đo**: biên **8,8%**, và `fatigued` = **0,0%** (không bao giờ là thứ chặn duy nhất).
+> 2. **`DEFERRED.md` vẫn mang claim cũ KHÔNG có caveat** — prereg khai vùng mù nhưng `DEFERRED` thì
+>    không, và `DEFERRED` mới là thứ người ta đọc. Việc sửa nó vẫn cần.
+> 3. Hệ quả cho `D-M3-06` (mất một trụ của lý lẽ hạ ưu tiên) — cái này prereg không nói.
+>
+> **Bài học lặp lại:** đây là lần thứ ba trong hai ngày tôi nói quá về một kết quả (85% → biên 3,5%;
+> *"cổng không chặn"* relay từ subagent; và lần này *"phát hiện mới"* vốn đã nằm trong tài liệu tôi
+> tự viết). Cả ba đều cùng một hình: **không đọc lại nguồn trước khi tuyên bố.**
+
 ## Tóm tắt
 
 Sau khi tự bắt lỗi *"đếm sai đại lượng"* của mình ở UPDATE-138, tôi hỏi câu hiển nhiên tiếp theo:

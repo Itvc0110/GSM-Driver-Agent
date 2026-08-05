@@ -55,6 +55,31 @@
     "STOP-D: fingerprint ngày 0 arm A giữa hai lần chạy KHÁC nhau ⇒ multiday không tất định, mọi Δ vô nghĩa"
   ],
 
+  "dinh_chinh_TRUOC_KHI_DO_2026_08_05": {
+    "trang_thai": "Ghi vào prereg TRƯỚC khi chạy MỘT seed nào. Ba mục dưới đây KHÔNG đổi thiết kế, metric, kỳ vọng hay luật quyết định — chúng gỡ hai chỗ prereg TỰ MÂU THUẪN và khai một chỗ đọc-hai-nghĩa. Làm sau khi thấy số thì không phân biệt được với 'nới cổng cho verdict đẹp', nên phải làm bây giờ.",
+    "phat_hien_boi": "agent, khi mở code để thi công `run_pair_multiday` (Cycle B) — chưa chạy phép đo nào",
+
+    "1_STOP_B_thu_hep_ve_kenh_dang_do": {
+      "mau_thuan": "STOP-B viết 'arm A (ADVICE OFF) có quyết định ⇒ dừng', nhưng khối `thiet_ke` của CHÍNH prereg này định nghĩa `arm_A = positioning_overrides wait_only` — tức advice BẬT. Arm A vì thế LUÔN có quyết định `positioning` ⇒ cổng DET-01 như đang implement (`parallel.py:474-487`, bắt MỌI kênh có decided>0) sẽ TREO 100% số seed và phép đo không bao giờ chạy được.",
+      "Cuong_chot_2026_08_05": "Thu hẹp DET-01 về KÊNH ĐANG ĐO: arm A không được có quyết định `rest_window`. Quyết định `positioning` ở arm A là NỀN đã duyệt, không phải nhiễm.",
+      "vi_sao_dung_tinh_than_goc": "DET-01 sinh ra từ lỗi thật (arm đối chứng không sạch ⇒ mọi Δ là rác). Cái phải sạch là CAN THIỆP ĐANG ĐO, không phải mọi lời khuyên. Nền `wait_only` giống nhau ở hai arm nên nó triệt tiêu trong hiệu số.",
+      "rang_buoc_thi_cong": "Tham số kênh phải GHI VÀO ARTIFACT. Cổng vẫn TREO nếu arm A có bất kỳ quyết định `rest_window` nào — không nới thêm.",
+      "KHONG_doi": "STOP-A, STOP-C, STOP-D, metric, n_seeds, days, luat_quyet_dinh, cam_vinh_vien."
+    },
+
+    "2_fingerprint_kiem_CA_HAI_ngay": {
+      "mau_thuan": "STOP-D viết 'fingerprint NGÀY 0'; brief `d-m3-04-multiday-ab-brief.md` acceptance viết 'fingerprint NGÀY 1'.",
+      "Cuong_chot_2026_08_05": "Kiểm CẢ HAI, báo cả hai. Chặt hơn cả hai văn bản, không nới cái nào.",
+      "vi_sao": "Ngày 0 chưa có DriverMemory nên nó chỉ kiểm tất định của thế giới; ngày 1 kiểm tất định SAU khi memory đã truyền qua — đó mới là chỗ multiday có thể mất tất định."
+    },
+
+    "3_doc_ro_metric_driver_payout": {
+      "cho_doc_hai_nghia": "`metric` viết 'trung bình driver_payout của ngày 1..2' — có thể đọc là (a) payout của MỘT actor mục tiêu, hay (b) trung bình cohort.",
+      "agent_tu_quyet_va_khai": "Đọc là (b) TRUNG BÌNH COHORT — `payout_mean_all` của `_cohort_metrics` (`parallel.py:177`). Lý do: multiday chạy `coverage='all'` (`run_multiday` không nhận `actor_id`) nên KHÔNG tồn tại actor mục tiêu nào để đọc theo (a). Đây là agent tự quyết, khai ra để Cường bác được trước khi đo.",
+      "kem_theo": "`_driver_metrics` của actor mục tiêu VẪN được ghi vào artifact làm cột phụ, nhưng verdict GIỮ/REVERT chấm trên cohort."
+    }
+  },
+
   "cam_vinh_vien": [
     "Nới REST_TOTAL_DROP_TOL / SPAN_P90_RISE_TOL để verdict đẹp (mẫu D-R20)",
     "Nới rest_defer_max_min / shift_extend_max_min — đã bị POLICY_LOCKED_KEYS khoá cứng",
