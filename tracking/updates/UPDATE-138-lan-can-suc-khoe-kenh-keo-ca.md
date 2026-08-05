@@ -128,8 +128,10 @@ trong khi hai mũi chưa hề được thử.
 | 1001 | 107 | 82 | 4357 | 292 | **3936** | 129 |
 | 1002 | 75 | **79** ⚠ | 3856 | 260 | **3469** | 127 |
 
-**(a) Lan can 3 làm ~85% việc.** Nếu chỉ làm phương án *"chỉ trạng thái hiện tại"*, ta bắt được
-~11% số ca. Lựa chọn *"cả hai"* của Cường có số chống lưng.
+**(a) ~~Lan can 3 làm ~85% việc~~ — 🔴 ĐÍNH CHÍNH 2026-08-05, câu này ĐẾM SAI ĐẠI LƯỢNG.**
+
+Xem mục *"ĐÍNH CHÍNH số 85%"* ngay dưới. Tóm tắt: 85% là *"lan can được BÁO CÁO bao nhiêu lần"*,
+không phải *"lan can THÊM GIÁ TRỊ bao nhiêu"* — vì tôi cố ý đặt nó **trước** trần kinh tế.
 
 **(b) ⚠ seed 1002 số lời khuyên TĂNG (75 → 79).** Một lan can **không thể** thêm lời khuyên. Đây là
 **trôi quỹ đạo**: chặn một lần kéo ca làm actor ở trạng thái khác ⇒ cơ hội kéo ca về sau khác ⇒
@@ -138,6 +140,49 @@ RNG stream lệch. Đúng thứ `D-SIM-K3` (note của Khánh §7) cảnh báo: 
 ⇒ **Không được đọc bảng này thành "lan can làm mất N lời khuyên"**. Con số đó không tách được khỏi
 nhiễu quỹ đạo cho tới khi có keyed RNG. Cái đọc được: lan can **có đường chạy thật**, và
 `would_exceed_fatigue` là nhánh chi phối.
+
+### 🔴 ĐÍNH CHÍNH số 85% (2026-08-05) — tôi đã đưa con số sai cho Cường
+
+Bản đầu của UPDATE này, của commit `5432486`, của `DEFERRED`/`PENDING-REVIEW`/`PROJECT-GRAPH`, và
+câu tôi nói với Cường (*"lựa chọn 'cả hai' của anh có số chống lưng"*) đều dựa trên:
+
+> *"`would_exceed_fatigue` chiếm ~85% số chặn ⇒ nhánh 'đã mệt' một mình chỉ bắt ~11%"*
+
+**Câu đó đếm sai đại lượng.** Tôi **cố ý** đặt `would_exceed_fatigue` **TRƯỚC** `cap_unreachable`
+(để lý do báo ra là lý do sức khoẻ — quyết định đó vẫn đúng). Hệ quả: **mọi ca mà trần kinh tế cũng
+sẽ chặn đều được tính cho lan can sức khoẻ.** 85% là *"lan can được BÁO CÁO bao nhiêu lần"*, không
+phải *"lan can THÊM GIÁ TRỊ bao nhiêu"*.
+
+Đo lại phần **BIÊN** — số ca mà lan can là thứ **DUY NHẤT** chặn (kinh tế cho phép: `need_min ≤` trần):
+
+| lan can | đã bắn | kinh tế **cũng** chặn | 🔴 **BIÊN** | % biên |
+| --- | ---: | ---: | ---: | ---: |
+| `soc_low` | 391 | 344 | **47** | 12,0% |
+| `fatigued` | 932 | 758 | **174** | 18,7% |
+| `would_exceed_fatigue` | 10 259 | 10 070 | **189** | **1,8%** |
+| **TỔNG** | 11 582 | | **410** | **3,5%** |
+
+⚠ Ước lượng BIÊN dùng trần đầy 60′ làm cận trên của "trần còn lại" ⇒ nó là **cận TRÊN** của giá trị
+lan can. Nói quá về giá trị một lan can tệ hơn nói thiếu.
+
+**Bức tranh thật, đảo ngược câu tôi đã nói:**
+
+- `would_exceed_fatigue` **đóng góp biên NHỎ NHẤT** (189 ca, 1,8%) — không phải "làm 85% việc".
+  98,2% ca nó báo cáo là ca `need_min` khổng lồ (tài xế năng suất thấp, cần hàng trăm phút để với
+  mốc) mà trần 60′ vốn đã chặn.
+- `fatigued` — nhánh tôi bảo *"một mình chỉ bắt ~11%"* — thực ra có **biên LỚN NHẤT** (174 ca).
+- Cả ba cộng lại chỉ **410/11 582 = 3,5%** là chặn thật sự thêm.
+
+**Lựa chọn (b) của Cường vẫn đúng, nhưng KHÔNG vì lý do tôi đưa.** Giá trị của lan can không nằm ở
+số ca — nó nằm ở chỗ **410 ca đó là những ca kinh tế NÓI ĐƯỢC mà sức khoẻ nói không**. Đó chính xác
+là những ca ranh giới sinh ra để chặn: lời khuyên *khả thi về tiền* nhưng *đẩy tài xế quá sức*. Một
+lan can chặn 3,5% mà đúng 3,5% ấy thì có giá trị; một lan can chặn 85% ca mà 98% trong đó đã bị chặn
+sẵn thì chỉ là tiếng ồn trong bảng đếm.
+
+**Vì sao tôi mắc:** tôi đã tự nêu đúng rủi ro này ở phần thiết kế (*"lan can sức khoẻ ưu tiên hơn
+trần kinh tế ⇒ bảng veto sẽ nói 'hết trần' cho đúng những ca…"*), thậm chí viết test `j5`/
+`test_DOI_CHUNG_lan_can_SUC_KHOE_uu_tien_hon_tran_kinh_te` cho nó — rồi **vẫn đọc bảng đếm như thể
+nó là bảng giá trị**. Biết một cái bẫy không đủ; phải đo trước khi trích số.
 
 ### `xveto_calls_n` ≠ số lời khuyên bị chặn
 
