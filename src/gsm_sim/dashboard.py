@@ -145,6 +145,25 @@ with st.sidebar.expander("🤝 Hành vi nhận đơn (behavior)"):
         "Chi phí cảm nhận /km đón (đ)", int(lo), int(hi),
         int(_DEF["behavior.pickup_disutility_vnd_per_km"]), step=500)
 
+# V-28 (2026-08-05, Cường: "chạy riêng đi bật kênh đi"): trước đây Journey tab đọc run chính
+# mà run chính KHÔNG có đường bật advisor ⇒ vạch advice trên timeline không bao giờ hiện.
+# Mặc định GIỮ NGUYÊN hành vi cũ (advisor TẮT — đúng ĐA-07); mọi checkbox chỉ áp khi tự tay bật.
+with st.sidebar.expander("🤖 Advisor (SIM-3/4 — nghiên cứu)"):
+    adv_on = st.checkbox("Bật advisor (arm B)", value=False,
+                         help="MẶC ĐỊNH TẮT theo ĐA-07. Bật để xem vạch advice trên tab Hành trình.")
+    if adv_on:
+        st.caption("⚠ Cấu hình NGHIÊN CỨU — số liệu chạy ra KHÔNG phải baseline đã duyệt.")
+        _ch_ext = st.checkbox("Kênh shift_extend (kéo ca — V-28)", value=True)
+        _ch_rest = st.checkbox("Kênh rest_window (hoãn nghỉ = cam kết)", value=False,
+                               help="Chỉ sống thật ở multiday (D-M3-04); single-day gần như im.")
+        _ch_lift = st.checkbox("Kênh accept_lift", value=False)
+        _ch_plan = st.checkbox("Kênh shift_plan (⚠ ĐA-07 đã bác — CÓ HẠI)", value=False)
+        overrides["advice"] = {
+            "enabled": True, "coverage": "all",
+            "channels": {"shift_plan": _ch_plan, "accept_lift": _ch_lift,
+                         "shift_extend": _ch_ext, "rest_window": _ch_rest},
+        }
+
 # ---------- Sidebar: kịch bản MÔI TRƯỜNG ----------
 
 st.sidebar.markdown("---")
@@ -491,6 +510,16 @@ with tab_journey:
                   and e.kind in _SPOKEN]
     sup_events = [e for e in result.events if e.actor_id == pick.actor_id
                   and e.kind == "advice_suppressed"]
+    # V-28 (UPDATE-138/143): vạch ĐỎ = LAN CAN SỨC KHOẺ chặn lời khuyên — lý do vạch advice
+    # "thưa hẳn" ở tài xế online_min cao phải NHÌN thấy được, không chỉ nằm trong xveto_* audit.
+    # Chỉ lọc lý do lan can THẬT (EXTEND_RAILS/REST_RAILS) — advice_rest_veto còn log cả
+    # no_window/cadence… vẽ hết là rừng vạch vô nghĩa (đúng bài học vùng-xám ngân sách dưới).
+    from gsm_sim.sim_metrics import EXTEND_RAILS, REST_RAILS
+    rail_events = [e for e in result.events if e.actor_id == pick.actor_id
+                   and ((e.kind == "advice_extend_veto"
+                         and (e.detail or {}).get("reason") in EXTEND_RAILS)
+                        or (e.kind == "advice_rest_veto"
+                            and (e.detail or {}).get("reason") in REST_RAILS))]
     _t = lambda mins: pd.Timestamp("2026-07-01") + pd.to_timedelta(mins, unit="m")
     for e in adv_events:
         figj.add_vline(x=_t(e.t_min), line_width=1, line_dash="dot",
@@ -509,6 +538,22 @@ with tab_journey:
     for e in _khac:
         figj.add_vline(x=_t(e.t_min), line_width=1, line_dash="dash",
                        line_color="#9AA0A6", opacity=0.6)
+    # Lan can bắn MỖI TICK 2′ khi tài xế mệt đứng chờ ⇒ tài xế online cao có hàng TRĂM lượt
+    # (đo seed 1000: d-30 143 lượt). Vẽ từng vạch là rừng vạch — đúng bài học vùng ngân sách
+    # ngay dưới. Nên: ≤ 20 lượt vẽ từng vạch; dày hơn thì tô VÙNG đỏ nhạt từ lượt đầu tới
+    # lượt cuối + một mốc chú thích.
+    if len(rail_events) <= 20:
+        for e in rail_events:
+            figj.add_vline(x=_t(e.t_min), line_width=1, line_dash="dash",
+                           line_color="#D9534F", opacity=0.65)
+    elif rail_events:
+        r0 = min(e.t_min for e in rail_events)
+        r1 = max(e.t_min for e in rail_events)
+        figj.add_vrect(x0=_t(r0), x1=_t(r1), fillcolor="#D9534F", opacity=0.10,
+                       line_width=0, layer="below")
+        figj.add_vline(x=_t(r0), line_width=2, line_dash="dash", line_color="#D9534F",
+                       annotation_text=f"lan can sức khoẻ chặn ×{len(rail_events)}",
+                       annotation_position="top left")
     if _budget:
         t0 = min(e.t_min for e in _budget)
         # `a_pick` là Actor THẬT (dòng ~462); `pick` chỉ là hàng của selectbox và KHÔNG có
@@ -519,10 +564,14 @@ with tab_journey:
         figj.add_vline(x=_t(t0), line_width=2, line_dash="dash", line_color="#6B7378",
                        annotation_text="hết ngân sách nhắc", annotation_position="top")
     st.plotly_chart(figj, width='stretch')
-    if adv_events or sup_events:
+    if adv_events or sup_events or rail_events:
         _cap = f"Vạch CHẤM = {len(adv_events)} lần advisor NÓI"
         if _khac:
             _cap += f" · vạch GẠCH xám = {len(_khac)} lần bị nén vì cooldown/an toàn"
+        if rail_events:
+            _kieu = "vạch GẠCH ĐỎ" if len(rail_events) <= 20 else "VÙNG ĐỎ nhạt"
+            _cap += (f" · {_kieu} = {len(rail_events)} lượt LAN CAN SỨC KHOẺ chặn"
+                     f" (soc thấp / đã mệt / sẽ vượt ngưỡng — V-28; lượt đếm theo tick 2′)")
         if _budget:
             _cap += (f" · VÙNG XÁM = từ lúc hết ngân sách 6 lời khuyên/ca, advisor im"
                      f" ({len(_budget)} lần muốn nói mà không được)")
