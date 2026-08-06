@@ -239,8 +239,16 @@ def _neighbors(cell: str, grid: Grid, ring: int = 1) -> list[str]:
 
 
 def choose_station(actor: Actor, grid: Grid, stations: list[Station], now_min: float, rng) -> Station | None:
-    """Chọn trạm đổi pin: trạm quen p=0.7 (mock = gần nhà), else gần nhất theo cell distance.
-    Nếu trạm gần nhất quá đông (queue>3) → chuyển sang trạm gần kế (1 lần)."""
+    """Chọn trạm đổi pin: GẦN NHẤT theo cell distance; nếu trạm gần nhất quá đông (queue>3)
+    → chuyển sang trạm gần kế (1 lần).
+
+    ⚠ ĐÍNH CHÍNH 2026-08-06 (mm-05 MI-8, tự kiểm lại trên code): docstring cũ ghi *"trạm quen
+    p=0.7 (mock = gần nhà)"* — **KHÔNG có logic đó trong thân hàm**, và hàm **không rút RNG lần
+    nào** (`rng` nhận vào nhưng không dùng; giữ trong chữ ký cho tương thích call-site).
+    Hệ quả đúng phải biết: gọi hàm này **không** làm lệch dòng RNG ⇒ kênh `swap_early` an toàn
+    CRN hơn mức comment cũ ở `world.py` tưởng. Không sửa hành vi ở đây — chỉ sửa tài liệu sai
+    (họ lỗi D-M3-15: tài liệu sai nằm trong nguồn sự thật thì người đọc sau suy sai theo).
+    """
     if not stations:
         return None
     ranked = sorted(stations, key=lambda s: cell_distance_km(grid, actor.cell, s.cell))

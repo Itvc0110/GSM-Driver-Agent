@@ -968,8 +968,12 @@ class World:
 
             # --- E4/E-03 (UPDATE-156): kênh ĐỔI PIN SỚM — chỉ đè WAIT (không cướp REST/
             # RELOCATE), đặt TRƯỚC positioning để pin thắng vị trí khi cả hai muốn nói.
-            # ⚠ Gate cờ đứng TRƯỚC choose_station: choose_station RÚT RNG (p=0.7 trạm quen) —
-            # kênh TẮT phải 0 draw để config mặc định bit-identical (kỷ luật CRN như SIM-3).
+            # Gate cờ đứng TRƯỚC choose_station — giữ nguyên thứ tự này (kỷ luật CRN như SIM-3:
+            # kênh TẮT không được gọi thêm gì).
+            # ⚠ ĐÍNH CHÍNH 2026-08-06 (mm-05 MI-8): comment cũ ở đây ghi *"choose_station RÚT RNG
+            # (p=0.7 trạm quen)"* — SAI, hàm đó **không rút RNG lần nào** (behavior.py:241, đã
+            # kiểm lại). Thứ tự gate vẫn đúng và vẫn nên giữ, nhưng **lý do thật** là kỷ luật
+            # chung, KHÔNG phải vì có draw cần bảo toàn. Đừng suy tiếp từ tiền đề cũ.
             if action == IdleAction.WAIT and self.advice.ch_swap_early:
                 # `self.stations` (Station SỐNG, có queue/pin) — KHÔNG phải `grid.stations`
                 # (bản geo tĩnh); _do_charge dùng đúng danh sách này (`world.py:1196`).
