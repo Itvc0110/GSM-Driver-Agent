@@ -54,10 +54,42 @@ thuần hình học + config (tái tạo được). Nguồn luật: `behavior.py
    Đo được: với σ thực tế theo archetype (0,10–0,60), attractor **vỡ thành 40–78 cái**, top-3 chỉ còn
    **30,4% → 13,7%**. ⇒ **luật leo dốc MỘT MÌNH không dự đoán được** việc 56,6% phút idle dồn vào đúng
    hai ô. Verdict đã nói quá ở chỗ này.
-6. ⚠ **Cột "khoảng cách tới ô nhiều đơn chết" của F1 KHÔNG so được với verdict**: F1 dùng **PROXY = cầu
-   kỳ vọng**, còn verdict dùng **đơn chết ĐO ĐƯỢC**. Hai ô hút có cầu *trung bình* nhưng đơn chết **rất
-   thấp** (3,2 đơn = **1,57%** kho, rc-03) ⇒ *gần ô đỉnh-cầu* **không** đồng nghĩa *gần ô đỉnh-đơn-chết*.
-   **Không được dùng con số 0,00–1,34 km của F1 để bác con số 3,40–4,73 km của verdict.**
+6. ⚠→✅ **Cột "khoảng cách" của F1 dùng PROXY (cầu kỳ vọng) nên KHÔNG so được với verdict — nay ĐÃ GIẢI
+   QUYẾT bằng `f2-expired-by-cell.py`** (đo đơn chết theo ô, arm A, 5 seed). Xem §4 dưới: caveat này
+   **không còn**, và số đo **xác nhận** claim hình học của verdict.
+
+---
+
+## 4. F2 — đo ĐƠN CHẾT THEO Ô: caveat §2.6 đã đóng, và claim hình học của verdict ĐỨNG
+
+Artifact: `f2-expired-by-cell.json` · arm A, 5 seed, **204,6 đơn chết/ngày**, 82 ô có đơn chết.
+**Cổng đối chiếu ĐẠT:** top-10 ô chiếm **42,0%** kho — rc-03 báo **42,1%** ⇒ hai đường đo độc lập khớp.
+
+| ô | vai trò | cách 5 ô nhiều-đơn-chết nhất | đơn chết CỦA CHÍNH ô đó |
+| --- | --- | --- | --- |
+| `953` | **ô hút idle ĐO ĐƯỢC** (verdict gọi "bẫy") | **3,46** km (dải 3,46–4,27) | 1,80/ngày |
+| `bb3` | **ô hút idle ĐO ĐƯỢC** | **3,71** km (dải 3,71–5,10) | 1,40/ngày |
+| `88f` | attractor **lưu vực lớn nhất của F1** (42,8%) | **1,60** km | **4,60**/ngày |
+| `8c7` | cùng cặp với `88f` | **1,34** km | 2,80/ngày |
+
+### ✅ Claim hình học của verdict §0 — XÁC NHẬN bằng số đo
+Verdict nói hai ô hút cách mọi ô nhiều-đơn-chết **3,40–4,73 km**; đo được **3,46–3,71 km** tới top-5
+(dải tới 5,10 km). **Cả hai đều NGOÀI bán kính chào đơn 2,22 km** ⇒ phần *"rót thêm phút rảnh vào đó
+cũng không gặp đơn nào"* **đứng**.
+
+### 🔴 Và đây là phát hiện MỚI, sắc hơn cả verdict
+Cặp mà luật leo dốc **ưu ái nhất** (`88f`+`8c7`, lưu vực **42,8%**) lại nằm **1,34–1,60 km** từ ô
+nhiều-đơn-chết — tức **TRONG** bán kính 2,22 km — và bản thân nó có **4,60 đơn chết/ngày**. Cặp
+`e2b`+`e2f` (lưu vực 12,9%) còn tốt hơn: `e2b` là ô đơn-chết **hạng 4** (11,0/ngày).
+
+⇒ **Có sẵn attractor TỐT, nằm ngay cạnh cầu. Nhưng đội xe lại dồn vào cặp TỆ** (`953`+`bb3`: xa 3,5 km,
+đơn chết nội tại chỉ 1,4–1,8). Vậy vấn đề **không phải** *"luật leo dốc chỉ tạo ra bẫy"* — mà là
+***"luật tạo ra vài điểm hút, trong đó có cái tốt, và đội xe rơi vào cái tệ"***.
+
+**`UNRESOLVED` được phát biểu lại cho sắc:** *vì sao đội xe hội tụ về cặp XA thay vì cặp GẦN mà chính
+luật ưu ái hơn?* Ứng viên (chưa đo): phân bố `home_cell` / vị trí bắt đầu ca; belief cache theo
+`(actor, giờ, cell)` làm quỹ đạo phụ thuộc lịch sử; trường cầu đổi theo giờ nên lưu vực đổi trong ngày.
+⚠ **KHÔNG** phải deadhead — rc-03 đã đo: nguồn vào hai ô hút là `demand_seek` **123** vs deadhead **2**.
 
 ### 🔴 NHƯNG giả thuyết thay thế của tôi BỊ BÁC bởi số đã có trong tay
 Tôi định đề xuất *"có thể `home_cell`/hình học `_relocate_to_core` mới là thứ bơm người vào hai ô đó"*

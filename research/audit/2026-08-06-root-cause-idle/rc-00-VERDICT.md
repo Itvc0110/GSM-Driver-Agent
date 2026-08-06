@@ -20,8 +20,21 @@
 > `go_online` **4** (**95%** do chính luật đó). Và `give_up` sinh **chu trình hai ô** đã được F1 xác nhận
 > độc lập, kể cả tìm ra đúng cặp `94b`+`953`.
 >
-> **Còn `UNRESOLVED`:** vì sao run thật cho `953`+`bb3` mà không phải cặp lưu vực lớn nhất — cần đo **phân
-> bố lượt ghé theo ô** trong run thật; bản đồ tĩnh là mô hình quá thô cho câu đó.
+> **✅ Claim HÌNH HỌC của §0 — nay ĐÃ XÁC NHẬN bằng số đo** (`f2-expired-by-cell.py`, đơn chết theo ô,
+> arm A, 5 seed; cổng đối chiếu đạt: top-10 ô chiếm **42,0%** vs rc-03 báo **42,1%**): hai ô hút cách 5 ô
+> nhiều-đơn-chết nhất **3,46–3,71 km** (dải tới 5,10 km) — khớp dải 3,40–4,73 km đã nêu, và **cả hai đều
+> NGOÀI bán kính chào đơn 2,22 km**. Caveat "proxy" của F1 §2.6 **đã đóng**.
+>
+> **🔴 Phát hiện MỚI sắc hơn cả kết luận gốc:** cặp mà luật leo dốc **ưu ái nhất** (`88f`+`8c7`, lưu vực
+> **42,8%**) nằm **1,34–1,60 km** từ ô nhiều-đơn-chết — tức **TRONG** bán kính 2,22 km — và bản thân nó có
+> **4,60 đơn chết/ngày**; cặp `e2b`+`e2f` (12,9%) còn tốt hơn (`e2b` là ô đơn-chết **hạng 4**). ⇒ Vấn đề
+> **không phải** *"luật chỉ tạo ra bẫy"* mà là ***"luật tạo ra vài điểm hút, có cả cái TỐT ngay cạnh cầu,
+> nhưng đội xe lại dồn vào cái TỆ"***.
+>
+> **Còn `UNRESOLVED` (phát biểu lại cho sắc):** vì sao đội xe hội tụ về cặp **XA** thay vì cặp **GẦN** mà
+> chính luật ưu ái hơn? Ứng viên chưa đo: phân bố `home_cell`/vị trí bắt đầu ca · belief cache theo
+> `(actor, giờ, cell)` làm quỹ đạo phụ thuộc lịch sử · trường cầu đổi theo giờ nên lưu vực đổi trong ngày.
+> ⚠ **KHÔNG** phải deadhead — rc-03 đã đo: `demand_seek` **123** vs deadhead **2** vs go_online **4**.
 
 Ngày: 2026-08-06 · Vai: RC-04 (phản biện rc-01/rc-02/rc-03 + phán quyết cuối) · Mock: có (sim)
 Tiền đề: `rc-01-mechanism.json` (cơ chế, đọc code) · `rc-02-numbers.json` (số nền) · `rc-03-overlap.json` (probe đo trong sim)

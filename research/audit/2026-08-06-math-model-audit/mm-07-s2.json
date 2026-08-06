@@ -1,0 +1,237 @@
+{
+  "item": "SOLVER shift_dp.py (S2) — DP lịch ca ONLINE/REST/SWAP/END, soi THUẦN MATH tầng solver (MM-07)",
+  "audit_date": "2026-08-06",
+  "auditor": "MATH-MODELLING subagent",
+  "reproduction": "5 probe read-only ở scratchpad, gọi ĐÚNG hàm production (gsm_core.solvers.shift_dp.solve/_solve_dp/_baseline_naive_rest/_forecast_arrays) với policy = SimPolicy.from_config(configs/pilot_dongda.yaml).to_core_record() và params = solver_params() thật của bridge (bucket_min=60, p_accept=0.66, avg_dist_km=3.5, acceptance=0.90, completion=0.95). Forecast dựng bằng ĐÚNG đường của advice_bridge.build_shift_plan_input: expected_demand_field(grid,cfg) → grid_disk(cell,2) → top-3 cell/bucket. probe1 = λ vs cap; probe2 = shape thật; probe3 = repro tối giản + can thiệp nhân quả (PBS, service_min); probe4 = demand 0 / weak test / sensitivity; probe5 = quét 9.504 cấu hình. KHÔNG sửa file repo nào.",
+
+  "objective_as_implemented": "DP hữu hạn horizon, γ=1, state (b, soc_band, points_band, rests_left), action {ONLINE, REST, SWAP, END} thứ tự tie-break ONLINE→SWAP→REST→END. Reward tức thời: ONLINE = exp_trips×(ppo − cash/km×avg_dist_km); REST = 0; SWAP = −swap_fee; END = bonus_at(pb×PBS) và DỪNG. Terminal V[B,soc,pb,0] = bonus_at(pb×PBS), rests_left>0 tại B = NEG (ép nghỉ đủ trong ca). exp_trips = min(bucket_min/service_min_per_trip, Σ_cell expected_orders × demand_scale) × p_accept. Điểm tiến theo BAND: pb ← min(NB−1, pb + add_pts//PBS) với add_pts = round(exp_trips × trip_points(hour)). Sau khi solve, `reconstruct` đi lại lịch và tính BÁO CÁO expected_payout = Σ et×ppo (GROSS, không trừ chi phí) + bonus_at(proj_points) với proj_points là điểm CHÍNH XÁC (không band). delta_payout = expected_payout − _baseline_naive_rest (baseline = nghỉ R bucket ĐẦU ca, swap khi soc≤0, cùng tín dụng nghỉ ADV-04, bonus trên điểm chính xác). Cấu trúc Bellman ĐÚNG: không chiết khấu là hợp lý cho một ca; END không double-count vì không có continuation; reconstruct cộng bonus đúng MỘT lần; không có đếm kép tiền. Lỗi KHÔNG ở dạng Bellman mà ở (a) hàm mục tiêu trong V khác hàm được BÁO CÁO/chấm điểm, (b) một số hạng của V bị lượng tử hoá mất mát.",
+
+  "action_space": [
+    "ONLINE — bridge map về None (KHÔNG can thiệp, để bản năng chọn WAIT/RELOCATE) — advice_bridge.py:74-82",
+    "REST — map IdleAction.REST, và chỉ ghi đè khi bản năng là WAIT (rest_only_overrides_wait, bài học BUG-ADVICE-OVERRIDE)",
+    "SWAP — map GO_SWAP (fleet SWAP) hoặc GO_CHARGE (fleet CHARGE) — advice_bridge.py:1241-1242",
+    "END — map END_SHIFT; là cổng duy nhất của kênh con shift_plan_end_only (advice_bridge.py:624)",
+    "KHÔNG có cell/reposition (product boundary, docstring shift_dp.py:4-5) — việc đó thuộc S4 positioning"
+  ],
+
+  "variables_observed": [
+    "buckets_remaining B, demand_forecast (đa dòng/cell, GỘP theo timestamp sau S2-2)",
+    "points_now (→ band pts0 = min(NB−1, points_now//PBS))",
+    "soc_pct (→ soc0 = int(soc_pct/(100/NS)), NS=10 band)",
+    "rest_taken_min + shift_elapsed_min (Cycle R/H1 — tín dụng nghỉ đã nghỉ, ADV-04 đã cấp cho CẢ baseline)",
+    "acceptance_rate + completion_rate (cổng thưởng S2-3, TĨNH)",
+    "hour của bucket — CHỈ dùng cho trip_points(hour), KHÔNG dùng cho thời gian phục vụ/tốc độ",
+    "cash_cost_vnd_per_km + swap_fee_vnd (B2/C1/C5; cả hai = 0 trong pilot ⇒ trơ, D-E4-01)"
+  ],
+
+  "variables_missing": [
+    {
+      "var": "Thời gian phục vụ THẬT theo GIỜ (service_min_per_trip là hằng 25′ cứng của solver)",
+      "vi_sao_quan_trong": "cap_trips = bucket_min/service_min quyết định eo, và ĐO được nó BIND ở 96,0% bucket ⇒ nó không còn là 'mitigation chống phóng đại' (ý định S2-7) mà là RÀNG BUỘC CHI PHỐI NGHIỆM. Vì nó là hằng theo giờ, mọi bucket có cùng giá ⇒ bậc tự do 'đặt nghỉ vào demand thấp' — chính lý do tồn tại của DP — bị TRIỆT TIÊU. World lại BIẾT tốc độ theo giờ (speed_kmh.peak=17 vs offpeak=25, chênh 47%) ⇒ giờ cao điểm phục vụ chậm hơn thật nhưng cap vẫn 2,4.",
+      "nguon_co_san_trong_sim": "configs/pilot_dongda.yaml speed_kmh.{peak,offpeak,night,peak_hours} + demand.trip_km_median/detour_factor + dispatcher pickup TB (0,98 km đã ĐO, ghi trong config) + congestion.cap; bridge.solver_params() đã là chỗ truyền, chỉ cần thêm khoá"
+    },
+    {
+      "var": "Tham số PIN của world (vehicle.swap_consume_pct_per_km)",
+      "vi_sao_quan_trong": "soc_cost_per_bucket=1 band/30′ ⇒ 20% SOC mỗi giờ online, là hằng RIÊNG của solver, bridge KHÔNG truyền. Sổ pin solver và sổ pin world không chia sẻ MỘT tham số nào ⇒ tự do trôi. Tính từ config world: ~5,8 km/cuốc × 1,6%/km = 9,3%/cuốc × 1,584 cuốc/giờ ≈ 14,7%/giờ ⇒ DP tin pin cạn nhanh hơn ~36% ⇒ khuyên SWAP sớm hơn cần. Cùng LỚP với D-M3-17 (UI tự tính phạm vi pin khác engine).",
+      "nguon_co_san_trong_sim": "vehicle.swap_consume_pct_per_km / charge_consume_pct_per_km; Actor.consume_soc() là hàm world đang dùng — có thể suy soc_cost/bucket từ (cuốc/bucket × km/cuốc × %/km)"
+    },
+    {
+      "var": "Ngưỡng ĐỔI PIN vật lý (vehicle.swap_soc_threshold_pct = 20)",
+      "vi_sao_quan_trong": "DP cho SWAP hợp lệ ở MỌI mức SOC kể cả 100%. Vì swap_fee=0 (D-E4-01) nên SWAP có giá 0 và tie-break đặt nó TRƯỚC REST ⇒ ở bucket cầu 0 nó chiếm mọi thế hoà, sinh kế hoạch TOÀN SWAP. Ngưỡng đổi là ràng buộc CÓ THẬT trong sim, không phải số bịa.",
+      "nguon_co_san_trong_sim": "vehicle.swap_soc_threshold_pct; bridge đã đọc nó cho check_swap_early (advice_bridge.py:673)"
+    },
+    {
+      "var": "Vị trí/quỹ đạo kỳ vọng của tài xế trong ca",
+      "vi_sao_quan_trong": "CỐ TÌNH bỏ khỏi action space (product boundary — đúng). Nhưng hệ quả KHÔNG cố tình: forecast dựng bằng demand_hint_fn(actor, hour) với actor.cell ĐÓNG BĂNG ở ô hiện tại cho MỌI bucket tương lai (advice_bridge.py:502-503) ⇒ DP giả định tài xế đứng một chỗ cả ca, trong khi kênh positioning ĐANG BẬT MẶC ĐỊNH (positioning_overrides: wait_only) chủ động dịch tài xế. Hai kênh của cùng advisor mâu thuẫn giả định.",
+      "nguon_co_san_trong_sim": "world.standby_plan (S4 đã gán ô/bucket) — đủ để forecast theo ô KỲ VỌNG, hoặc tối thiểu ghi caveat 'giả định đứng yên'"
+    },
+    {
+      "var": "Trạng thái acceptance/completion TRONG ca (biến theo hành động)",
+      "vi_sao_quan_trong": "_bonus_eligible là cổng TĨNH đọc params; nhưng đi ONLINE với p_accept<1 nghĩa là từ chối đơn ⇒ tỷ lệ nhận trôi trong ca ⇒ cổng thưởng có thể LẬT giữa ca mà DP không thấy (nó tin cổng cố định suốt horizon). KHÔNG đề xuất S2 khuyên nhận/từ chối đơn (ranh giới §5) — chỉ ghi nhận đây là biến trạng thái bị gộp mất; kênh accept_lift mới là chỗ của nó.",
+      "nguon_co_san_trong_sim": "actor.orders_offered/orders_accepted, memory.acceptance_avg — bridge đã đọc cho _acc_estimate"
+    },
+    {
+      "var": "Phần dư điểm (add_pts mod PBS) — không có chiều state nào giữ nó",
+      "vi_sao_quan_trong": "Xem math_issues #2: chính là chỗ 37,5% tiến trình điểm bốc hơi mỗi bucket giờ thường.",
+      "nguon_co_san_trong_sim": "không cần dữ liệu mới — là biến nội bộ của DP"
+    }
+  ],
+
+  "math_issues": [
+    {
+      "title": "delta_payout ÂM tới −55.000đ: DP tối ưu trên ĐIỂM ĐÃ FLOOR THEO BAND nhưng được BÁO CÁO/CHẤM ĐIỂM trên ĐIỂM CHÍNH XÁC — hai hàm mục tiêu khác nhau (ĐÃ REPRODUCE + CAN THIỆP CHỨNG MINH NHÂN QUẢ)",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:188 + :252 (V và END dùng bonus_at(pb*PBS) — điểm BAND) vs :283 (exp_payout += bonus_at(proj_points) — điểm CHÍNH XÁC) và :274 (reconstruct cập nhật pb bằng cùng floor nhưng proj_points thì không); baseline :314 policy.bonus_at(pts) cũng CHÍNH XÁC. Docstring :289-290 khẳng định 'DP đặt nghỉ vào demand thấp nhất → luôn ≥ baseline này'. Test ghim: tests/test_shift_dp.py:69-72 test_delta_nonnegative_vs_baseline.",
+      "detail": "REPRO TỐI GIẢN (deterministic, không seed): B=10 bucket 60′ từ 08:00→18:00, expected_orders=6.0/bucket (bị cap về 2,4), soc=80%, points_now=0, params bridge thật. Kết quả: DP payout 161.746,2đ · baseline 191.746,2đ · **delta = −30.000,0đ** = đúng một mốc thưởng tier-60. Điểm DP 56 (tier 0), baseline 72 (tier 30.000). Kế toán tay: DP online giờ [8,9,10,11,13,14,15] (7 bucket toàn giờ thường) = 56 điểm; baseline nghỉ 2 bucket ĐẦU rồi online [10,11,12,13,15,16,17] = 5×8 + 2×16 = 72 điểm — baseline TÌNH CỜ ôm được hai giờ peak 16,17. Trong không gian BAND thì DP thấy 7×(8//5)=7 band=35 điểm và phương án ôm peak = 5×1+2×3=11 band=55 điểm — CẢ HAI dưới mốc 60 ⇒ bonus band = 0 ⇒ HOÀ ⇒ tie-break 'ONLINE xét trước' đẩy nghỉ về cuối ca. CAN THIỆP CHỨNG MINH NHÂN QUẢ: đổi points_band_size 5→1 (points_bands 49→241), giữ mọi thứ khác ⇒ delta −30.000 → **0,0**, proj_points 56→64, tier 0→30.000, lịch OOOOSOOORR→OOOOSOOROR (nghỉ dịch khỏi giờ peak). Đổi service_min_per_trip 25→12 (nới cap) cũng đưa delta về 0,0 ⇒ HAI nguyên nhân xếp chồng (issue #2 và #3). TẦN SỐ trên shape THẬT của sim (λ config × grid_disk top-3, 9.504 cấu hình = 22 cell × 9 giờ bắt đầu × 4 độ dài ca × 3 SOC × 4 mức điểm): delta<0 **383 (4,0%)**, tệ nhất **−55.000đ** (cell …3ffff, 08:00→18:00, soc 35%, points 95); delta==0 6.130 (64,5%); delta>0 2.991 (31,5%). TEST GHIM LÀ VÔ HIỆU: fixture _spi(buckets=6) dùng bucket_min=30 default ⇒ R = min(6, (6×30)//240 × 1) = min(6, 0) = **0** ⇒ không có bucket nghỉ nào để đặt ⇒ DP và baseline online y hệt ⇒ delta ≡ 0 bất kể tính chất có sai. Cùng khuôn WEAK_TEST mà repo đã ghi cho _spi_multi_cell (test_shift_dp.py:196-199). ⚠ TỰ BÁC giả thuyết mạnh hơn của tôi: KHÔNG phải 'DP hệ thống nghỉ vào giờ peak' — đo trên 17.424 bucket REST thì chỉ 12,7% rơi vào giờ peak điểm, THẤP hơn tỷ lệ nền ~25% (4/16 giờ trong cửa sổ điểm). DP phần lớn tránh peak đúng; lỗi dồn vào 4% cấu hình knife-edge nơi band-floor vừa đủ che một mốc.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "ADV-01 CHƯA HẾT: floor `add_pts // PBS` vẫn bốc hơi 37,5% tiến trình điểm mỗi bucket giờ thường (mất 34 điểm/ca 14 bucket); test ADV-01 mù vì fixture chọn add_pts ≡ 0 (mod PBS) đúng chằn",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:207 npb_online = lambda pb: min(NB-1, pb + add_pts // PBS); :274 cùng phép floor ở reconstruct; DEFAULT_PARAMS :28-29 points_bands=49, points_band_size=5. Test ADV-01: tests/test_e1b_cong_thuc_kenh.py:40-50 test_dp_an_lo_nho_de_lay_moc_thuong.",
+      "detail": "ADV-01 (UPDATE-151 r10, hôm nay) đổi PBS 15→5 để band không ĐÓNG BĂNG. Điều đó đúng và đã xoá trường hợp increment=0. Nhưng phép floor là PER-BUCKET nên Σfloor < floor(Σ) vẫn còn, và trong dải tham số THẬT của sim nó rất lớn: exp_trips = cap 2,4 × p_accept 0,66 = 1,584 ⇒ add_pts giờ thường = round(1,584×5) = 8, 8//5 = 1 band = 5 điểm ⇒ **mất 3/8 = 37,5%** mỗi bucket; giờ peak add = round(1,584×10) = 16, 16//5 = 3 = 15 điểm ⇒ mất 1/16 = 6,25%. ĐO trên ca 14 bucket 06:00→20:00 (cell median): điểm chính xác 144 vs điểm band 110 ⇒ **mất 34 điểm** = hơn nửa khoảng cách mốc 100→160. Với points_now=40: chính xác 184 (tier 115.000đ) nhưng band 150 (tier 60.000đ) ⇒ DP lập kế hoạch như thể mất **55.000đ** thưởng. Đây là nguồn gốc issue #1. VÌ SAO TEST ADV-01 KHÔNG BẮT: fixture _spi(4, points_now=45) đặt eo=1.0 và p_accept=1.0 ⇒ exp_trips = 1,000 chằn ⇒ add_pts = round(1,0×5) = 5 = PBS đúng chằn ⇒ `add_pts % PBS == 0` ở CẢ BỐN bucket (đã in ra từng bucket để xác nhận) ⇒ fixture nằm đúng trên điểm mà floor không mất gì. Test chứng minh 'bonus vào được Bellman' (thật) nhưng KHÔNG chứng minh 'bonus vào ĐÚNG LƯỢNG'. Nợ này được yêu cầu 'chỉ cite'; tôi ghi vì câu hỏi (2) hỏi thẳng 'còn dư nào?' — đây là phần dư, có số.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "cap service_min_per_trip=25′ BIND ở 96,0% bucket ⇒ eo PHẲNG TUYỆT ĐỐI ⇒ kênh payout của S2 hết tín hiệu; và `sensitivity −20%/−40%` là ROBUST GIẢ vì cap áp SAU demand_scale",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:146 cap_trips = bucket_min / service_min_per_trip; :152 eo = [min(cap_trips, grouped[b] * demand_scale) …] — cap áp SAU khi nhân scale; :391-397 sensitivity gọi lại _solve_dp/_baseline với demand_scale 0.8/0.6. src/gsm_sim/advice_bridge.py:578-590 solver_params() KHÔNG truyền service_min_per_trip ⇒ luôn 25,0 default. Test: tests/test_shift_dp.py:127-133 test_sensitivity_demand.",
+      "detail": "cap = 60/25 = 2,4 cuốc/bucket. ĐO λ config Đống Đa (expected_demand_field, 85 cell lõi), tổng top-3 cell trong grid_disk(cell,2) — đúng công thức bridge: h=7 min 3,465 / med 5,488 / max 9,030; h=12 min 2,252 / med 3,568; h=18 min 4,504 / med 7,135 / max 11,740; h=21 min 2,772 / med 4,391. Số cell vượt cap 2,4: **85/85 ở h=7, h=18, h=21**; 82/85 ở h=12. Hệ quả trên 80.256 bucket của 9.504 cấu hình: **77.064 (96,0%) có eo == 2,4 ĐÚNG CHẰN**. eo phẳng ⇒ online_net bằng nhau mọi bucket ⇒ mọi cách đặt R bucket nghỉ cho CÙNG payout ⇒ bậc tự do duy nhất còn lại là ĐIỂM (peak/normal), mà điểm thì bị issue #2 làm mờ. Đây là lời giải thích số học trực tiếp cho delta==0 ở 64,5% cấu hình và cho Δ=0 TUYỆT ĐỐI ở s2_only (UPDATE-152) — song song với ADV-01, không thay thế nó. ROBUST GIẢ: vì cap áp SAU scale, khi grouped ≥ cap/0,6 = 4,0 thì min(2,4; g×0,8) = min(2,4; g×0,6) = 2,4 ⇒ hai dòng sensitivity **bằng ĐÚNG base về mặt số học, không thể khác**. Dải này phủ mọi cell ở giờ 16-20h (min 4,504). ĐO: eo_raw = 4,0 / 6,0 / 12,0 ⇒ sensitivity = [−30000, −30000] = base −30000, y hệt. Tức solver báo cho consumer 'Δ không đổi khi cầu giảm 40%' trong khi con số KHÔNG THỂ đổi — đúng loại claim thuận lợi phải verify kỹ nhất. Ở dải thấp hơn thì nó lại NHẢY VÁCH: eo_raw=2,4 ⇒ base −30.000 nhưng sens = [0,0; 0,0]; cell median thật ⇒ base 0,0 nhưng sens = [+37.948,7; +26.647,7] — không đơn điệu, và lớn hơn base hàng chục nghìn. Comment của test 'demand giảm → delta_payout không tăng' (test_shift_dp.py:131) là SAI trong thực tế và KHÔNG được assert (test chỉ kiểm `v is not None`). Đây là uncertainty-quantification DUY NHẤT mà S2 xuất ra.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Cầu = 0 ⇒ kế hoạch TOÀN SWAP (9 lần đổi pin trong 12 bucket) với next_action = SWAP; test_rest_when_zero_demand PASS trên đúng kế hoạch phi lý đó",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:239-244 (SWAP xét TRƯỚC REST, v = −swap_fee + V[b+1, NS−1, pb, rl]; fee=0 ⇒ v = V, KHÔNG có ràng buộc SOC nào cho phép/ngăn swap) + :225 (ONLINE bị chặn vì exp_trips=0) + :246-249 (REST cũng cho 0) ⇒ so sánh CHẶT `v > best_v` trao mọi thế hoà cho nhánh xét trước = SWAP. Test: tests/test_shift_dp.py:83-86 chỉ assert all(action != 'ONLINE').",
+      "detail": "ĐO: eo=0 mọi bucket, soc=80%, bucket_min=60 ⇒ B=6 cho ['SWAP']×5 + ['REST']×1; B=12 cho ['SWAP']×9 + ['REST']×3; next_action = SWAP ở cả hai. Chạy fixture Y HỆT test (bucket 30′, points_now=10, forecast [0.0]×6) ⇒ ['SWAP']×6, và assert 'không ONLINE' PASS ⇒ test chỉ loại ONLINE, không hề ghim REST. Tie-break SWAP-trước-REST là CÓ CHỦ Ý (Cycle R/H3, comment :229-237, cho tình huống SOC thấp) — tôi KHÔNG đề nghị đảo nó; hệ quả ngoài ý muốn là ở eo=0 nó chiếm mọi thế hoà, và cái phanh duy nhất (swap_fee>0 làm SWAP thừa thua REST, comment :240-241) đã chết vì swap_fee=0 trong pilot (D-E4-01). REACHABILITY trong sim: _actor_demand_hint (src/gsm_sim/world.py:1158-1173) lấy field.get(hour, {}) rồi field.get(c, 0.0) cho grid_disk(actor.cell, 2); tài xế ở vành đệm (world.buffer_ring_k=4) ngoài 85 cell lõi có thể được cả 19 cell = 0,0 ⇒ hint KHÁC RỖNG nhưng toàn 0 ⇒ bridge vẫn append 3 dòng expected_orders=0.0 (advice_bridge.py:504-509, KHÔNG lọc 0) ⇒ eo = 0 CẢ CA (vì forecast dùng ô hiện tại cho mọi bucket). Khi đó _map_action('SWAP') → GO_SWAP (advice_bridge.py:1241). CHƯA ĐO tần suất thật (cần chạy sim + đếm actor ngoài lõi) ⇒ hành vi solver = CONFIRMED, reachability = PLAUSIBLE. Kênh shift_plan hiện TẮT (advice.channels.shift_plan: false theo ĐA-07) nên KHÔNG có tác hại đang chạy — nhưng đây là thứ phải sửa TRƯỚC khi mở lại.",
+      "severity": "TRUNG BÌNH-CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "END BẤT KHẢ ở bucket 0 trong world zero-cost (chứng minh dominance + đo 0/680 cấu hình) ⇒ kênh con shift_plan_end_only (E4/E-05, UPDATE-155) là CODE CHẾT khi cầu > 0",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:250-254 (END = bonus_at(pb*PBS), KHÔNG có continuation) vs :225-228 (ONLINE = online_net + V[b+1, nsoc, np_on, rl]). Consumer: src/gsm_sim/advice_bridge.py:624 `if self.sp_end_only and str(solver_action).upper() != 'END': return None` với solver_action = schedule[0]['action'] (:618).",
+      "detail": "CHỨNG MINH: bonus_at đơn điệu không giảm và np_on ≥ pb, còn V[b+1,·,·,rl] ≥ bonus_at(np_on×PBS) (vì END/terminal luôn là một lựa chọn từ b+1 khi rl=0, và với rl>0 thì rl phải tiêu hết trước B nên bất đẳng thức vẫn giữ trên nhánh khả thi) ⇒ ONLINE ≥ online_net + bonus_at(pb×PBS) > END khi online_net > 0. Với cash=0 thì online_net = exp_trips×ppo > 0 mọi khi exp_trips > 0. Vậy END chỉ có thể thắng khi exp_trips=0 HOẶC soc0=0. ĐO: schedule[0]=='END' xuất hiện **0/68** (quét cell×giờ bắt đầu) và **0/612** (quét 17 giờ × 12 độ dài × 3 SOC, points_now=190 để bonus lớn nhất). Ngay cả eo=0 cũng KHÔNG ra END mà ra SWAP (issue trên) — nên hai điều kiện thoát đều không dẫn tới END. λ config dương ở MỌI giờ 5..23 và soc<10% thì sim đã đi swap ở ngưỡng 20% ⇒ trong pilot config END là bất khả. Hệ quả: bật shift_plan_end_only là đo một kênh không bao giờ phát ra một lời khuyên nào. CHƯA KIỂM: UPDATE-155 có báo con số nào cho kênh này chưa (ngoài phạm vi mm-07) — nếu có thì con số đó phải được kiểm lại.",
+      "severity": "TRUNG BÌNH",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Sổ pin của solver và sổ pin của world KHÔNG chia sẻ một tham số nào — soc_cost_per_bucket / soc_bands / service_min_per_trip đều là hằng riêng, bridge không truyền (cùng lớp D-M3-17)",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:100-110 _soc_cost → max(1, round(1 × bucket_min/30)) = 2 band với bucket 60′; DEFAULT_PARAMS :20 soc_bands=10 ⇒ 1 band = 10% ⇒ **20% SOC/giờ online, cứng**. src/gsm_sim/advice_bridge.py:578-590 solver_params() chỉ truyền bucket_min, p_accept, avg_dist_km, acceptance_rate, completion_rate, cash_cost_vnd_per_km, swap_fee_vnd. configs/pilot_dongda.yaml:272 vehicle.swap_consume_pct_per_km = 1.6.",
+      "detail": "Tính từ config world: quãng/cuốc ≈ trip 3,5 km × detour_factor 1,3 = 4,55 km, cộng pickup ĐÃ ĐO 0,98 km × 1,3 = 1,27 ⇒ ~5,8 km/cuốc ⇒ 5,8 × 1,6%/km = 9,3% SOC/cuốc; ở 1,584 cuốc/giờ ⇒ **~14,7%/giờ** (chưa cộng relocate tự nguyện). DP tin **20%/giờ** ⇒ cạn nhanh hơn ~36% ⇒ DP xếp SWAP sớm hơn/ nhiều hơn cần, và vì trong world zero-cost ONLINE luôn trội thì mỗi bucket SWAP thừa là một bucket kiếm tiền bị mất trong CHÍNH ước lượng của DP. Test hiện có (tests/test_shift_dp.py:272-294) chỉ ghim TỶ LỆ scale theo bucket_min và 'swaps60 ≥ swaps30' — không ghim MỨC, và mức không neo vào bất kỳ khoá config nào của world. Đây đúng lớp D-M3-17 ('UI tự tính phạm vi pin khác engine'), lần này ở tầng solver. CHƯA KIỂM: chưa đo drain thật từ trace sim (chỉ tính từ config + pickup TB đã ghi trong config) ⇒ confidence TRUNG BÌNH, cần một run đếm ΔSOC/giờ-online để chốt.",
+      "severity": "TRUNG BÌNH",
+      "confidence": "TRUNG BÌNH",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "avg_dist_km bị dùng cho HAI khái niệm quãng đường khác nhau: doanh thu (km KHÁCH) và chi phí (km LĂN BÁNH) ⇒ chi phí ước NON ~27% khi C1 bật",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:130-132 _payout_per_order dùng avg_dist_km cho cước (ĐÚNG — cước tính trên km khách); :194 cost_per_trip = cash_km × float(params['avg_dist_km']) (SAI khái niệm — chi phí điện/mòn tính trên TỔNG km lăn bánh, gồm deadhead tới điểm đón).",
+      "detail": "Cùng một biến nuôi hai mẫu số khác nhau. Km lăn bánh/cuốc ≈ 5,8 km (đã tính ở issue trên) vs avg_dist_km = 3,5 do bridge truyền (orders.trip_km_median) ⇒ chi phí bị ước NON **~40%** so với km thật (3,5/5,8), tức khi B2/C1 bật thì DP tin chạy có lời hơn thực tế một cách HỆ THỐNG. Hôm nay TRƠ vì cash_cost_vnd_per_km = 0 (D-E4-01) — ghi để không ai bật C1 rồi tin con số. Không phải lỗi ở việc dùng avg_dist_km cho cước; lỗi ở việc TÁI DỤNG nó cho chi phí.",
+      "severity": "THẤP (trơ hôm nay) / CAO nếu bật C1",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "delta_payout là GROSS−GROSS trong khi DP tối ưu NET ⇒ 'khoảng cách tối ưu' không cùng đơn vị với hàm mục tiêu; khi C1 bật, Δ có thể âm dù DP hoàn toàn đúng",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:203 online_net vào V (NET); :271 exp_payout += et * ppo và :283 += bonus (GROSS); :314 baseline cũng GROSS; :360 delta = exp_payout − baseline. Test ghim việc BÁO gross: tests/test_c1_cost_term.py:87-97 test_moderate_cost_keeps_gross_payout_reporting.",
+      "detail": "Việc BÁO CÁO gross là THIẾT KẾ có chủ đích (§5 tách gross/payout/net, comment :51-52) và có test ghim ⇒ KHÔNG đề nghị đổi. Lỗi nằm ở chỗ khác: gọi hiệu số gross−gross là 'delta so baseline' và ghim nó ≥ 0. DP chọn lịch để cực đại NET; nếu cash>0 nó có thể bỏ một bucket lỗ-net, làm gross giảm trong khi baseline (luật cứng) vẫn đếm bucket đó ⇒ Δ gross âm dù quyết định đúng. Chú ý test_moderate_cost_keeps_gross_payout_reporting cố tình chọn mức chi phí mà LỊCH KHÔNG ĐỔI (assert _acts(mod) == _acts(base)) ⇒ đúng nhánh 'lịch đổi vì net' là nhánh CHƯA có test. Đây là đường thứ hai, ĐỘC LẬP, dẫn tới Δ<0 — mở ra ngay khi B2/C1 bật. Đường tôi đã ĐO ở issue #1 thì xảy ra ngay ở cash=0.",
+      "severity": "THẤP (trơ hôm nay) / CAO nếu bật C1",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MODEL GAP: action space loại trừ nhau ⇒ SWAP không được tín dụng nghỉ, đổi pin + nghỉ tối thiểu ăn HAI bucket cho một khoảng downtime vật lý",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:239-244 nhánh SWAP giữ rl NGUYÊN; :246 chỉ REST giảm rl. ĐO: soc=15%, B=8, eo=6.0 ⇒ ['ONLINE','SWAP','ONLINE','ONLINE','ONLINE','ONLINE','REST','REST'] — 3/8 bucket không kiếm tiền với R=2.",
+      "detail": "⚠ GIẢ THUYẾT TÔI ĐÃ TỰ BÁC BỎ, ghi lại để không ai đi lại đường này: tôi cho rằng producer cộng thời gian đi/chờ đổi pin vào rest_taken_min trong khi DP không tín dụng ⇒ hai nửa của CÙNG ràng buộc lệch nhau (sẽ là bug đếm). SAI: src/gsm_sim/world.py:1113-1114 cộng actor.rest_min CHỈ ở nhánh IdleAction.REST; GO_SWAP/GO_CHARGE (:1098-1099 → _do_charge) KHÔNG cộng. Producer và solver NHẤT QUÁN ⇒ hạ xuống MODEL GAP thuần. Vế còn lại là câu hỏi CHÍNH SÁCH, không phải toán: thời gian chờ trạm có phục hồi sức khoẻ không? Nếu CÓ thì world phải cộng nó vào rest_min và DP mới được tín dụng; nếu KHÔNG thì hiện tại đã đúng. KHÔNG tự quyết: nới cổng nghỉ là làm YẾU lan can một chiều §1.2b ⇒ đưa vào backlog câu hỏi cho Cường, không đề xuất sửa code.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "LATENT: bucket mất hết dòng forecast ⇒ chỉ số lịch TRƯỢT + hrs bịa bằng hrs[-1]+1 (cộng 1 GIỜ bất kể bucket_min) + bucket đệm thành DUNG LƯỢNG NGHỈ không tồn tại",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:151 buckets = sorted(grouped)[:B]; :154-157 while len(eo) < B: eo.append(0.0); hrs.append(hrs[-1] + 1 …); buckets.append(None). Consumer nhạy cảm: src/gsm_sim/advice_bridge.py:618 solver_action = schedule[0] dùng làm hành động TỨC THỜI của bucket hiện tại.",
+      "detail": "ĐO: bỏ hết dòng của 3 bucket giữa ca 06:00→20:00 ⇒ hrs = [6,7,11,12,…,22] và 3 slot cuối có bucket=None ⇒ DP tin ca là một dải LIỀN gồm giờ 6,7,11,…,22 (có giờ 22 dù horizon thật hết ở 20:00). Hai hệ quả: (a) bucket đệm eo=0 cho REST/SWAP miễn phí ⇒ R bucket nghỉ bị đẩy vào khung KHÔNG CÓ THẬT, tài xế không nghỉ gì trong horizon thật; (b) nếu bucket HIỆN TẠI mất dòng thì schedule[0] là hành động của bucket KHÁC. KHÔNG ĐẾN ĐƯỢC trong pilot hôm nay — đã kiểm nhánh né: bridge append 3 dòng cho mọi hint khác rỗng và KHÔNG lọc expected_orders==0 (advice_bridge.py:504-509); demand_field phủ giờ 5..23; starts bị chặn bởi world_end_min=1440 và world chạy từ time.start_min=300 ⇒ hour ∈ [5,23] luôn có hint khác rỗng. Producer L1 src/gsm_core/features/shift_plan.py:53-63 cũng append vô điều kiện. ⇒ LATENT. Mở ra nếu: window sim thêm giờ 0-4 (bridge docstring :54 đã ghi giờ 0 trả {}), hoặc producer nào lọc bỏ dòng 0, hoặc l1r đổi top_cells.",
+      "severity": "THẤP (latent)",
+      "confidence": "CAO (cơ chế) / REFUTED (đến được hôm nay)",
+      "cung_lop_station_choice": false
+    }
+  ],
+
+  "cau_tra_loi_5_cau_hoi": {
+    "1_bellman": "ĐÚNG về cấu trúc. Reward cộng dồn không double-count: END không có continuation nên bonus chỉ vào một lần; terminal V[B,·,·,0] = bonus và rests_left>0 tại B = NEG là cách ép ràng buộc nghỉ đúng; guard `rl > buckets_left → continue` tạo phễu khả thi đúng (ở rl == buckets_left thì ONLINE và SWAP đều bị chặn, chỉ REST còn lại). Không chiết khấu (γ=1) là ĐÚNG cho horizon một ca. Reconstruct cộng bonus_at(proj_points) đúng một lần ngoài vòng lặp. KHÔNG có đếm kép tiền. Lỗi thật KHÔNG ở dạng Bellman mà ở hai chỗ khác: (a) hàm mục tiêu bên trong V dùng ĐIỂM BAND còn hàm được báo cáo/chấm dùng ĐIỂM CHÍNH XÁC — hai bài toán khác nhau (issue #1); (b) reward NET vào V nhưng GROSS ra báo cáo, rồi hiệu số gross bị ghim ≥ 0 (issue #8).",
+    "2_roi_rac_hoa": "Thời gian: bucket là đơn vị nguyên tử, sai số chính là REST và SWAP mỗi cái ăn TRỌN một bucket (60′) dù việc thật ngắn hơn — với bucket 60′ thì một swap ~15′ bị tính 60′, tức DP mất 45′ ảo mỗi lần. Điểm: ADV-01 CHƯA HẾT DƯ — floor per-bucket vẫn mất add_pts mod PBS mỗi bucket; ở dải thật (add=8, PBS=5) là 37,5%/bucket giờ thường, tích luỹ 34 điểm/ca 14 bucket, đủ che một mốc thưởng (issue #2, có can thiệp PBS=1 chứng minh nhân quả). SOC: 10 band × 10%, soc0 = floor ⇒ mất tới 9,9% pin; nhưng sai số này nhỏ so với chuyện MỨC soc_cost không neo vào world (issue #6). Cầu: cap làm rời rạc hoá cầu thành MỘT giá trị duy nhất ở 96% bucket — đây là 'rời rạc hoá' tệ nhất trong file, tệ hơn mọi band (issue #3).",
+    "3_baseline_information_set": "ADV-04 ĐÃ đúng phần tín dụng nghỉ: cả DP (:169) và baseline (:298) gọi _required_rest với cùng hai trường state — đã xác nhận bằng test ghim tests/test_e1b_cong_thuc_kenh.py:63 và đọc lại code. CÒN LỆCH ba chỗ, và cả ba đều làm baseline THẤP GIẢ (tức Δ bị thổi phồng), NGƯỢC chiều với issue #1: (a) baseline TRỪ SOC cả ở bucket cầu = 0 (:303-313 — soc -= _soc_cost vô điều kiện sau khi cộng payout), trong khi DP có gate exp_trips > 0 (:225) nên ở bucket cầu 0 nó REST/SWAP MIỄN PHÍ và giữ pin ⇒ baseline tốn thêm swap ⇒ mất thêm bucket kiếm tiền; (b) baseline KHÔNG có quyền END (không phải bất công thật, vì END bị trội trong world zero-cost — issue #5); (c) baseline soc0 (:301-302) thiếu max(0, …) mà nhánh DP có (:177-178) ⇒ soc_pct âm sẽ cho hai giá trị khác nhau (không đến được, ghi cho đủ). Và lệch LỚN NHẤT không nằm ở information set mà ở HÀM CHẤM: baseline được tính bonus trên điểm CHÍNH XÁC còn DP QUYẾT ĐỊNH trên điểm BAND ⇒ hai bên chơi hai luật khác nhau (issue #1).",
+    "4_state_bi_gop": "(a) Vị trí: bỏ CỐ TÌNH (product boundary) — nhưng hệ quả không cố tình là forecast đóng băng ô hiện tại cho mọi bucket tương lai, mâu thuẫn với kênh positioning đang BẬT mặc định. (b) SOC: 10 band, và MỨC tiêu hao không neo vào world. (c) Giờ: chỉ vào trip_points, KHÔNG vào thời gian phục vụ — world biết speed 17 vs 25 km/h (chênh 47%) mà cap phục vụ vẫn hằng 2,4 ⇒ đúng lớp (b) của audit 'biến sim BIẾT nhưng solver BỎ QUA'. (d) rests_left chỉ ĐẾM, không nhớ nghỉ ở ĐÂU ⇒ DP xếp được 3 REST liền nhau (đo ở issue #4); spacing sinh lý không mô hình hoá — nêu như ràng buộc một chiều, KHÔNG đề xuất đưa sức khoẻ vào objective (§1.2b). (e) Phần dư điểm: không có chiều state nào giữ ⇒ issue #2. (f) acceptance/completion: cổng thưởng TĨNH dù hành động ONLINE làm tỷ lệ trôi trong ca.",
+    "5_world_zero_cost_va_DA07": "Trong world cash=0, swap_fee=0: reward ONLINE ≥ 0, REST = 0, SWAP = 0, END = bonus hiện có; vì bonus_at đơn điệu và điểm không giảm, ONLINE **trội YẾU** mọi action khác khi exp_trips>0 và soc>0, và trội CHẶT hơn END. Bài toán suy biến thành 'tối đa số bucket ONLINE; đặt R bucket nghỉ vào bucket rẻ nhất; swap khi buộc'. ĐO khớp: END xuất hiện 0/680 cấu hình. Vậy DP có 'luôn nói chạy full' không? — GẦN như: nó luôn chạy hết số bucket mà SOC cho phép, chỉ trừ R bucket nghỉ và các bucket swap. VỀ CÂU HỎI CHÍNH (kênh shift_plan bị ĐA-07 bác là do DP SAI hay world KHÔNG CÓ GIÁ): **CẢ HAI, và có ba nguyên nhân xếp chồng** — (i) cap service_min ghim 96% bucket ở cùng một giá ⇒ vế payout của objective HẾT tín hiệu, không còn gì để tối ưu [lỗi model/input, SỬA ĐƯỢC]; (ii) floor band điểm bốc hơi 37,5%/bucket ⇒ vế điểm bị mờ tới mức DP hoà và tie-break quyết, sinh Δ<0 tới −55.000đ ở 4,0% cấu hình [lỗi math solver, SỬA ĐƯỢC, đã can thiệp chứng minh]; (iii) cash=0 + swap_fee=0 làm mọi số hạng chi phí trơ và END bất khả [world không có giá, D-E4-01]. Nói cách khác: KHÔNG được kết luận 'kênh vô giá trị' từ ĐA-07 khi hai trong ba nguyên nhân là khuyết tật của chính solver. ⚠ ĐỒNG THỜI KHÔNG ĐƯỢC KẾT LUẬN NGƯỢC: ĐA-07 bác trên n=100 seed bằng served −0,33đp SIG, đơn chết +4,1 SIG, Gini/HHI xấu SIG — KHÔNG chỉ bằng Δ. Sửa (i)+(ii) là ĐIỀU KIỆN CẦN để tái đo có nghĩa, KHÔNG phải bằng chứng ĐA-07 sẽ lật."
+  },
+
+  "extension_proposals": [
+    {
+      "title": "Đưa state điểm về ĐƠN VỊ ĐIỂM (points_band_size=1, points_bands=241) — xoá hẳn phần dư floor",
+      "action_executable": "KHÔNG đổi action space; sửa hàm mục tiêu để nó khớp hàm được chấm",
+      "solver_dua_tren": "shift_dp hiện có; state (b, soc, points, rests_left) chỉ đổi kích thước chiều points. Ô DP = B×NS×NB×(R+1) ≈ 14×10×241×4 ≈ 135k so với ~27k hiện tại (×5) — vẫn thuần vòng lặp numpy-indexed, PHẢI đo runtime ở ladder trước khi chốt. Rẻ hơn nếu cần: giữ band 5 nhưng thêm chiều 'dư' 5 giá trị (cùng ×5 ô, không lợi hơn) ⇒ chọn PBS=1 cho đơn giản.",
+      "chi_phi_uoc": "nhỏ (một dòng DEFAULT_PARAMS) + đo runtime",
+      "ky_vong": "ĐÃ ĐO trên repro: Δ −30.000 → 0,0; proj_points 56 → 64; tier 0 → 30.000; nghỉ dịch khỏi giờ peak. Xoá nguyên nhân (ii) của ĐA-07."
+    },
+    {
+      "title": "Dẫn xuất service_min_per_trip TỪ WORLD, theo GIỜ — trả lại shape cho cầu",
+      "action_executable": "KHÔNG đổi action space; đổi cap từ scalar sang vector theo bucket",
+      "solver_dua_tren": "_forecast_arrays (:139-158) chỉ cần cap[b] thay cap_trips. service_min(hour) = (pickup_km + trip_km×detour_factor)/speed_kmh(hour)×60 + dwell; mọi số đã có trong configs/pilot_dongda.yaml (speed_kmh.*, demand.trip_km_median, detour_factor, pickup TB 0,98 km đã ĐO và ghi trong config, congestion.cap). Bridge.solver_params() đã là chỗ truyền.",
+      "chi_phi_uoc": "nhỏ-trung bình",
+      "ky_vong": "Bỏ trạng thái 96% bucket phẳng ⇒ 'đặt nghỉ vào demand thấp' mới có nghĩa. Kèm hiệu ứng đúng chiều: giờ cao điểm phục vụ chậm hơn ⇒ cap thấp hơn ⇒ DP không còn tin peak và offpeak cho cùng số cuốc. LƯU Ý: đây là đổi hành vi ⇒ phải regate, và nó làm LỆCH mọi baseline cũ của S2."
+    },
+    {
+      "title": "delta_payout phải cùng đơn vị với objective: xuất thêm delta_net và ghim invariant trên NET",
+      "action_executable": "KHÔNG đổi action space; thêm trường solution.delta_net_vnd + giữ nguyên delta_payout gross (thiết kế §5 có test ghim)",
+      "solver_dua_tren": "reconstruct đã đi lại lịch nên tính được Σ(et×(ppo−cost_per_trip)) − n_swaps×fee; baseline đã trả n_swaps. Đồng thời SỬA docstring :289-290 và test tests/test_shift_dp.py:69 — invariant hiện tại SAI như đã phát biểu; phiên bản đúng là 'DP_net ≥ baseline_net' và test phải chạy trên fixture có R > 0 (fixture hiện tại R=0 nên vô hiệu).",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Δ trở thành khoảng cách tối ưu thật, kiểm được. Chặn cả đường Δ<0 thứ hai (issue #8) trước khi C1 bật."
+    },
+    {
+      "title": "SWAP chỉ hợp lệ khi SOC dưới ngưỡng đổi vật lý của world",
+      "action_executable": "GO_SWAP đã executable trong sim; đây là THU HẸP miền khả thi, không mở rộng",
+      "solver_dua_tren": "shift_dp nhánh SWAP (:239-244) thêm gate soc ≤ band(vehicle.swap_soc_threshold_pct); bridge đã đọc khoá này (advice_bridge.py:673). KHÔNG phải số bịa — là ràng buộc world đang thi hành.",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Xoá kế hoạch TOÀN SWAP (9/12 bucket) và next_action='đi đổi pin' khi pin đầy. Kèm test ĐỎ-TRƯỚC mạnh hơn test_rest_when_zero_demand: ở cầu 0 phải là REST (hoặc END), KHÔNG được là SWAP."
+    },
+    {
+      "title": "Sửa sensitivity: cap TRƯỚC scale, và quét tham số thật chứ không chỉ demand đã bị cap",
+      "action_executable": "KHÔNG đổi action space; là uncertainty-quantification",
+      "solver_dua_tren": "_forecast_arrays :152 đổi min(cap, g×s) → min(cap, g)×s (đưa scale ra ngoài cap); và thêm hai dòng sensitivity theo p_accept và theo cap (hai tham số ĐANG chi phối nghiệm). Bổ sung assert đơn điệu mà comment test_shift_dp.py:131 đã hứa nhưng chưa ghim.",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Hết chuyện báo 'Δ bền với cầu −40%' khi con số không thể đổi. Đây là claim THUẬN LỢI đang được relay ra output — loại nguy hiểm nhất."
+    },
+    {
+      "title": "Neo sổ pin của solver vào tham số world (soc_cost dẫn xuất, không phải hằng)",
+      "action_executable": "KHÔNG đổi action space",
+      "solver_dua_tren": "soc_cost = ceil(exp_trips × km_per_trip × vehicle.swap_consume_pct_per_km / (100/soc_bands)) — mọi thừa số đã có; truyền qua solver_params(). Kèm test neo MỨC (không chỉ tỷ lệ scale) và một fixture đối chứng ΔSOC/giờ-online lấy từ trace sim.",
+      "chi_phi_uoc": "trung bình (cần một run đo ΔSOC thật để calibrate + regate)",
+      "ky_vong": "Hết drift 36% giữa hai sổ pin; DP không xếp swap sớm hơn cần. Cùng lớp fix với D-M3-17."
+    },
+    {
+      "title": "Khớp giả định vị trí giữa S2 và S4 (hoặc tối thiểu khai caveat)",
+      "action_executable": "KHÔNG đưa cell vào action space của S2 (product boundary + đã có S4)",
+      "solver_dua_tren": "advice_bridge.build_shift_plan_input dựng forecast theo world.standby_plan (S4 đã gán ô/bucket) khi positioning bật; nếu không thì thêm caveat 'forecast giả định tài xế ở lại ô hiện tại'. Đây là khớp hai kênh, không mở rộng.",
+      "chi_phi_uoc": "nhỏ (caveat) / trung bình (dùng standby_plan)",
+      "ky_vong": "Hết chuyện hai kênh của cùng advisor chạy trên hai giả định trái nhau; và tài xế ở vành đệm không còn nhận forecast 0 cả ca."
+    },
+    {
+      "title": "CÂU HỎI CHO CƯỜNG (không tự quyết): thời gian chờ/đổi pin có tính là nghỉ phục hồi?",
+      "action_executable": "n/a — quyết định chính sách, không phải mở rộng solver",
+      "solver_dua_tren": "Nếu CÓ: world phải cộng thời gian đó vào actor.rest_min (world.py:1113-1114 hiện chỉ cộng ở REST) VÀ nhánh SWAP của DP mới được giảm rl. Nếu KHÔNG: hiện tại đã đúng, chỉ còn MODEL GAP 'một bucket cho một việc ngắn'. TUYỆT ĐỐI không sửa một phía: nới cổng nghỉ là làm YẾU lan can một chiều §1.2b, phải qua policy_locks + duyệt.",
+      "chi_phi_uoc": "0 (câu hỏi)",
+      "ky_vong": "Chốt được thì DP hết mất 3/8 bucket cho downtime khi soc thấp — nhưng chỉ khi world đồng ý cùng định nghĩa."
+    }
+  ],
+
+  "lop_loi_station_choice_verdict": "S2 KHÔNG mắc nguyên bản của station_choice (nó không chọn không gian), nhưng mắc BỐN biến thể cùng họ, và ba trong bốn là nghiêm trọng hơn ca station_choice vì chúng làm SAI DẤU của chỉ số quyết định. (a) Lớp (a) 'objective thiếu vế mà world thật sự định giá': objective không có vế THỜI GIAN PHỤC VỤ THEO GIỜ — world định giá nó (speed 17 vs 25 km/h) nhưng solver dùng hằng 25′, đúng như station_choice cực tiểu downtime mà thiếu vế giá trị vị trí. (b) Lớp (c) 'kỳ vọng ≠ realized': DP QUYẾT ĐỊNH trên điểm đã lượng tử hoá còn world/evaluator TRẢ THƯỞNG trên điểm chính xác ⇒ hai sổ điểm, và hiệu số của chúng đủ để đảo dấu delta (−55.000đ). (c) Lớp (e) 'ràng buộc không bind hoặc bind đôi': cap service_min được đặt làm 'mitigation chống phóng đại' (comment :34-36) nhưng ĐO ra nó BIND ở 96,0% bucket — nó đã trở thành ràng buộc CHI PHỐI NGHIỆM, và vì nó phẳng nên nó xoá luôn bậc tự do mà DP tồn tại để khai thác. (d) Lớp (b) 'biến sim BIẾT nhưng solver BỎ QUA': tham số pin của world (swap_consume_pct_per_km) và ngưỡng đổi pin (swap_soc_threshold_pct) đều có sẵn và đều không được truyền — cùng lớp D-M3-17. Điểm chung của cả bốn: mỗi lần một hằng số RIÊNG của solver (service_min 25′, soc_cost 1 band, PBS 5) thay cho một đại lượng world đã biết, thì nó vừa lệch vừa KHÔNG AI ĐO ĐƯỢC vì không test nào neo MỨC — chỉ neo tỷ lệ.",
+
+  "gia_thuyet_da_bac_bo": [
+    "'Producer cộng thời gian swap vào rest_taken_min nhưng DP không tín dụng ⇒ hai nửa cùng ràng buộc lệch' — BÁC: world.py:1113-1114 chỉ cộng rest_min ở nhánh IdleAction.REST, GO_SWAP/GO_CHARGE không cộng. Nhất quán.",
+    "'DP hệ thống đặt nghỉ vào giờ peak điểm' — BÁC: đo 17.424 bucket REST, chỉ 12,7% rơi vào giờ peak, THẤP hơn tỷ lệ nền ~25%. DP phần lớn tránh peak đúng; lỗi dồn vào 4% cấu hình knife-edge.",
+    "'Bucket mất dòng forecast làm trượt chỉ số lịch NGAY HÔM NAY' — BÁC: bridge append 3 dòng cho mọi hint khác rỗng và không lọc 0; demand_field phủ giờ 5..23; world chạy từ 300 và starts bị chặn ở 1440 ⇒ không đến được. Giữ là LATENT.",
+    "'Sensitivity −20% luôn bằng base' — BÁC một phần: chỉ đúng khi grouped ≥ cap/0,8 = 3,0 (và −40% cần ≥ 4,0). Ở cell/giờ cầu thấp thì nó đổi, và đổi KHÔNG ĐƠN ĐIỆU (0 → +37.949 → +26.648). Phát biểu đúng: hai dòng sensitivity là hàm của 'khi nào cap thôi bind', không phải độ nhạy cầu của giá trị kế hoạch.",
+    "'Bellman/terminal/END có đếm kép' — BÁC: END không có continuation, reconstruct cộng bonus đúng một lần ngoài vòng lặp, terminal chỉ hợp lệ ở rl=0. Không có đếm kép tiền."
+  ],
+
+  "chua_kiem_chung": [
+    "Chưa chạy sim thật để đếm tần suất actor rơi vào vành đệm với hint toàn 0 (điều kiện của kế hoạch TOÀN SWAP) — reachability là PLAUSIBLE, không CONFIRMED.",
+    "Chưa đo ΔSOC/giờ-online từ trace sim để chốt con số drift 36% của sổ pin (chỉ tính từ config + pickup TB đã ghi trong config).",
+    "Chưa đo runtime của DP khi PBS=1 (ô ×5) — bắt buộc đo trước khi chốt đề xuất #1.",
+    "Chưa đọc UPDATE-155 để biết kênh shift_plan_end_only đã từng được báo số nào chưa (nếu có, con số đó phải kiểm lại vì END bất khả).",
+    "Mọi số ở đây là MOCK theo configs/pilot_dongda.yaml + λ config Đống Đa, KHÔNG phải số thật của GSM.",
+    "Kênh advice.channels.shift_plan hiện = false (ĐA-07) và shift_plan_end_only = false ⇒ KHÔNG có tác hại đang chạy trong production; mọi severity ở đây là severity CHO VIỆC MỞ LẠI kênh."
+  ],
+
+  "known_debts_not_repeated": [
+    "ADV-01 (floor điểm bucket, PBS 15→5) — CITE; nhưng câu hỏi (2) hỏi 'còn dư nào?' nên math_issues #2 trả lời phần DƯ, có số và có can thiệp nhân quả.",
+    "ADV-04 (baseline tín dụng nghỉ) — CITE; đã kiểm lại và ĐÚNG (cả hai nhánh gọi _required_rest với state). Ba lệch CÒN LẠI của baseline được ghi mới ở câu trả lời (3).",
+    "ĐA-07 (kênh shift_plan bị bác, n=100 seed) — CITE; câu trả lời (5) phân tách ba nguyên nhân và nói rõ KHÔNG kết luận ĐA-07 sẽ lật.",
+    "D-E4-01 (kênh chi phí trơ trong world zero-cost) — CITE; là nguyên nhân (iii) và là lý do phanh swap_fee chết.",
+    "D-ADV-02 (shift_extend mù point_window) — kênh KHÁC, không chạm.",
+    "D-M3-17 (UI tự tính phạm vi pin khác engine) — CITE làm TIỀN LỆ cùng lớp cho math_issues #6."
+  ]
+}
