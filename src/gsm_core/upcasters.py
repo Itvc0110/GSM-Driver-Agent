@@ -60,6 +60,20 @@ def _checkpoint_100_to_110(record: dict) -> dict:
     }
 
 
+@_register("advice_checkpoint", "1.1.0")
+def _checkpoint_110_to_120(record: dict) -> dict:
+    """1.2 mang numbers/caveats của solver report + fingerprint vào record.
+
+    Record 1.1 không lưu numbers/caveats ⇒ danh sách RỖNG là sự thật của record đó
+    (muốn đủ thì đọc lại artifact qua `solver_report_refs`). `fingerprint` thì TÁI LẬP
+    được chính xác từ các material field đã persist — dùng đúng hàm production để
+    dedup product khớp giữa record cũ và candidate mới."""
+    from gsm_core.lifecycle.checkpoint import checkpoint_fingerprint
+    return {**record, "schema_version": "1.2.0",
+            "numbers": [], "caveats": [],
+            "fingerprint": checkpoint_fingerprint(record)}
+
+
 @_register("advice_checkpoint_event", "1.0.0")
 def _checkpoint_event_100_to_110(record: dict) -> dict:
     """1.1 adds an event enum value but does not reinterpret old events."""

@@ -594,7 +594,11 @@ class AdviceActionBridge:
         schedule = sol.get("schedule") or []
         if not schedule:
             return None
-        self._capture_checkpoint("S2", actor, now_min, spi, report, "shift_plan")
+        # bucket hiện tại theo đúng lưới của build_shift_plan_input (start = floor theo b)
+        b = self.bucket_min
+        bucket_end_min = int(now_min) - int(now_min) % b + b
+        self._capture_checkpoint("S2", actor, now_min, spi, report, "shift_plan",
+                                 validity_hints={"bucket_end_min": float(bucket_end_min)})
 
         # BẪY 1: hành động TỨC THỜI = bucket hiện tại, KHÔNG phải `next_action`
         solver_action = str(schedule[0].get("action") or "ONLINE").upper()
@@ -744,7 +748,10 @@ class AdviceActionBridge:
             return None                      # S7 KHÔNG bịa vấn đề khi tài xế không chờ nhiều
         w = sol.get("worst_window")
         if w:
-            self._capture_checkpoint("S7", actor, now_min, ii, rep, "rest_window")
+            # window S7 là GIỜ trong ngày; kết thúc = (hour+1)*60 phút sim (run 1 ngày).
+            self._capture_checkpoint(
+                "S7", actor, now_min, ii, rep, "rest_window",
+                validity_hints={"rest_window_end_min": (int(w["hour"]) + 1) * 60.0})
         return int(w["hour"]) if w else None
 
     def should_defer_rest(self, actor: Actor, now_min: float, hour: int,
@@ -1080,14 +1087,19 @@ class AdviceActionBridge:
 
     def _capture_checkpoint(self, solver_name: str, actor: Actor, now_min: float,
                             solver_input: dict, solver_report: dict,
-                            channel: str) -> str | None:
+                            channel: str,
+                            validity_hints: dict[str, float] | None = None) -> str | None:
         if self.checkpoint_trace is None:
             return None
         source_decision_id = (
             f"slth-{self.run_id}-{actor.actor_id}-{channel}-{decision_bucket(now_min)}")
+        # UPDATE-147: freshness THẬT = chu kỳ consult của chính kênh này (interval_min),
+        # không phải hằng +1' bịa trong trace. Boundary solver-specific do callsite khai.
+        hints = {"freshness_deadline_min": now_min + self.interval_min}
+        hints.update(validity_hints or {})
         return self.checkpoint_trace.capture(
             solver_name, actor, now_min, solver_input, solver_report,
-            source_decision_id)
+            source_decision_id, validity_hints=hints)
 
 
 def _map_action(solver_action: str, actor: Actor) -> IdleAction | None:

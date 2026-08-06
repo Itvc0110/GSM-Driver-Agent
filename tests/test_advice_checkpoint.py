@@ -230,7 +230,10 @@ def test_checkpoint_store_rejects_invalid_transition_before_persist(tmp_path):
         with pytest.raises(CheckpointTransitionError):
             store.append_event(_event("displayed", "e-2", display_id="display-1",
                                       actor="client"))
-        assert store.events("ckpt-1") == [_event("created", "created:ckpt-1")]
+        # created event mang version của EVENT entity (1.1.0), không kéo theo version
+        # của checkpoint record (UPDATE-147).
+        assert store.events("ckpt-1") == [
+            _event("created", "created:ckpt-1", schema_version="1.1.0")]
 
 
 def test_checkpoint_store_rejects_conflicting_idempotency_retry(tmp_path):
@@ -244,6 +247,7 @@ def test_checkpoint_store_rejects_conflicting_idempotency_retry(tmp_path):
 
 
 def test_checkpoint_1_0_upcasts_to_1_1_without_inventing_source_refs():
+    from gsm_core.lifecycle.checkpoint import checkpoint_fingerprint
     from gsm_core.schema_registry import SchemaRegistry
     from gsm_core.upcasters import upcast
 
@@ -251,11 +255,17 @@ def test_checkpoint_1_0_upcasts_to_1_1_without_inventing_source_refs():
     old = _checkpoint()
     assert reg.validate("advice_checkpoint", old) == []
     new = upcast("advice_checkpoint", old)
-    assert new["schema_version"] == "1.1.0"
+    # chuỗi upcast đi tới latest: 1.0.0 → 1.1.0 → 1.2.0 (UPDATE-147)
+    assert new["schema_version"] == "1.2.0"
     assert new["source_decision_id"] is None
     assert new["run_id"] is None
     assert new["solver_input_refs"] == []
     assert new["solver_report_refs"] == []
+    # 1.2.0: record cũ không lưu numbers/caveats ⇒ rỗng (không bịa);
+    # fingerprint tái lập từ material fields đã persist.
+    assert new["numbers"] == []
+    assert new["caveats"] == []
+    assert new["fingerprint"] == checkpoint_fingerprint(old)
     assert reg.validate("advice_checkpoint", new) == []
     assert old["schema_version"] == "1.0.0", "upcaster phải pure"
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import TypedDict
 
 
@@ -28,8 +28,10 @@ _ALLOWED_TRANSITIONS: dict[str | None, frozenset[str]] = {
     None: frozenset({"created"}),
     "created": frozenset({"queued", "ready", "suppressed", "expired", "superseded"}),
     "queued": frozenset({"ready", "expired", "superseded", "suppressed"}),
-    "ready": frozenset({"generation_started", "offered", "expired", "superseded",
-                         "suppressed"}),
+    # `ready -> queued`: tài xế bắt đầu di chuyển SAU khi checkpoint đã ready — moving
+    # gate phải để lại dấu vết lifecycle thay vì silent không event (UPDATE-147).
+    "ready": frozenset({"generation_started", "offered", "queued", "expired",
+                         "superseded", "suppressed"}),
     "generation_started": frozenset({"generated", "generation_failed", "expired",
                                       "superseded"}),
     "generation_failed": frozenset({"generation_started", "offered", "expired",
@@ -75,6 +77,7 @@ CHECKPOINT_RECORD_FIELDS = frozenset({
     "checkpoint_id", "driver_id", "topic", "surface", "trigger_type",
     "current_action", "future_plan", "action_window", "validity",
     "urgency_band", "material_revision", "reason_code", "confidence_band",
+    "numbers", "caveats", "fingerprint",
     "snapshot_ref", "solver_artifact_ref", "source_decision_id", "run_id",
     "solver_input_refs", "solver_report_refs", "solver_set", "data_mode",
     "is_mock", "created_at",
@@ -82,10 +85,18 @@ CHECKPOINT_RECORD_FIELDS = frozenset({
 
 
 def checkpoint_record(candidate: dict) -> dict:
-    """Strip policy-only fields and return the closed persisted checkpoint shape."""
-    return {"schema_version": "1.1.0", **{
+    """Strip policy-only fields and return the closed persisted checkpoint shape.
+
+    1.2.0 giữ lại `numbers`/`caveats` của solver report và `fingerprint` — trước đây
+    ba thứ này bị strip nên card nghèo facts và dedup product không bao giờ khớp
+    record đã persist (UPDATE-146 §4-G2).
+    """
+    record = {"schema_version": "1.2.0", **{
         key: candidate.get(key) for key in CHECKPOINT_RECORD_FIELDS
     }}
+    record["numbers"] = list(record.get("numbers") or [])
+    record["caveats"] = list(record.get("caveats") or [])
+    return record
 
 
 def _event_sort_key(event: dict) -> tuple[datetime, str]:
@@ -142,6 +153,46 @@ def _topic_for_action(code: str, solver: str) -> str:
     return "shift_timing"
 
 
+def _schedule_step_minutes(schedule: list[dict], bucket_end_hint: str | None,
+                           first_bucket: str | None) -> float | None:
+    """Bước lưới bucket suy từ CHÍNH nhãn schedule của solver (không bịa hằng số).
+
+    Ưu tiên hiệu của hai nhãn liên tiếp; schedule một phần tử thì dùng
+    `bucket_end` hint mà producer cung cấp. Không suy ra được ⇒ None (window
+    giữ None thay vì phát minh)."""
+    labels = [item.get("bucket") for item in schedule
+              if isinstance(item, dict) and item.get("bucket")]
+    for left, right in zip(labels, labels[1:]):
+        try:
+            delta = (datetime.fromisoformat(right)
+                     - datetime.fromisoformat(left)).total_seconds() / 60.0
+        except (TypeError, ValueError):
+            continue
+        if delta > 0:
+            return delta
+    if bucket_end_hint and first_bucket:
+        try:
+            delta = (datetime.fromisoformat(bucket_end_hint)
+                     - datetime.fromisoformat(first_bucket)).total_seconds() / 60.0
+        except (TypeError, ValueError):
+            return None
+        if delta > 0:
+            return delta
+    return None
+
+
+def _plan_window(bucket_label: str | None, step_min: float | None) -> dict | None:
+    """Window {start,end} của một bucket trong lịch S2 — thuần từ dữ liệu solver."""
+    if not bucket_label or not step_min:
+        return None
+    try:
+        start = datetime.fromisoformat(bucket_label)
+    except (TypeError, ValueError):
+        return None
+    return {"start": start.isoformat(),
+            "end": (start + timedelta(minutes=step_min)).isoformat()}
+
+
 def normalize_solver_decision(
     solver_name: str,
     snapshot: dict,
@@ -157,15 +208,22 @@ def normalize_solver_decision(
     solver = str(solver_name).upper()
     solution = solver_report.get("solution") or {}
     future: list[dict] = []
+    action_window = solution.get("action_window")
 
     if solver == "S2":
         current_raw, future_raw = normalize_shift_plan(solution)
         current_code = (current_raw or {}).get("action")
         current = _canonical_action(current_code)
+        step_min = _schedule_step_minutes(
+            solution.get("schedule") or [], snapshot.get("bucket_end"),
+            (current_raw or {}).get("bucket"))
+        if action_window is None:
+            action_window = _plan_window((current_raw or {}).get("bucket"), step_min)
         for step in future_raw:
             action = _canonical_action(step.get("action"))
             if action is not None:
-                future.append({**action, "window": step.get("window")})
+                window = step.get("window") or _plan_window(step.get("bucket"), step_min)
+                future.append({**action, "window": window})
     elif solver == "S1":
         current_code = ("NO_ACTION" if solution.get("already_maxed")
                         else "PROTECT_ELIGIBILITY")
@@ -181,13 +239,18 @@ def normalize_solver_decision(
         current = _canonical_action(current_code)
 
     freshness = snapshot.get("freshness_deadline") or solver_input.get("freshness_deadline")
+    # Boundary hint có thể tới từ solver_input (đường l1r) HOẶC từ snapshot của producer
+    # (đường sim — UPDATE-147: producer khai boundary thật thay vì để freshness giả +1'
+    # che mọi window của solver).
     validity_until = normalize_validity(
         solver,
         shift_end=snapshot.get("shift_end"),
         policy_effective_boundary=solver_input.get("policy_effective_boundary"),
-        solver_bucket_end=solver_input.get("bucket_end"),
-        allocation_bucket_end=solver_input.get("allocation_bucket_end"),
-        rest_window_end=solver_input.get("rest_window_end"),
+        solver_bucket_end=solver_input.get("bucket_end") or snapshot.get("bucket_end"),
+        allocation_bucket_end=(solver_input.get("allocation_bucket_end")
+                               or snapshot.get("allocation_bucket_end")),
+        rest_window_end=(solver_input.get("rest_window_end")
+                         or snapshot.get("rest_window_end")),
         freshness_deadline=freshness,
     )
     observed_at = snapshot.get("observed_at")
@@ -199,7 +262,7 @@ def normalize_solver_decision(
         "trigger_type": snapshot.get("trigger_type") or "solver_update",
         "current_action": current,
         "future_plan": future,
-        "action_window": solution.get("action_window"),
+        "action_window": action_window,
         "validity": {
             "valid_from": observed_at,
             "valid_until": validity_until,
@@ -208,6 +271,11 @@ def normalize_solver_decision(
         "urgency_band": solver_report.get("urgency_band") or "medium",
         "material_revision": str(solver_report.get("material_revision") or "1"),
         "reason_code": str(solver_report.get("reason_code") or "solver_recommendation"),
+        # numbers/caveats là dữ liệu solver ĐÃ TÍNH (typed, có source) — giữ nguyên trên
+        # record để card không phải phụ thuộc artifact lookup (UPDATE-147).
+        "numbers": [dict(number) for number in (solver_report.get("numbers") or [])
+                    if isinstance(number, dict)],
+        "caveats": [str(caveat) for caveat in (solver_report.get("caveats") or [])],
         "confidence": confidence,
         "confidence_band": "high" if confidence >= 0.8 else "medium" if confidence >= 0.5 else "low",
         "snapshot_ref": _content_ref(snapshot),
@@ -302,11 +370,18 @@ def checkpoint_fingerprint(candidate: dict) -> str:
         recommendation = {}
     if action is None:
         action = recommendation.get("action")
+    future_plan = candidate.get("future_plan") or []
+    head = future_plan[0] if future_plan and isinstance(future_plan[0], dict) else None
     material = {
         "topic": candidate.get("topic"),
         "surface": candidate.get("surface"),
         "current_action": action,
         "action_window": candidate.get("action_window"),
+        # Hành động KẾ TIẾP (code + window) là nội dung material với tài xế — plan đổi
+        # bucket SWAP thì đây là một lời khuyên KHÁC, không được dedup nhầm (UPDATE-147).
+        # Đuôi lịch xa hơn không vào fingerprint để revision không nổ theo từng poll.
+        "future_head": ({"code": head.get("code"), "window": head.get("window")}
+                        if head is not None else None),
         "urgency_band": candidate.get("urgency_band"),
         "material_revision": candidate.get("material_revision"),
         "reason_code": candidate.get("reason_code"),

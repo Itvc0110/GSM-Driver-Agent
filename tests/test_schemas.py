@@ -64,7 +64,7 @@ def test_all_entities_registered():
 LATEST_VERSIONS = {
     "shift_plan_input": "1.1.0",
     "policy_bundle": "1.1.0",
-    "advice_checkpoint": "1.1.0",
+    "advice_checkpoint": "1.2.0",
     "advice_checkpoint_event": "1.1.0",
     "advice_artifact": "1.1.0",
     "agent_presentation_input": "1.1.0",

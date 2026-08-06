@@ -14,7 +14,9 @@ from typing import Iterable
 from gsm_core.vn_format import render_number_vn
 
 
-TEMPLATE_VERSION = "checkpoint-template-v1"
+# v2 (UPDATE-147): SWAP/REST render action_window thật ("trong khung HH:MM–HH:MM")
+# khi record 1.2.0 mang window; wording không window giữ nguyên v1.
+TEMPLATE_VERSION = "checkpoint-template-v2"
 
 
 @dataclass(frozen=True)
@@ -108,10 +110,15 @@ class CheckpointTemplateRegistry:
                 "Lý do: kế hoạch hiện tại giữ trạng thái online trước khi đổi pin.",
                 "S2_ONLINE_NOW_SWAP_LATER", TEMPLATE_VERSION)
 
+        action_window = _window_text(checkpoint.get("action_window"))
+        swap_summary = (f"Đổi pin trong khung {action_window}." if action_window
+                        else "Đổi pin trong cửa sổ được đề xuất.")
+        rest_summary = (f"Nghỉ trong khung {action_window}." if action_window
+                        else "Nghỉ trong cửa sổ đang còn hiệu lực.")
         templates = {
-            "SWAP": ("Chuẩn bị đổi pin", "Đổi pin trong cửa sổ được đề xuất.",
+            "SWAP": ("Chuẩn bị đổi pin", swap_summary,
                       "Lý do: cần bảo vệ phần ca còn lại.", "S2_SWAP_NOW"),
-            "REST": ("Nghỉ trong khung này", "Nghỉ trong cửa sổ đang còn hiệu lực.",
+            "REST": ("Nghỉ trong khung này", rest_summary,
                      "Lý do: kế hoạch đã tính trạng thái nghỉ và thời gian trong ca.",
                      "S7_REST_WINDOW"),
             "END": ("Kết ca", "Kết ca theo ranh giới kế hoạch hiện tại.",

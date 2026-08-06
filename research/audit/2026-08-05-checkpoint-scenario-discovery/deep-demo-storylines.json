@@ -1,0 +1,5189 @@
+{
+  "evidence_type": "read_only_storyline_projection",
+  "provenance": {
+    "data_mode": "sim-engine",
+    "is_mock": true,
+    "seed": 1000,
+    "run_id": "1000-B-sp+al-all-c9beb6ef2"
+  },
+  "selection_note": "Actors chosen from deep-opportunity-by-actor.csv: 35 energy/bonus/mission, 70 rest+energy+bonus, 37 newbie+bonus+mission. Selection is not a fixture.",
+  "stories": [
+    {
+      "seed": 1000,
+      "run_id": "1000-B-sp+al-all-c9beb6ef2",
+      "actor_id": 35,
+      "driver_id": "d-35",
+      "archetype": "P3",
+      "fleet": "swap",
+      "shift": [
+        550.0334379402439,
+        1231.54581443587
+      ],
+      "journey_metrics": {
+        "online_min": 682.4,
+        "occupied_min": 197.4,
+        "idle_min": 256.2,
+        "utilization": 0.2894,
+        "minutes_by_kind": {
+          "charge": 16.1,
+          "enroute": 67.3,
+          "idle": 256.2,
+          "on_trip": 197.4,
+          "relocate": 108.7,
+          "rest": 36.7
+        },
+        "offers": 18,
+        "accepted": 15,
+        "declined": 1,
+        "skipped_soc": 2,
+        "trips_completed": 15,
+        "cancelled_after_accept": 0,
+        "acceptance_rate": 0.8333,
+        "completion_rate": 1.0,
+        "payout_vnd": 330636,
+        "trip_payout_vnd": 260636,
+        "day_bonus_vnd": 0,
+        "mission_reward_vnd": 70000,
+        "newbie_vnd": 0,
+        "bonus_share": 0.2117,
+        "gross_vnd": 347514,
+        "points": 90,
+        "soc_end_pct": 56.5,
+        "decline_reasons": {
+          "economics": 1,
+          "base_behavior": 0
+        }
+      },
+      "checkpoints": [
+        {
+          "checkpoint_id": "ckpt-7dc5283a0e987d48ac3e81ba",
+          "created_min": 550.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T09:00:00+07:00",
+            "end": "2026-07-01T10:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T09:10:00+07:00",
+            "valid_until": "2026-07-01T09:40:00+07:00",
+            "freshness_deadline": "2026-07-01T09:40:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 334478.4,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 334478.4,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 120.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 60000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-aeba21deca764e7d747e849e",
+              "checkpoint_id": "ckpt-7dc5283a0e987d48ac3e81ba",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-18",
+              "segment_id": null,
+              "observed_event_id": "sim-event-484b13d86da45368066147a1",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-5b8fe7ec512cbad7c209fec8",
+          "created_min": 572.0,
+          "state": "ready",
+          "solver_set": [
+            "S1"
+          ],
+          "topic": "bonus_eligibility",
+          "current_action": {
+            "code": "PROTECT_ELIGIBILITY",
+            "label_id": "action.protect_eligibility"
+          },
+          "future_plan": [],
+          "action_window": null,
+          "validity": {
+            "valid_from": "2026-07-01T09:32:00+07:00",
+            "valid_until": "2026-07-01T10:02:00+07:00",
+            "freshness_deadline": "2026-07-01T10:02:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 55.0,
+              "unit": "points",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 7.971,
+              "unit": "points_per_hour",
+              "source": "dp:policy_theoretical"
+            },
+            {
+              "value": 6.9,
+              "unit": "hours",
+              "source": "dp:policy_theoretical"
+            },
+            {
+              "value": 11.0,
+              "unit": "trips",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "tốc độ điểm có phần dùng ước lượng lý thuyết (thiếu lịch sử cá nhân) — độ tin thấp",
+            "số cuốc thực nhận phụ thuộc nhu cầu (demand proxy) — không đảm bảo"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-df1d946f49995c6d6b2fe99f",
+              "checkpoint_id": "ckpt-5b8fe7ec512cbad7c209fec8",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-accept_lift-19",
+              "segment_id": null,
+              "observed_event_id": "sim-event-649530a5c472e13f85809913",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-876f76941949746e8caff353",
+          "created_min": 595.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T09:00:00+07:00",
+            "end": "2026-07-01T10:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T09:55:00+07:00",
+            "valid_until": "2026-07-01T10:00:00+07:00",
+            "freshness_deadline": "2026-07-01T10:25:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 334478.4,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 334478.4,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 135.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 60000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-bed7a414b24e723ced20a233",
+              "checkpoint_id": "ckpt-876f76941949746e8caff353",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-19",
+              "segment_id": null,
+              "observed_event_id": "sim-event-dfef2b6ef23c61b4a78a679e",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-6d81c6a17bcb00acf7c7bd21",
+          "created_min": 643.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T10:00:00+07:00",
+            "end": "2026-07-01T11:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T10:43:00+07:00",
+            "valid_until": "2026-07-01T11:00:00+07:00",
+            "freshness_deadline": "2026-07-01T11:13:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 196056.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 195892.62,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 163.38,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 108.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-617fbb54f04d9eee5c8b46e3",
+              "checkpoint_id": "ckpt-6d81c6a17bcb00acf7c7bd21",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-21",
+              "segment_id": null,
+              "observed_event_id": "sim-event-ccf655d6a8f4f6ee699cffce",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-243346b4ebdfd08f16f789c8",
+          "created_min": 674.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T11:00:00+07:00",
+            "end": "2026-07-01T12:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T11:14:00+07:00",
+            "valid_until": "2026-07-01T11:44:00+07:00",
+            "freshness_deadline": "2026-07-01T11:44:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 196056.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 196056.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 108.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-ea2ca9a6767b2cf56651fafa",
+              "checkpoint_id": "ckpt-243346b4ebdfd08f16f789c8",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-22",
+              "segment_id": null,
+              "observed_event_id": "sim-event-ccf655d6a8f4f6ee699cffce",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-f9fcc7d9b83c23bf242fc6da",
+          "created_min": 736.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T12:00:00+07:00",
+            "end": "2026-07-01T13:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T12:16:00+07:00",
+            "valid_until": "2026-07-01T12:46:00+07:00",
+            "freshness_deadline": "2026-07-01T12:46:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 168048.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 168048.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 98.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-8ccd5ce87efaa35bc5d1b5b0",
+              "checkpoint_id": "ckpt-f9fcc7d9b83c23bf242fc6da",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-24",
+              "segment_id": null,
+              "observed_event_id": "sim-event-8f2129fa4d7b027ec72761cf",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-f8f3b462e2ca98271464304a",
+          "created_min": 781.0,
+          "state": "ready",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "energy",
+          "current_action": {
+            "code": "SWAP",
+            "label_id": "action.swap"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T13:00:00+07:00",
+            "end": "2026-07-01T14:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T13:01:00+07:00",
+            "valid_until": "2026-07-01T13:31:00+07:00",
+            "freshness_deadline": "2026-07-01T13:31:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 145875.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 145875.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 95.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-aff2b1dfd38525f0771d2ee8",
+              "checkpoint_id": "ckpt-f8f3b462e2ca98271464304a",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-26",
+              "segment_id": "seg-892737486033710ac8c9e241",
+              "observed_event_id": null,
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-700c9e152caa27fa9b2ce71f",
+          "created_min": 845.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T14:00:00+07:00",
+            "end": "2026-07-01T15:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T14:05:00+07:00",
+            "valid_until": "2026-07-01T14:35:00+07:00",
+            "freshness_deadline": "2026-07-01T14:35:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 145875.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 145875.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 95.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-933ed1c5acb189f02a1646e6",
+              "checkpoint_id": "ckpt-700c9e152caa27fa9b2ce71f",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-28",
+              "segment_id": null,
+              "observed_event_id": "sim-event-c6c38d29d8fde5619bf391b5",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-7e238edb873847996c1d3f21",
+          "created_min": 912.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T15:00:00+07:00",
+            "end": "2026-07-01T16:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T15:12:00+07:00",
+            "valid_until": "2026-07-01T15:42:00+07:00",
+            "freshness_deadline": "2026-07-01T15:42:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 150034.286,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 150034.286,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 92.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-9cd4f52f4055bfdc1c7c2fa2",
+              "checkpoint_id": "ckpt-7e238edb873847996c1d3f21",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-30",
+              "segment_id": null,
+              "observed_event_id": "sim-event-19ee6dd6312a553875059de8",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-6d067333738a2577b596b08c",
+          "created_min": 943.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T16:00:00+07:00",
+                "end": "2026-07-01T17:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T15:00:00+07:00",
+            "end": "2026-07-01T16:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T15:43:00+07:00",
+            "valid_until": "2026-07-01T16:00:00+07:00",
+            "freshness_deadline": "2026-07-01T16:13:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 152535.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 152535.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 97.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-e028dd1b521e101b83eee046",
+              "checkpoint_id": "ckpt-6d067333738a2577b596b08c",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-31",
+              "segment_id": null,
+              "observed_event_id": "sim-event-6d3172609b47518f7df1eb1e",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-7b406fa879348e3bef9d3307",
+          "created_min": 975.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T17:00:00+07:00",
+                "end": "2026-07-01T18:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T16:00:00+07:00",
+            "end": "2026-07-01T17:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T16:15:00+07:00",
+            "valid_until": "2026-07-01T16:45:00+07:00",
+            "freshness_deadline": "2026-07-01T16:45:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 121901.25,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 121901.25,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 87.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-0a3c5812a2a10213d84cf4f1",
+              "checkpoint_id": "ckpt-7b406fa879348e3bef9d3307",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-32",
+              "segment_id": null,
+              "observed_event_id": "sim-event-ef272d8d40e3e99cd05f1e62",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-c02463b725f54618ab107ea6",
+          "created_min": 1023.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T17:00:00+07:00",
+            "end": "2026-07-01T18:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T17:03:00+07:00",
+            "valid_until": "2026-07-01T17:33:00+07:00",
+            "freshness_deadline": "2026-07-01T17:33:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 123360.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 123360.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 88.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-390cfa8ec194de2d84190dff",
+              "checkpoint_id": "ckpt-c02463b725f54618ab107ea6",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-34",
+              "segment_id": null,
+              "observed_event_id": "sim-event-ef272d8d40e3e99cd05f1e62",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-ee32fa603e8e6e78c401b981",
+          "created_min": 1061.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T18:00:00+07:00",
+                "end": "2026-07-01T19:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T17:00:00+07:00",
+            "end": "2026-07-01T18:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T17:41:00+07:00",
+            "valid_until": "2026-07-01T18:00:00+07:00",
+            "freshness_deadline": "2026-07-01T18:11:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 93018.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 93018.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 88.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-bd14f3ca80b59ea27c0c7011",
+              "checkpoint_id": "ckpt-ee32fa603e8e6e78c401b981",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-35",
+              "segment_id": null,
+              "observed_event_id": "sim-event-c90ee4d3dfa208cc5210991c",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-12c68d5c6440b3c457856a0a",
+          "created_min": 1099.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T18:00:00+07:00",
+            "end": "2026-07-01T19:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T18:19:00+07:00",
+            "valid_until": "2026-07-01T18:49:00+07:00",
+            "freshness_deadline": "2026-07-01T18:49:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 93654.545,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 93654.545,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 87.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-24df11ee1090482aa7582fbd",
+              "checkpoint_id": "ckpt-12c68d5c6440b3c457856a0a",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-36",
+              "segment_id": null,
+              "observed_event_id": "sim-event-c2a545f36a22722867b5a4d3",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-885be91af7ead4a4a9e84ab3",
+          "created_min": 1152.0,
+          "state": "ready",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "energy",
+          "current_action": {
+            "code": "SWAP",
+            "label_id": "action.swap"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T19:00:00+07:00",
+                "end": "2026-07-01T20:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T19:00:00+07:00",
+            "end": "2026-07-01T20:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T19:12:00+07:00",
+            "valid_until": "2026-07-01T19:42:00+07:00",
+            "freshness_deadline": "2026-07-01T19:42:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 27507.857,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 27507.857,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 79.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-bcc839e58065d9ef2a1558b2",
+              "checkpoint_id": "ckpt-885be91af7ead4a4a9e84ab3",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-38",
+              "segment_id": "seg-13db2d362b2cac25fc851aa0",
+              "observed_event_id": null,
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-b3ee8baf2e024e6411be81d2",
+          "created_min": 1227.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T20:00:00+07:00",
+                "end": "2026-07-01T21:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T20:00:00+07:00",
+            "end": "2026-07-01T21:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T20:27:00+07:00",
+            "valid_until": "2026-07-01T20:31:00+07:00",
+            "freshness_deadline": "2026-07-01T20:57:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 29175.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 29175.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 100.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-e734c2e0edac745f8f5edbc2",
+              "checkpoint_id": "ckpt-b3ee8baf2e024e6411be81d2",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-35-shift_plan-40",
+              "segment_id": null,
+              "observed_event_id": "sim-event-df69a1a1e401c520a9545be6",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        }
+      ],
+      "key_events": [
+        {
+          "t_min": 550.033,
+          "kind": "go_online",
+          "detail": {}
+        },
+        {
+          "t_min": 781.81,
+          "kind": "go_swap",
+          "detail": {
+            "station": 13665050694
+          }
+        },
+        {
+          "t_min": 803.827,
+          "kind": "swap_done",
+          "detail": {
+            "station": 13665050694,
+            "wait_min": 13.0
+          }
+        },
+        {
+          "t_min": 808.77,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 1117.333,
+          "kind": "order_skipped_soc",
+          "detail": {
+            "order_id": 886,
+            "soc_pct": 20.4,
+            "need_km": 8.35
+          }
+        },
+        {
+          "t_min": 1148.5,
+          "kind": "order_skipped_soc",
+          "detail": {
+            "order_id": 934,
+            "soc_pct": 9.6,
+            "need_km": 6.79
+          }
+        },
+        {
+          "t_min": 1152.275,
+          "kind": "go_swap",
+          "detail": {
+            "station": 13667135450
+          }
+        },
+        {
+          "t_min": 1158.492,
+          "kind": "swap_done",
+          "detail": {
+            "station": 13667135450,
+            "wait_min": 0.0
+          }
+        },
+        {
+          "t_min": 1174.353,
+          "kind": "mission_completed",
+          "detail": {
+            "mission_id": "m-allday12",
+            "reward_vnd": 40000,
+            "name": "12 cuốc trong ngày"
+          }
+        },
+        {
+          "t_min": 1194.688,
+          "kind": "mission_completed",
+          "detail": {
+            "mission_id": "m-evening6",
+            "reward_vnd": 30000,
+            "name": "6 cuốc khung tối 17-20h"
+          }
+        },
+        {
+          "t_min": 1232.399,
+          "kind": "end_shift",
+          "detail": {
+            "trips": 15,
+            "payout": 330636,
+            "points": 90,
+            "day_bonus": 0
+          }
+        }
+      ],
+      "long_idle_blocks_30m": [
+        {
+          "t0": 646.527,
+          "t1": 686.527,
+          "minutes": 40.0
+        },
+        {
+          "t0": 716.253,
+          "t1": 754.083,
+          "minutes": 37.83
+        },
+        {
+          "t0": 845.422,
+          "t1": 883.422,
+          "minutes": 38.0
+        },
+        {
+          "t0": 947.15,
+          "t1": 987.15,
+          "minutes": 40.0
+        }
+      ]
+    },
+    {
+      "seed": 1000,
+      "run_id": "1000-B-sp+al-all-c9beb6ef2",
+      "actor_id": 70,
+      "driver_id": "d-70",
+      "archetype": "P6",
+      "fleet": "swap",
+      "shift": [
+        300.0,
+        831.0893929284873
+      ],
+      "journey_metrics": {
+        "online_min": 536.5,
+        "occupied_min": 113.7,
+        "idle_min": 207.9,
+        "utilization": 0.2119,
+        "minutes_by_kind": {
+          "charge": 1.3,
+          "enroute": 39.4,
+          "idle": 207.9,
+          "on_trip": 113.7,
+          "relocate": 42.5,
+          "rest": 131.7
+        },
+        "offers": 10,
+        "accepted": 8,
+        "declined": 1,
+        "skipped_soc": 1,
+        "trips_completed": 7,
+        "cancelled_after_accept": 1,
+        "acceptance_rate": 0.8,
+        "completion_rate": 0.875,
+        "payout_vnd": 152384,
+        "trip_payout_vnd": 132384,
+        "day_bonus_vnd": 0,
+        "mission_reward_vnd": 20000,
+        "newbie_vnd": 0,
+        "bonus_share": 0.1312,
+        "gross_vnd": 176512,
+        "points": 45,
+        "soc_end_pct": 74.4,
+        "decline_reasons": {
+          "economics": 0,
+          "base_behavior": 1
+        }
+      },
+      "checkpoints": [
+        {
+          "checkpoint_id": "ckpt-1be5c6062e6f2b7c425ef5c1",
+          "created_min": 300.0,
+          "state": "ready",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "rest",
+          "current_action": {
+            "code": "REST",
+            "label_id": "action.rest"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T05:00:00+07:00",
+                "end": "2026-07-01T06:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T06:00:00+07:00",
+                "end": "2026-07-01T07:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T07:00:00+07:00",
+                "end": "2026-07-01T08:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T05:00:00+07:00",
+            "end": "2026-07-01T06:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T05:00:00+07:00",
+            "valid_until": "2026-07-01T05:30:00+07:00",
+            "freshness_deadline": "2026-07-01T05:30:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 225355.8,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 225355.8,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 88.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-86e2f293a5fb95e67e82bdf4",
+              "checkpoint_id": "ckpt-1be5c6062e6f2b7c425ef5c1",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-10",
+              "segment_id": "seg-11c76aca94dc94f3c6d1312e",
+              "observed_event_id": null,
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-2358de20cfdb2ab405d9a48a",
+          "created_min": 340.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T06:00:00+07:00",
+                "end": "2026-07-01T07:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T07:00:00+07:00",
+                "end": "2026-07-01T08:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T05:00:00+07:00",
+            "end": "2026-07-01T06:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T05:40:00+07:00",
+            "valid_until": "2026-07-01T06:00:00+07:00",
+            "freshness_deadline": "2026-07-01T06:10:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 225355.8,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 225355.8,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 77.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-a3dd2031f14bb08cc544e9e0",
+              "checkpoint_id": "ckpt-2358de20cfdb2ab405d9a48a",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-11",
+              "segment_id": null,
+              "observed_event_id": "sim-event-e94d80d12ae61e8b9ea410dd",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-f02b9456f886604590c25e12",
+          "created_min": 361.0,
+          "state": "ready",
+          "solver_set": [
+            "S1"
+          ],
+          "topic": "bonus_eligibility",
+          "current_action": {
+            "code": "PROTECT_ELIGIBILITY",
+            "label_id": "action.protect_eligibility"
+          },
+          "future_plan": [],
+          "action_window": null,
+          "validity": {
+            "valid_from": "2026-07-01T06:01:00+07:00",
+            "valid_until": "2026-07-01T06:31:00+07:00",
+            "freshness_deadline": "2026-07-01T06:31:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 60.0,
+              "unit": "points",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 9.972,
+              "unit": "points_per_hour",
+              "source": "dp:policy_theoretical"
+            },
+            {
+              "value": 6.017,
+              "unit": "hours",
+              "source": "dp:policy_theoretical"
+            },
+            {
+              "value": 10.0,
+              "unit": "trips",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "tốc độ điểm có phần dùng ước lượng lý thuyết (thiếu lịch sử cá nhân) — độ tin thấp",
+            "số cuốc thực nhận phụ thuộc nhu cầu (demand proxy) — không đảm bảo"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-956b613289e1a2da5529229f",
+              "checkpoint_id": "ckpt-f02b9456f886604590c25e12",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-accept_lift-12",
+              "segment_id": null,
+              "observed_event_id": "sim-event-3f658abcd2dc432e96cf49c4",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-4208ca4b64a4b9e314ed40fa",
+          "created_min": 371.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T07:00:00+07:00",
+                "end": "2026-07-01T08:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T06:00:00+07:00",
+            "end": "2026-07-01T07:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T06:11:00+07:00",
+            "valid_until": "2026-07-01T06:41:00+07:00",
+            "freshness_deadline": "2026-07-01T06:41:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 192796.5,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 162796.5,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 77.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-edb87e22feaa1371521d39e1",
+              "checkpoint_id": "ckpt-4208ca4b64a4b9e314ed40fa",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-12",
+              "segment_id": null,
+              "observed_event_id": "sim-event-4da806cd9423d9e6fcbc57b4",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-0fc9d8c41974bd392aa072e9",
+          "created_min": 476.0,
+          "state": "ready",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "energy",
+          "current_action": {
+            "code": "SWAP",
+            "label_id": "action.swap"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T07:00:00+07:00",
+                "end": "2026-07-01T08:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T07:00:00+07:00",
+            "end": "2026-07-01T08:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T07:56:00+07:00",
+            "valid_until": "2026-07-01T08:00:00+07:00",
+            "freshness_deadline": "2026-07-01T08:26:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 136150.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 136150.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 85.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-890f38b42041b5cd93112f4a",
+              "checkpoint_id": "ckpt-0fc9d8c41974bd392aa072e9",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-15",
+              "segment_id": "seg-0fe5645230fa9917307d7ba5",
+              "observed_event_id": null,
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-ff8efdc106ac460b97833c42",
+          "created_min": 523.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T08:00:00+07:00",
+            "end": "2026-07-01T09:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T08:43:00+07:00",
+            "valid_until": "2026-07-01T09:00:00+07:00",
+            "freshness_deadline": "2026-07-01T09:13:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 112032.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 112032.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 85.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-4255f42ee93388f814e9e97f",
+              "checkpoint_id": "ckpt-ff8efdc106ac460b97833c42",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-17",
+              "segment_id": null,
+              "observed_event_id": "sim-event-cf220383159d5262185cd9b7",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-798d0bef8a57a8d9031eed30",
+          "created_min": 553.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T09:00:00+07:00",
+            "end": "2026-07-01T10:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T09:13:00+07:00",
+            "valid_until": "2026-07-01T09:43:00+07:00",
+            "freshness_deadline": "2026-07-01T09:43:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 112032.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 112032.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 85.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-3b5dad7bda1a3d96beef09fe",
+              "checkpoint_id": "ckpt-798d0bef8a57a8d9031eed30",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-18",
+              "segment_id": null,
+              "observed_event_id": "sim-event-b9e199893fc69ea65d4ed477",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-51ac65d2072d5a10bd4b82fe",
+          "created_min": 615.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T10:00:00+07:00",
+            "end": "2026-07-01T11:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T10:15:00+07:00",
+            "valid_until": "2026-07-01T10:45:00+07:00",
+            "freshness_deadline": "2026-07-01T10:45:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 84024.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 84024.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 75.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-70f24707a403502af2d3c25a",
+              "checkpoint_id": "ckpt-51ac65d2072d5a10bd4b82fe",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-20",
+              "segment_id": null,
+              "observed_event_id": "sim-event-5319fcd4e31cdcb722a2e7ef",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-fe2f3db25d86f39e10ddc919",
+          "created_min": 694.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T11:00:00+07:00",
+            "end": "2026-07-01T12:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T11:34:00+07:00",
+            "valid_until": "2026-07-01T12:00:00+07:00",
+            "freshness_deadline": "2026-07-01T12:04:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 84024.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 84024.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 75.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-cae79a0e0e2b8885d2ea5b36",
+              "checkpoint_id": "ckpt-fe2f3db25d86f39e10ddc919",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-23",
+              "segment_id": null,
+              "observed_event_id": "sim-event-6eda21da62d355efa4a2ca71",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-51595bda4063bb027bef013a",
+          "created_min": 726.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T12:00:00+07:00",
+            "end": "2026-07-01T13:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T12:06:00+07:00",
+            "valid_until": "2026-07-01T12:36:00+07:00",
+            "freshness_deadline": "2026-07-01T12:36:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 56016.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 56016.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 65.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-b25129a655e91db734641797",
+              "checkpoint_id": "ckpt-51595bda4063bb027bef013a",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-24",
+              "segment_id": null,
+              "observed_event_id": "sim-event-1f7dd99a1ed12a5de71ca444",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-97190a3978c97fce7bbb7958",
+          "created_min": 803.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T13:00:00+07:00",
+            "end": "2026-07-01T14:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T13:23:00+07:00",
+            "valid_until": "2026-07-01T13:51:00+07:00",
+            "freshness_deadline": "2026-07-01T13:53:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 28008.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 28008.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 55.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-8a849bd2e2723927f391a1ca",
+              "checkpoint_id": "ckpt-97190a3978c97fce7bbb7958",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-70-shift_plan-26",
+              "segment_id": null,
+              "observed_event_id": "sim-event-b3136b223102c3da62d96df8",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        }
+      ],
+      "key_events": [
+        {
+          "t_min": 300.0,
+          "kind": "go_online",
+          "detail": {}
+        },
+        {
+          "t_min": 398.454,
+          "kind": "order_cancelled_after_accept",
+          "detail": {
+            "order_id": 62,
+            "wasted_min": 2.95
+          }
+        },
+        {
+          "t_min": 471.18,
+          "kind": "mission_completed",
+          "detail": {
+            "mission_id": "m-morning4",
+            "reward_vnd": 20000,
+            "name": "4 cuốc khung sáng 6-9h"
+          }
+        },
+        {
+          "t_min": 471.25,
+          "kind": "order_skipped_soc",
+          "detail": {
+            "order_id": 176,
+            "soc_pct": 10.1,
+            "need_km": 5.66
+          }
+        },
+        {
+          "t_min": 476.177,
+          "kind": "go_swap",
+          "detail": {
+            "station": 13675000206
+          }
+        },
+        {
+          "t_min": 481.571,
+          "kind": "swap_done",
+          "detail": {
+            "station": 13675000206,
+            "wait_min": 0.0
+          }
+        },
+        {
+          "t_min": 661.54,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 732.066,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 763.219,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 809.676,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 836.48,
+          "kind": "end_shift",
+          "detail": {
+            "trips": 7,
+            "payout": 152384,
+            "points": 45,
+            "day_bonus": 0
+          }
+        }
+      ],
+      "long_idle_blocks_30m": [
+        {
+          "t0": 527.953,
+          "t1": 567.953,
+          "minutes": 40.0
+        },
+        {
+          "t0": 601.61,
+          "t1": 641.61,
+          "minutes": 40.0
+        },
+        {
+          "t0": 698.066,
+          "t1": 732.066,
+          "minutes": 34.0
+        }
+      ]
+    },
+    {
+      "seed": 1000,
+      "run_id": "1000-B-sp+al-all-c9beb6ef2",
+      "actor_id": 37,
+      "driver_id": "d-37",
+      "archetype": "P4",
+      "fleet": "swap",
+      "shift": [
+        407.2464940351266,
+        923.6852120998684
+      ],
+      "journey_metrics": {
+        "online_min": 519.3,
+        "occupied_min": 165.6,
+        "idle_min": 139.7,
+        "utilization": 0.319,
+        "minutes_by_kind": {
+          "charge": 6.2,
+          "enroute": 41.7,
+          "idle": 139.7,
+          "on_trip": 165.6,
+          "relocate": 101.5,
+          "rest": 64.6
+        },
+        "offers": 16,
+        "accepted": 12,
+        "declined": 4,
+        "skipped_soc": 0,
+        "trips_completed": 12,
+        "cancelled_after_accept": 0,
+        "acceptance_rate": 0.75,
+        "completion_rate": 1.0,
+        "payout_vnd": 322500,
+        "trip_payout_vnd": 209344,
+        "day_bonus_vnd": 0,
+        "mission_reward_vnd": 60000,
+        "newbie_vnd": 53156,
+        "bonus_share": 0.3509,
+        "gross_vnd": 279126,
+        "points": 75,
+        "soc_end_pct": 97.9,
+        "decline_reasons": {
+          "economics": 4,
+          "base_behavior": 0
+        }
+      },
+      "checkpoints": [
+        {
+          "checkpoint_id": "ckpt-444e4ac4ebc41c47821b3ea6",
+          "created_min": 407.0,
+          "state": "ready",
+          "solver_set": [
+            "S1"
+          ],
+          "topic": "bonus_eligibility",
+          "current_action": {
+            "code": "PROTECT_ELIGIBILITY",
+            "label_id": "action.protect_eligibility"
+          },
+          "future_plan": [],
+          "action_window": null,
+          "validity": {
+            "valid_from": "2026-07-01T06:47:00+07:00",
+            "valid_until": "2026-07-01T07:17:00+07:00",
+            "freshness_deadline": "2026-07-01T07:17:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 60.0,
+              "unit": "points",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 30000.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 8.845,
+              "unit": "points_per_hour",
+              "source": "dp:policy_theoretical"
+            },
+            {
+              "value": 6.783,
+              "unit": "hours",
+              "source": "dp:policy_theoretical"
+            },
+            {
+              "value": 11.0,
+              "unit": "trips",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "tốc độ điểm có phần dùng ước lượng lý thuyết (thiếu lịch sử cá nhân) — độ tin thấp",
+            "số cuốc thực nhận phụ thuộc nhu cầu (demand proxy) — không đảm bảo"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-c7bf2a6ad12166dc4d641330",
+              "checkpoint_id": "ckpt-444e4ac4ebc41c47821b3ea6",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-accept_lift-13",
+              "segment_id": null,
+              "observed_event_id": "sim-event-6e3e5885850ebcdc59b13ffc",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-6c14a1259b2c05b746aaec54",
+          "created_min": 407.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T07:00:00+07:00",
+                "end": "2026-07-01T08:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T06:00:00+07:00",
+            "end": "2026-07-01T07:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T06:47:00+07:00",
+            "valid_until": "2026-07-01T07:00:00+07:00",
+            "freshness_deadline": "2026-07-01T07:17:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 196056.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 196056.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 88.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-bea178f2aeb76b1bfc760dbb",
+              "checkpoint_id": "ckpt-6c14a1259b2c05b746aaec54",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-13",
+              "segment_id": null,
+              "observed_event_id": "sim-event-705aaedac507eefbb7b947ca",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-06fe64eef27193bb121e7a78",
+          "created_min": 479.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T08:00:00+07:00",
+                "end": "2026-07-01T09:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T07:00:00+07:00",
+            "end": "2026-07-01T08:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T07:59:00+07:00",
+            "valid_until": "2026-07-01T08:00:00+07:00",
+            "freshness_deadline": "2026-07-01T08:29:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 126036.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 126036.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 79.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-75b2525a8ed236dfc51fabae",
+              "checkpoint_id": "ckpt-06fe64eef27193bb121e7a78",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-15",
+              "segment_id": null,
+              "observed_event_id": "sim-event-81770362f9b3e698cd2bd6f9",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-ba7d632a8e65bc75f7c41466",
+          "created_min": 511.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T09:00:00+07:00",
+                "end": "2026-07-01T10:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T08:00:00+07:00",
+            "end": "2026-07-01T09:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T08:31:00+07:00",
+            "valid_until": "2026-07-01T09:00:00+07:00",
+            "freshness_deadline": "2026-07-01T09:01:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 116700.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 116700.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 75.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-40a0f1edcdeb45bc5de238ae",
+              "checkpoint_id": "ckpt-ba7d632a8e65bc75f7c41466",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-17",
+              "segment_id": null,
+              "observed_event_id": "sim-event-7f9fa6075902f96b5552e6d3",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-1561e84cdced3d0f4ac4bcbf",
+          "created_min": 554.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T09:00:00+07:00",
+            "end": "2026-07-01T10:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T09:14:00+07:00",
+            "valid_until": "2026-07-01T09:44:00+07:00",
+            "freshness_deadline": "2026-07-01T09:44:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 109406.25,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 109406.25,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 80.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-1077331526972b75561907be",
+              "checkpoint_id": "ckpt-1561e84cdced3d0f4ac4bcbf",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-18",
+              "segment_id": null,
+              "observed_event_id": "sim-event-7f9fa6075902f96b5552e6d3",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-10ec0a87404b0275aaea7644",
+          "created_min": 624.0,
+          "state": "ready",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "energy",
+          "current_action": {
+            "code": "SWAP",
+            "label_id": "action.swap"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T10:00:00+07:00",
+                "end": "2026-07-01T11:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T10:00:00+07:00",
+            "end": "2026-07-01T11:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T10:24:00+07:00",
+            "valid_until": "2026-07-01T10:54:00+07:00",
+            "freshness_deadline": "2026-07-01T10:54:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 84024.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 75551.58,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 8472.42,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 73.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-dcfb37c68e286112811ad5a3",
+              "checkpoint_id": "ckpt-10ec0a87404b0275aaea7644",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-20",
+              "segment_id": "seg-e83fa1dbf8eeafcaf657a647",
+              "observed_event_id": null,
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-863cebf557ea87530c9eaf97",
+          "created_min": 657.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T11:00:00+07:00",
+                "end": "2026-07-01T12:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T10:00:00+07:00",
+            "end": "2026-07-01T11:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T10:57:00+07:00",
+            "valid_until": "2026-07-01T11:00:00+07:00",
+            "freshness_deadline": "2026-07-01T11:27:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 89116.364,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 89116.364,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 82.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-669f2030f7b88a1bbf61f54a",
+              "checkpoint_id": "ckpt-863cebf557ea87530c9eaf97",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-21",
+              "segment_id": null,
+              "observed_event_id": "sim-event-2d52dcfbeacc06adb55e0480",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-3c35dd9f97db85254e07b843",
+          "created_min": 696.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T12:00:00+07:00",
+                "end": "2026-07-01T13:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T11:00:00+07:00",
+            "end": "2026-07-01T12:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T11:36:00+07:00",
+            "valid_until": "2026-07-01T12:00:00+07:00",
+            "freshness_deadline": "2026-07-01T12:06:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 89116.364,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 89116.364,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 82.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-889a74fe16f2ce0825b05cb1",
+              "checkpoint_id": "ckpt-3c35dd9f97db85254e07b843",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-23",
+              "segment_id": null,
+              "observed_event_id": "sim-event-3b12274d5b1be990884b9bb2",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-82d859679fbd5e7a598720c5",
+          "created_min": 727.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T12:00:00+07:00",
+            "end": "2026-07-01T13:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T12:07:00+07:00",
+            "valid_until": "2026-07-01T12:37:00+07:00",
+            "freshness_deadline": "2026-07-01T12:37:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 70020.0,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 62405.325,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 7614.675,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 79.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-7d44ef20047cd74db9bb378f",
+              "checkpoint_id": "ckpt-82d859679fbd5e7a598720c5",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-24",
+              "segment_id": null,
+              "observed_event_id": "sim-event-3b12274d5b1be990884b9bb2",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-8a8739d8139b72e83dc8a326",
+          "created_min": 768.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "REST",
+              "label_id": "action.rest",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T12:00:00+07:00",
+            "end": "2026-07-01T13:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T12:48:00+07:00",
+            "valid_until": "2026-07-01T13:00:00+07:00",
+            "freshness_deadline": "2026-07-01T13:18:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 72713.077,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 72713.077,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 84.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-faf6dd6b2a9a27f007f1fe9e",
+              "checkpoint_id": "ckpt-8a8739d8139b72e83dc8a326",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-25",
+              "segment_id": null,
+              "observed_event_id": "sim-event-5cc6a80012a07b3a58e6e6f9",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-880003bb805eb5482251c167",
+          "created_min": 799.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T13:00:00+07:00",
+                "end": "2026-07-01T14:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T13:00:00+07:00",
+            "end": "2026-07-01T14:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T13:19:00+07:00",
+            "valid_until": "2026-07-01T13:49:00+07:00",
+            "freshness_deadline": "2026-07-01T13:49:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 72713.077,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 72713.077,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 84.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-90e844c69caf051c5358552d",
+              "checkpoint_id": "ckpt-880003bb805eb5482251c167",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-26",
+              "segment_id": null,
+              "observed_event_id": "sim-event-dad22f77112e601ed52935b5",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-c9c40331a7da6d3ecbcc23d8",
+          "created_min": 837.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T14:00:00+07:00",
+                "end": "2026-07-01T15:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T13:00:00+07:00",
+            "end": "2026-07-01T14:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T13:57:00+07:00",
+            "valid_until": "2026-07-01T14:00:00+07:00",
+            "freshness_deadline": "2026-07-01T14:27:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 50014.286,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 50014.286,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 83.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-1561d3d6c7b0c94548f9f6ed",
+              "checkpoint_id": "ckpt-c9c40331a7da6d3ecbcc23d8",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-27",
+              "segment_id": null,
+              "observed_event_id": "sim-event-4d507c434b36bfcc87f2248e",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-269e2e748a96e6a0a9233257",
+          "created_min": 885.0,
+          "state": "suppressed",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            },
+            {
+              "code": "SWAP",
+              "label_id": "action.swap",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T14:00:00+07:00",
+            "end": "2026-07-01T15:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T14:45:00+07:00",
+            "valid_until": "2026-07-01T15:00:00+07:00",
+            "freshness_deadline": "2026-07-01T15:15:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 26257.5,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 26257.5,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 84.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-812b9f133c507ea328c54676",
+              "checkpoint_id": "ckpt-269e2e748a96e6a0a9233257",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-29",
+              "segment_id": null,
+              "observed_event_id": "sim-event-711de147ea8230e658af75f4",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        },
+        {
+          "checkpoint_id": "ckpt-d48d5bb66f3749ad6c9b7e27",
+          "created_min": 926.0,
+          "state": "expired",
+          "solver_set": [
+            "S2"
+          ],
+          "topic": "shift_timing",
+          "current_action": {
+            "code": "ONLINE",
+            "label_id": "action.online"
+          },
+          "future_plan": [
+            {
+              "code": "ONLINE",
+              "label_id": "action.online",
+              "window": {
+                "start": "2026-07-01T15:00:00+07:00",
+                "end": "2026-07-01T16:00:00+07:00"
+              }
+            }
+          ],
+          "action_window": {
+            "start": "2026-07-01T15:00:00+07:00",
+            "end": "2026-07-01T16:00:00+07:00"
+          },
+          "validity": {
+            "valid_from": "2026-07-01T15:26:00+07:00",
+            "valid_until": "2026-07-01T15:23:00+07:00",
+            "freshness_deadline": "2026-07-01T15:56:00+07:00"
+          },
+          "reason_code": "solver_recommendation",
+          "numbers": [
+            {
+              "value": 26257.5,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 26257.5,
+              "unit": "vnd",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "dp:computed"
+            },
+            {
+              "value": 84.0,
+              "unit": "points",
+              "source": "dp:historical_forecast"
+            },
+            {
+              "value": 0.0,
+              "unit": "vnd",
+              "source": "policy_v:sim-policy-v0"
+            },
+            {
+              "value": 14587.5,
+              "unit": "vnd_per_order",
+              "source": "policy_v:sim-policy-v0"
+            }
+          ],
+          "caveats": [
+            "số cuốc thực phụ thuộc nhu cầu (forecast lịch sử) — không đảm bảo",
+            "advice timing, không chỉ định khu vực/đơn cụ thể",
+            "tỷ lệ nhận/hoàn thành đang DƯỚI ngưỡng — mốc thưởng sẽ KHÔNG được trả nếu giữ nguyên (E[payout] đã bỏ thưởng)"
+          ],
+          "execution_links": [
+            {
+              "execution_link_id": "exec-ab65d0dc61b813644a7afa4f",
+              "checkpoint_id": "ckpt-d48d5bb66f3749ad6c9b7e27",
+              "source_decision_id": "slth-1000-B-sp+al-all-c9beb6ef2-37-shift_plan-30",
+              "segment_id": null,
+              "observed_event_id": "sim-event-711de147ea8230e658af75f4",
+              "relation_type": "coincident",
+              "confidence": 0.6
+            }
+          ]
+        }
+      ],
+      "key_events": [
+        {
+          "t_min": 407.246,
+          "kind": "go_online",
+          "detail": {}
+        },
+        {
+          "t_min": 498.849,
+          "kind": "mission_completed",
+          "detail": {
+            "mission_id": "m-morning4",
+            "reward_vnd": 20000,
+            "name": "4 cuốc khung sáng 6-9h"
+          }
+        },
+        {
+          "t_min": 624.756,
+          "kind": "go_swap",
+          "detail": {
+            "station": 13665050694
+          }
+        },
+        {
+          "t_min": 636.291,
+          "kind": "swap_done",
+          "detail": {
+            "station": 13665050694,
+            "wait_min": 3.0
+          }
+        },
+        {
+          "t_min": 661.405,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 879.804,
+          "kind": "mission_completed",
+          "detail": {
+            "mission_id": "m-allday12",
+            "reward_vnd": 40000,
+            "name": "12 cuốc trong ngày"
+          }
+        },
+        {
+          "t_min": 885.603,
+          "kind": "go_swap",
+          "detail": {
+            "station": 13675000204
+          }
+        },
+        {
+          "t_min": 893.867,
+          "kind": "swap_done",
+          "detail": {
+            "station": 13675000204,
+            "wait_min": 0.0
+          }
+        },
+        {
+          "t_min": 896.981,
+          "kind": "rest",
+          "detail": {}
+        },
+        {
+          "t_min": 926.51,
+          "kind": "newbie_guarantee_topup",
+          "detail": {
+            "tenure_days": 25,
+            "gross_day": 279126,
+            "floor_vnd": 350000,
+            "topup_vnd": 53156
+          }
+        },
+        {
+          "t_min": 926.51,
+          "kind": "end_shift",
+          "detail": {
+            "trips": 12,
+            "payout": 322500,
+            "points": 75,
+            "day_bonus": 0
+          }
+        }
+      ],
+      "long_idle_blocks_30m": [
+        {
+          "t0": 554.813,
+          "t1": 596.5,
+          "minutes": 41.687
+        },
+        {
+          "t0": 771.79,
+          "t1": 811.79,
+          "minutes": 40.0
+        }
+      ]
+    }
+  ]
+}

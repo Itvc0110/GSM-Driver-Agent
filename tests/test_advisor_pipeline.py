@@ -129,6 +129,43 @@ def test_template_renders_each_feature(reg):
         assert out["fallback_used"] is True
 
 
+def test_f2_uses_current_schedule_action_and_separates_future_action():
+    """F2 phải nói đúng action hiện tại, không biến next_action thành "bây giờ"."""
+    report = {
+        "schema_version": "1.0.0", "solver": "shift_dp",
+        "problem_digest": "Kế hoạch ca.",
+        "inputs_used": [],
+        "solution": {
+            "schedule": [
+                {"bucket": "09:00", "action": "ONLINE"},
+                {"bucket": "10:00", "action": "SWAP"},
+            ],
+            "next_action": {
+                "bucket": "10:00", "action": "SWAP",
+                "reason": "đổi pin trước khi cạn",
+            },
+        },
+        "numbers": [], "sensitivity": [], "confidence": 0.7,
+        "caveats": [], "infeasible_reason": None,
+    }
+
+    out = render_template("F2", [report], [], numbers_registry={})
+    message = out["message"]
+    assert "Bây giờ" in message
+    assert "tiếp tục chạy" in message
+    assert "Bây giờ" in message and "đi đổi pin" not in message.split("Sắp tới", 1)[0]
+    assert "Sắp tới 10:00" in message
+    assert "đi đổi pin" in message
+    assert out["advice_spec"]["action_type"] == "online"
+    assert out["advice_spec"]["target_window"] == "09:00"
+
+    pack = build_context_pack("F2", [report], [], driver_id="d-1")
+    assert "schedule" in pack["prompt_data"]
+    assert "09:00: ONLINE" in pack["prompt_data"]
+    assert "next_action" in pack["prompt_data"]
+    assert "hành động hiện tại" in pack["instruction"]
+
+
 # ---------- episode_store ----------
 
 def test_episode_store_append_and_cache(tmp_path):

@@ -45,3 +45,4 @@ graph-out/
 
 # cache trung gian cua measure_e10 (1.3MB, deterministic tu seed — tai tao duoc)
 research/audit/2026-07-27-current-state/41-e10-tuning-cache.json
+research/audit/2026-08-05-checkpoint-inventory/checkpoint-timeline.json
