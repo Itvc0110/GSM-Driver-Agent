@@ -1,0 +1,66 @@
+{
+  "what": "F5 — lượt ghé vs thời gian giữ theo ô (ĐO, arm A)",
+  "mock": true,
+  "arm": "A",
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004
+  ],
+  "cong_nhieu_loan": "XANH",
+  "tong_idle_phut_ngay": 15310.0,
+  "share_idle_hai_o_hut": 0.554,
+  "giu_trung_vi_phut_moi_luot": 6.88,
+  "top8_o_hut_idle": [
+    {
+      "cell": "89415cb4bb3ffff",
+      "idle_phut_ngay": 5720.8,
+      "luot_vao_ngay": 191.6,
+      "giu_phut_moi_luot": 29.86
+    },
+    {
+      "cell": "89415cb4953ffff",
+      "idle_phut_ngay": 2760.8,
+      "luot_vao_ngay": 120.8,
+      "giu_phut_moi_luot": 22.85
+    },
+    {
+      "cell": "89415cb494bffff",
+      "idle_phut_ngay": 1647.2,
+      "luot_vao_ngay": 149.6,
+      "giu_phut_moi_luot": 11.01
+    },
+    {
+      "cell": "89415cb4b97ffff",
+      "idle_phut_ngay": 1219.6,
+      "luot_vao_ngay": 60.6,
+      "giu_phut_moi_luot": 20.13
+    },
+    {
+      "cell": "89415cb4e2bffff",
+      "idle_phut_ngay": 552.4,
+      "luot_vao_ngay": 56.8,
+      "giu_phut_moi_luot": 9.73
+    },
+    {
+      "cell": "89415cb4c03ffff",
+      "idle_phut_ngay": 306.8,
+      "luot_vao_ngay": 48.4,
+      "giu_phut_moi_luot": 6.34
+    },
+    {
+      "cell": "89415cb4c0bffff",
+      "idle_phut_ngay": 302.4,
+      "luot_vao_ngay": 38.2,
+      "giu_phut_moi_luot": 7.92
+    },
+    {
+      "cell": "89415cb4bb7ffff",
+      "idle_phut_ngay": 237.2,
+      "luot_vao_ngay": 0.2,
+      "giu_phut_moi_luot": 1186.0
+    }
+  ]
+}
