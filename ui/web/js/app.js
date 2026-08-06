@@ -102,7 +102,10 @@ function renderHeader() {
   const socElement = $("pill-soc");
   socElement.firstChild.nodeValue = `⚡ ${soc}% `;
   $("pill-soc-tag").hidden = S.state.soc_source !== "MOCK";
-  socElement.classList.toggle("low", soc < 25);
+  // E1a (r06 CO-3, họ D-M3-17): ngưỡng "pin thấp" đọc từ payload (engine swap_soc_threshold_pct)
+  // — KHÔNG hardcode (bản cũ 25 ≠ engine 20). Thiếu ngưỡng ⇒ không tô, không tự bịa số.
+  const socThr = Number(S.state.soc_low_threshold_pct);
+  socElement.classList.toggle("low", Number.isFinite(socThr) && soc < socThr);
   socElement.classList.toggle("is-mock", S.state.soc_source === "MOCK");
 }
 

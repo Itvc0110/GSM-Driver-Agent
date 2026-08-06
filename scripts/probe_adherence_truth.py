@@ -90,8 +90,10 @@ def probe_coins(base: Config, seeds) -> tuple[dict, dict, dict]:
         decisions[key] = out
         return out
 
-    def spy_claim(self, actor, topic, now_min, bucket_min=None):
-        out = orig_claim(self, actor, topic, now_min, bucket_min)
+    def spy_claim(self, actor, topic, now_min):
+        # E1a (BUG-PROBE-SPY): chữ ký cũ truyền thừa `bucket_min` — `_claim_effect` thật chỉ
+        # nhận (actor, topic, now_min) ⇒ TypeError ngay lượt đầu, cột claim/HỤT chết cả probe.
+        out = orig_claim(self, actor, topic, now_min)
         # `claim_moi` = quyết định LẦN ĐẦU được áp tác động (dedup đúng);
         # `claim_lap` = hỏi lại cùng quyết định trong cùng bucket (bị chặn — đúng).
         coins[topic]["claim_moi" if out else "claim_lap"] += 1

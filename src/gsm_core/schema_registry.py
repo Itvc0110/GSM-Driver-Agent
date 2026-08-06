@@ -26,10 +26,27 @@ Cơ chế (phương án 3 của audit `01-*` §8 — file versioned, chọn theo
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, FormatChecker
+
+# E1a (UPDATE-151 r08 REVIEW-092-5): validator dựng KHÔNG format_checker ⇒ `format: date-time`
+# trên 15 schema là chữ chết — `2029-02-31T00:00:00Z` lọt vào store append-only. ⚠ KHÔNG dùng
+# `Draft202012Validator.FORMAT_CHECKER` suông: jsonschema chỉ kiểm date-time khi có gói
+# `rfc3339-validator`, mà repo KHÔNG có (đã kiểm 2026-08-06: 'date-time' not in checkers) —
+# truyền nó vào là placebo đúng họ D-R12. Đăng ký checker THẬT bằng `datetime.fromisoformat`
+# (Python ≥3.11 nhận cả hậu tố 'Z' lẫn offset) — bắt được cả ngày không tồn tại lẫn chuỗi rác.
+_FORMAT_CHECKER = FormatChecker()
+
+
+@_FORMAT_CHECKER.checks("date-time", raises=ValueError)
+def _check_date_time(value):
+    if not isinstance(value, str):
+        return True                       # type sai đã có "type": "string" bắt — không kiểm kép
+    datetime.fromisoformat(value.replace("Z", "+00:00") if value.endswith("Z") else value)
+    return True
 
 # entity -> layer folder (spec §1.2–1.5 + §2–3; đếm hiện tại: xem ALL_ENTITIES)
 LAYER_OF: dict[str, str] = {
@@ -145,7 +162,9 @@ class SchemaRegistry:
 
     @lru_cache(maxsize=None)
     def _validator(self, entity: str, version: str | None = None) -> Draft202012Validator:
-        return Draft202012Validator(self.schema(entity, version))
+        # format_checker: xem comment `_FORMAT_CHECKER` đầu file (E1a — date-time phải có răng)
+        return Draft202012Validator(self.schema(entity, version),
+                                    format_checker=_FORMAT_CHECKER)
 
     def schema_version(self, entity: str) -> str:
         """Phiên bản LATEST (const của file không hậu tố) — giữ nguyên ngữ nghĩa API cũ."""

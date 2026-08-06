@@ -143,6 +143,24 @@ def _cohort_metrics(result) -> dict:
     for arch in sorted(by_arch_pay):
         out[f"payout_mean_{arch}"] = round(st.mean(by_arch_pay[arch]), 2)
         out[f"net_mean_{arch}"] = round(st.mean(by_arch_net[arch]), 2)
+    # E1a (UPDATE-151 r03 SWAP-07): metric pin phải báo THEO FLEET. Hai lý do đo được:
+    # (1) fleet confound 100% với archetype (P1=charge, P2/P4/P6/P7=swap) ⇒ so 2 đội bằng mean
+    # gộp là so persona chứ không phải công nghệ pin; (2) `charge_min` LƯỠNG ĐỈNH — swap 1-2′/lượt
+    # vs sạc cắm 210′ — mean gộp vô nghĩa, nên downtime pin báo percentile theo đội.
+    # Tiền tố `F_` để không đụng namespace `payout_mean_{P*}` (archetype) đã có consumer.
+    by_fleet: dict[str, dict[str, list[float]]] = {}
+    for a in result.actors:
+        f = by_fleet.setdefault(getattr(a.fleet, "value", str(a.fleet)),
+                                {"pay": [], "net": [], "charge": []})
+        f["pay"].append(float(a.payout_vnd))
+        f["net"].append(float(a.payout_vnd) - float(a.cost_vnd))
+        f["charge"].append(float(getattr(a, "charge_min", 0.0) or 0.0))
+    for fl in sorted(by_fleet):
+        v = by_fleet[fl]
+        out[f"payout_mean_F_{fl}"] = round(st.mean(v["pay"]), 2)
+        out[f"net_mean_F_{fl}"] = round(st.mean(v["net"]), 2)
+        out[f"charge_min_p50_F_{fl}"] = round(float(np.percentile(v["charge"], 50)), 1)
+        out[f"charge_min_p90_F_{fl}"] = round(float(np.percentile(v["charge"], 90)), 1)
     return out
 
 
@@ -394,6 +412,17 @@ HEALTH_KEYS_ONE_WAY = frozenset({
     "drive_min_p50", "drive_min_p90", "drive_min_max",
 })
 
+# E1a (UPDATE-151 r07-F6): danh sách tường minh ở trên đã HỞ hai lần — `xveto_*` (UPDATE-138)
+# và `commit_*` (UPDATE-142) được nối vào tầng 5 SAU khi frozenset chốt, lọt bảng significance
+# hai chiều và được in "ĐỘNG TỚI HỆ THỐNG" khi veto tăng. Chặn theo TIỀN TỐ để khoá tầng-5
+# tương lai không lặp lại lỗ này; set tường minh giữ cho các khoá không có tiền tố chung
+# (rest_min_total, work_span_*, drive_min_*).
+_ONE_WAY_PREFIXES = ("veto_", "xveto_", "commit_")
+
+
+def _is_one_way(key: str) -> bool:
+    return key in HEALTH_KEYS_ONE_WAY or key.startswith(_ONE_WAY_PREFIXES)
+
 # MẪU SỐ, không phải kết quả. Tách riêng khỏi `HEALTH_KEYS_ONE_WAY` vì hai lý do khác nhau:
 # khoá một chiều bị chặn `significant` để "veto tăng" không đọc thành "hệ thống tốt lên"; khoá
 # phạm vi bị chặn vì gắn `significant` cho một MẪU SỐ là vô nghĩa về ngữ nghĩa (Δ của nó luôn 0
@@ -419,37 +448,60 @@ def compare(pairs: list[PairResult], min_seeds: int | None = None) -> dict:
     `significant` chỉ được bật khi n ≥ MIN_SEEDS_FOR_SIGNIFICANCE — dưới đó flag luôn
     False và `n_insufficient`=True để consumer không đọc nhầm nhiễu thành hiệu ứng."""
     n = len(pairs)
-    out: dict = {"n_seeds": n, "n_insufficient": n < MIN_SEEDS_FOR_SIGNIFICANCE,
-                 "driver": {}, "system": {},
-           "min_seeds_for_sig": (min_seeds if min_seeds is not None
-                                 else MIN_SEEDS_FOR_SIGNIFICANCE)}
-    ms = out["min_seeds_for_sig"]
+    ms = min_seeds if min_seeds is not None else MIN_SEEDS_FOR_SIGNIFICANCE
+    # E1a (r07-F3/BUG-PARALLEL-NINSUF): `n_insufficient` phải so với NGƯỠNG HIỆU LỰC, không
+    # phải hằng 30 — caller truyền min_seeds=100 (so biến-thể, T-041 1b') mà cờ vẫn so 30 thì
+    # artifact n=50 báo "mẫu đủ" trong khi mọi significant bị chặn ở 100: hai cờ tự mâu thuẫn.
+    out: dict = {"n_seeds": n, "n_insufficient": n < ms,
+                 "driver": {}, "system": {}, "min_seeds_for_sig": ms}
     if not pairs:
         return out
-    for key in pairs[0].a:
-        diffs = [float(p.b[key] or 0) - float(p.a[key] or 0) for p in pairs]
-        lo, hi = bootstrap_ci(diffs)
-        out["driver"][key] = {
-            "mean_a": round(st.mean(float(p.a[key] or 0) for p in pairs), 2),
-            "mean_b": round(st.mean(float(p.b[key] or 0) for p in pairs), 2),
-            "delta_mean": round(st.mean(diffs), 2),
-            "ci95": (round(lo, 2), round(hi, 2)),
-            "significant": _sig(lo, hi, n, ms),
-            "n_positive": sum(1 for d in diffs if d > 0),
-        }
-    for key in pairs[0].system_a:
-        diffs = [float(p.system_b[key] or 0) - float(p.system_a[key] or 0) for p in pairs]
-        lo, hi = bootstrap_ci(diffs)
-        row = {"delta_mean": round(st.mean(diffs), 4), "ci95": (round(lo, 4), round(hi, 4))}
+    # E1a (r07-F8): keys là UNION qua mọi pair, không phải pairs[0] — archetype/khoá vắng ở
+    # seed đầu bị RƠI IM LẶNG, vắng ở seed sau thì KeyError. Cặp thiếu khoá bị BỎ QUA cho khoá
+    # đó và `n_pairs` khai tường minh (không ép 0 im lặng — 0 là một GIÁ TRỊ, vắng là VẮNG).
+
+    def _rows(get_a, get_b, keys, digits):
+        rows = {}
+        for key in sorted(keys):          # union là set — sort để artifact/CLI ổn định khi diff
+            sub = [p for p in pairs if key in get_a(p) and key in get_b(p)]
+            if not sub:
+                continue
+            va = [float(get_a(p)[key] or 0) for p in sub]
+            vb = [float(get_b(p)[key] or 0) for p in sub]
+            diffs = [b - a for a, b in zip(va, vb)]
+            lo, hi = bootstrap_ci(diffs)
+            row = {
+                "mean_a": round(st.mean(va), digits),
+                "mean_b": round(st.mean(vb), digits),
+                "delta_mean": round(st.mean(diffs), digits),
+                "ci95": (round(lo, digits), round(hi, digits)),
+                "n_positive": sum(1 for d in diffs if d > 0),
+                "_n_sub": len(sub), "_lo_hi": (lo, hi),
+            }
+            if len(sub) < n:
+                row["n_pairs"] = len(sub)
+            rows[key] = row
+        return rows
+
+    for key, row in _rows(lambda p: p.a, lambda p: p.b,
+                          {k for p in pairs for k in p.a}, 2).items():
+        n_sub, (lo, hi) = row.pop("_n_sub"), row.pop("_lo_hi")
+        row["significant"] = _sig(lo, hi, n_sub, ms)
+        out["driver"][key] = row
+    for key, row in _rows(lambda p: p.system_a, lambda p: p.system_b,
+                          {k for p in pairs for k in p.system_a}, 4).items():
+        n_sub, (lo, hi) = row.pop("_n_sub"), row.pop("_lo_hi")
         if key in SCOPE_KEYS:
+            row.pop("n_positive", None)
             row["role"] = "MẪU SỐ — số tài xế trong phạm vi chấm tầng 5, KHÔNG phải kết quả"
-        elif key in HEALTH_KEYS_ONE_WAY:
+        elif _is_one_way(key):
             # (e) tầng 5 KHÔNG có `significant` hai chiều — cổng của nó là
             # `sim_metrics.health_guardrail_flags` (một chiều, chỉ tố giác suy giảm).
             # Để `significant` ở đây làm "veto tăng" được in như hệ thống TỐT lên.
+            # E1a: match theo `_is_one_way` (tiền tố) — xveto_*/commit_* từng lọt (r07-F6).
             row["one_way_gate"] = "sim_metrics.health_guardrail_flags (D-M3-05)"
         else:
-            row["significant"] = _sig(lo, hi, n, ms)
+            row["significant"] = _sig(lo, hi, n_sub, ms)
         out["system"][key] = row
     return out
 

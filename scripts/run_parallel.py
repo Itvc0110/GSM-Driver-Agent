@@ -57,8 +57,11 @@ def main() -> None:
                   f"{d['delta_mean']:>+12,.2f}{ci:>26s}{d['n_positive']:>5d}/{r['n_seeds']}{mark}")
         print("  -- guardrail hệ thống (tầng 1-4, cổng HAI CHIỀU) --")
         for k, d in r["system"].items():
-            if "one_way_gate" in d:
-                continue          # tầng 5 in riêng ở dưới
+            # E1a (r07-F1): lọc theo "có significant không" thay vì chỉ né one_way_gate —
+            # hàng SCOPE_KEYS (n_actors_scope) chỉ mang `role`, bản cũ KeyError ở đây làm
+            # CLI chết TRƯỚC khi in per-archetype (bảng P1..P7 chưa bao giờ in ra được).
+            if "significant" not in d:
+                continue          # tầng 5 (one_way_gate) + mẫu số (role) in riêng ở dưới
             mark = "  <-- ĐỘNG TỚI HỆ THỐNG" if d["significant"] else ""
             print(f"  {k:24s} Δ={d['delta_mean']:>+12,.4f} "
                   f"CI=[{d['ci95'][0]:,.4f}, {d['ci95'][1]:,.4f}]{mark}")

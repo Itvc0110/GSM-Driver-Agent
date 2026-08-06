@@ -206,3 +206,19 @@ def test_van_tra_SO_chu_khong_tra_null():
             continue
         v = mockdata.driver_state(drv, date)["vehicle_range_km"]
         assert isinstance(v, (int, float)) and v > 0, f"{drv}: {v!r}"
+
+
+def test_soc_low_threshold_khop_engine():
+    """E1a (r06 CO-3): ngưỡng "pin thấp" trong payload phải ĐÚNG `vehicle.swap_soc_threshold_pct`
+    của engine — client chỉ đọc, không tự đặt (bản cũ app.js hardcode 25 ≠ engine 20)."""
+    from gsm_sim.runner import Config
+    veh = Config.load(str(ROOT / "configs/pilot_dongda.yaml")).get("vehicle")
+    assert mockdata._soc_low_threshold_pct() == float(veh["swap_soc_threshold_pct"])
+
+
+def test_state_payload_mang_nguong_soc():
+    """Payload driver state phải mang `soc_low_threshold_pct` — thiếu là client quay về hardcode."""
+    import inspect
+
+    src = inspect.getsource(mockdata)
+    assert '"soc_low_threshold_pct"' in src and '"soc_source"' in src

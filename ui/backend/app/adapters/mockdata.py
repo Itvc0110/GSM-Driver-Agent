@@ -38,6 +38,19 @@ def manifest() -> dict:
 
 
 @lru_cache(maxsize=1)
+def _soc_low_threshold_pct() -> float:
+    """Ngưỡng SOC 'thấp' — đọc ĐÚNG ngưỡng engine dùng để quyết định đi đổi pin (`E1a`, r06 CO-3).
+
+    Bản cũ: client hardcode 25 trong khi engine dùng `vehicle.swap_soc_threshold_pct = 20` —
+    UI tự đặt ngưỡng khác canonical source, đúng họ lỗi `D-M3-17` (tầm pin từng lệch 1,76×
+    cũng vì kiểu này). Client chỉ được ĐỌC số này qua payload, không tự bịa.
+    """
+    from gsm_sim.runner import Config
+    veh = Config.load(str(REPO_ROOT / "configs" / "pilot_dongda.yaml")).get("vehicle")
+    return float(veh["swap_soc_threshold_pct"])
+
+
+@lru_cache(maxsize=1)
 def _range_band() -> tuple[float, float, float, float]:
     """Dải tầm pin ở SOC hiện tại — suy từ ĐÚNG hệ số engine dùng (`D-M3-17`).
 
@@ -194,6 +207,9 @@ def driver_state(driver_id: str, date: str) -> dict:
         # tài xế. Nếu chỉ sửa `app.js` thì màn hình khác / Flutter của Khánh lại quên —
         # đúng mẫu lỗi "sửa một tầng, tầng khác không biết".
         "soc_source": "MOCK",
+        # E1a: ngưỡng cảnh báo SOC — client ĐỌC, không tự đặt (bản cũ app.js hardcode 25 ≠
+        # engine 20; họ D-M3-17). Test parity: ui/backend/tests/test_range_matches_engine.py
+        "soc_low_threshold_pct": _soc_low_threshold_pct(),
         "vehicle_range_km_source": "MOCK",          # suy TỪ soc bịa ⇒ cũng là mock
         # D-M3-17: tầm pin nay suy từ ĐÚNG hệ số engine (xem `_range_band`). Hiển thị đầu THẤP
         # của dải vì không biết tài xế thuộc đội đổi pin hay đội sạc; dải đầy đủ + cơ sở đi kèm
