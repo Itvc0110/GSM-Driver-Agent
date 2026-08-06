@@ -69,6 +69,52 @@ không phải sửa.
 | --- | --- | --- | --- |
 | **C1** | `D-M3-17` — UI **tự tính phạm vi pin** khác engine | ✅ đã chứng minh (smoke e2e, `f38ff25`) | **READY** |
 | **C2** | `D-ADV-04b` — vế còn lại của mẫu số S1 trên đường sản phẩm | ✅ B0 đã sửa vế chính, 4b là phần chừa | **READY** (chờ V-32 để không đụng cùng card) |
+| **C0** | ⭐ **3 lỗi MỚI trên đường sản phẩm** do audit lớp tìm ra | ⚠ **agent báo, CHƯA qua phản biện** | **BLOCKED-RESEARCH → nếu đứng thì lên ĐẦU** |
+
+**C0 — ba lỗi mới, tất cả nằm ở `ui/backend` hoặc `lifecycle` (tức tài xế thật chạm):**
+
+| mã | chỗ | cái gì sai | bằng chứng agent nêu |
+| --- | --- | --- | --- |
+| **P-1** | `ui/backend/app/routers/advice.py:126` | `_phase_of` dùng **hằng ca viết cứng** ≠ nguồn thật | **ĐO**: ca đêm 22:00→02:00 **lệch 4/4 mốc thử** (`at_min=1320` đọc `early`/ghi `late`; `at_min=90` ngược lại) |
+| **P-2** | `lifecycle/checkpoint.py:346` | `>= 6` viết cứng ⇒ **hai tầng bất đồng** | **ĐO**: cùng tình huống, `cadence.evaluate` = `SUPPRESS(topic_cooldown)` còn `evaluate_checkpoint` = `ready` |
+| **P-3** | `ui/backend/app/services/advice_checkpoint.py:569-584` | `proactive_count = len(offered_ids)` cộng dồn **trọn đời tài khoản** | **CẤU TRÚC, chưa reproduce e2e**: sau 6 thẻ ĐẦU TIÊN trong đời tài khoản, v2 **im vĩnh viễn** |
+
+**P-3 — TÔI ĐÃ TỰ KIỂM XONG, và kết luận khác agent ở phần quan trọng nhất:**
+
+- ✅ **Đúng về cấu trúc:** `checkpoint_store.checkpoints(driver_id)` là `SELECT record FROM
+  advice_checkpoints ORDER BY rowid` — **không lọc ngày/ca**, chỉ lọc `driver_id`
+  (`checkpoint_store.py:302-309`). `_cadence_memory` đếm `offered_ids` trên **toàn bộ đời tài khoản**,
+  rồi `checkpoint.py:346` chặn khi `>= 6`.
+- ✅ **Và nó là L1 thật:** đường **v1** (`routers/advice.py:141-143`) **CÓ** lọc `payload["date"] == date`.
+  ⇒ **hai quy ước cho cùng một ngân sách**, một cái theo NGÀY, một cái theo ĐỜI.
+- ⚠ **Nhưng bán kính hôm nay = 0:** `advice_v2.py:38-39` — `ADVICE_V2_ENABLED` mặc định **`"0"`**.
+- ⚠ **Và nó KHÔNG tự lành:** DB là `TELEMETRY_DIR/"advice_checkpoint.db"` — **bền vững qua phiên**.
+  ⇒ Ngày ai bật v2, bộ đếm đã tích luỹ sẵn; sau 6 thẻ là **im vĩnh viễn**, **im lặng** (không lỗi, không log).
+
+⇒ **P-3 không phải việc gấp — nó là ĐIỀU KIỆN TIÊN QUYẾT của việc bật v2.**
+
+### ⭐ Và đây là KHUÔN LỚN HƠN cả 6 lớp tôi giả định
+
+Ba thứ nặng nhất hôm nay có **cùng một hình dạng**, và nó không phải L1..L6:
+
+| nợ | công tắc đang che | cắn khi nào |
+| --- | --- | --- |
+| bản án ĐA-07 dựa trên DP mù thưởng (§2) | `shift_plan: false` | khi bật lại để đo |
+| 9 khoá ngoài tầm cổng tầng 5 (`C4b`) | `shift_extend`/`rest_window: false` | khi bật lại để đo |
+| ngân sách thẻ đếm theo ĐỜI (`P-3`) | `ADVICE_V2_ENABLED=0` | khi bật v2 |
+
+> **LỚP 0 — nợ NGỦ ĐÔNG sau công tắc mặc-định-tắt.** Khuyết tật và công tắc do hai người, hai thời điểm
+> khác nhau tạo ra. Không ai kiểm lại khuyết tật **lúc gạt công tắc** — mà gạt công tắc chính là lúc ta
+> ra quyết định dựa trên nó. **Đây là lý do một quyết định đã duyệt (ĐA-07) lại đứng trên bằng chứng hỏng.**
+
+**Cổng chặn tái diễn cho LỚP 0 (khả thi, không phải "nhớ cẩn thận hơn"):** một **sổ tiền-điều-kiện** gắn
+với từng công tắc — `configs`/`env` nào đang tắt thì liệt kê **nợ đã biết nằm trên đường của nó**, và một
+test đọc sổ đó: *bật công tắc mà nợ chưa đóng ⇒ ĐỎ*. Sổ này rẻ (một YAML + một test), và nó biến
+*"nhớ kiểm lại"* thành *"không bật được nếu chưa kiểm"*.
+
+⚠ **Kỷ luật:** `P-1`/`P-2` vẫn là **agent báo, tôi CHƯA tự kiểm**; agent được lệnh cố BÁC chưa trả lời.
+Không mục nào được coi là xác nhận cho tới khi tôi tự mở `file:line` — luật này đã cứu tôi **4 lần** trong
+ba ngày, và hôm nay nó vừa sửa `P-3` từ *"lỗi nghiêm trọng đang xảy ra"* thành *"nợ ngủ đông"*.
 
 **C1 — acceptance:** UI **không còn công thức pin riêng**; nó đọc đúng đại lượng engine phát ra. Test
 đỏ-trước: một `(driver, soc, fleet)` mà hai công thức lệch ⇒ assert UI == engine. Không đổi engine.
@@ -151,6 +197,19 @@ lần"* — và bản vá chỉ nối **chiều đi ra**, quên **chiều đi v�
 
 **C4 — acceptance:** cổng mới **ĐỎ** trên `soc_low` trước khi khai trơ, **XANH** sau khi khai; và **ĐỎ**
 nếu ai đó xoá `fatigued`. Sim **fingerprint IDENTICAL 5 seed** (chỉ thêm test + hàm cổng, 0 đổi dynamics).
+
+**C5b — ⚠ MỘT NGHI VẤN LỚN HƠN vừa nổi lên từ lớp L5 (agent báo, chưa phản biện):**
+
+Agent đo: bật chi phí thật (150đ/km + 9.000đ/lượt) làm hai định nghĩa tiền **lệch 23.685–25.603đ/người/ngày
+= 9,8–10,3% payout** — tức **gấp 4–6 lần** mọi Δ advisor đang được trích. Và ngưỡng để số hạng chi phí
+lật quyết định là **4.325đ/km**, trong khi chi phí thật **70–250đ/km** ⇒ **thấp hơn ngưỡng 17–62 lần**.
+
+⇒ Nếu đứng, thì **mọi phán quyết PASS/NO-GO đã chạy** (`QUYET-DINH-2026-07-30`) thực chất là phán quyết
+về **payout gộp**, không phải **thu nhập ròng** — đúng thứ `CLAUDE.md` §5 bắt phải tách. **Chưa cắn hôm
+nay** (cost=0 nên hai định nghĩa trùng), nhưng nó là **nhãn sai trên mọi kết luận cũ**.
+
+**Việc:** không sửa gì — **ghi nhãn**. Mọi kết luận cũ phải nói rõ chúng đo `driver payout`, không phải
+`estimated net income`. Đây là việc **docs**, rẻ, và ngăn một hiểu nhầm có hệ thống.
 
 **C5 — acceptance:** `A2` (đội 74) ở **n=100 paired CRN** + **HHI cung theo ô** cho **cả** Q-07 A0/A1.
 Chỉ khi có hai số này thì *"biên đánh đổi"* của `UPDATE-176` §3(c) mới được gọi là **số chốt** thay vì
