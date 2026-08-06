@@ -712,6 +712,21 @@ with tab_ab:
             (st.success if ok_guard else st.warning)(
                 f"Guardrail hệ thống: served A {g[0]:.3f} → B {g[1]:.3f} "
                 f"({'không đổi đáng kể' if ok_guard else 'CÓ dịch chuyển — xem lại'})")
+        # E2 (UPDATE-154): bảng Δ THEO HỒ SƠ (P1..P7) + THEO ĐỘI PIN — đọc thẳng từ
+        # `pr.system_a/b` (máy đo parallel.py đã tính, dashboard chỉ TRỪ hai số như cột Δ trên).
+        with st.expander("📊 Δ theo hồ sơ tài xế (P1..P7) & theo đội pin", expanded=False):
+            rows_a = []
+            for k in sorted(set(pr.system_a) & set(pr.system_b)):
+                if k.startswith(("payout_mean_", "net_mean_", "charge_min_")):
+                    va, vb = pr.system_a[k], pr.system_b[k]
+                    rows_a.append({"Chỉ số": k, "World A": va, "World B": vb,
+                                   "Δ (B−A)": round((vb or 0) - (va or 0), 2)})
+            st.dataframe(pd.DataFrame(rows_a), width="stretch", height=380, hide_index=True)
+            st.caption("⚠ Cặp này chạy coverage='single' (chỉ 1 tài xế được advise) ⇒ Δ theo "
+                       "hồ sơ bị PHA LOÃNG ~1/k và gần như thuần nhiễu ở 1 seed — chỉ đọc "
+                       "HƯỚNG. Kết luận: chạy CLI ≥30 seed coverage=all (UPDATE-153 E2). "
+                       "`F_swap`/`F_charge` = theo đội pin (fleet confound với hồ sơ — "
+                       "so 2 đội là so persona, không phải công nghệ pin). MOCK.")
         st.caption("LƯU Ý ĐỌC SỐ: 1 seed = 1 ngày — kết luận cần 30 seed + CI "
                    "(`uv run python scripts/run_parallel.py --seeds 30`). "
                    "Δ dương một ngày không có nghĩa 'ngày nào cũng lợi'. MOCK.")

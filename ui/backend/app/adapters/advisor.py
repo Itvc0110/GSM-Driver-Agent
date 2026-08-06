@@ -208,6 +208,8 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
         "scenario_id": f"mock-realdata:{date}", "seed": _dataset_seed(),
         "data_mode": "mock-realdata", "is_mock": True,
         "generated_at_min": now_min,
+        # E3.3: ngưỡng chính sách đi CÙNG payload — client đọc, không hardcode (họ D-M3-17)
+        "policy_thresholds": _policy_thresholds(),
     }
 
     if sol.get("already_maxed"):
@@ -268,7 +270,11 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
             "reason_code": "feasible_gap",
             "numbers": numbers, "caveat": caveat,
         }
-        return {**base, "silent": {"is_silent": False}, "items": [item]}
+        items = [item]
+        cliff = _cliff_item(report, driver_id, date, now_min)   # E3.1 — phòng ngừa sát ngưỡng
+        if cliff:
+            items.append(cliff)
+        return {**base, "silent": {"is_silent": False}, "items": items}
 
     # infeasible — nói thật lý do, không hứa hẹn
     constraints = sol.get("constraints", {})
@@ -288,7 +294,11 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
         "reason_code": reason_code,
         "numbers": numbers, "caveat": caveat,
     }
-    return {**base, "silent": {"is_silent": False}, "items": [item]}
+    items = [item]
+    cliff = _cliff_item(report, driver_id, date, now_min)       # E3.1 — phòng ngừa sát ngưỡng
+    if cliff:
+        items.append(cliff)
+    return {**base, "silent": {"is_silent": False}, "items": items}
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +312,37 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
 def _vn(value, unit: str) -> str:
     """Render số theo locale VN — CÙNG hàm với pipeline (không tự format f-string)."""
     return render_number_vn(value, unit) if value is not None else ""
+
+
+def _policy_thresholds() -> dict:
+    """E3.3 (UPDATE-151 r06 THIẾU-6): expose ngưỡng chính sách cho client — UI thôi hardcode
+    (họ D-M3-17: client tự đặt ngưỡng khác canonical source). Đi kèm MỌI payload advice."""
+    p = policy()
+    return {"bonus_min_acceptance": float(p.bonus_min_acceptance),
+            "bonus_min_completion": float(p.bonus_min_completion),
+            "source": f"policy_v:{p.version}"}
+
+
+def _cliff_item(report: dict, driver_id: str, date: str, now_min: int) -> dict | None:
+    """E3.1 (UPDATE-151 r06 THIẾU-1): cảnh báo PHÒNG NGỪA "tỷ lệ nhận sát ngưỡng thưởng".
+
+    S1 ĐÃ TÍNH sẵn (`sensitivity` param `acceptance_cliff`, CLIFF_MARGIN=0.03) — bản cũ adapter
+    chỉ đọc solution/numbers và VỨT toàn bộ sensitivity, nên loại cảnh báo giá trị nhất (phòng
+    ngừa TRƯỚC khi rơi ngưỡng — sim gọi là advice_bonus_gate) không bao giờ tới tài xế.
+    KHÔNG số tiền, KHÔNG hứa hẹn — chỉ nhắc ranh giới; note lấy từ solver (không tự đặt lời)."""
+    cliff = next((s for s in report.get("sensitivity") or []
+                  if s.get("param") == "acceptance_cliff"), None)
+    if cliff is None:
+        return None
+    return {
+        "advice_id": f"s1-{driver_id}-{date}-{now_min}-cliff",   # giữ namespace s1- (L4-07)
+        "solver": "S1", "kind": "info",
+        "title": "Tỷ lệ nhận đang sát ngưỡng thưởng",
+        "message": str(cliff.get("note") or "Tỷ lệ nhận đang sát ngưỡng chính sách."),
+        "confidence": report.get("confidence", 0.5),
+        "reason_code": "acceptance_near_threshold",
+        "numbers": [], "caveat": "cảnh báo phòng ngừa — không phải cam kết mức thưởng",
+    }
 
 
 def _infeasible_text(constraints: dict) -> str:
