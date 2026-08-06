@@ -1,0 +1,1839 @@
+{
+  "evidence_type": "read_only_ui_experience_derived_state_probe",
+  "runtime_changed": false,
+  "production_policy_changed": false,
+  "thresholds_are_probes_not_rules": {
+    "long_idle_min": 30,
+    "episode_window_min": 60,
+    "energy_recovery_window_min": 90,
+    "cluster_window_min": 120,
+    "utilization_or_empty_delta": 0.15,
+    "income_low_ratio_to_prior7_median": 0.8
+  },
+  "simulator": {
+    "seeds": [
+      1000,
+      1001,
+      1002,
+      1003,
+      1004
+    ],
+    "actor_runs": 450,
+    "derived_states": [
+      {
+        "derived_state": "bonus_and_mission_same_shift",
+        "candidate_occurrences": 130,
+        "actor_runs": 130,
+        "archetype_actor_runs": {
+          "P1": 3,
+          "P2": 22,
+          "P3": 5,
+          "P4": 37,
+          "P5": 6,
+          "P6": 33,
+          "P7": 24
+        },
+        "shift_fraction_p50": 0.404,
+        "shift_fraction_p75": 0.792,
+        "phase_occurrences": {
+          "late": 46,
+          "early": 52,
+          "mid": 32
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 942.797,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604
+          },
+          {
+            "seed": 1000,
+            "actor_id": 15,
+            "archetype": "P2",
+            "at_min": 954.124,
+            "shift_start_min": 495.663,
+            "shift_end_min": 1114.414
+          },
+          {
+            "seed": 1000,
+            "actor_id": 19,
+            "archetype": "P2",
+            "at_min": 906.665,
+            "shift_start_min": 469.195,
+            "shift_end_min": 1106.328
+          },
+          {
+            "seed": 1000,
+            "actor_id": 21,
+            "archetype": "P2",
+            "at_min": 993.644,
+            "shift_start_min": 433.448,
+            "shift_end_min": 1084.936
+          },
+          {
+            "seed": 1000,
+            "actor_id": 24,
+            "archetype": "P2",
+            "at_min": 523.089,
+            "shift_start_min": 424.977,
+            "shift_end_min": 1060.963
+          }
+        ]
+      },
+      {
+        "derived_state": "cancellation_cluster_2_in_120m",
+        "candidate_occurrences": 21,
+        "actor_runs": 21,
+        "archetype_actor_runs": {
+          "P1": 2,
+          "P2": 5,
+          "P3": 3,
+          "P4": 2,
+          "P5": 3,
+          "P6": 3,
+          "P7": 3
+        },
+        "shift_fraction_p50": 0.625,
+        "shift_fraction_p75": 0.758,
+        "phase_occurrences": {
+          "mid": 4,
+          "late": 10,
+          "early": 7
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 1,
+            "archetype": "P1",
+            "at_min": 1202.395,
+            "shift_start_min": 1079.467,
+            "shift_end_min": 1292.678,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 17,
+            "archetype": "P2",
+            "at_min": 983.704,
+            "shift_start_min": 425.495,
+            "shift_end_min": 1057.144,
+            "count": 4
+          },
+          {
+            "seed": 1000,
+            "actor_id": 52,
+            "archetype": "P5",
+            "at_min": 1156.058,
+            "shift_start_min": 1017.752,
+            "shift_end_min": 1440.0,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 81,
+            "archetype": "P7",
+            "at_min": 1291.171,
+            "shift_start_min": 927.971,
+            "shift_end_min": 1440.0,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 83,
+            "archetype": "P7",
+            "at_min": 1257.829,
+            "shift_start_min": 908.148,
+            "shift_end_min": 1432.454,
+            "count": 2
+          }
+        ]
+      },
+      {
+        "derived_state": "decline_cluster_2_in_120m",
+        "candidate_occurrences": 101,
+        "actor_runs": 101,
+        "archetype_actor_runs": {
+          "P1": 19,
+          "P2": 5,
+          "P3": 1,
+          "P4": 49,
+          "P5": 4,
+          "P6": 10,
+          "P7": 13
+        },
+        "shift_fraction_p50": 0.716,
+        "shift_fraction_p75": 0.843,
+        "phase_occurrences": {
+          "mid": 25,
+          "late": 54,
+          "early": 22
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 2,
+            "archetype": "P1",
+            "at_min": 1153.083,
+            "shift_start_min": 1022.584,
+            "shift_end_min": 1229.448,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 5,
+            "archetype": "P1",
+            "at_min": 1169.5,
+            "shift_start_min": 1019.424,
+            "shift_end_min": 1211.108,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 11,
+            "archetype": "P1",
+            "at_min": 1134.75,
+            "shift_start_min": 995.728,
+            "shift_end_min": 1218.109,
+            "count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 943.417,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 36,
+            "archetype": "P4",
+            "at_min": 850.25,
+            "shift_start_min": 372.868,
+            "shift_end_min": 862.612,
+            "count": 4
+          }
+        ]
+      },
+      {
+        "derived_state": "empty_share_rising_15pp",
+        "candidate_occurrences": 99,
+        "actor_runs": 99,
+        "archetype_actor_runs": {
+          "P1": 11,
+          "P2": 4,
+          "P3": 1,
+          "P4": 36,
+          "P5": 9,
+          "P6": 37,
+          "P7": 1
+        },
+        "shift_fraction_p50": 0.5,
+        "shift_fraction_p75": 0.5,
+        "phase_occurrences": {
+          "mid": 99
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 4,
+            "archetype": "P1",
+            "at_min": 1127.751,
+            "shift_start_min": 1036.136,
+            "shift_end_min": 1219.367,
+            "early": 0.249,
+            "late": 0.657
+          },
+          {
+            "seed": 1000,
+            "actor_id": 9,
+            "archetype": "P1",
+            "at_min": 1135.44,
+            "shift_start_min": 1030.274,
+            "shift_end_min": 1240.606,
+            "early": 0.235,
+            "late": 0.544
+          },
+          {
+            "seed": 1000,
+            "actor_id": 11,
+            "archetype": "P1",
+            "at_min": 1106.918,
+            "shift_start_min": 995.728,
+            "shift_end_min": 1218.109,
+            "early": 0.258,
+            "late": 0.415
+          },
+          {
+            "seed": 1000,
+            "actor_id": 36,
+            "archetype": "P4",
+            "at_min": 617.74,
+            "shift_start_min": 372.868,
+            "shift_end_min": 862.612,
+            "early": 0.326,
+            "late": 0.489
+          },
+          {
+            "seed": 1000,
+            "actor_id": 41,
+            "archetype": "P4",
+            "at_min": 689.027,
+            "shift_start_min": 430.859,
+            "shift_end_min": 947.195,
+            "early": 0.407,
+            "late": 0.567
+          }
+        ]
+      },
+      {
+        "derived_state": "energy_disruption_recovered_90m",
+        "candidate_occurrences": 115,
+        "actor_runs": 90,
+        "archetype_actor_runs": {
+          "P2": 27,
+          "P3": 7,
+          "P4": 10,
+          "P5": 14,
+          "P6": 14,
+          "P7": 18
+        },
+        "shift_fraction_p50": 0.559,
+        "shift_fraction_p75": 0.851,
+        "phase_occurrences": {
+          "late": 47,
+          "early": 14,
+          "mid": 54
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 943.704,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "skipped_min": 942.833
+          },
+          {
+            "seed": 1000,
+            "actor_id": 19,
+            "archetype": "P2",
+            "at_min": 1058.755,
+            "shift_start_min": 469.195,
+            "shift_end_min": 1106.328,
+            "skipped_min": 1058.667
+          },
+          {
+            "seed": 1000,
+            "actor_id": 20,
+            "archetype": "P2",
+            "at_min": 661.843,
+            "shift_start_min": 476.08,
+            "shift_end_min": 1104.496,
+            "skipped_min": 639.167
+          },
+          {
+            "seed": 1000,
+            "actor_id": 21,
+            "archetype": "P2",
+            "at_min": 671.058,
+            "shift_start_min": 433.448,
+            "shift_end_min": 1084.936,
+            "skipped_min": 668.583
+          },
+          {
+            "seed": 1000,
+            "actor_id": 24,
+            "archetype": "P2",
+            "at_min": 1084.379,
+            "shift_start_min": 424.977,
+            "shift_end_min": 1060.963,
+            "skipped_min": 1084.0
+          }
+        ]
+      },
+      {
+        "derived_state": "energy_disruption_unrecovered_90m",
+        "candidate_occurrences": 6,
+        "actor_runs": 5,
+        "archetype_actor_runs": {
+          "P3": 2,
+          "P5": 3
+        },
+        "shift_fraction_p50": 0.817,
+        "shift_fraction_p75": 0.878,
+        "phase_occurrences": {
+          "late": 6
+        },
+        "examples": [
+          {
+            "seed": 1001,
+            "actor_id": 52,
+            "archetype": "P5",
+            "at_min": 1321.333,
+            "shift_start_min": 913.655,
+            "shift_end_min": 1412.345,
+            "skipped_min": 1321.333
+          },
+          {
+            "seed": 1002,
+            "actor_id": 35,
+            "archetype": "P3",
+            "at_min": 1103.083,
+            "shift_start_min": 548.435,
+            "shift_end_min": 1223.246,
+            "skipped_min": 1103.083
+          },
+          {
+            "seed": 1002,
+            "actor_id": 52,
+            "archetype": "P5",
+            "at_min": 1317.5,
+            "shift_start_min": 957.388,
+            "shift_end_min": 1439.989,
+            "skipped_min": 1317.5
+          },
+          {
+            "seed": 1003,
+            "actor_id": 31,
+            "archetype": "P3",
+            "at_min": 1157.25,
+            "shift_start_min": 552.407,
+            "shift_end_min": 1241.491,
+            "skipped_min": 1157.25
+          },
+          {
+            "seed": 1003,
+            "actor_id": 31,
+            "archetype": "P3",
+            "at_min": 1158.0,
+            "shift_start_min": 552.407,
+            "shift_end_min": 1241.491,
+            "skipped_min": 1158.0
+          }
+        ]
+      },
+      {
+        "derived_state": "future_swap_observed_in_window",
+        "candidate_occurrences": 349,
+        "actor_runs": 274,
+        "archetype_actor_runs": {
+          "P2": 82,
+          "P3": 15,
+          "P4": 61,
+          "P5": 24,
+          "P6": 41,
+          "P7": 51
+        },
+        "shift_fraction_p50": 0.536,
+        "shift_fraction_p75": 0.737,
+        "phase_occurrences": {
+          "late": 117,
+          "mid": 201,
+          "early": 31
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 943.704,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "window_start": 900.0,
+            "window_end": 960.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 766.374,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "window_start": 720.0,
+            "window_end": 780.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 698.593,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "window_start": 660.0,
+            "window_end": 720.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 1107.445,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "window_start": 1080.0,
+            "window_end": 1140.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 15,
+            "archetype": "P2",
+            "at_min": 660.685,
+            "shift_start_min": 495.663,
+            "shift_end_min": 1114.414,
+            "window_start": 660.0,
+            "window_end": 720.0
+          }
+        ]
+      },
+      {
+        "derived_state": "idle_and_rest_same_shift",
+        "candidate_occurrences": 296,
+        "actor_runs": 296,
+        "archetype_actor_runs": {
+          "P1": 14,
+          "P2": 77,
+          "P3": 17,
+          "P4": 74,
+          "P5": 12,
+          "P6": 74,
+          "P7": 28
+        },
+        "shift_fraction_p50": 0.468,
+        "shift_fraction_p75": 0.645,
+        "phase_occurrences": {
+          "mid": 227,
+          "early": 2,
+          "late": 67
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 6,
+            "archetype": "P1",
+            "at_min": 1158.54,
+            "shift_start_min": 1037.124,
+            "shift_end_min": 1239.235
+          },
+          {
+            "seed": 1000,
+            "actor_id": 9,
+            "archetype": "P1",
+            "at_min": 1142.446,
+            "shift_start_min": 1030.274,
+            "shift_end_min": 1240.606
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 727.713,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604
+          },
+          {
+            "seed": 1000,
+            "actor_id": 15,
+            "archetype": "P2",
+            "at_min": 734.883,
+            "shift_start_min": 495.663,
+            "shift_end_min": 1114.414
+          },
+          {
+            "seed": 1000,
+            "actor_id": 16,
+            "archetype": "P2",
+            "at_min": 740.721,
+            "shift_start_min": 505.895,
+            "shift_end_min": 1150.686
+          }
+        ]
+      },
+      {
+        "derived_state": "incentive_share_20pct",
+        "candidate_occurrences": 210,
+        "actor_runs": 210,
+        "archetype_actor_runs": {
+          "P1": 6,
+          "P2": 49,
+          "P3": 15,
+          "P4": 72,
+          "P5": 15,
+          "P6": 30,
+          "P7": 23
+        },
+        "shift_fraction_p50": 1.0,
+        "shift_fraction_p75": 1.0,
+        "phase_occurrences": {
+          "late": 210
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 2,
+            "archetype": "P1",
+            "at_min": 1229.448,
+            "shift_start_min": 1022.584,
+            "shift_end_min": 1229.448,
+            "share": 0.243
+          },
+          {
+            "seed": 1000,
+            "actor_id": 5,
+            "archetype": "P1",
+            "at_min": 1211.108,
+            "shift_start_min": 1019.424,
+            "shift_end_min": 1211.108,
+            "share": 0.2194
+          },
+          {
+            "seed": 1000,
+            "actor_id": 8,
+            "archetype": "P1",
+            "at_min": 1230.563,
+            "shift_start_min": 1021.956,
+            "shift_end_min": 1230.563,
+            "share": 0.2665
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 1166.279,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "share": 0.3186
+          },
+          {
+            "seed": 1000,
+            "actor_id": 16,
+            "archetype": "P2",
+            "at_min": 1150.686,
+            "shift_start_min": 505.895,
+            "shift_end_min": 1150.686,
+            "share": 0.2244
+          }
+        ]
+      },
+      {
+        "derived_state": "late_shift_energy_pressure_90m",
+        "candidate_occurrences": 122,
+        "actor_runs": 122,
+        "archetype_actor_runs": {
+          "P2": 34,
+          "P3": 12,
+          "P4": 20,
+          "P5": 13,
+          "P6": 7,
+          "P7": 36
+        },
+        "shift_fraction_p50": 0.937,
+        "shift_fraction_p75": 0.98,
+        "phase_occurrences": {
+          "late": 122
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 1107.445,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279
+          },
+          {
+            "seed": 1000,
+            "actor_id": 18,
+            "archetype": "P2",
+            "at_min": 1104.284,
+            "shift_start_min": 477.387,
+            "shift_end_min": 1078.503
+          },
+          {
+            "seed": 1000,
+            "actor_id": 19,
+            "archetype": "P2",
+            "at_min": 1058.755,
+            "shift_start_min": 469.195,
+            "shift_end_min": 1106.328
+          },
+          {
+            "seed": 1000,
+            "actor_id": 20,
+            "archetype": "P2",
+            "at_min": 1077.078,
+            "shift_start_min": 476.08,
+            "shift_end_min": 1104.496
+          },
+          {
+            "seed": 1000,
+            "actor_id": 23,
+            "archetype": "P2",
+            "at_min": 1085.79,
+            "shift_start_min": 505.666,
+            "shift_end_min": 1114.97
+          }
+        ]
+      },
+      {
+        "derived_state": "long_idle_then_rest_60m",
+        "candidate_occurrences": 228,
+        "actor_runs": 176,
+        "archetype_actor_runs": {
+          "P1": 8,
+          "P2": 27,
+          "P3": 11,
+          "P4": 54,
+          "P5": 4,
+          "P6": 61,
+          "P7": 11
+        },
+        "shift_fraction_p50": 0.695,
+        "shift_fraction_p75": 0.9,
+        "phase_occurrences": {
+          "mid": 99,
+          "late": 127,
+          "early": 2
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 9,
+            "archetype": "P1",
+            "at_min": 1142.446,
+            "shift_start_min": 1030.274,
+            "shift_end_min": 1240.606,
+            "idle_end": 1134.174
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 1116.525,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "idle_end": 1086.235
+          },
+          {
+            "seed": 1000,
+            "actor_id": 16,
+            "archetype": "P2",
+            "at_min": 740.721,
+            "shift_start_min": 505.895,
+            "shift_end_min": 1150.686,
+            "idle_end": 709.45
+          },
+          {
+            "seed": 1000,
+            "actor_id": 24,
+            "archetype": "P2",
+            "at_min": 1028.553,
+            "shift_start_min": 424.977,
+            "shift_end_min": 1060.963,
+            "idle_end": 997.501
+          },
+          {
+            "seed": 1000,
+            "actor_id": 26,
+            "archetype": "P2",
+            "at_min": 1026.274,
+            "shift_start_min": 426.077,
+            "shift_end_min": 1060.493,
+            "idle_end": 1020.496
+          }
+        ]
+      },
+      {
+        "derived_state": "long_idle_window_30m",
+        "candidate_occurrences": 1012,
+        "actor_runs": 379,
+        "archetype_actor_runs": {
+          "P1": 21,
+          "P2": 85,
+          "P3": 25,
+          "P4": 75,
+          "P5": 49,
+          "P6": 74,
+          "P7": 50
+        },
+        "shift_fraction_p50": 0.581,
+        "shift_fraction_p75": 0.773,
+        "phase_occurrences": {
+          "late": 391,
+          "mid": 351,
+          "early": 270
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 6,
+            "archetype": "P1",
+            "at_min": 1240.831,
+            "shift_start_min": 1037.124,
+            "shift_end_min": 1239.235,
+            "minutes": 30.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 9,
+            "archetype": "P1",
+            "at_min": 1134.174,
+            "shift_start_min": 1030.274,
+            "shift_end_min": 1240.606,
+            "minutes": 40.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 10,
+            "archetype": "P1",
+            "at_min": 1252.667,
+            "shift_start_min": 1062.555,
+            "shift_end_min": 1284.599,
+            "minutes": 32.179
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 792.452,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "minutes": 36.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 834.5,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "minutes": 37.161
+          }
+        ]
+      },
+      {
+        "derived_state": "mission_and_energy_overlap_60m",
+        "candidate_occurrences": 196,
+        "actor_runs": 196,
+        "archetype_actor_runs": {
+          "P2": 47,
+          "P3": 12,
+          "P4": 21,
+          "P5": 17,
+          "P6": 55,
+          "P7": 44
+        },
+        "shift_fraction_p50": 0.624,
+        "shift_fraction_p75": 0.836,
+        "phase_occurrences": {
+          "late": 90,
+          "early": 44,
+          "mid": 62
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 942.797,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 1041.247,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279
+          },
+          {
+            "seed": 1000,
+            "actor_id": 15,
+            "archetype": "P2",
+            "at_min": 954.124,
+            "shift_start_min": 495.663,
+            "shift_end_min": 1114.414
+          },
+          {
+            "seed": 1000,
+            "actor_id": 19,
+            "archetype": "P2",
+            "at_min": 906.665,
+            "shift_start_min": 469.195,
+            "shift_end_min": 1106.328
+          },
+          {
+            "seed": 1000,
+            "actor_id": 21,
+            "archetype": "P2",
+            "at_min": 993.644,
+            "shift_start_min": 433.448,
+            "shift_end_min": 1084.936
+          }
+        ]
+      },
+      {
+        "derived_state": "multiple_income_sources",
+        "candidate_occurrences": 345,
+        "actor_runs": 345,
+        "archetype_actor_runs": {
+          "P1": 13,
+          "P2": 76,
+          "P3": 21,
+          "P4": 80,
+          "P5": 35,
+          "P6": 73,
+          "P7": 47
+        },
+        "shift_fraction_p50": 1.0,
+        "shift_fraction_p75": 1.0,
+        "phase_occurrences": {
+          "late": 345
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 2,
+            "archetype": "P1",
+            "at_min": 1229.448,
+            "shift_start_min": 1022.584,
+            "shift_end_min": 1229.448,
+            "source_count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 5,
+            "archetype": "P1",
+            "at_min": 1211.108,
+            "shift_start_min": 1019.424,
+            "shift_end_min": 1211.108,
+            "source_count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 8,
+            "archetype": "P1",
+            "at_min": 1230.563,
+            "shift_start_min": 1021.956,
+            "shift_end_min": 1230.563,
+            "source_count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 12,
+            "archetype": "P1",
+            "at_min": 1246.311,
+            "shift_start_min": 1028.72,
+            "shift_end_min": 1246.311,
+            "source_count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 1152.604,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "source_count": 2
+          }
+        ]
+      },
+      {
+        "derived_state": "multiple_ready_topics",
+        "candidate_occurrences": 103,
+        "actor_runs": 103,
+        "archetype_actor_runs": {
+          "P2": 15,
+          "P3": 5,
+          "P4": 29,
+          "P5": 7,
+          "P6": 34,
+          "P7": 13
+        },
+        "shift_fraction_p50": 0.535,
+        "shift_fraction_p75": 0.734,
+        "phase_occurrences": {
+          "mid": 47,
+          "late": 35,
+          "early": 21
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 899.0,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "topics": [
+              "bonus_eligibility",
+              "energy"
+            ]
+          },
+          {
+            "seed": 1000,
+            "actor_id": 21,
+            "archetype": "P2",
+            "at_min": 972.0,
+            "shift_start_min": 433.448,
+            "shift_end_min": 1084.936,
+            "topics": [
+              "bonus_eligibility",
+              "energy"
+            ]
+          },
+          {
+            "seed": 1000,
+            "actor_id": 24,
+            "archetype": "P2",
+            "at_min": 721.0,
+            "shift_start_min": 424.977,
+            "shift_end_min": 1060.963,
+            "topics": [
+              "bonus_eligibility",
+              "energy"
+            ]
+          },
+          {
+            "seed": 1000,
+            "actor_id": 33,
+            "archetype": "P3",
+            "at_min": 1062.0,
+            "shift_start_min": 555.22,
+            "shift_end_min": 1228.735,
+            "topics": [
+              "bonus_eligibility",
+              "energy"
+            ]
+          },
+          {
+            "seed": 1000,
+            "actor_id": 35,
+            "archetype": "P3",
+            "at_min": 1152.0,
+            "shift_start_min": 550.033,
+            "shift_end_min": 1231.546,
+            "topics": [
+              "bonus_eligibility",
+              "energy"
+            ]
+          }
+        ]
+      },
+      {
+        "derived_state": "multiple_ready_touchpoints",
+        "candidate_occurrences": 125,
+        "actor_runs": 125,
+        "archetype_actor_runs": {
+          "P2": 23,
+          "P3": 10,
+          "P4": 29,
+          "P5": 8,
+          "P6": 40,
+          "P7": 15
+        },
+        "shift_fraction_p50": 0.484,
+        "shift_fraction_p75": 0.706,
+        "phase_occurrences": {
+          "mid": 56,
+          "late": 37,
+          "early": 32
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 899.0,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 816.0,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 17,
+            "archetype": "P2",
+            "at_min": 886.0,
+            "shift_start_min": 425.495,
+            "shift_end_min": 1057.144,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 21,
+            "archetype": "P2",
+            "at_min": 972.0,
+            "shift_start_min": 433.448,
+            "shift_end_min": 1084.936,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 23,
+            "archetype": "P2",
+            "at_min": 1085.0,
+            "shift_start_min": 505.666,
+            "shift_end_min": 1114.97,
+            "count": 2
+          }
+        ]
+      },
+      {
+        "derived_state": "plan_churn_3_in_120m",
+        "candidate_occurrences": 92,
+        "actor_runs": 92,
+        "archetype_actor_runs": {
+          "P1": 1,
+          "P2": 34,
+          "P3": 2,
+          "P4": 17,
+          "P5": 10,
+          "P6": 14,
+          "P7": 14
+        },
+        "shift_fraction_p50": 0.698,
+        "shift_fraction_p75": 0.782,
+        "phase_occurrences": {
+          "late": 51,
+          "mid": 37,
+          "early": 4
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 10,
+            "archetype": "P1",
+            "at_min": 1224.0,
+            "shift_start_min": 1062.555,
+            "shift_end_min": 1284.599
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 899.0,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604
+          },
+          {
+            "seed": 1000,
+            "actor_id": 18,
+            "archetype": "P2",
+            "at_min": 867.0,
+            "shift_start_min": 477.387,
+            "shift_end_min": 1078.503
+          },
+          {
+            "seed": 1000,
+            "actor_id": 20,
+            "archetype": "P2",
+            "at_min": 962.0,
+            "shift_start_min": 476.08,
+            "shift_end_min": 1104.496
+          },
+          {
+            "seed": 1000,
+            "actor_id": 24,
+            "archetype": "P2",
+            "at_min": 888.0,
+            "shift_start_min": 424.977,
+            "shift_end_min": 1060.963
+          }
+        ]
+      },
+      {
+        "derived_state": "plan_revision_after_disruption_60m",
+        "candidate_occurrences": 160,
+        "actor_runs": 125,
+        "archetype_actor_runs": {
+          "P1": 3,
+          "P2": 30,
+          "P3": 8,
+          "P4": 20,
+          "P5": 19,
+          "P6": 20,
+          "P7": 25
+        },
+        "shift_fraction_p50": 0.648,
+        "shift_fraction_p75": 0.785,
+        "phase_occurrences": {
+          "early": 12,
+          "late": 78,
+          "mid": 70
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 1,
+            "archetype": "P1",
+            "at_min": 1150.0,
+            "shift_start_min": 1079.467,
+            "shift_end_min": 1292.678,
+            "disruption_min": 1115.902
+          },
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 975.0,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "disruption_min": 942.833
+          },
+          {
+            "seed": 1000,
+            "actor_id": 17,
+            "archetype": "P2",
+            "at_min": 942.0,
+            "shift_start_min": 425.495,
+            "shift_end_min": 1057.144,
+            "disruption_min": 908.564
+          },
+          {
+            "seed": 1000,
+            "actor_id": 24,
+            "archetype": "P2",
+            "at_min": 888.0,
+            "shift_start_min": 424.977,
+            "shift_end_min": 1060.963,
+            "disruption_min": 868.335
+          },
+          {
+            "seed": 1000,
+            "actor_id": 28,
+            "archetype": "P2",
+            "at_min": 759.0,
+            "shift_start_min": 423.107,
+            "shift_end_min": 1043.903,
+            "disruption_min": 720.1
+          }
+        ]
+      },
+      {
+        "derived_state": "plan_window_revision",
+        "candidate_occurrences": 3086,
+        "actor_runs": 450,
+        "archetype_actor_runs": {
+          "P1": 65,
+          "P2": 90,
+          "P3": 25,
+          "P4": 80,
+          "P5": 55,
+          "P6": 80,
+          "P7": 55
+        },
+        "shift_fraction_p50": 0.571,
+        "shift_fraction_p75": 0.807,
+        "phase_occurrences": {
+          "mid": 1029,
+          "late": 1258,
+          "early": 799
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 0,
+            "archetype": "P1",
+            "at_min": 1091.0,
+            "shift_start_min": 1016.491,
+            "shift_end_min": 1208.109
+          },
+          {
+            "seed": 1000,
+            "actor_id": 0,
+            "archetype": "P1",
+            "at_min": 1145.0,
+            "shift_start_min": 1016.491,
+            "shift_end_min": 1208.109
+          },
+          {
+            "seed": 1000,
+            "actor_id": 0,
+            "archetype": "P1",
+            "at_min": 1216.0,
+            "shift_start_min": 1016.491,
+            "shift_end_min": 1208.109
+          },
+          {
+            "seed": 1000,
+            "actor_id": 1,
+            "archetype": "P1",
+            "at_min": 1150.0,
+            "shift_start_min": 1079.467,
+            "shift_end_min": 1292.678
+          },
+          {
+            "seed": 1000,
+            "actor_id": 1,
+            "archetype": "P1",
+            "at_min": 1226.0,
+            "shift_start_min": 1079.467,
+            "shift_end_min": 1292.678
+          }
+        ]
+      },
+      {
+        "derived_state": "quiet_shift_with_recap",
+        "candidate_occurrences": 148,
+        "actor_runs": 148,
+        "archetype_actor_runs": {
+          "P1": 51,
+          "P2": 26,
+          "P3": 11,
+          "P5": 36,
+          "P6": 6,
+          "P7": 18
+        },
+        "shift_fraction_p50": 1.0,
+        "shift_fraction_p75": 1.0,
+        "phase_occurrences": {
+          "late": 148
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 1,
+            "archetype": "P1",
+            "at_min": 1292.678,
+            "shift_start_min": 1079.467,
+            "shift_end_min": 1292.678
+          },
+          {
+            "seed": 1000,
+            "actor_id": 2,
+            "archetype": "P1",
+            "at_min": 1229.448,
+            "shift_start_min": 1022.584,
+            "shift_end_min": 1229.448
+          },
+          {
+            "seed": 1000,
+            "actor_id": 3,
+            "archetype": "P1",
+            "at_min": 1264.232,
+            "shift_start_min": 1040.212,
+            "shift_end_min": 1264.232
+          },
+          {
+            "seed": 1000,
+            "actor_id": 4,
+            "archetype": "P1",
+            "at_min": 1219.367,
+            "shift_start_min": 1036.136,
+            "shift_end_min": 1219.367
+          },
+          {
+            "seed": 1000,
+            "actor_id": 5,
+            "archetype": "P1",
+            "at_min": 1211.108,
+            "shift_start_min": 1019.424,
+            "shift_end_min": 1211.108
+          }
+        ]
+      },
+      {
+        "derived_state": "ready_action_observed_in_validity",
+        "candidate_occurrences": 125,
+        "actor_runs": 109,
+        "archetype_actor_runs": {
+          "P2": 31,
+          "P3": 8,
+          "P4": 16,
+          "P5": 10,
+          "P6": 20,
+          "P7": 24
+        },
+        "shift_fraction_p50": 0.582,
+        "shift_fraction_p75": 0.821,
+        "phase_occurrences": {
+          "mid": 65,
+          "late": 51,
+          "early": 9
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 766.374,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "action": "SWAP"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 1107.445,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "action": "SWAP"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 17,
+            "archetype": "P2",
+            "at_min": 647.274,
+            "shift_start_min": 425.495,
+            "shift_end_min": 1057.144,
+            "action": "SWAP"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 20,
+            "archetype": "P2",
+            "at_min": 890.587,
+            "shift_start_min": 476.08,
+            "shift_end_min": 1104.496,
+            "action": "SWAP"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 21,
+            "archetype": "P2",
+            "at_min": 972.513,
+            "shift_start_min": 433.448,
+            "shift_end_min": 1084.936,
+            "action": "SWAP"
+          }
+        ]
+      },
+      {
+        "derived_state": "ready_action_observed_late_60m",
+        "candidate_occurrences": 21,
+        "actor_runs": 21,
+        "archetype_actor_runs": {
+          "P2": 12,
+          "P3": 1,
+          "P4": 6,
+          "P6": 2
+        },
+        "shift_fraction_p50": 0.688,
+        "shift_fraction_p75": 0.762,
+        "phase_occurrences": {
+          "late": 13,
+          "mid": 8
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 943.704,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "action": "SWAP"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 16,
+            "archetype": "P2",
+            "at_min": 740.721,
+            "shift_start_min": 505.895,
+            "shift_end_min": 1150.686,
+            "action": "REST"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 17,
+            "archetype": "P2",
+            "at_min": 912.492,
+            "shift_start_min": 425.495,
+            "shift_end_min": 1057.144,
+            "action": "SWAP"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 38,
+            "archetype": "P4",
+            "at_min": 672.024,
+            "shift_start_min": 391.566,
+            "shift_end_min": 926.484,
+            "action": "REST"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 50,
+            "archetype": "P4",
+            "at_min": 927.041,
+            "shift_start_min": 445.835,
+            "shift_end_min": 973.854,
+            "action": "SWAP"
+          }
+        ]
+      },
+      {
+        "derived_state": "ready_checkpoint_with_execution_link",
+        "candidate_occurrences": 275,
+        "actor_runs": 275,
+        "archetype_actor_runs": {
+          "P1": 1,
+          "P2": 62,
+          "P3": 13,
+          "P4": 80,
+          "P5": 14,
+          "P6": 73,
+          "P7": 32
+        },
+        "shift_fraction_p50": 0.0,
+        "shift_fraction_p75": 0.367,
+        "phase_occurrences": {
+          "mid": 62,
+          "early": 200,
+          "late": 13
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 786.0,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 766.0,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279
+          },
+          {
+            "seed": 1000,
+            "actor_id": 15,
+            "archetype": "P2",
+            "at_min": 583.0,
+            "shift_start_min": 495.663,
+            "shift_end_min": 1114.414
+          },
+          {
+            "seed": 1000,
+            "actor_id": 16,
+            "archetype": "P2",
+            "at_min": 666.0,
+            "shift_start_min": 505.895,
+            "shift_end_min": 1150.686
+          },
+          {
+            "seed": 1000,
+            "actor_id": 17,
+            "archetype": "P2",
+            "at_min": 647.0,
+            "shift_start_min": 425.495,
+            "shift_end_min": 1057.144
+          }
+        ]
+      },
+      {
+        "derived_state": "repeated_long_idle_windows",
+        "candidate_occurrences": 289,
+        "actor_runs": 289,
+        "archetype_actor_runs": {
+          "P1": 2,
+          "P2": 71,
+          "P3": 23,
+          "P4": 68,
+          "P5": 32,
+          "P6": 54,
+          "P7": 39
+        },
+        "shift_fraction_p50": 0.582,
+        "shift_fraction_p75": 0.756,
+        "phase_occurrences": {
+          "mid": 117,
+          "late": 111,
+          "early": 61
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 13,
+            "archetype": "P2",
+            "at_min": 834.5,
+            "shift_start_min": 514.809,
+            "shift_end_min": 1152.604,
+            "count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 1004.4,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 15,
+            "archetype": "P2",
+            "at_min": 1105.633,
+            "shift_start_min": 495.663,
+            "shift_end_min": 1114.414,
+            "count": 2
+          },
+          {
+            "seed": 1000,
+            "actor_id": 16,
+            "archetype": "P2",
+            "at_min": 709.45,
+            "shift_start_min": 505.895,
+            "shift_end_min": 1150.686,
+            "count": 3
+          },
+          {
+            "seed": 1000,
+            "actor_id": 18,
+            "archetype": "P2",
+            "at_min": 644.594,
+            "shift_start_min": 477.387,
+            "shift_end_min": 1078.503,
+            "count": 5
+          }
+        ]
+      },
+      {
+        "derived_state": "semantic_plan_revision",
+        "candidate_occurrences": 1224,
+        "actor_runs": 426,
+        "archetype_actor_runs": {
+          "P1": 65,
+          "P2": 90,
+          "P3": 21,
+          "P4": 80,
+          "P5": 35,
+          "P6": 80,
+          "P7": 55
+        },
+        "shift_fraction_p50": 0.645,
+        "shift_fraction_p75": 0.778,
+        "phase_occurrences": {
+          "mid": 488,
+          "early": 166,
+          "late": 570
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 0,
+            "archetype": "P1",
+            "at_min": 1091.0,
+            "shift_start_min": 1016.491,
+            "shift_end_min": 1208.109,
+            "current": "ONLINE",
+            "future": "ONLINE"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 1,
+            "archetype": "P1",
+            "at_min": 1150.0,
+            "shift_start_min": 1079.467,
+            "shift_end_min": 1292.678,
+            "current": "ONLINE",
+            "future": "ONLINE"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 2,
+            "archetype": "P1",
+            "at_min": 1092.0,
+            "shift_start_min": 1022.584,
+            "shift_end_min": 1229.448,
+            "current": "ONLINE",
+            "future": "ONLINE"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 3,
+            "archetype": "P1",
+            "at_min": 1144.0,
+            "shift_start_min": 1040.212,
+            "shift_end_min": 1264.232,
+            "current": "ONLINE",
+            "future": "ONLINE"
+          },
+          {
+            "seed": 1000,
+            "actor_id": 4,
+            "archetype": "P1",
+            "at_min": 1097.0,
+            "shift_start_min": 1036.136,
+            "shift_end_min": 1219.367,
+            "current": "ONLINE",
+            "future": "ONLINE"
+          }
+        ]
+      },
+      {
+        "derived_state": "swap_friction_episode",
+        "candidate_occurrences": 140,
+        "actor_runs": 110,
+        "archetype_actor_runs": {
+          "P2": 32,
+          "P3": 5,
+          "P4": 26,
+          "P5": 12,
+          "P6": 7,
+          "P7": 28
+        },
+        "shift_fraction_p50": 0.677,
+        "shift_fraction_p75": 0.873,
+        "phase_occurrences": {
+          "mid": 65,
+          "late": 72,
+          "early": 3
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 766.374,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "kind": "swap_failed",
+            "wait_min": 61.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 14,
+            "archetype": "P2",
+            "at_min": 816.313,
+            "shift_start_min": 518.373,
+            "shift_end_min": 1166.279,
+            "kind": "swap_done",
+            "wait_min": 48.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 20,
+            "archetype": "P2",
+            "at_min": 698.547,
+            "shift_start_min": 476.08,
+            "shift_end_min": 1104.496,
+            "kind": "swap_done",
+            "wait_min": 28.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 23,
+            "archetype": "P2",
+            "at_min": 741.868,
+            "shift_start_min": 505.666,
+            "shift_end_min": 1114.97,
+            "kind": "swap_done",
+            "wait_min": 31.0
+          },
+          {
+            "seed": 1000,
+            "actor_id": 26,
+            "archetype": "P2",
+            "at_min": 1198.484,
+            "shift_start_min": 426.077,
+            "shift_end_min": 1060.493,
+            "kind": "swap_done",
+            "wait_min": 60.0
+          }
+        ]
+      },
+      {
+        "derived_state": "utilization_phase_shift_15pp",
+        "candidate_occurrences": 130,
+        "actor_runs": 130,
+        "archetype_actor_runs": {
+          "P1": 24,
+          "P2": 11,
+          "P3": 5,
+          "P4": 36,
+          "P5": 11,
+          "P6": 37,
+          "P7": 6
+        },
+        "shift_fraction_p50": 0.5,
+        "shift_fraction_p75": 0.5,
+        "phase_occurrences": {
+          "mid": 130
+        },
+        "examples": [
+          {
+            "seed": 1000,
+            "actor_id": 4,
+            "archetype": "P1",
+            "at_min": 1127.751,
+            "shift_start_min": 1036.136,
+            "shift_end_min": 1219.367,
+            "early": 0.751,
+            "late": 0.343
+          },
+          {
+            "seed": 1000,
+            "actor_id": 7,
+            "archetype": "P1",
+            "at_min": 1122.387,
+            "shift_start_min": 1013.873,
+            "shift_end_min": 1230.9,
+            "early": 0.505,
+            "late": 0.762
+          },
+          {
+            "seed": 1000,
+            "actor_id": 9,
+            "archetype": "P1",
+            "at_min": 1135.44,
+            "shift_start_min": 1030.274,
+            "shift_end_min": 1240.606,
+            "early": 0.765,
+            "late": 0.456
+          },
+          {
+            "seed": 1000,
+            "actor_id": 11,
+            "archetype": "P1",
+            "at_min": 1106.918,
+            "shift_start_min": 995.728,
+            "shift_end_min": 1218.109,
+            "early": 0.742,
+            "late": 0.585
+          },
+          {
+            "seed": 1000,
+            "actor_id": 36,
+            "archetype": "P4",
+            "at_min": 617.74,
+            "shift_start_min": 372.868,
+            "shift_end_min": 862.612,
+            "early": 0.674,
+            "late": 0.511
+          }
+        ]
+      }
+    ]
+  },
+  "mock_multiday": {
+    "provenance": "MOCK 90-day corpus; shape evidence only, not live availability",
+    "drivers_with_7day_comparable_history": 150,
+    "income_low_days_below_80pct_prior7_median": 2154,
+    "drivers_with_2day_low_income_streak": 125,
+    "income_rebound_days_after_low_day": 1041,
+    "drivers_with_2day_acceptance_risk": 88,
+    "drivers_with_acceptance_recovery_next_day": 130,
+    "drivers_with_rush_split_history": 150
+  }
+}

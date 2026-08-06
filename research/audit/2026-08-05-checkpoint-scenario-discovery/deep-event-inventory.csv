@@ -1,0 +1,26 @@
+event_kind,count,actor_runs,detail_keys
+advice_bonus_gate,3709,173,"['accept_lift_total', 'acceptance', 'channel', 'decision_id', 'followed', 'lift', 'threshold']"
+advice_given,5708,450,"['adherence', 'channel', 'decision_id', 'followed', 'instinct_action', 'plan_next', 'reason', 'solver_action']"
+advice_rest_veto,1215,438,"['channel', 'from_action', 'reason']"
+censored_end_of_run,69,69,['state']
+charge_home_end,11,11,[]
+charge_home_start,40,40,[]
+day_end_settle,93,93,"['day_bonus', 'payout', 'points', 'trips']"
+dropoff,4757,450,"['dist_km', 'gross', 'order_id']"
+end_shift,357,357,"['day_bonus', 'payout', 'points', 'trips']"
+go_online,450,450,[]
+go_swap,566,344,['station']
+mission_completed,333,282,"['mission_id', 'name', 'reward_vnd']"
+newbie_guarantee_topup,76,76,"['floor_vnd', 'gross_day', 'tenure_days', 'topup_vnd']"
+order_cancelled_after_accept,224,169,"['order_id', 'wasted_min']"
+order_censored,25,0,"['last_state', 'order_id']"
+order_declined,515,273,"['gross_vnd', 'net_vnd', 'order_id', 'p_accept', 'pickup_km', 'reason']"
+order_expired,1023,0,"['order_id', 'reason']"
+order_matched,5006,450,"['gross_vnd', 'net_vnd', 'order_id', 'p_accept', 'pickup_km', 'reason']"
+order_skipped_soc,121,95,"['need_km', 'order_id', 'soc_pct']"
+pickup,4775,450,"['eta_min', 'order_id']"
+relocate,7159,450,['reason']
+rest,609,348,[]
+swap_done,533,344,"['station', 'wait_min']"
+swap_failed,27,26,"['station', 'wait_min']"
+trip_rated,3608,450,"['order_id', 'stars']"
