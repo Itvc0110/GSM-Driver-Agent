@@ -1,0 +1,90 @@
+{
+  "what": "V1 — tôi TỰ KIỂM arm NULL của pb-02 (D-M3-20)",
+  "mock": true,
+  "seeds": [
+    7000,
+    7001,
+    7002,
+    7003,
+    7004,
+    7005
+  ],
+  "days": 3,
+  "thiet_ke": "A = advice off · Bnull = rest_window ON + coin_follows luôn False (0 can thiệp)",
+  "per_seed": [
+    {
+      "seed": 7000,
+      "d_rest_min_total": 519.0753934814438,
+      "d_work_span_p90": -0.48269847231347285,
+      "d_payout_total": -1625279.0,
+      "A_rest_min_total": 11776.145214694874,
+      "A_work_span_p90": 667.2828998665026,
+      "A_payout_total": 68232864.0
+    },
+    {
+      "seed": 7001,
+      "d_rest_min_total": 15.624578130156806,
+      "d_work_span_p90": 4.882215808399451,
+      "d_payout_total": 575807.0,
+      "A_rest_min_total": 11738.81763438806,
+      "A_work_span_p90": 662.564257928699,
+      "A_payout_total": 67395980.0
+    },
+    {
+      "seed": 7002,
+      "d_rest_min_total": -524.5596985616976,
+      "d_work_span_p90": 4.614130604799698,
+      "d_payout_total": 96967.0,
+      "A_rest_min_total": 12617.997967901623,
+      "A_work_span_p90": 666.2724956133435,
+      "A_payout_total": 67548137.0
+    },
+    {
+      "seed": 7003,
+      "d_rest_min_total": -10.662977805463015,
+      "d_work_span_p90": 2.010740118691615,
+      "d_payout_total": -794417.0,
+      "A_rest_min_total": 11811.656126710064,
+      "A_work_span_p90": 673.432601376873,
+      "A_payout_total": 67670863.0
+    },
+    {
+      "seed": 7004,
+      "d_rest_min_total": 112.55554618400129,
+      "d_work_span_p90": -3.3635964647078254,
+      "d_payout_total": -214467.0,
+      "A_rest_min_total": 11478.977795098004,
+      "A_work_span_p90": 668.9885476024941,
+      "A_payout_total": 69574779.0
+    },
+    {
+      "seed": 7005,
+      "d_rest_min_total": -406.1957960255677,
+      "d_work_span_p90": 3.6947609772786336,
+      "d_payout_total": 271453.0,
+      "A_rest_min_total": 12997.245007007155,
+      "A_work_span_p90": 659.0869598054667,
+      "A_payout_total": 66947287.0
+    }
+  ],
+  "tong_hop": {
+    "rest_min_total": {
+      "sd": 376.35,
+      "sd_pct_nen": 0.03118,
+      "max_abs": 524.56,
+      "khac_0": 6
+    },
+    "work_span_p90": {
+      "sd": 3.25,
+      "sd_pct_nen": 0.00488,
+      "max_abs": 4.88,
+      "khac_0": 6
+    },
+    "payout_total": {
+      "sd": 807129.32,
+      "sd_pct_nen": 0.01189,
+      "max_abs": 1625279.0,
+      "khac_0": 6
+    }
+  }
+}

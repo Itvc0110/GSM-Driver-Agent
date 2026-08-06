@@ -1,0 +1,21 @@
+{
+  "what": "V2 — tôi TỰ KIỂM claim cổng-HẸP của pb-04 (D-ADV-02)",
+  "mock": true,
+  "arm": "B chỉ shift_extend",
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004
+  ],
+  "n_luot_ap": 77,
+  "n_vo_can": 16,
+  "ty_le_vo_can": 0.2078,
+  "phut_keo_vo_can": 128.1,
+  "phut_keo_tong": 1392.3,
+  "gio_ket_ca_vo_can": {
+    "23": 16
+  },
+  "cong_hep_giu": 61
+}
