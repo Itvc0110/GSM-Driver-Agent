@@ -44,12 +44,33 @@ Nếu `pb-02` cho thấy đây chỉ là trường hợp riêng của `D-SIM-K3`
 
 ---
 
+## CYCLE B0 — `D-ADV-04`: sửa MẪU SỐ của S1 (⚠ ĐƯỜNG SẢN PHẨM — ưu tiên cao nhất trong nhóm giá trị)
+
+**Điều kiện khởi động:** KHÔNG cần chờ phản biện nợ khác — nợ này **đã reproduce có output thật**
+(tôi tự chạy lại `repro_s1_denominator.py`). Vẫn nên nhờ một refuter soi "có test nào ghim quy ước
+producer" trước khi sửa. **Cycle B (shift_extend) PHỤ THUỘC cycle này** — gọi S1 mà producer còn sai
+mẫu số thì chỉ chuyển chỗ đặt lỗi.
+
+| Mục | Nội dung |
+| --- | --- |
+| **Vì sao ưu tiên cao nhất trong nhóm giá trị** | **S1 là solver DUY NHẤT đường sản phẩm chạy** (`B6-PARITY`) ⇒ lỗi đập thẳng vào card cho tài xế thật, và nó làm advisor **bi quan có hệ thống**: nói "không với tới" về mốc thưởng **với tới được** — tức im lặng/dập đúng lúc lời khuyên đáng giá nhất |
+| **Root cause (ĐÃ REPRODUCE, output thật)** | Producer chia **điểm-của-bucket** cho **giờ online TOÀN NGÀY** (`bonus_gap.py:63-64` · `from_l1r.py:161` · `ui/.../advisor.py:74`); solver tiêu thụ như **điểm/giờ TRONG bucket** (`bonus_feasibility.py:51-52` + `_walk:72,79`). Chạy lại: producer trả `{peak: 6.0, offpeak: 6.0}` (đúng: `{30, 7.5}`) ⇒ S1 phán **INFEASIBLE** *"chỉ kiếm thêm ~42đ < 50đ"*, rate đúng cho **FEASIBLE tại 2,42h** |
+| **Ai đúng ai sai** | **Solver ĐÚNG, producer SAI** — ngữ nghĩa consumer bị **test ghim** `tests/test_bonus_feasibility.py:113-119` (hist offpeak=15 ⇒ hours=gap/15). Sửa producer, KHÔNG sửa solver |
+| **Test đỏ-trước** | 1. Test producer: tài xế online 08–18h, 60đ peak/2h + 60đ offpeak/8h ⇒ đòi `{peak: 30.0, offpeak: 7.5}` (hiện trả `{6.0, 6.0}` ⇒ **ĐỎ**). 2. Test end-to-end trên đúng đường production `derive_bonus_gap_input → solve`: cùng tình huống ⇒ đòi `feasible=True, hours_needed≈2.42` (hiện `False` ⇒ **ĐỎ**). 3. Test survivorship: ngày online-phủ-bucket mà **0 điểm** phải đóng **0.0** vào mẫu (hiện biến mất ⇒ **ĐỎ**) |
+| **Fix** | `oh_bucket = Σ overlap(khoảng-online-ngày-d ∩ giờ-của-bucket)` ở **cả ba** producer + đóng `0.0` hợp lệ. ⚠ **PHẢI sửa hai vế CÙNG LÚC**: mẫu số (bi quan) và survivorship (lạc quan) **bù trừ nhau** — sửa một cái làm số đổi hướng khó hiểu |
+| **Acceptance (số)** | 1. Ba test đỏ-trước xanh. 2. Suite `tests/` **và** `ui/backend/tests` xanh như baseline (2F của Khánh) — đặc biệt test ghim ngữ nghĩa solver **không được đổi**. 3. Đo lại tỷ lệ `feasible` trên tập hồ sơ mock (5 persona × giờ hỏi) **trước/sau**, báo cả hai; kỳ vọng: số lượt "không kịp" **giảm**, và **không** lượt nào chuyển từ đúng-infeasible sang feasible sai. 4. Nếu kênh `accept_lift` bật trong sim: fingerprint 5 seed để biết Δ hành vi (kênh này ĐANG TẮT nên kỳ vọng IDENTICAL) |
+| **Rủi ro đảo kết luận** | (a) L1R **không có timestamp đủ mịn** ⇒ `oh_bucket` chỉ xấp xỉ được; phải gắn nhãn xấp xỉ, không giả vờ chính xác; (b) sửa xong advisor **lạc quan hơn** ⇒ nếu forecast vẫn là median point-estimate thì rủi ro "khuyên bám mốc rồi không tới" **tăng** — đây chính là `mm-06` issue #2, phải ghi nợ kèm và **không** claim "advisor tốt hơn" chỉ vì bớt im lặng; (c) ba producer sửa ba chỗ ⇒ nguy cơ lệch nhau tiếp; phải có **một test dùng chung** ghim quy ước |
+| **Chi phí** | Nhỏ-vừa (3 producer + 3 test + đo lại bảng feasible) |
+
+---
+
 ## CYCLE B — `D-ADV-02`: `shift_extend` phải biết CỬA SỔ ĐIỂM
 
-**Điều kiện khởi động:** `pb-03` (tần suất) cho tần suất **> 0 đáng kể** *và* `pb-04` (cách sửa) không
-bác đường S1. Nếu `pb-03` đo ra ~0 lượt ⇒ **hạ severity, chuyển sang chỉ ghi comment cảnh báo**, không
-sửa (tránh sửa cái không bao giờ chạy). Nếu `pb-04` phát hiện **S1 cũng dùng rate trung bình** ⇒ phải
-**thiết kế lại** cách ước điểm, cycle phình ⇒ tách plan riêng.
+**Điều kiện khởi động:** **Cycle B0 xong trước** (đã biết: `mm-06` issue #4 cho thấy producer in-sim
+đổ **day-average vào CẢ HAI bucket** `advice_bridge.py:990-992` ⇒ gọi S1 khi input còn sai thì chỉ
+chuyển chỗ đặt lỗi). Thêm: `pb-03` (tần suất) cho tần suất **> 0 đáng kể** *và* `pb-04` (cách sửa)
+không bác đường S1. Nếu `pb-03` đo ra ~0 lượt ⇒ **hạ severity, chỉ ghi comment cảnh báo**, không sửa
+(tránh sửa cái không bao giờ chạy).
 
 | Mục | Nội dung |
 | --- | --- |
