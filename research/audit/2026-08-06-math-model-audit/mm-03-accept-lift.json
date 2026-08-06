@@ -1,0 +1,153 @@
+{
+  "item": "Kênh ACCEPT_LIFT (TẮT mặc định — configs/pilot_dongda.yaml:337) + cliff card UI (UPDATE-158): S1 bonus_feasibility + sensitivity.acceptance_cliff, advice_bridge.check_bonus_gate/_advice_would_help/_acceptance_recoverable, ui/backend/app/adapters/advisor.py:_cliff_item",
+  "objective_as_implemented": "HAI đường, KHÔNG chung một objective. (A) SIM (src/gsm_sim/advice_bridge.py:743-803): bài toán CONSTRAINT-SATISFACTION, không có hàm giá trị — NÓI khi [acc_est < 0.85 (bonus_min_acceptance)] ∧ [actor.accept_lift < lift_max 0.15] ∧ [_advice_would_help: S1 nói mốc-KẾ feasible HOẶC acceptance là blocker DUY NHẤT (constraints typed, advice_bridge.py:1042-1047)] ∧ [_acceptance_recoverable: kỳ vọng (a+p·R)/(o+R) ≥ thr với p=max_realized_accept=0.93 best-case, advice_bridge.py:948-971] ∧ cadence. Khi coin nghe: accept_base += 0.10 (trần cộng dồn 0.15, effective clamp 0.98 — entities.py:115-117), MỘT lần mỗi decision bucket 30' (_claim_effect), reset đầu ngày. acc_est = luỹ kế TRONG NGÀY (orders_accepted/orders_offered), <5 offer thì rơi về memory nhiều ngày rồi accept_base (_acc_estimate, advice_bridge.py:532-544). (B) UI (advisor.py:326-345): card cảnh báo THUẦN THÔNG TIN khi S1 sensitivity có param acceptance_cliff — tức acceptance ∈ [0.85, 0.88) (CLIFF_MARGIN=0.03, bonus_feasibility.py:21,213-218); acceptance của UI = shrunk rate 7 ngày TRƯỚC date, ĐỨNG IM suốt ngày (advisor.py:117-131,151). Thứ world THẬT SỰ định giá: day_bonus(points, acc, comp) = bonus_at(points) nếu CẢ acc ≥0.85 VÀ comp ≥0.85, ngược lại 0 (gsm_sim/policy.py:94-102) — một hàm bậc thang được-ăn-cả-ngã-về-không trên (points, acc, comp); kênh chỉ mô hình hoá chiều acc, và chỉ so với mốc-KẾ chứ không với giá trị ĐANG TREO.",
+  "action_space": [
+    "SIM: {im lặng} ∪ {nâng accept_base tạm thời +0.10, tối đa +0.15 cộng dồn, hiệu lực phần còn lại của ngày} — không có mức nâng trung gian theo tình huống, không có hành động 'hạ lift về 0 khi đã an toàn' (lift một chiều, chỉ reset qua đêm)",
+    "UI: {im lặng} ∪ {1 card info 'acceptance_near_threshold', numbers=[], không hành động}",
+    "Cả hai KHÔNG khuyên nhận/từ chối đơn cụ thể (đúng ranh giới §5) — tác động ở mức TỶ LỆ qua effective_accept_base trong decide_accept (behavior.py:94-96)"
+  ],
+  "variables_observed": [
+    "actor.orders_offered / orders_accepted — đếm RỜI RẠC trong ngày (world.py:647,675) → bridge dùng cho acc_est và R, nhưng KHÔNG truyền vào S1 (bonus_gap_input chỉ có scalar acceptance_rate, advice_bridge.py:1004)",
+    "actor.points + policy.bonus_at(points) — giá trị bonus ĐANG TREO (gsm_core/policy.py:104-110) — có sẵn, gate không dùng",
+    "tier_vnd mốc kế — S1 có (bonus_feasibility.py:147) nhưng không ai so nó với chi phí của lift",
+    "R = offer-rate × thời gian còn lại — dùng trong _acceptance_recoverable (advice_bridge.py:967) nhưng KHÔNG vào cliff/S1",
+    "net_vnd + p_accept của từng cuốc BỊ TỪ CHỐI — world log order_declined (world.py:669-672): phân phối giá trị của lớp cuốc sẽ-được-nhận-thêm khi lift là ĐO ĐƯỢC từ log, không dùng",
+    "completion_rate — cùng gate policy (AND với acceptance), S1 kiểm ok_completion nhưng không có cliff cho nó",
+    "UI: trips hôm nay (points_now tính intraday, advisor.py:48-55) trong khi acceptance as-of ĐẦU ngày — hai đại lượng cùng payload ở hai thời điểm khác nhau"
+  ],
+  "variables_missing": [
+    {
+      "var": "o, a (số offer/accept luỹ kế) trong bonus_gap_input",
+      "vi_sao_quan_trong": "Cliff trên RATE không đổi được thành 'còn chịu được d lần từ chối': d_max = a + R − thr·(o+R). Một lần từ chối dịch rate ≈ acc/(o+1) — ở o=10 là ~0.08, GẤP 2.7 LẦN toàn bộ band 0.03; ở o=100 band ≈ 3-4 lần từ chối. Thiếu o thì band cố định 0.03 vô nghĩa về đơn vị 'lần từ chối'.",
+      "nguon_co_san_trong_sim": "actor.orders_offered/orders_accepted (sim, entities.py:47); UI: driver_statistic_daily accepted_count/total_request_calculate_accept (7 ngày trước — intraday offer table KHÔNG có trong mock, chỉ suy được cận)"
+    },
+    {
+      "var": "R (offer kỳ vọng còn lại trong ca) ở tầng S1/cliff",
+      "vi_sao_quan_trong": "Trả lời đúng câu ĐUÔI CA: R nhỏ ⇒ một lần từ chối lật verdict VĨNH VIỄN (không còn mẫu để pha loãng). Hiện chỉ _acceptance_recoverable (nhánh bỏ-cuộc) có R; nhánh cảnh báo/cliff không có.",
+      "nguon_co_san_trong_sim": "trips_per_hour_est (config, nhãn ĐO) × (shift_end_min − now) — công thức đã tồn tại tại advice_bridge.py:967"
+    },
+    {
+      "var": "bonus_at(points_now) — giá trị INFRAMARGINAL đang treo",
+      "vi_sao_quan_trong": "day_bonus trả mốc ĐÃ đạt nếu qua gate tỷ lệ. Gate _advice_would_help chỉ định giá mốc-KẾ ⇒ tài xế đã có 100đ (60k treo) mà mốc 160 hết giờ thì bị 'blocked_elsewhere' và mất 60k cứu được (xem MI-1).",
+      "nguon_co_san_trong_sim": "policy.bonus_at(points) — hàm có sẵn gsm_core/policy.py:104, thuần lookup"
+    },
+    {
+      "var": "E[net] của lớp cuốc hiện-bị-từ-chối (chi phí mix của lift)",
+      "vi_sao_quan_trong": "Vế giá trị mà world định giá nhưng objective thiếu — ĐÚNG lớp station_choice: lift làm nhận thêm cuốc EV thấp/pickup xa, chi phí cơ hội đã đo −34k (D-SIM-05, config:391-392) cùng bậc với tier 30-60k của P4 ⇒ kỳ vọng ròng ≈ 0 ngay cả khi gate ĐÚNG.",
+      "nguon_co_san_trong_sim": "world log order_declined kèm net_vnd/pickup_km/p_accept (world.py:669-672) — analytics offline thuần, không cần agent bịa số"
+    },
+    {
+      "var": "completion_rate cận ngưỡng (cliff đối xứng)",
+      "vi_sao_quan_trong": "Gate là AND hai ràng buộc cùng ngưỡng 0.85; chỉ acceptance có cliff. Tài xế completion 0.86 sát vách nhận silence.",
+      "nguon_co_san_trong_sim": "actor.completion_rate / driver_statistic_daily completed_count — cùng nguồn với acceptance"
+    },
+    {
+      "var": "Phương sai binomial của final rate",
+      "vi_sao_quan_trong": "_acceptance_recoverable là kỳ vọng điểm với p best-case 0.93 ⇒ gate lạc quan MỘT PHÍA; ở đuôi ca (R nhỏ) variance lớn, verdict thực tế là biến ngẫu nhiên mà model coi là số.",
+      "nguon_co_san_trong_sim": "thuần math từ (o, a, R, p) — không cần dữ liệu mới"
+    }
+  ],
+  "math_issues": [
+    {
+      "title": "MI-1: Gate 'blocked_elsewhere' định giá SAI mục tiêu — dùng khả thi của mốc-KẾ để phủ quyết lời khuyên bảo vệ mốc ĐÃ ĐẠT",
+      "evidence": "src/gsm_sim/advice_bridge.py:1033-1047 + src/gsm_core/solvers/bonus_feasibility.py:177-178,238",
+      "detail": "S1 feasible = enough_hours(mốc KẾ) ∧ ok_acc ∧ ok_comp. Bridge: not feasible ∧ (not enough_hours ∨ not ok_comp) ⇒ im lặng. Nhưng day_bonus (policy.py:94-102) trả bonus_at(points ĐÃ CÓ) khi qua gate tỷ lệ — kịch bản: points_now=100 (60k treo), acceptance 0.82 còn gỡ kịp, quỹ giờ KHÔNG đủ cho mốc 160 ⇒ enough_hours=False ⇒ blocked_elsewhere ⇒ kênh câm ⇒ mất 60k đáng lẽ một lời khuyên lift cứu được. Nhánh duy nhất được vá là already_maxed (points ≥ 200, C2/UPDATE-076); toàn dải 60 ≤ points < 200 hở. Cửa sổ hở trùng ĐUÔI CA (lúc hết quỹ giờ cho mốc kế) — đúng lúc điểm tích luỹ nhiều nhất, giá trị treo lớn nhất. Comment tự biện 'ôm thêm cuốc rẻ mà vẫn không có thưởng' (advice_bridge.py:1036) chỉ đúng khi points < 60.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MI-2: Cliff biến mất đúng nơi giá trị treo LỚN NHẤT — nhánh already_maxed trả sensitivity=[]",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:130-145 (sensitivity: []) + ui/backend/app/adapters/advisor.py:221-225",
+      "detail": "Check cliff (bonus_feasibility.py:213-218) chỉ nằm trên nhánh còn-mốc-kế. Tài xế points ≥ 200 (170k treo — giá trị lớn nhất hệ thống), acceptance 0.86 ∈ band [0.85,0.88): S1 trả already_maxed+feasible với sensitivity RỖNG ⇒ adapter trả silent 'already_on_track — không có gì cần chỉnh. Giữ nhịp hiện tại' — trấn an người đang đứng sát mép vách 170k. Trigger cliff mù hoàn toàn với value-at-risk: cảnh báo y hệt cho người treo 30k, và KHÔNG cảnh báo cho người treo 170k.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MI-3: CLIFF_MARGIN=0.03 là tuyến tính hoá trên rate — bỏ qua tính RỜI RẠC của mẫu số; ĐUÔI CA không được xét (trả lời câu hỏi riêng: KHÔNG)",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:21,213-218; input schema thiếu counts — advice_bridge.py:1004 chỉ truyền round(acceptance_rate,4)",
+      "detail": "Một lần từ chối dịch rate từ a/o về a/(o+1), tức −acc/(o+1): o=10 ⇒ −0.080 (2.7× band); o=30 ⇒ −0.028 (≈ band); o=100 ⇒ −0.0087 (band = 3-4 lần từ chối). Cùng một band 0.03 nghĩa là 'còn 0 lần' hay 'còn 4 lần' tuỳ o — mà S1 KHÔNG nhận o/a nên về nguyên tắc không thể tính d_max = a + R − thr·(o+R). Note của cliff nói 'VÀI lần từ chối nữa có thể mất toàn bộ thưởng' — chữ 'vài' là claim định lượng không có mẫu số đứng sau. Đuôi ca (R nhỏ) làm verdict lật bởi MỘT lần từ chối không đảo được — không biến nào trong cliff nhìn thấy điều đó.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-4: Hai thước đo cho MỘT khái niệm 'acceptance_rate' — sim đo luỹ-kế NGÀY (đúng đơn vị gate), UI đo shrunk 7-ngày ĐỨNG IM suốt ngày",
+      "evidence": "src/gsm_sim/entities.py:122-123 vs ui/backend/app/adapters/advisor.py:117-131,151 (SHRINK_PSEUDO_COUNTS=20, RATE_WINDOW_DAYS=7)",
+      "detail": "Gate policy là NGÀY (day_bonus trên tỷ lệ luỹ kế của chính ngày đó). UI feed S1 bằng shrunk rate 7 ngày TRƯỚC — hằng số cả ngày: từ chối lúc 9h sáng không dịch verdict cliff lúc 17h, trong khi card viết 'vài lần từ chối nữa...'. Độ dịch do shrinkage: w = 20/(n+20) ≈ 0.16 với n≈105 ⇒ displacement = 0.16·|prior−raw| ≈ 0.02 khi raw 0.80/prior 0.92 — CÙNG BẬC với band rộng 0.03 ⇒ estimator có thể đẩy người thật-dưới-ngưỡng VÀO band (báo 'sát' thay vì 'dưới') hoặc đẩy người trong band ra khỏi tầm cảnh báo. Leak-free là đúng (ĐA-01) nhưng ước lượng đang trả lời sai câu hỏi: E[rate 7 ngày] ≠ rate NGÀY mà gate áp.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-5: Ngưỡng cứng + kỳ vọng best-case, không xác suất — _acceptance_recoverable dùng p=0.93 (trần đo được) không phương sai (trả lời câu hỏi riêng: ngưỡng cứng, không có P(đạt))",
+      "evidence": "src/gsm_sim/advice_bridge.py:948-971; configs/pilot_dongda.yaml:393 (max_realized_accept ĐO)",
+      "detail": "final = (a + p·R)/(o + R) ≥ thr với p là mức nhận CAO NHẤT đạt được khi lift kịch trần — tức gate 'còn gỡ kịp' là kỳ vọng của kịch bản TỐT NHẤT: nói 'kịp' cả khi xác suất đạt thật (binomial, nhất là R nhỏ) có thể <50%. Chiều lỗi: khuyên lift trong các ca ít khả năng thành ⇒ tài xế trả chi phí mix (MI-8) mà không nhận bonus — chính hiệu ứng vách đá D-SIM-05 mô tả, chỉ được chặn một phần. Lưu ý phụ: elapsed dùng online_min vốn GỘP cả nghỉ (nợ đã biết D-M3-19) ⇒ offer-rate ước THẤP ⇒ R thấp ⇒ chiều này lại bảo thủ — hai lệch ngược chiều không ai đối chiếu.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-6: Ràng buộc AND hai vế nhưng chỉ canh MỘT — completion có cùng vách 0.85 mà không có cliff/sensitivity/card nào",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:213-218 (chỉ acceptance) + ui/backend/app/adapters/advisor.py:326-345 (_cliff_item chỉ acceptance_cliff); gate AND tại src/gsm_sim/policy.py:96",
+      "detail": "day_bonus mất TOÀN BỘ khi completion < 0.85 y hệt acceptance. Tài xế completion 0.86 (một cuốc bị khách bom nữa là rơi — cancel_after_accept_rate 0.05 nghĩa là biến cố này không hiếm) nhận im lặng tuyệt đối từ cả S1 sensitivity lẫn UI. Bất đối xứng không có căn cứ policy — cùng một discontinuity, một bên được phòng ngừa một bên không.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-7: Sim TÍNH cliff rồi VỨT — kênh sim thuần reactive; P1 (accept_base = ĐÚNG 0.85) không bao giờ được phòng ngừa",
+      "evidence": "grep 'sensitivity' toàn src/gsm_sim: 0 consumer; src/gsm_sim/advice_bridge.py:773 (acc >= thr ⇒ return None); src/gsm_sim/archetypes.py:37 (P1 accept_base=0.85)",
+      "detail": "_advice_would_help gọi S1 (sensitivity acceptance_cliff được tính mỗi lần) nhưng bridge chỉ đọc solution — cảnh báo phòng-ngừa tồn tại duy nhất trên đường UI (UPDATE-158). Trong sim, quần thể đứng TRONG band [0.85,0.88) — nơi cliff được thiết kế cho — nhận zero can thiệp; kênh chỉ thức dậy SAU khi acc_est rơi dưới 0.85, tức sau khi đã mất ít nhất một phần khả năng gỡ (mẫu số luỹ kế). P1 khởi đầu ĐÚNG TẠI ngưỡng: acc_est = accept_base = 0.85 ⇒ 'acc >= thr' ⇒ câm — nửa số ngày binomial của P1 sẽ kết dưới 0.85 mà lời khuyên chỉ đến giữa chừng, và đến ở đuôi ca thì _acceptance_recoverable chặn nốt. Kênh tự giới hạn vào đúng vùng nó yếu nhất.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-8: Vì sao kênh đo ns — CẢ 'hiếm bind' LẪN 'thiếu vế': bind cấu trúc chỉ ~32% quần thể, và khi bind thì bonus giành được ≈ chi phí mix chưa được định giá",
+      "evidence": "src/gsm_sim/archetypes.py:37-53 (accept_base: P4 0.80, P1 0.85, còn lại ≥0.93); configs/pilot_dongda.yaml:391-393 (hiệu ứng vách đá đo −34k); configs/pilot_dongda.yaml:256-260 (tiers 30k/60k/115k/170k); src/gsm_sim/advice_bridge.py:105-109 (SIM-2: P4/P1 nhận 0đ)",
+      "detail": "Cấu trúc bind: gate acceptance chỉ cắn P4 (mix 0.18, base 0.80) và P1-biên (0.14, base 0.85); 68% quần thể không bao giờ chạm kênh. Khi bind: giá trị = bonus_at(points cuối ngày) — P4 ca 8-9h lệch khung ⇒ điểm điển hình 60-100 ⇒ tier 30-60k; chi phí = opportunity cost của mix cuốc xấu được nhận thêm khi effective_accept_base 0.80→0.95, đã đo −34k trong chế độ không-chạm-ngưỡng (D-SIM-05) và CƠ CHẾ ĐÓ vẫn chạy nguyên khi chạm ngưỡng (cùng những cuốc rẻ/xa được nhận). E[Δpayout] ≈ tier − mix_cost ≈ 30..60k − ~34k ⇒ vài k đến vài chục k trên MỘT tài xế P4, pha loãng vào arm ⇒ ns trên n=100 là kết cục KỲ VỌNG của objective hiện tại, không phải nhiễu. Kênh không ở world zero-cost-trơ như D-E4-01 (bonus là tiền thật trong sim) — nó ns vì objective thiếu vế chi phí mà world định giá qua matching/opportunity cost. Confidence TB vì cơ chế đọc từ code + số đã đo trong repo, chưa reproduce lại n=100.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": true
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "EP-1: Cliff theo 'số lần từ chối còn chịu được' thay band rate",
+      "action_executable": "Cùng action hiện có: card cảnh báo (UI) / gate nói-hay-im (sim) — chỉ đổi ĐIỀU KIỆN kích hoạt, không thêm hành động mới",
+      "solver_dua_tren": "S1 thuần đại số: thêm o, a (và R từ trips_per_hour_est × giờ còn lại) vào bonus_gap_input; d_max = floor(a + R − thr·(o+R)); cliff khi d_max ≤ k (k=2-3). Sim có sẵn counts; UI dùng (k,n) 7 ngày làm cận + caveat intraday",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Cliff có đơn vị đúng (lần từ chối), tự động chặt ở đuôi ca (R nhỏ ⇒ d_max nhỏ) — vá MI-3 và trả lời đúng câu đuôi ca; note 'vài lần từ chối' thành số thật có nguồn"
+    },
+    {
+      "title": "EP-2: S1 trả 'bonus_at_risk_vnd' = bonus_at(points_now); gỡ conflation mốc-kế trong _advice_would_help",
+      "action_executable": "Sim: vẫn là lift accept_base (action đã có trong world); chỉ sửa gate: khi bonus_at_risk > 0 ∧ acceptance là blocker của việc ĐƯỢC TRẢ ∧ recoverable ⇒ không để enough_hours(mốc kế) phủ quyết",
+      "solver_dua_tren": "policy.bonus_at có sẵn (gsm_core/policy.py:104) — một lookup, đưa vào solution của S1; bridge đọc typed field (đúng bài ADV-07 không parse chuỗi)",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Vá MI-1: đóng dải hở 60≤points<200 ở đuôi ca — vùng giá trị treo cao nhất; đồng thời cho phép cliff UI hiển thị đúng mức tiền đang rủi ro (chỉ trong caveat/không hứa)"
+    },
+    {
+      "title": "EP-3: Vế chi phí mix từ decline log — gate giá trị: chỉ khuyên khi bonus_at_stake ≥ ước lượng chi phí mix",
+      "action_executable": "Không đổi action; thêm điều kiện im lặng khi lift kỳ vọng lỗ ròng (đúng triết lý R-08 'không có gì để nói')",
+      "solver_dua_tren": "Analytics offline trên world log order_declined (net_vnd, pickup_km — world.py:669-672): E[opportunity cost/giờ-lift] theo archetype × khung giờ, calibrate như max_realized_accept đã làm (ĐO, không bịa); bridge so tier_at_stake với cost × giờ còn lại",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Vá MI-8 — đưa vế mà world định giá vào objective (đúng bài học station_choice); kỳ vọng biến kênh từ ns thành 'nói ít hơn nhưng dương khi nói', kiểm bằng ĐA-08 n=100 paired-seed"
+    },
+    {
+      "title": "EP-4: Cliff đối xứng cho completion + tính cliff trong nhánh already_maxed",
+      "action_executable": "UI: thêm 1 card info cùng khuôn _cliff_item; sim không đổi action",
+      "solver_dua_tren": "S1: chuyển block cliff (bonus_feasibility.py:213-218) thành hàm chạy ở CẢ hai nhánh (maxed lẫn thường) và thêm completion_cliff cùng công thức band/d_max; adapter đọc thêm param mới",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Vá MI-2 + MI-6: người treo 170k sát vách hết nhận 'không có gì cần chỉnh'; hai ràng buộc AND được canh đủ hai"
+    },
+    {
+      "title": "EP-5: Gate xác suất P(final ≥ thr) thay kỳ vọng best-case",
+      "action_executable": "Không đổi action — chỉ đổi điều kiện recoverable/cliff của sim",
+      "solver_dua_tren": "Thuần math: final-rate là (a + X)/(o + R) với X ~ Binomial(R, p); P(đạt) tính đóng bằng CDF binomial từ (o, a, R, p) — tất cả biến đã có trong bridge; khuyên khi P(đạt|nghe) − P(đạt|không) đủ lớn",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Vá MI-5: hết khuyên các ca best-case-mới-kịp (nguồn vách đá còn sót); đo lại arm accept_lift 5-30 seed trước khi xin bật"
+    }
+  ]
+}

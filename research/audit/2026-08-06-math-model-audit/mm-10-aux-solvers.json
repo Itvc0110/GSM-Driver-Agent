@@ -1,0 +1,134 @@
+{
+  "item": "SOLVER idle_reduction.py (S7, UC5) + anomaly_alert.py (S9, UC7) + f3_patterns.py (S3, UC-review) — src/gsm_core/solvers/*.py",
+  "objective_as_implemented": "KHÔNG phải một bài toán argmin/argmax duy nhất — 3 solver có 3 hình dạng khác nhau, và điều đầu tiên đáng nói là: 2/3 KHÔNG có action space thật (xem action_space). (S7 idle_reduction, src/gsm_core/solvers/idle_reduction.py:41-135) Bản thân solve() KHÔNG tối ưu hoá gì — nó là một bộ PHÁT HIỆN + ĐỊNH DẠNG: gom idle_segments theo giờ (idle_reduction.py:70-72), chọn 'worst_window' = giờ có NHIỀU idle nhất (không phải giờ demand THẤP nhất) trong tập giờ có demand_by_hour<=LOW_DEMAND_MAX=0.5 (idle_reduction.py:74-78 — argmax theo (-idle_min, hour), có ràng buộc lọc demand, KHÔNG phải argmin demand). Solver tự nó KHÔNG di chuyển ai. Hành động thật chỉ xảy ra qua kênh sim `rest_window` (channels.rest_window, mặc định FALSE — configs/pilot_dongda.yaml:339): advice_bridge.rest_window_hour() gọi ĐÚNG solve() này (advice_bridge.py:837-861) để lấy 1 giờ mục tiêu, rồi should_defer_rest() (advice_bridge.py:863-944) quyết định có HOÃN REST hiện tại hay không — đây mới là bài toán có action: constraint set = SOC>threshold, online<=fatigue_threshold, không có cam kết đang vỡ (rest_commit_broken), rest_deferred_min+minutes_to<=rest_defer_max_min (POLICY_LOCKED); nếu qua hết, hành động thay thế PHẢI khác WAIT (world.py:1033-1038, consider_relocate làm alt_action_fn) — nếu không có gì hữu ích để làm thì KHÔNG hoãn (Cường chốt 2026-08-05). Không có hàm mục tiêu tiền/phút nào được cực tiểu — đây là một cây quyết định RÀNG BUỘC, giống S4 hơn là giống S1/S2. || (S9 anomaly_alert, src/gsm_core/solvers/anomaly_alert.py:67-137) KHÔNG có ngưỡng phát hiện — solver không hề phân loại/tính điểm bất thường. Nó CHỈ lọc các bản ghi `public_frauds` có status thuộc OPEN_STATUSES=('open','reviewing') (anomaly_alert.py:21,69), sort theo severity rồi ĐỊNH DẠNG lại (map severity nội bộ -> nhãn app 'Thấp/Cao/Rất cao', tính hours_left tới hạn giải trình 48h). 'Ngưỡng cảnh báo' hoàn toàn nằm ở một hệ thống UPSTREAM ngoài repo này (dữ liệu vào đã có severity/confidence sẵn) — solver S9 là một PRESENTER, không phải một detector; không thể trả lời 'ngưỡng từ đâu' vì trong code repo này không tồn tại một hàm/tham số ngưỡng nào cho anomaly detection. Action space = 0 (chỉ có văn bản khuyên kiểm tra lại + liên hệ hỗ trợ + giải trình 48h — không có actor action nào trong world.py đọc output của S9). || (S3 f3_patterns, src/gsm_core/solvers/f3_patterns.py:34-155) Chạy SAU ca (F3) trên `session_summary_input` đã CHỐT (không phải input động trong ca) — quét 4 rule độc lập (charge_rest_peak, acceptance_cliff, bonus_progress_gap, idle_peak), mỗi rule là MỘT ĐIỀU KIỆN NGƯỠNG đơn (không phải một objective liên rule). KHÔNG có action space — F3 là phản hồi RETROSPECTIVE cho ngày mai, actor của ngày ĐÃ XONG không còn hành động nào để nhận. Vì thế câu hỏi 'kỳ vọng vs realized / myopic-vs-lookahead' đúng nhất áp cho S3 là: rule có NÓI ĐÚNG THẾ GIỚI THẬT không (policy/eligibility), không phải 'objective có tối ưu chưa'.",
+  "action_space": [
+    "S7 idle_reduction (qua kênh sim rest_window, OFF theo mặc định — channels.rest_window=false): REST bị HOÃN sang giờ mục tiêu (rest_commit_due_min); nhánh thay thế trong lúc chờ là RELOCATE hoặc giữ nguyên bản năng (advice_bridge.py:889,916-918; world.py:1033-1055). Tới giờ cam kết, world ép REST qua rest_commit_gate (world.py:871-875). Đây là hành động actor CÓ THẬT trong world.py.",
+    "S7 idle_reduction (đường F2/F3 văn bản, router.py:18,20): CHỈ SINH VĂN BẢN ('cân nhắc dồn nghỉ/đổi pin vào khung X') — KHÔNG map sang bất kỳ actor action nào; đường này hiện KHÔNG có caller sống trong sản phẩm (xem math_issues 'orphan').",
+    "S9 anomaly_alert: KHÔNG có action space — chỉ có văn bản khuyên 'kiểm tra lại + liên hệ hỗ trợ + giải trình trực tuyến trong 48h'; hành động giải trình xảy ra NGOÀI hệ thống này (trên app GSM).",
+    "S3 f3_patterns: KHÔNG có action space — văn bản phản hồi RETROSPECTIVE cho ca đã kết thúc, không map sang actor action nào trong world.py."
+  ],
+  "variables_observed": [
+    "S7 (sim path, advice_bridge.build_idle_reduction_input, advice_bridge.py:807-835): idle_by_hour tích luỹ THẬT của actor (entities.py:96, ghi ở world.py:1139); demand_by_hour = belief cá nhân actor (_actor_demand_hint) chuẩn hoá theo đỉnh — đây là ORACLE field (config demand_field) × nhiễu per-actor, KHÔNG bị supply-censor (world.py:1142-1168)",
+    "S7 (L1R/production path, from_l1r.py:323-398): idle_segments từ public_driver_hex_tracking (đã cắt tại t_now, D-M3-11); demand_by_hour từ đếm `trips` theo giờ (đã cắt <=t_now, from_l1r.py:380-386); active_reposition từ campaign_id (chỉ khi đã bắt đầu <=t_now)",
+    "S9: flags từ public_frauds (severity, confidence, detected_at, status) — đã có sẵn, không tính lại; deadline giải trình từ config/ai['explain_deadline_hours'] hoặc EXPLAIN_DEADLINE_HOURS=48.0 (anomaly_alert.py:32)",
+    "S3: trips + inferred_activities (L2i, suy từ gap giữa các cuốc — infer_activity.py) + day_state_end (points, acceptance_rate, completion_rate) + payout_breakdown (gross/driver_payout tách sẵn) + policy (point_peak_hours, bonus_min_acceptance/completion, day_bonus_tiers) — TẤT CẢ đã có trong input, solver ĐANG SẴN CÓ nhưng không dùng hết (xem variables_missing/math_issues)"
+  ],
+  "variables_missing": [
+    {
+      "var": "S3 bonus_progress_gap: policy.bonus_min_acceptance / policy.bonus_min_completion — CÓ trong đối số `policy` truyền vào solve() nhưng KHÔNG được đọc ở block bonus_progress_gap (f3_patterns.py:94-108)",
+      "vi_sao_quan_trong": "day_bonus() thật (src/gsm_sim/policy.py:94-97) trả 0 tuyệt đối nếu acceptance<0.85 HOẶC completion<0.85, BẤT KỂ points — nhưng bonus_progress_gap chỉ nhìn `gap_pts<=30` rồi viết 'chỉ thiếu Xđ nữa là đạt mốc Y... ca sau chạy thêm ít cuốc là chốt được' (f3_patterns.py:103-104) mà không kiểm eligibility. Tài xế đã tự loại mình khỏi thưởng (vd P4 accept_base 0.80, xem mm-01) vẫn nhận lời hứa sai.",
+      "nguon_co_san_trong_sim": "`policy` (PolicyBundle) đã là tham số hàm solve(ss, policy, params); `dse['acceptance_rate']`/`dse['completion_rate']` đã đọc ở đầu hàm (f3_patterns.py:40-41) — chỉ cần thêm điều kiện, KHÔNG cần solver/data mới"
+    },
+    {
+      "var": "S7 (L1R path) tín hiệu cầu KHÔNG bị supply-censor — ví dụ số đơn hết hạn/huỷ hệ thống theo giờ, hoặc mật độ tài xế online theo giờ",
+      "vi_sao_quan_trong": "demand_by_hour hiện = đếm `trips` (đã label 'chỉ đơn ĐÃ phục vụ' — idle_reduction.py:12) theo giờ (from_l1r.py:380-386). Giờ thiếu cung trông y hệt giờ ít cầu — S7 có thể khuyên tài xế nghỉ ĐÚNG giờ thị trường đói cung nhất (S7-2, đã CONFIRMED trong audit 2026-07-26, vẫn còn nguyên trong code hiện tại — xem math_issues)",
+      "nguon_co_san_trong_sim": "driver_statistic_daily có total_request_calculate_cancel/cancelled_count (daily, không phải hourly — docs/data-catalog/gsm-data-catalog.csv) — chỉ đủ làm CẢNH BÁO độ tin cậy theo NGÀY, không đủ sửa hourly; sim path đã có sẵn đường ĐÚNG (oracle demand_field, world.py:1154) — có thể dùng làm THAM CHIẾU calibrate proxy L1R"
+    },
+    {
+      "var": "S7 rest_window: vị trí/kế hoạch mà kênh `positioning` (S4 capacity_alloc) ĐÃ GÁN cho actor (`self.standby_plan.get(actor.actor_id)`)",
+      "vi_sao_quan_trong": "should_defer_rest() dùng alt_action_fn=consider_relocate (world.py:1037-1038) — một bản năng CỤC BỘ (ring 1-3, chỉ theo demand_hint riêng actor, behavior.py:210-220) — hoàn toàn KHÔNG biết actor có đang giữ một standby_plan (đã tính bằng Hungarian trên toàn ô, có anti-herding, có cap-aware) hay không. Hai solver có thể chỉ 2 hướng khác nhau cho CÙNG một actor tại các tick liền kề (xem math_issues — cùng lớp station_choice)",
+      "nguon_co_san_trong_sim": "self.standby_plan (World, đã tồn tại — world.py:994) — chỉ cần truyền vào alt_action_fn hoặc đọc trực tiếp trong should_defer_rest, không cần solver mới"
+    },
+    {
+      "var": "S9: outcome đã-xác-nhận của cờ (fraud thật hay báo động giả) — không tồn tại field nào trong repo ghi lại kết quả giải trình/rà soát",
+      "vi_sao_quan_trong": "Không có closed-loop nào để đo false-positive rate; `confidence` hiển thị cho tài xế ('độ tin cậy X%' — anomaly_alert.py:119-120) trông như xác suất đã hiệu chỉnh nhưng trong mock là `rng.uniform(0.3,0.8)` thuần tuý (mockgen/realdata.py:481) — không neo vào signal nào",
+      "nguon_co_san_trong_sim": "KHÔNG có trong 13 bảng hiện tại (đã kiểm docs/data-catalog) — đây là GAP DỮ LIỆU thật, không phải lỗi solver bỏ sót; ghi rõ trong caveats là đúng, nhưng số 'confidence' không nên được trình bày như xác suất calibrated"
+    }
+  ],
+  "math_issues": [
+    {
+      "title": "S3 bonus_progress_gap: hứa 'chốt được mốc thưởng' mà KHÔNG kiểm điều kiện eligibility (acceptance/completion) mà world thật sự dùng để zero-out bonus — CÙNG LỚP station_choice (thiếu vế mà world định giá)",
+      "evidence": "f3_patterns.py:94-108 (không đọc dse['acceptance_rate']/['completion_rate'] ở block này dù đã có ở dòng 40-41); src/gsm_sim/policy.py:94-97 (day_bonus trả 0 nếu acceptance<0.85 HOẶC completion<0.85, bất kể points)",
+      "detail": "Đúng hình dạng lớp lỗi station_choice: một biến quan sát được (points_end, gap tới mốc) được dùng làm PROXY cho 'còn kiếm được thưởng không', trong khi world thật có một CỔNG NHỊ PHÂN (eligibility) độc lập với points mà solver bỏ qua hoàn toàn — kết quả là lời khuyên tự tin SAI đúng lúc nó sai nhiều nhất (tài xế đã rớt eligibility, đang cần biết SỰ THẬT ĐÓ nhất, lại được kể một câu chuyện lạc quan giả). test_f3_patterns.py hiện không có test case 'gap nhỏ NHƯNG acceptance<0.85' — nghĩa là hành vi sai này không bị bất kỳ test nào bắt.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S3 `derive_session_summary_input_l1r`/`derive_session_summary_input` là hai deriver L3 DUY NHẤT trong toàn bộ features/ KHÔNG nhận tham số `t_now` — cắt theo NGÀY tuyệt đối, không có cơ chế tự vệ chống đọc-tương-lai, và bị LOẠI khỏi cổng thường trực D-M3-12",
+      "evidence": "src/gsm_core/features/from_l1r.py:179-213 (chữ ký hàm chỉ có driver_id, session_date, l1r, policy — không có t_now, khác MỌI hàm derive_*_input_l1r khác trong cùng file: S5/S6/S7/S8/S9 đều có t_now); src/gsm_core/features/session_summary.py:14-49 (bản mock cũng không có t_now); tests/test_future_leak_gate.py:82-92 (`_cases()` liệt kê 7 deriver: bonus_gap/weekly_khoan/shift_plan/mission_select/idle_reduction/penalty_explain/anomaly_alert — KHÔNG có session_summary); tests/test_future_leak_l1r.py (grep toàn file: không có ca nào cho session_summary/f3_patterns)",
+      "detail": "Mọi deriver khác trong from_l1r.py tự cắt dữ liệu tại t_now NGAY TRONG HÀM (ví dụ S5 sau fix S5-1: `cutoff=min(today, week_end)`, S7 sau D-M3-11: `_observed_seconds(start,dur,t_now)`). S3 thì không — nó đọc TOÀN BỘ ngày `session_date` bất kể ai gọi lúc nào. Miễn là caller kỷ luật gọi ĐÚNG lúc ca đã kết thúc thì không sao — nhưng router.py khai `session_review` là một intent CÓ THỂ khớp giữa ca ('thu nhap hom nay', 'sao thu nhap' — router.py:29-30) và F3 hiện đang là feature NHẬN free-text (route(feature, free_text_query) không tự chọn feature theo thời điểm ca). Vì solver KHÔNG có t_now để tự vệ, an toàn hoàn toàn phụ thuộc kỷ luật caller — một kỷ luật hiện KHÔNG có test nào canh (cổng D-M3-12 vốn dựng ra chính để bắt lớp lỗi này lại bỏ sót đúng file này).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S7 (đường L1R/production) demand_by_hour bị supply-censor: đếm `trips` (chỉ đơn ĐÃ phục vụ) làm proxy cho cầu — giờ thiếu tài xế trông y hệt giờ ít khách, có thể khuyên nghỉ ĐÚNG giờ thị trường đói cung nhất (S7-2, CONFIRMED trong audit 2026-07-26, vẫn còn nguyên)",
+      "evidence": "src/gsm_core/features/from_l1r.py:376-386 (`by_hour[_hour(t['request_time'])] += 1` chỉ trên bảng `trips`; comment tự nhận 'chỉ đơn ĐÃ phục vụ'); src/gsm_core/solvers/idle_reduction.py:12 (docstring D-004b điều kiện 4: 'Demand là PROXY (chỉ đơn ĐÃ phục vụ)')",
+      "detail": "CÙNG LỚP station_choice: solver dùng một đại lượng cận thị (P(đơn được phục vụ | giờ)) làm thế cho đại lượng world thật sự định giá (cầu thô, hoặc ít nhất số đơn chờ/hết hạn). Vòng lặp tệ hại: giờ nhiều tài xế đã tự rời đi (vì tưởng ít khách) → càng ít trip được ghi nhận → proxy càng thấp → S7 càng khuyên nghỉ đúng giờ đó. LƯU Ý QUAN TRỌNG (đã kiểm để không đổ oan): đường SIM NỘI BỘ (advice_bridge.build_idle_reduction_input, world.py:1142-1168 `_actor_demand_hint`) dùng ORACLE demand_field (λ config thật) chứ KHÔNG bị lỗi này — bug bị giới hạn ở đường L1R/dữ liệu-thật (hiện chưa có caller sống — xem math_issue 'orphan'), nên chưa có hại thật đo được, nhưng sẽ có ngay khi ai đó nối đường này vào sản phẩm.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S7 rest_window (kênh sim, mặc định OFF) và S4 positioning (mặc định ON) có thể kéo CÙNG một actor theo 2 hướng khác nhau ở 2 tick liền kề — không có cơ chế chia sẻ trạng thái",
+      "evidence": "src/gsm_sim/world.py:990-1012 (positioning chỉ ghi đè khi action==WAIT, không chạm khi action==REST — standby_plan ở lại 'treo'); src/gsm_sim/world.py:1033-1038 (should_defer_rest dùng alt=consider_relocate(actor,...) — bản năng cục bộ, KHÔNG đọc self.standby_plan); src/gsm_sim/behavior.py:175-220 (consider_relocate chỉ nhìn demand_hint ring 1-3 của riêng actor, không có khái niệm capacity/anti-herding của S4)",
+      "detail": "Trình tự cụ thể: actor có standby_plan (Hungarian, toàn cục, cap-aware) đang treo vì bản năng tick này là REST → should_defer_rest hoãn REST, sai actor đi theo alt=RELOCATE tới ô KHÁC (chọn theo instinct cục bộ, có thể ngược hướng với standby target) → standby_plan VẪN còn đó → tick sau nếu bản năng quay lại WAIT, actor bị kéo LẦN NỮA về standby target ban đầu. Hai lần di chuyển cho hai đích khác nhau tốn ENROUTE + SOC thật (world.py:1120-1127) mà không actor action nào bị lợi thêm — đúng mô tả câu hỏi riêng 'hai solver cùng kéo tài xế đi hai hướng'. Vì rest_window mặc định TẮT (configs/pilot_dongda.yaml:339) nên hiện KHÔNG active trong baseline — đây là lỗi 'ngủ' (dormant), sẽ sống dậy ngay khi ai bật kênh này để thí nghiệm (README audit yêu cầu xét cả kênh đang tắt).",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S9 anomaly_alert: 'confidence' hiển thị cho tài xế như xác suất đã hiệu chỉnh nhưng không có nguồn calibration/closed-loop nào trong repo — false-positive rate KHÔNG được đo ở bất kỳ đâu",
+      "evidence": "src/gsm_core/solvers/anomaly_alert.py:96,119-120 (`numbers.append(_num(f['confidence'],'ratio',...))`; digest in `.0%`); src/gsm_core/mockgen/realdata.py:477-482 (`confidence: round(rng.uniform(0.3,0.8),2)`, `status: 'open'` LUÔN LUÔN — không bản ghi mock nào từng chuyển sang cleared/closed)",
+      "detail": "Đây không phải bug tính toán (solver không tính gì) mà là một khoảng trống đo lường: (a) trong mock, 'confidence' là nhiễu đều không neo vào tín hiệu nào, khi hiển thị dạng phần trăm nó ngụ ý một mức calibration không tồn tại; (b) không có trường/luồng nào trong 13 bảng hoặc trong code ghi lại kết quả giải trình (đúng/oan) để tính precision/false-positive rate — nên câu hỏi riêng của nhiệm vụ ('false-positive rate có đo?') có câu trả lời dứt khoát: KHÔNG, và hiện KHÔNG THỂ đo bằng dữ liệu đang có.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Solver mồ côi: f3_patterns và anomaly_alert (S3/S9) không có caller sống nào ngoài test/fixture viết tay; idle_reduction (S7) chỉ có ĐÚNG MỘT caller sống — bên trong simulator (kênh rest_window, mặc định TẮT) — KHÔNG solver nào trong ba cái nối được tới UI backend thật",
+      "evidence": "ui/backend/app/adapters/advisor.py:1-19 (docstring 'gọi solver S1 THẬT'; import DUY NHẤT `bonus_feasibility`); ui/backend/app/routers/advice.py:343 (`_REAL_ADVICE_ID_PREFIXES=('s1-','s2-','s4-','s7-')` khai 's7-' là namespace hợp lệ nhưng KHÔNG có route/adapter nào sinh advice_id đó); scripts/smoke_advisor_live.py:58-65 (`_s3()` — solver_report của f3_patterns được VIẾT TAY, không gọi `f3_patterns.solve()`); grep toàn repo cho `f3_patterns.solve(`/`anomaly_alert.solve(` ngoài tests: 0 kết quả",
+      "detail": "router.py khai F2/F3 dùng idle_reduction/f3_patterns/anomaly_alert (router.py:18,20-21) — đây là bản đồ Ý ĐỊNH, không phải bản đồ THI HÀNH. Không có đoạn code sản phẩm nào build input (derive_*_input_l1r) rồi gọi solve() rồi đẩy vào AdvisorPipeline.handle() cho 3 solver này. idle_reduction có sống trong SIM (advice_bridge.rest_window_hour, world.py) nhưng đó là một world khác, phục vụ mục đích khác (mô phỏng hành vi tài xế), không phải đường 'tài xế hỏi app, app trả lời' mà router.py mô tả. Hệ quả trực tiếp: 3 math_issue ở trên (bonus_progress_gap sai, demand proxy lệch, thiếu t_now) hiện KHÔNG gây hại thật cho ai — nhưng cũng KHÔNG được test end-to-end nào bảo vệ trước khi ai đó nối dây.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "[Debt cũ CHƯA SỬA — S3-1, audit 2026-07-26] `_dur_min` bỏ phần NGÀY của timestamp, hoạt động vắt qua nửa đêm cho duration ÂM, làm sai severity (HIGH/MED) của charge_rest_peak",
+      "evidence": "f3_patterns.py:21-27 (`_hour`/`_dur_min` chỉ đọc `iso[11:16]`, không parse ngày); archetypes P7 'ca TỐI-ĐÊM (15-16h → 23-24h)' (configs/pilot_dongda.yaml:242) là ca có khả năng thật vắt gần nửa đêm",
+      "detail": "Đọc lại code hiện tại 2026-08-06: bug CHƯA được sửa (không có trong danh sách UPDATE-065 batch1). Không phải finding mới — trích dẫn làm bằng chứng bổ trợ cho việc audit đơn vị/thời gian của cùng solver.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "[Debt cũ CHƯA SỬA — S8S9-2, audit 2026-07-26] `_hours_since` chỉ bắt ValueError; lệch aware/naive giữa t_now và detected_at → TypeError không bị bắt → solve() S9 CRASH toàn bộ thay vì degrade",
+      "evidence": "anomaly_alert.py:37-45 (`except ValueError: return None` — không có except TypeError)",
+      "detail": "Đọc lại code hiện tại 2026-08-06: bug CHƯA được sửa. Không phải finding mới — trích dẫn vì đúng trục 'đơn vị/timezone' mà nhiệm vụ yêu cầu kiểm, và vì S9 hiện mồ côi nên chưa ai đụng lỗi này trong thực tế — nhưng người nối dây tiếp theo sẽ đụng ngay khi có input thật lẫn dữ liệu tz-mixed (rất thường gặp khi trộn nguồn CSV/DB thật).",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "Thêm điều kiện eligibility vào bonus_progress_gap trước khi hứa 'chốt được mốc'",
+      "action_executable": "Không có actor action — đây là sửa VĂN BẢN/ĐIỀU KIỆN của một pattern F3, không đổi hành vi actor nào trong world.py",
+      "solver_dua_tren": "f3_patterns.py block 3: thêm `acceptance>=policy.bonus_min_acceptance and completion>=policy.bonus_min_completion` vào điều kiện phát pattern; nếu KHÔNG đạt, đổi heuristic_note sang cảnh báo ngược ('đã đủ điểm nhưng tỷ lệ nhận/hoàn thành đang dưới ngưỡng nên CHƯA nhận được thưởng dù đạt điểm') — cả hai biến đã có sẵn trong `dse`, PolicyBundle đã có trong chữ ký hàm, không cần solver/data mới",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Loại lời hứa sai đúng lúc tài xế cần sự thật nhất; thêm 1 regression test đỏ-trước-xanh-sau (gap nhỏ + acceptance<0.85) là đủ khoá lại"
+    },
+    {
+      "title": "Thêm `t_now` + cắt tại t_now cho session_summary_input_l1r (mirror pattern của S5/S7), và thêm vào cổng D-M3-12",
+      "action_executable": "Không có actor action — đây là hardening một L3 view (đọc dữ liệu), không đổi hành vi actor",
+      "solver_dua_tren": "Mirror `derive_weekly_khoan_input_l1r`'s `cutoff=min(today,week_end)` (from_l1r.py:243) hoặc `derive_idle_reduction_input_l1r`'s `_observed_seconds(start,dur,t_now)` (from_l1r.py:354); sau khi có t_now, thêm case `session_summary` vào `_cases()` của tests/test_future_leak_gate.py:82-92 để cổng thường trực bắt được nếu ai làm hỏng lại sau này",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Đóng lỗ hổng cấu trúc DUY NHẤT còn lại trong features/ trước khi có caller sản phẩm nào nối vào F3; không đổi hành vi hiện tại (session_date vẫn luôn == ngày đã xong trong mọi test hiện có), nên là thay đổi an toàn thuần phòng thủ"
+    },
+    {
+      "title": "Cho `should_defer_rest` đọc `self.standby_plan` trước khi gọi consider_relocate cục bộ",
+      "action_executable": "Vẫn là RELOCATE — actor đã thực hiện được hành động này; chỉ đổi ĐÍCH được chọn khi hoãn nghỉ",
+      "solver_dua_tren": "world.py truyền `self.standby_plan.get(actor.actor_id)` vào should_defer_rest (hoặc alt_action_fn); nếu có sẵn plan, dùng nó làm alt=(RELOCATE, sb_cell) thay vì gọi consider_relocate; nếu không có plan, giữ nguyên hành vi hiện tại — 0 solver mới, chỉ nối 2 state đã tồn tại (advice_bridge.py + world.py:994)",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Xoá lớp lỗi 'hai solver kéo hai hướng' TRƯỚC khi ai bật rest_window để thí nghiệm (kênh này hiện tắt — đây là sửa phòng ngừa, không phải sửa một hại đã đo được); nên đo lại bằng cách bật tạm `rest_window=true` trong một sweep nhỏ, so sánh km-rỗng/SOC trước-sau"
+    },
+    {
+      "title": "Gắn cờ 'độ tin cậy KHÔNG hiệu chỉnh' rõ ràng hơn cho confidence của S9, tách khỏi cách trình bày phần trăm",
+      "action_executable": "Không có actor action — chỉ đổi cách trình bày số cho driver, giữ nguyên toàn bộ luồng dữ liệu",
+      "solver_dua_tren": "Không cần solver mới — chỉ đổi template/digest: hiển thị severity (đã có thang app chính thức, đáng tin) làm tín hiệu CHÍNH; đưa `confidence` xuống `numbers[]` với source rõ 'upstream:uncalibrated' thay vì in `.0%` như một xác suất trong câu văn chính (anomaly_alert.py:119-120)",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Không hứa một độ chính xác không tồn tại; đây là sửa CÁCH NÓI, không sửa MODEL (đúng ranh giới CLAUDE.md §5 — agent chỉ diễn giải, số vẫn do rule/analytics đưa ra, chỉ đổi cách trình bày cho trung thực hơn)"
+    }
+  ]
+}

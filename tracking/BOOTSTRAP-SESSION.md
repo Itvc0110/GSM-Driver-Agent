@@ -67,10 +67,13 @@ phải thừa nhận lập luận cũ sai. `advice.cadence.enabled: false` là m
 
 ---
 
-## §2. STATE hiện tại (2026-07-30)
+## §2. STATE hiện tại (2026-08-06)
 
 ```
-local HEAD  = merge PR #6 Khánh + E-program UPDATE-151..158 (đã commit + push 2026-08-06)
+local HEAD  = e697e22: merge PR #6 Khánh + E-program UPDATE-151..160 (UPDATE-159 D-E4-03 đóng +
+              UI nhãn stakeholder; UPDATE-160 station_choice NO-GO ĐA-08 n=100 + la bàn §5b).
+              Đang chạy nền 2026-08-06: 2 workflow audit (math-model + root-cause idle) →
+              research/audit/2026-08-06-math-model-audit/ + .../2026-08-06-root-cause-idle/
 suite       = 1356 passed / 4 skipped / **2 FAILED** (đo 2026-08-06 SAU merge PR #6)
               uv run pytest -q                  -> 1155 / 2 fail / 4 skip  (26-53′ tuỳ tải)
               uv run pytest -q ui/backend/tests -> 201 passed — 🎉 KHÔNG cần --ignore nữa
@@ -109,12 +112,17 @@ suite       = 1356 passed / 4 skipped / **2 FAILED** (đo 2026-08-06 SAU merge P
                 sửa sau đó ⇒ kết quả đo CODE CŨ. 2026-08-04 tôi lại sập bẫy này (sửa
                 `ui/contracts/advice_v2.json` giữa chừng, mà một test trong `tests/` đọc nó lúc
                 runtime) ⇒ phải HUỶ và chạy lại từ đầu, mất ~25′ máy. Lần thứ HAI
-UPDATE       = 125 file (ĐẾM 2026-08-04), mới nhất UPDATE-137 (104 UIUX + 105 codex + 120 routing = remote/Khánh)
-              ⚠ 125 ≠ 130 vì dãy số THIẾU vài số (013–018) và có số TRÙNG (121, 125 dùng hai lần
+UPDATE       = **155 file** (ĐẾM BẰNG LỆNH 2026-08-06), số cao nhất **UPDATE-160**
+              ⚠ 155 ≠ 160 vì dãy số THIẾU vài số (013–018) và có số TRÙNG (121, 125 dùng hai lần
                 do song song với remote). Đừng suy số file từ số cao nhất — đếm bằng lệnh:
                 `(Get-ChildItem tracking\updates -Filter "UPDATE-*.md" | Measure-Object).Count`
-                Dòng này đã sai HAI lần vì đếm bằng ký ức (2026-08-03 ghi 115; 2026-08-04 ghi 118)
-PENDING      = 26 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-27 mới 2026-08-04):
+                Dòng này đã sai BA lần vì đếm bằng ký ức (2026-08-03: 115; 08-04: 118; 08-06: 125)
+              Dãy 144–150 = PR #6 của KHÁNH (checkpoint/Flutter); 151–160 = chương trình E1–E5 +
+                NO-GO station_choice của tôi (đã renumber để hết đụng — bài học: push ngay)
+PENDING      = **31 hàng V-** trong bảng; **3 đóng-gạch** (V-28/29/30) + V-19 đóng inline
+              ⇒ **~27 mục còn cần Cường**. ⚠ Đếm bằng lệnh, và đọc KỸ hàng có dấu ✅ inline:
+                có hàng đóng MỘT PHẦN (V-15: phán quyết xong, còn chờ Cường chốt 5 mục giá trị §6)
+                — đừng cộng nó vào "đã đóng". Danh sách dưới đây giữ nguyên bản mô tả cũ:
               V-01..V-14 (visual/data SIM + Track UI) · V-16 (fare parity gate)
               V-17 (kênh VỊ TRÍ b3/b4) · V-18 (nhịp nói advisor + card im lặng)
               V-20 (PHAN-QUYET đảo C2 — Cường đã hạ xuống THỬ NGHIỆM, chờ chốt văn bản)
@@ -130,13 +138,17 @@ PENDING      = 26 mục V- đang chờ Cường (V-15/V-19 đã ĐÓNG; V-27 m�
                         được đo) với `rest_nudge` (mềm); tôi chọn MỀM vì fail-closed nhưng
                         KHÔNG chắc → `D-QD4-01`
                     (b) defer bước 3 `CheckpointStore` vào đường đo chung → `D-QD4-02`)
+              V-31 (VISUAL GỘP chương trình E1–E5, 2026-08-06 — 3 màn ~10′: dashboard :8501 tab
+                    A/B + bảng Δ theo hồ sơ · web :8000/app/ thẻ cliff + pill SOC theo ngưỡng
+                    engine · tab Hành trình seed 1000. Server đang SỐNG khi viết dòng này)
               ⚠ V-16/V-17 dễ bị đọc thiếu — agent đã nhiều lần chỉ đọc V-01..V-14 + V-18
               ⚠ K-01 là mục cho KHÁNH, không phải Cường — đừng gộp vào 26
 ```
 
 🔴 **BẮT BUỘC: luôn chạy CẢ HAI lệnh khi nói "suite xanh".** `pyproject.toml` có
-`testpaths = ["tests"]` nên `pytest -q` từ root **BỎ 115 test ở `ui/backend/tests/`** — tức bỏ đúng
-test của **đường sản phẩm** (`D-M3-09`).
+`testpaths = ["tests"]` nên `pytest -q` từ root **BỎ TOÀN BỘ `ui/backend/tests/`** (đo 2026-08-06:
+**201 test**) — tức bỏ đúng test của **đường sản phẩm** (`D-M3-09`). Con số này tăng theo thời
+gian (từng ghi 56, rồi 115); **đếm lại**, đừng chép.
 
 ### Cấu hình đang chạy (đọc kỹ, dễ hiểu sai)
 

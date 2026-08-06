@@ -1,0 +1,167 @@
+{
+  "item": "SOLVER capacity_alloc.py (S4) — phân bổ cung theo zone/slot, nền của kênh positioning (kênh dương SIG duy nhất, ship)",
+  "objective_as_implemented": "Rectangular ASSIGNMENT (Hungarian, scipy.optimize.linear_sum_assignment — KHÔNG phải LP flow, KHÔNG phải greedy) trên slot-expansion: mỗi (zone, bucket) nhân bản capacity lần thành slot đơn vị (capacity_alloc.py:32-35). Cost[i,j] = pen_i + 10·1[slot_j.target ≠ pref_i], với pen_i = priority_soc/100 ∈ [0,1] là HẰNG SỐ THEO HÀNG (capacity_alloc.py:45-50). Vì mismatch penalty là nhị phân đồng giá 10 và pen là hằng theo hàng, objective THỰC CHẤT là: (a) tối đa hoá SỐ NGƯỜI được gán đúng ô ưa thích; (b) khi nC > nS (rectangular), giữ lại các hàng pen thấp — trong đường sim pen = (100−SOC)/100 nên ưu tiên giữ người NHIỀU pin (world.py:445-446). Ràng buộc: mỗi candidate ≤ 1 slot, mỗi slot ≤ 1 candidate; dư candidate → unassigned (im lặng, không churn). Ô ưa thích pref_i được chọn NGOÀI solver = ô còn trần GẦN NHẤT theo haversine centroid (world.py:442, geo.py:305-311). Trần zone do MarketStateView tính: slots = int(λ_bucket // 1.5), capacity_left = max(0, slots − (supply_now + supply_incoming)) (features/market_state.py:81-82); zones = các ô capacity_left > 0 của bucket hiện tại (world.py:451). KHÔNG có vế khoảng cách, KHÔNG có vế giá trị cầu, KHÔNG có vế thời gian trong ma trận cost.",
+  "action_space": [
+    "Gán actor IDLE (đứng ở ô cap_left==0, capacity trigger mặc định — hoặc ô fired, wait trigger E10b) → RELOCATE tới một zone còn trần trong bucket hiện tại (world._standby_planner, thi hành qua IdleAction.RELOCATE reason='standby', world.py:1012)",
+    "unassigned = bỏ lời khuyên (advisor im lặng) — không có action thay thế",
+    "wait_only: chỉ ghi đè khi bản năng là WAIT; không cướp go_swap/rest/end_shift (world.py:1002-1005)",
+    "KHÔNG dùng trong sim: nhánh swap_window (gán trạm đổi pin theo slot thời gian) — stations=[] tại call site duy nhất (world.py:452)"
+  ],
+  "variables_observed": [
+    "capacity_left theo ô = slots − (supply_now + supply_incoming + pending advice) — trừ trần NGAY khi gán (world.py:500, market_state.py sim:172)",
+    "supply_incoming gồm cả người enroute lẫn người đã-được-khuyên-chưa-đi (count_supply, chống fallacy-of-composition trong-batch)",
+    "SOC của candidate — nhưng CHỈ làm priority xếp hạng giữ/bỏ, không làm ràng buộc khả thi",
+    "khoảng cách haversine actor→zone — nhưng CHỈ ở bước chọn pref (argmin), bị vứt khỏi ma trận cost",
+    "λ kỳ vọng của BUCKET HIỆN TẠI theo ô (oracle demand_field config; E10 đã nghiên cứu nhánh realized)",
+    "idle_streak_min — chỉ ở wait trigger (E10b); capacity trigger mặc định bỏ qua",
+    "adherence coin theo archetype — rút SAU khi gán (world.py:495), không vào bài toán gán"
+  ],
+  "variables_missing": [
+    {
+      "var": "Khoảng cách/thời-gian-di-chuyển actor→slot trong ma trận cost",
+      "vi_sao_quan_trong": "Đây là chi phí tiền thật world định giá: km rỗng tốn thời gian (17-25 km/h theo giờ + congestion) và pin (1.6 %/km). Hiện chỉ ô pref (gần nhất) được biết khoảng cách; mọi slot khác đồng giá +10 ⇒ người bị stagger có thể bị đẩy đi xa tuỳ ý (tie-break theo alphabet cell id) trong khi tồn tại hoán vị tổng-km nhỏ hơn.",
+      "nguon_co_san_trong_sim": "cell_distance_km(grid, a.cell, zone) (geo.py:305) — đã được gọi ngay dòng trên (world.py:442); speed_kmh theo giờ trong config; quy phút = km/v"
+    },
+    {
+      "var": "Giá trị biên của ô đích (sd_ratio / λ dư chưa phủ)",
+      "vi_sao_quan_trong": "sd_ratio được TÍNH rồi VỨT: ranked chỉ dùng làm tập membership (min-distance trên set, world.py:442; zones→dict→sorted alphabet, capacity_alloc.py:34) ⇒ hai ô cùng còn trần nhưng cầu dư chênh 3× được đối xử y hệt. Objective đếm mismatch thay vì định giá cái world trả tiền (xác suất đón cuốc tại đích).",
+      "nguon_co_san_trong_sim": "view['cells'][c]['sd_ratio'] và expected_demand — đã có sẵn trong chính view mà planner đang cầm (features/market_state.py:93)"
+    },
+    {
+      "var": "Cầu/cung của ô NGUỒN (opportunity cost khi rút người đi)",
+      "vi_sao_quan_trong": "Điều kiện ứng viên cap_left==0 (world.py:431) gộp 'cân bằng đúng' (eff==slots) với 'dư cung' (eff>slots); và không có ngân sách outflow ⇒ ô slots=2, eff=2 có thể bị rút SẠCH cả 2 người trong một batch, để λ≈3 cuốc/h tại đó không ai phủ (chỉ được cứu bởi ring dispatcher ~2,2km). Vế mất mát tại nguồn không tồn tại trong objective.",
+      "nguon_co_san_trong_sim": "view['cells'][a.cell]['supply_effective'] và ['capacity_left']/λ — cùng view; ngân sách outflow = max(0, eff − slots) tính được thuần từ đó"
+    },
+    {
+      "var": "λ các giờ TƯƠNG LAI (lookahead)",
+      "vi_sao_quan_trong": "Myopic 1-bucket: gán lúc 15h theo λ(15h) trong khi di chuyển ăn 10-20' và người tới nơi sẽ đứng ở đó sang bucket 16-18h (đỉnh chiều). Giá trị VỊ TRÍ TẠI THỜI ĐIỂM ĐẾN VÀ SAU ĐÓ không được định giá — đúng dạng thiếu-vế của station_choice nhưng theo trục thời gian.",
+      "nguon_co_san_trong_sim": "world.demand_field có đủ 24h (mode oracle) — λ(h+1) đọc miễn phí, không leak (là cùng nguồn belief advisor đang được phép dùng)"
+    },
+    {
+      "var": "Xác suất nghe theo (adherence prior theo archetype)",
+      "vi_sao_quan_trong": "Slot bị TIÊU bởi người coin-false trong batch (world.py:495-501: coin rút sau gán; người không theo không vào pending nhưng đã chiếm slot Hungarian) ⇒ fill kỳ vọng của ô tốt = p̄ × capacity (p̄ ∈ 0.3-0.75) — trần được đặt để chống dồn cục lại thành nút thắt làm ô đói cung được bù CHẬM một bucket.",
+      "nguon_co_san_trong_sim": "advice.adherence_by_archetype (configs/pilot_dongda.yaml:442-449) — chính hệ số dùng để rút coin"
+    },
+    {
+      "var": "Ràng buộc khả thi theo pin (range check)",
+      "vi_sao_quan_trong": "LARGE (cost cấm) không bao giờ được dùng trong construction hiện tại — người SOC 25% vẫn có thể bị stagger tới zone xa (chỉ bị xếp sau khi THIẾU slot, không bị chặn slot ngoài tầm pin). Với 1.6 %/km, 5 km rỗng = 8% pin — đẩy người sát ngưỡng swap 20% vào thế phải đổi pin ngay khi tới nơi.",
+      "nguon_co_san_trong_sim": "a.soc_pct, vehicle.swap_consume_pct_per_km, cell_distance_km — điều kiện cấm slot j khi dist(i,j) × 1.6 > soc_i − 20 là thuần số học"
+    },
+    {
+      "var": "Tuổi của assignment khi THI HÀNH (TTL)",
+      "vi_sao_quan_trong": "standby_plan 'còn hiệu lực' vô hạn (world.py:423-424): sống qua trip/rest/nhiều bucket; tài xế nhận gán lúc 9h theo trần 9h có thể thi hành lúc 11h TỪ MỘT Ô KHÁC (sau khi trả khách nơi xa) — khoảng cách thật ≠ khoảng cách lúc chọn pref, và ô đích có thể đã đầy. Trace ghi freshness_deadline = biên bucket (world.py:485-488) nhưng executor (world.py:994-1012) không kiểm bất kỳ deadline nào — trace TUYÊN BỐ một validity mà runtime không thi hành.",
+      "nguon_co_san_trong_sim": "now vs thời điểm gán (đã có trong decision_id/bucket); chỉ cần pop plan tại biên bucket kế"
+    }
+  ],
+  "math_issues": [
+    {
+      "title": "MM-08-A: Ma trận cost không định giá KHOẢNG CÁCH lẫn GIÁ TRỊ đích — stagger mù km, sd_ratio hoàn toàn trang trí",
+      "evidence": "src/gsm_core/solvers/capacity_alloc.py:45-50 (cost = pen | pen+10, không có vế nào khác); src/gsm_sim/world.py:442 (distance chỉ dùng chọn pref rồi vứt); capacity_alloc.py:34 sorted(slot_caps.items()) — thứ tự sd_ratio của ranked bị thay bằng alphabet; features/market_state.py:99-103 (ranked sort theo sd_ratio nhưng không consumer nào dùng THỨ TỰ đó — grep toàn src chỉ có world.py:390/393 dùng làm set)",
+      "detail": "Objective như-đã-implement là 'đếm số người trúng ô ưa thích', không phải 'tối đa payout kỳ vọng − chi phí di chuyển'. Hệ quả đo được về cấu trúc: (a) mọi slot ngoài pref đồng giá +10 bất kể 0,5 km hay 5 km — người bị stagger được đặt theo tie-break alphabet của cell id, không theo km, không theo cầu dư; (b) tổng-km của lời giải không được tối thiểu hoá dù Hungarian đang chạy — nó tối thiểu một đại lượng vô đơn vị không map sang tiền/phút của world. World trả giá thật cho km rỗng (thời gian × cơ hội cuốc + 1.6 %pin/km) và cho việc đứng ở ô cầu-dư-thấp. Đây chính là 'objective thiếu vế mà world định giá'. Ghi chú công bằng: kênh vẫn PASS ĐA-08 9/9 n=100 (+6.016đ SIG) — thiếu vế không có nghĩa âm, nghĩa là GIÁ TRỊ ĐỂ TRÊN BÀN và rủi ro đảo dấu khi mật độ zone/candidate đổi (impact chưa đo riêng: n_stag có log 'staggered' trong event standby_planner, đo được bằng offline count).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MM-08-B: Không có opportunity cost phía NGUỒN — biên cap_left==0 gộp 'cân bằng' với 'dư cung', outflow không giới hạn",
+      "evidence": "src/gsm_sim/world.py:431-432 (elif cap_left.get(a.cell,0) > 0: continue — điều kiện ứng viên duy nhất); features/market_state.py:82 (capacity_left = max(0, slots − eff): eff==slots và eff>slots cùng cho 0); world.py:419-446 (không có ngân sách outflow per-cell)",
+      "detail": "Ô có slots=k và ĐÚNG k tài xế idle (eff==slots, vừa đủ phủ cầu) bị đối xử y hệt ô dư cung: TẤT CẢ idle ở đó thành ứng viên và có thể bị Hungarian gán đi hết trong một batch (chỉ giới hạn bởi capacity nơi khác, không bởi nhu cầu nơi đi). Đúng câu hỏi self-defeating: mô hình anticipate herding VÀO đích (capacity + pending trừ trần ngay, world.py:500 — làm tốt) nhưng KHÔNG anticipate việc rút CẠN nguồn; bucket kế, ô nguồn mất cung → capacity_left>0 → vào ranked → hút người từ ô khác về ⇒ cấu trúc ping-pong không có hysteresis. Giảm nhẹ thực tế: adherence 0.3-0.75 và wait_only chỉ đè bản năng WAIT; ring dispatcher ~2,2km phủ hộ ô bị rút; equilibrium hồ sơ multi-agent-equilibrium.md đo phủ tăng không tự phá — nên severity về TIỀN chưa chứng minh âm, nhưng lỗ hổng toán là chắc: outflow đúng phải bị chặn ở max(0, eff − slots).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MM-08-C: Assignment không có TTL — thi hành muộn tuỳ ý trên trạng thái cũ; trace ghi freshness_deadline nhưng executor không kiểm",
+      "evidence": "src/gsm_sim/world.py:423-424 ('đã có phân công còn hiệu lực' — không bao giờ hết hạn); world.py:994-1012 (đường thi hành không so now với deadline nào); world.py:485-488 (validity_hints freshness_deadline_min chỉ ghi vào checkpoint_trace); market_state.py:41 + count_supply (pending của actor bận vẫn đếm inc tại đích nhiều bucket)",
+      "detail": "Người coin-true nhưng đang không WAIT (nhận đơn ngay sau khi gán, hoặc rest) giữ nguyên plan qua trip/rest: (a) pending_targets tiếp tục trừ trần ô đích hàng giờ cho một người không hề trên đường tới; (b) khi rảnh lại — có thể ở đầu kia quận sau khi trả khách — họ RELOCATE tới ô được chọn theo ảnh cung/cầu của MẤY BUCKET TRƯỚC, với khoảng cách thật khác hẳn khoảng cách lúc argmin pref; (c) vì đang trong standby_plan họ bị loại khỏi ứng viên các batch sau (world.py:423) nên không thể được gán lại theo trạng thái mới. Kỳ-vọng-lúc-gán vs realized-lúc-thi-hành tách rời không kiểm soát; km rỗng trả cho một đích đã hết giá trị là tiền thật. Fix thuần cơ học: pop standby_plan/pending tại biên bucket kế (deadline đã được TÍNH sẵn ở validity_hints).",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MM-08-D: slots = floor(λ/1.5) per-cell res-9 — sai cả service-rate lẫn granularity so với kernel dispatcher",
+      "evidence": "src/gsm_core/features/market_state.py:81 (slots = int(demand // trips_per_driver_per_bucket)); src/gsm_sim/market_state.py:112 + configs/pilot_dongda.yaml:395 (trips_per_hour_est=1.5 hằng); configs/pilot_dongda.yaml:120-147 (dispatcher match trong ring k≤6 ≈ 2,2km, eta_max 11') vs h3_res 9 (~0,35km/cell)",
+      "detail": "Ba lỗi chồng nhau trong công thức trần: (1) FLOOR per-cell: ô λ=1.4 'nuôi' gần 1 tài xế nhưng slots=0 — vô hình vĩnh viễn với positioning; sum-of-floors << floor-of-sum nên vùng 4 ô λ=1.2 (tổng 4.8, đủ nuôi 3 người) hiện 0 capacity. Off-peak (λ tổng ~45/h trên ~85 ô, mean 0.53) gần như MỌI ô slots=0 ⇒ ranked rỗng ⇒ kênh câm cả dải giờ thấp — có thể là điều muốn, nhưng là hệ quả của floor chứ không phải quyết định. (2) SERVICE-RATE: μ=1.5 cuốc/tài-xế/giờ giả định tài xế đứng lại phục vụ tiếp Ô ĐÓ, nhưng cấu trúc OD của world đưa tài xế đi nơi khác sau 1 cuốc (65-81% trả ngoài/khác ô) — một người đứng ở ô c hấp thụ ~1 cuốc của c rồi biến mất khỏi c ⇒ trần ước THIẾU cung cần thiết cho ô cầu cao. (3) GRANULARITY: cầu ô c được phục vụ bởi cung trong bán kính ~2,2km (hàng chục ô), nên 'cung của ô' không phải pool liên quan — cap_left từng ô đơn lẻ nhiễu lớn (λ, eff đều số nguyên nhỏ 0-6). Ba lỗi cùng hướng làm capacity vừa thiếu vừa nhiễu; hướng đúng là pool theo grid_disk(k) rồi chia ngược.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MM-08-E: Adherence không vào bài toán gán — slot tiêu cho người coin-false, ô đói được bù chậm một bucket",
+      "evidence": "src/gsm_sim/world.py:475-501 (allocations tiêu slot trước; standby_follow_draw rút coin SAU, chỉ follower vào pending); configs/pilot_dongda.yaml:442-449 (p theo archetype 0.30-0.75 đã biết trước)",
+      "detail": "Trong một batch, Hungarian lấp k slot của ô đích bằng k người, nhưng chỉ ~p·k người thực sự đi (coin-false không vào pending, không di chuyển). Bucket đó ô đích nhận kỳ vọng p·k thay vì k cung mới, trong khi trần đã bị coi là 'đã phát đủ' (người coin-false không giữ pending nên bucket sau trần mở lại — self-correcting sau 60', không phải leak vĩnh viễn). Hệ quả: tốc độ lấp ô đói bị chiết khấu p̄ ∈ [0.3, 0.75], tức advisor phản ứng chậm ~1/p̄ bucket với sốc cầu. Đây là kỳ-vọng vs realized ở tầng phân bổ; chuẩn overbooking (phát 1/p̄ lời khuyên có trần an toàn) là toán thuần đã có sẵn tham số. Lưu ý ranh giới: KHÔNG đề xuất phân biệt đối xử cá nhân theo adherence khi phát lời khuyên cho NGƯỜI THẬT (fairness) — trong sim đo trần giá trị thì hợp lệ, ship cần Cường duyệt riêng.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MM-08-F: Nhánh chống-dồn-cục ĐỔI PIN của S4 (mục đích khai sinh) không được nối — và một bucket/call nên không thể stagger theo THỜI GIAN (nợ E-07)",
+      "evidence": "src/gsm_sim/world.py:452 (derive_allocation_input(_iso(now), cands, [], zones, ...) — stations=[]); src/gsm_core/features/allocation.py:30 (bucket = t_now duy nhất cho MỌI slot); docstring capacity_alloc.py:1-7 ('chống cả làng cùng đi sạc') vs thực tế chỉ standby_zone chạy; world.py:973-988 (swap_early đi đường per-driver check_swap_early, không qua S4)",
+      "detail": "Trả lời câu hỏi E-07: slot KHÔNG tĩnh — zones tái tính mỗi bucket 60' từ view sống (dynamic snapshot) — nhưng trong MỖI lần gọi chỉ có đúng MỘT bucket (bucket = t_now cho mọi entry), nên chiều 'bucket' của slot (target, bucket) là degenerate: S4 chỉ có thể stagger KHÔNG GIAN (đổi zone) hoặc BỎ, không bao giờ 'đến muộn 30 phút' — trong khi với trạm đổi pin, stagger thời gian mới là công cụ đúng. Nghiêm trọng hơn: đường trạm không được nối gì cả (stations=[] tại call site duy nhất), còn kênh swap_early phát quyết định per-driver theo queue tức thời — nhiều tài xế trong cùng interval nhìn cùng queue=0 và cùng đi (race không trọng tài); station_choice (NO-GO, D-E4-06) cũng per-driver. Tức là đúng chỗ hệ CÓ solver chống herding thì lại không dùng nó. Không phải bug tính sai — là integration gap giữa docstring/US-F2-04 và thực tế ship; cần nói rõ trước khi ai đó tin 'S4 đã chống dồn trạm'.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MM-08-G: Myopic 1-bucket — không định giá vị-trí-tại-thời-điểm-đến, travel ăn vào bucket không được trừ",
+      "evidence": "src/gsm_sim/world.py:389 (view(now) — chỉ λ bucket hiện tại); src/gsm_sim/market_state.py:151-160 (_demand trả đúng 1 giờ); không tồn tại tham chiếu demand_field[h+1] nào trong đường planner",
+      "detail": "Người được gán lúc phút cuối bucket đi 10-20' và đứng ở đích chủ yếu trong BUCKET SAU, nhưng đích được chọn/trần được tính theo λ bucc hiện tại. Ở các biên chuyển pha (15h→16h đỉnh chiều lên, 20h→21h xuống), lời khuyên hệ thống hoá trễ pha một bucket. Đây là phiên bản thời-gian của bài học station_choice: giá trị của VỊ TRÍ SAU HÀNH ĐỘNG so với cầu lúc đó không có trong objective. Mode oracle có sẵn λ đủ 24h nên lookahead không tốn nguồn dữ liệu mới và không phải future-leak (cùng belief advisor được phép dùng); mode realized (E10) thì cần dự báo — ghi rõ để không lẫn hai arm.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MM-08-H: sd_ratio đối xử eff=0 và eff=1 như nhau (mẫu số 1) — hiện vô hại vì sd_ratio không được dùng",
+      "evidence": "src/gsm_core/features/market_state.py:86 (sd = demand/eff if eff>0 else demand — tức λ/max(1,eff))",
+      "detail": "Ô trống hoàn toàn và ô có đúng 1 tài xế cho cùng sd — giá trị biên của người ĐẦU TIÊN vào ô trống (gấp đôi) không được phản ánh. Comment giải thích tránh inf là đúng, nhưng λ/(eff+1) (giá trị biên của người THÊM VÀO — đúng ngữ nghĩa 'nếu tôi tới đó') vừa hữu hạn vừa đúng đối tượng. Hôm nay moot vì MM-08-A cho thấy sd_ratio không ảnh hưởng quyết định nào; thành load-bearing ngay khi ai sửa MM-08-A — ghi để người sửa A không thừa hưởng biên sai này.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "E-S4-1: Ma trận cost có đơn vị PHÚT — travel_min + giá trị biên đích",
+      "action_executable": "Vẫn đúng action hiện có: IdleAction.RELOCATE tới zone còn trần (không action mới)",
+      "solver_dua_tren": "Chính linear_sum_assignment: cost[i,j] = travel_min(i→j) − γ·E[phút-có-cuốc tiết kiệm ở j] + soc_pen_min; travel_min = cell_distance_km (geo.py:305) / speed_kmh(hour) × 60; giá trị đích = min(λ_j − eff_j·μ, μ)/μ × (60/μ) từ chính view — thuần số học, mọi số từ analytics/config, không LLM",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Stagger ngắn km hơn và trúng ô cầu-dư cao hơn; sd_ratio hết trang trí. Phải đo lại ĐA-08 n≥30 paired seed vì đổi hành vi kênh ship; kỳ vọng cải thiện payout_mean_all hoặc ít nhất giảm km rỗng SIG không đổi payout"
+    },
+    {
+      "title": "E-S4-2: Ngân sách outflow phía nguồn = max(0, eff − slots)",
+      "action_executable": "Không đổi action — chỉ lọc ứng viên trong _standby_planner (world.py:419-446): mỗi ô nguồn chỉ cho tối đa (eff − slots) người vào candidates, chọn theo SOC cao trước",
+      "solver_dua_tren": "Pure filter trước capacity_alloc; eff/slots đọc từ view đã có (view['cells'][a.cell])",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Chặn rút cạn ô cân bằng, giảm ping-pong giữa bucket; kỳ vọng served nguồn không giảm, km rỗng giảm. Đo 30 seed vì đổi tập ứng viên"
+    },
+    {
+      "title": "E-S4-3: TTL cho standby_plan tại biên bucket",
+      "action_executable": "Không đổi action — pop standby_plan/pending_targets/standby_decision khi now vượt allocation_bucket_end_min (số đã được TÍNH sẵn ở validity_hints, world.py:485-488); log 'standby_expired' để mẫu số adherence không hụt (bài học ĐA-05/D-M3-01)",
+      "solver_dua_tren": "Cơ học thuần trong world; không đụng solver",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Loại thi hành trên trạng thái cũ và pending-ghost trừ trần nhiều giờ; người hết hạn được gán LẠI theo trạng thái mới ở bucket sau. ⚠ đổi mẫu số adherence kênh positioning — phải phối hợp với gate D-M3-01/-10 trước khi so số cũ"
+    },
+    {
+      "title": "E-S4-4: Trần theo ring thay vì per-cell floor",
+      "action_executable": "Không đổi action — đổi công thức slots: pool λ và eff trên grid_disk(cell, k=2) rồi capacity_left_ring = max(0, floor(Σλ/μ) − Σeff), ô đích vẫn là cell (điểm đứng), trần kiểm theo ring chứa nó",
+      "solver_dua_tren": "h3.grid_disk đã dùng khắp sim (dispatcher); build_market_state thuần hàm dễ thêm chế độ có test riêng",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Trần khớp kernel phục vụ thật (~2,2km), hết mất capacity do sum-of-floors, kênh bớt câm off-peak. Đổi phân phối đích ⇒ regate 30 seed + so n_stag/unassigned trước-sau"
+    },
+    {
+      "title": "E-S4-5: Lookahead λ trộn theo thời-điểm-đến (chỉ arm oracle)",
+      "action_executable": "Không đổi action — λ_eff(c) = (1−w)·λ_h(c) + w·λ_{h+1}(c) với w = clip(travel_min_pref/bucket_min, 0, 1) hoặc w cố định theo phần-bucket-còn-lại",
+      "solver_dua_tren": "world.demand_field có đủ 24h (mode oracle); thuần nội suy tuyến tính, không dự báo, không LLM; arm realized (E10) để nguyên",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Giảm trễ pha ở biên đỉnh chiều/tối; kỳ vọng payout nhích ở giờ chuyển pha, trung tính giờ phẳng. Kiểm bằng phân rã theo giờ trên 30 seed"
+    },
+    {
+      "title": "E-S4-6: Nối swap_early qua S4 với slot đa-bucket (trả nợ E-07 + race trạm)",
+      "action_executable": "Action GO_SWAP đã có trong world (IdleAction.GO_SWAP, đường swap_early world.py:973-988); thay quyết định per-driver bằng batch: gom ứng viên swap_early đủ điều kiện trong bucket, stations = trạm sống với capacity = throughput thật × sub-bucket (slot (station, t+0/t+15/t+30) — chiều bucket của S4 dùng đúng thiết kế lần đầu)",
+      "solver_dua_tren": "capacity_alloc._assign_kind đã hỗ trợ slot (target, bucket) sẵn — chỉ caller chưa bao giờ truyền >1 bucket; queue/pin sống từ self.stations",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Loại race 'cùng thấy queue=0 cùng đi'; điều kiện tiên quyết nếu muốn bật swap_early diện rộng (D-E4-02 nói không lợi ở tải trạm hiện tại — proposal này là điều kiện mở lại khi tải trạm tăng, không phải lệnh bật)"
+    }
+  ],
+  "station_choice_class_answer": "CÓ — mắc cùng lớp ở MM-08-A/B/G: objective như-implement tối thiểu một proxy vô đơn vị (đếm mismatch + SOC) trong khi world định giá km rỗng, giá trị biên của cầu tại ĐÍCH, cầu bị bỏ lại tại NGUỒN, và cầu tại THỜI ĐIỂM ĐẾN. Khác station_choice ở một điểm cứu mạng: tập đích đã được LỌC theo cầu (capacity_left>0) nên 'thời gian/cung giải phóng có được demand hấp thụ không' được đảm bảo một phần ngay từ view — đó là lý do hợp lý vì sao positioning PASS ĐA-08 9/9 (+6.016đ SIG) còn station_choice FAIL: kênh này đưa người TỚI demand, station_choice chỉ tiết kiệm thời gian rồi thả người tại vị trí không ai định giá. Kết luận: kênh đang dương KHÔNG chứng minh objective đủ vế — nó dương nhờ bộ lọc capacity, phần Hungarian phía trên bộ lọc vẫn mù giá trị."
+}

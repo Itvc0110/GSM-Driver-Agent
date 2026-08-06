@@ -1,0 +1,149 @@
+{
+  "item": "SOLVER bonus_feasibility.py (S1) — trips/hours cần đạt mốc thưởng kế, feasible vs quỹ giờ (MM-06)",
+  "audit_date": "2026-08-06",
+  "auditor": "MATH-MODELLING subagent",
+  "reproduction": "script scratchpad repro_s1_denominator.py — chạy đúng hàm production derive_bonus_gap_input → solve; kết quả in ở math_issues[0].detail",
+  "objective_as_implemented": "KHÔNG phải bài toán tối ưu — là FEASIBILITY CHECK đa ràng buộc + forecast tuyến tính từng giờ. Cho gap_pts = tier_kế − points_now, solver _walk đi TỪNG GIỜ từ t_now tới nửa đêm (DAY_END_HOUR=24, bonus_feasibility.py:56-84): mỗi giờ h đóng góp rate(h)·span với rate(h) = hist[bucket(h)] nếu có (bucket ∈ {peak, offpeak}) hoặc ppt(h)×1.5 cuốc/giờ lý thuyết (dòng 53); giờ ngoài khung điểm (22-24h, trước 6h) đóng góp 0. feasible ⟺ hours_to_gap ≤ hours_budget + 1e-6 ∧ acceptance ≥ 0.85 ∧ completion ≥ 0.85 (dòng 177-178, ngưỡng từ PolicyBundle). Nhánh already_maxed vẫn kiểm ràng buộc tỷ lệ (S1-1, dòng 121-145). Sensitivity: rescale rate −20%/−40%, tier kế cao hơn, acceptance cliff ±0.03 (dòng 194-218). Deterministic, không RNG, mọi số có source.",
+  "action_space": [
+    "S1 tự nó không có action — trả solver_report (feasible, gap_points, trips_needed, hours_needed, constraints typed, sensitivity, infeasible_reason).",
+    "Consumer 1 — kênh accept_lift (sim, advice_bridge.py:1010-1060): khuyên nâng tỷ lệ nhận tạm thời (+0.10, trần +0.15) — actor thực thi được trong world (đổi accept prob).",
+    "Consumer 2 — kênh shift_extend (sim, advice_bridge.py:1064+): hoãn kết ca ≤ 60′ (shift_extend_max_min, POLICY_LOCKED) khi sát mốc — actor thực thi được (dời shift_end_min). Kênh đang OFF mặc định.",
+    "Consumer 3 — UI product (ui/backend/app/adapters/advisor.py:193-229): card F0/F1 cho tài xế thật — S1 là solver DUY NHẤT UI chạy (B6-PARITY), nên mọi lệch của S1 đập thẳng vào sản phẩm."
+  ],
+  "variables_observed": [
+    "points_now (cắt tại t_now ở l1r/UI sau AUDIT A3 LAYEROUT-4)",
+    "next_tiers từ policy.day_bonus_tiers",
+    "hours_budget_remaining = shift_end − now (declared window)",
+    "acceptance_rate, completion_rate (RATIO — không có counts)",
+    "historical_points_per_hour: đúng 2 bucket {peak, offpeak}, mỗi bucket MỘT median point-estimate",
+    "policy: trip_points(h), is_peak(h), tiers, bonus_min_acceptance/completion"
+  ],
+  "variables_missing": [
+    {"var": "Giờ-online-TRONG-bucket (mẫu số đúng của điểm/giờ-bucket)", "vi_sao_quan_trong": "Cả 3 producer chia điểm-bucket cho giờ online TOÀN NGÀY ⇒ rate mỗi bucket bị nén xuống theo tỷ lệ oh_bucket/oh_day (luôn ≤ 1) — solver lại nhân rate đó với TỪNG giờ của bucket ⇒ false-infeasible có hệ thống (đã reproduce)", "nguon_co_san_trong_sim": "L1: app_event timestamps (go_online/…); L1R: xấp xỉ overlap [first_event, last_event] ∩ khung bucket; sim: actor timeline có đủ"},
+    {"var": "orders_offered / orders_accepted (COUNTS, không chỉ ratio)", "vi_sao_quan_trong": "Ràng buộc acceptance là luỹ kế CUỐI NGÀY và điều khiển được — với ratio trần solver không tính được 'còn gỡ kịp không' lẫn 'mấy lần từ chối nữa thì rớt'; công thức gỡ đã tồn tại nhưng nằm NGOÀI solver", "nguon_co_san_trong_sim": "actor.orders_offered/orders_accepted (advice_bridge.py:962); bảng thật: driver_statistic_daily.accepted_count / total_request_calculate_accept (advisor.py:94-97)"},
+    {"var": "Phân phối rate theo ngày (per_bucket lists — phương sai/IQR/n_days)", "vi_sao_quan_trong": "Cả 3 producer TÍNH danh sách rate từng ngày rồi VỨT, chỉ xuất median ⇒ solver không thể trả CI; 'feasible' nhị phân trên median ≈ P(đạt) ~50% khi sát biên", "nguon_co_san_trong_sim": "bonus_gap.py:52-68, from_l1r.py:144-162, advisor.py:63-78 — dữ liệu đã nằm trong biến cục bộ, chỉ chưa xuất"},
+    {"var": "Hour-shape của cầu λ(h) khi fallback lý thuyết", "vi_sao_quan_trong": "1.5 cuốc/giờ PHẲNG cho mọi giờ trong khung; config hour_weights dao động 0.35→1.30 ⇒ trips/h thực tế 21h so với 18h lệch ~1.6× — 'còn kịp' cuối ngày trên rate phẳng là lạc quan", "nguon_co_san_trong_sim": "MarketStateProducer (tôn trọng cờ E10 market_demand_source oracle/realized); config demand.hour_weights"},
+    {"var": "Ngày-trong-tuần", "vi_sao_quan_trong": "Câu hỏi riêng của item: KHÔNG có — lịch sử pool mọi ngày; sim có environment.dow (weekday/friday/weekend ×1.0/1.10/1.05, hiện const nên vô hại trong sim), bảng thật có local_date nên tách được và SẼ lệch với data thật", "nguon_co_san_trong_sim": "l1r local_date; environment.dow config"},
+    {"var": "SOC / downtime tất yếu trong quỹ giờ (swap pin, nghỉ đã hoãn)", "vi_sao_quan_trong": "hours_budget coi 100% giờ còn lại là giờ kiếm điểm; một lần swap tất yếu (~10-30′ travel+queue+swap) làm verdict flip khi hours_needed sát budget", "nguon_co_san_trong_sim": "actor.soc_pct + vehicle.swap_soc_threshold_pct + station queue state; l1r không có (soc_pct=None — TBC)"}
+  ],
+  "math_issues": [
+    {
+      "title": "Mẫu số bucket SAI ĐƠN VỊ: producer tính điểm-bucket/giờ-online-TOÀN-NGÀY, solver tiêu thụ như điểm/giờ-TRONG-bucket — false-infeasible có hệ thống (ĐÃ REPRODUCE)",
+      "evidence": "src/gsm_core/features/bonus_gap.py:64 (pts/oh, oh=online_minutes_on_date cả ngày — _common.py:30-36); src/gsm_core/features/from_l1r.py:161 (pts/oh, oh=online_time cả ngày); ui/backend/app/adapters/advisor.py:74 (p/oh, oh=driver_online_hours cả ngày); consumer: src/gsm_core/solvers/bonus_feasibility.py:51-53+75-80 (_walk nhân hist[bucket] với TỪNG giờ thuộc bucket); ngữ nghĩa consumer được PIN bởi tests/test_bonus_feasibility.py:113-119 (hist offpeak=15 ⇒ hours=gap/15)",
+      "detail": "Vì oh_ngày ≥ oh_trong_bucket nên rate mỗi bucket LUÔN bị ước non, hệ số = oh_ngày/oh_bucket (peak thường 2-4×). Reproduce bằng đường production L1 (script repro_s1_denominator.py): tài xế online 08-18h (10h/ngày × 4 ngày), 60đ peak trong 2h + 60đ offpeak trong 8h ⇒ producer trả {peak: 6.0, offpeak: 6.0} thay vì {30, 7.5}; hỏi lúc 15:00 gap 50đ quỹ 6h: S1 phán INFEASIBLE ('chỉ kiếm thêm được ~42đ < 50đ') trong khi rate đúng cho FEASIBLE tại 2.42h. Hệ quả sản phẩm: UI (chỉ chạy S1) bảo tài xế 'không kịp' với mốc HOÀN TOÀN với được ⇒ advisor im lặng/bi quan đúng lúc lời khuyên có giá trị nhất. Ba producer cùng chép một quy ước sai = họ lỗi 'nhiều bản sao một sự thật' (cùng gia đình D-M3-17/T-046) nhưng CHƯA được ghi nợ ở đâu (đã grep tracking).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "'Feasible' NHỊ PHÂN trên point-estimate median — không phương sai/CI, đúng lớp kỳ-vọng-vs-realized của case study; sensitivity thay thế là −20/−40% cứng và MỘT CHIỀU",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:177 (feasible = so sánh điểm đơn), 194-201 (chỉ scale 0.8/0.6; flips_feasible chỉ bắt chiều feasible→infeasible: `feasible and (...)`); phân phối per-day bị vứt tại bonus_gap.py:66-68, from_l1r.py:162, advisor.py:76-78",
+      "detail": "hours_needed tính từ MEDIAN rate ⇒ khi hours_needed ≈ hours_budget thì P(realized đạt mốc) ≈ 50%, nhưng report nói 'feasible=True' như chắc chắn. Consumer shift_extend giữ tài xế thêm ≤60′ và UI card khuyên bám mốc trên verdict này — nếu realized < median, giờ bỏ thêm KHÔNG được demand hấp thụ (không tới mốc, không thưởng) = đúng bài học station_choice 'thời gian bỏ ra có được demand hấp thụ không'. Chiều ngược cũng thiếu: khi đang infeasible không có sensitivity 'rate +20% thì kịp' để phân biệt 'thiếu 5 phút' với 'vô vọng'. Mức −20/−40% là hằng tự chọn, không neo vào spread đo được của chính tài xế dù dữ liệu ngày-qua-ngày có sẵn ở producer.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Ràng buộc acceptance/completion kiểm TĨNH tại t_now trong khi policy chấm LUỸ KẾ CUỐI NGÀY; logic 'còn gỡ kịp không' tồn tại nhưng nằm NGOÀI solver và đường UI production KHÔNG có",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:109-110 (ok_acc/ok_comp tĩnh); advice_bridge.py:948-971 (_acceptance_recoverable — công thức (a+p·R)/(o+R) ở bridge, không ở solver); advice_bridge.py:1017-1022 (docstring TỰ THÚ 'S1 chỉ kiểm TĨNH nên không thay thế được'); ui/backend/app/adapters/advisor.py:134-154+227-229 (build_gi không truyền counts, adapter báo acceptance_below_threshold không kiểm recoverable)",
+      "detail": "Hai chiều sai: (1) acc hiện 0.80 < 0.85 ⇒ S1 infeasible, nhưng với o offer đã chào và a đã nhận, x lần nhận liên tiếp thoả (a+x)/(o+x) ≥ 0.85 vẫn cứu được — solver không tính được vì view chỉ truyền RATIO, không truyền counts; (2) acc 0.89 > ngưỡng ⇒ feasible, nhưng cliff warning chỉ phủ dải [0.85, 0.88) — ngoài dải không có con số 'còn chịu được mấy lần từ chối'. Coupling cũng bị bỏ: trips_needed để đóng gap TỰ NÓ nâng acceptance (mỗi cuốc nhận thêm tăng tử số VÀ mẫu số) — hai ràng buộc được kiểm ĐỘC LẬP trong khi chúng phụ thuộc nhau qua kế hoạch. Bridge vá cho sim; UI (sản phẩm thật) thừa hưởng nguyên lỗi.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Producer in-sim đổ day-average (trộn peak+offpeak) vào CẢ HAI bucket — vô hiệu hoá chính fix AUDIT S1-2/5 (walk theo giờ) vì input không còn phân giải theo khung",
+      "evidence": "src/gsm_sim/advice_bridge.py:990-992 (mem.points_per_hour_avg điền cả 'peak' lẫn 'offpeak'); src/gsm_sim/multiday.py:142 (nguồn: actor.points/(online_min/60) — trung bình TRỘN cả ngày); advice_bridge.py:993-996 (ước trong-ca cũng là rate trộn, gán cho MỘT bucket hiện tại)",
+      "detail": "Solver được sửa để đi từng giờ với rate đúng bucket (S1-2/5), nhưng đường sim nuôi nó bằng MỘT số phẳng cho cả hai bucket. Ca tối (cửa sổ còn lại chỉ offpeak) thừa hưởng điểm peak lịch sử ⇒ rate offpeak bị thổi lên ⇒ 'còn kịp' LẠC QUAN đúng lúc shift_extend cân nhắc giữ tài xế; cửa sổ còn nhiều peak thì ngược lại (bi quan). Comment dòng 991 thừa nhận 'trộn cả peak/offpeak' nhưng không có nợ tracking và không có ước lượng bias.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Survivorship ở lịch sử: ngày 0-điểm-bucket bị LOẠI khỏi mẫu ở cả 3 producer + bridge tái nhiễm đúng bug ADV-05 mà solver vừa sửa (`actor.points > 0` mới tin dữ liệu)",
+      "evidence": "ui/backend/app/adapters/advisor.py:73 (`if p > 0` bỏ ngày 0 điểm); src/gsm_core/features/bonus_gap.py:59-64 (bp chỉ có bucket CÓ cuốc — ngày online mà 0 điểm không đóng 0.0 vào list); src/gsm_core/features/from_l1r.py:156-161 (same); src/gsm_sim/advice_bridge.py:993 (`and actor.points > 0` ⇒ 0 điểm trong ca → hist rỗng → fallback lý thuyết DƯƠNG); đối chiếu nguyên tắc: bonus_feasibility.py:47-52 (ADV-05: '0.0 điểm/giờ là DỮ LIỆU HỢP LỆ')",
+      "detail": "Solver đã học bài 'lịch sử 0.0 là dữ liệu hợp lệ' (ADV-05) nhưng KHÔNG producer nào từng sản xuất ra 0.0: ngày online-mà-trắng-điểm biến mất khỏi mẫu ⇒ median bucket thiên LẠC QUAN (chỉ trung vị của những ngày có điểm). Ở bridge, tài xế online ≥30′ với 0 điểm (khung chết) bị rơi về ước lượng lý thuyết 7.5đ/h dương — chính xác kịch bản ADV-05 mô tả, chỉ chuyển từ solver sang producer. Chiều bias NGƯỢC với issue #1 (bi quan) ⇒ hai lỗi bù trừ nhau một phần theo tỷ lệ không kiểm soát — sửa một mà không sửa cả hai sẽ làm số ĐỔI HƯỚNG khó hiểu.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Fallback lý thuyết PHẲNG 1.5 cuốc/giờ cho mọi giờ trong khung — bỏ hour-shape cầu mà sim biết; kỳ vọng phẳng vs realized theo giờ",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:20 (DEFAULT_TRIPS_PER_HOUR=1.5 hằng), :53 (ppt×1.5 không phụ thuộc giờ ngoài ppt); configs/pilot_dongda.yaml demand.hour_weights (0.35@5h → 1.30@18h → 0.40@23h)",
+      "detail": "1.5 là trung bình ĐO toàn cục (nhãn ĐO, tốt hơn 3.0 cũ) nhưng áp phẳng: lúc 20-21h weight 0.90/0.80 so đỉnh 1.30 ⇒ trips/h kỳ vọng thấp hơn đáng kể trung bình ngày; 'còn kịp trong 2h cuối khung' trên rate phẳng là lạc quan đúng ở nhóm dùng fallback (tân binh — thiếu lịch sử, cũng là nhóm adherence cao nhất P4=0.75). Confidence 0.5 + caveat có ghi, nhưng caveat nói 'thiếu lịch sử cá nhân', không nói 'không xét giờ'. Cùng lớp station_choice ở nghĩa: model không hỏi 'thời gian còn lại có được demand hấp thụ ở MỨC giả định không'.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Quỹ giờ coi 100% là giờ kiếm điểm — bỏ downtime tất yếu (swap pin) mà world biết tại thời điểm quyết định; ràng buộc bind ở biên chính là vùng quyết định của kênh",
+      "evidence": "src/gsm_sim/advice_bridge.py:1003 và ui/backend/app/adapters/advisor.py:147 (hours_budget = shift_end − now, nguyên); bonus_gap_input schema không có soc_pct (from_l1r.py:9 'soc_pct = None'); configs/pilot_dongda.yaml station (swap 60-120s + queue wait_cap 60′) + vehicle.swap_soc_threshold_pct 20",
+      "detail": "Lịch sử rate (điểm/giờ-online) ĐÃ khấu hao downtime trung bình, nhưng hours_budget thì KHÔNG: nếu SOC hiện tại bảo đảm 1 lần swap trong cửa sổ còn lại (điều sim biết chắc từ soc + consume_pct_per_km), 10-30′ đó phải trừ khỏi quỹ. Vùng sai là hours_needed ∈ [budget − 0.5h, budget] — chính vùng mà shift_extend/UI ra quyết định sát nút. Mức ảnh hưởng phụ thuộc tần suất case sát biên (chưa đo) ⇒ severity TB, không thổi.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Nhánh infeasible_reason 'quỹ giờ còn lại nằm ngoài khung giờ tính điểm' GỘP 3 nguyên nhân khác nhau — chẩn đoán sai 2/3 trường hợp",
+      "evidence": "src/gsm_core/solvers/bonus_feasibility.py:182-183 (pts_in_budget ≤ 1e-9 → một message duy nhất)",
+      "detail": "pts_in_budget = 0 xảy ra khi: (a) budget = 0 (hết ca GIỮA khung điểm — 15h, ca kết thúc); (b) giờ còn lại thật sự ngoài khung (sau 22h — trường hợp message đúng); (c) hist bucket = 0.0 hợp lệ theo ADV-05 (khung sống nhưng tài xế lịch sử trắng điểm). Ba nguyên nhân cần ba lời khuyên khác nhau ('mai tính' vs 'hết cửa hôm nay' vs 'đổi khung/khu vực') nhưng tài xế nhận cùng một câu. Constraints typed (ADV-07) không phân biệt được vì cả ba đều là enough_hours=false. Bổ sung chứ không lặp D-SIM-11 (nợ đó về parse chuỗi ở consumer, đây là về ĐỘ PHỦ ngữ nghĩa của chính reason).",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "bonus_gap.py (đường L1 mock): acceptance/completion đếm event MỌI NGÀY không lọc date — trộn lịch sử vào ràng buộc chấm THEO NGÀY",
+      "evidence": "src/gsm_core/features/bonus_gap.py:41-44 (không có filter date trên events, trong khi points_now lọc today qua _points_on_date)",
+      "detail": "day_bonus chấm acceptance của NGÀY; producer này trả ratio trọn đời của l1 truyền vào. Repro cùng script: 4 ngày lịch sử + hôm nay ⇒ acceptance=1.0 tính trên cả 5 ngày. Hạ mức nghiêm trọng có chủ đích: grep toàn repo — derive_bonus_gap_input KHÔNG có production caller (chỉ tests; UI dùng _rate_asof riêng đã đúng as-of, sim dùng actor state) — cùng tình trạng 'chưa nối consumer' như ghi chú D-M3-11. Ghi để ai nối đường L1 vào sau không thừa hưởng.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "Sửa mẫu số: điểm-bucket / giờ-online-TRONG-bucket ở cả 3 producer, kèm đóng 0.0 hợp lệ",
+      "action_executable": "Không đổi action space — sửa ước lượng nuôi verdict mà accept_lift/shift_extend/UI card đang dùng",
+      "solver_dua_tren": "Thuần math ở producer: oh_bucket = Σ overlap([online_span ngày d] ∩ [giờ bucket]); L1 có event timestamps, L1R xấp xỉ từ first/last record + online_time; ngày online-phủ-bucket mà 0 điểm đóng 0.0 vào list (đóng luôn issue #5). Regression: test pin ngữ nghĩa 'điểm/giờ-trong-bucket' ở CẢ producer lẫn solver để hết cảnh hai quy ước",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Hết false-infeasible hệ thống (repro cho thấy flip hẳn verdict); LƯU Ý phải sửa CÙNG issue #5 vì hai bias ngược chiều đang bù trừ nhau"
+    },
+    {
+      "title": "Xuất phân vị thay vì median đơn: historical_points_per_hour mang {p25, p50, p75, n_days}; S1 trả hours_needed theo 3 mức + verdict dải",
+      "action_executable": "UI card và shift_extend đổi từ 'kịp/không' sang 'kịp chắc / 50-50 / khó' — vẫn là nói/im + hoãn ≤60′, không action mới",
+      "solver_dua_tren": "Thuần đại số: dữ liệu per-day ĐÃ có trong biến cục bộ 3 producer, chỉ sorted rồi lấy 3 phân vị thay 1; _walk chạy 3 lần (đã có sẵn cơ chế rewalk của sensitivity). Sensitivity −20/−40% thay bằng p25/p75 đo được; thêm chiều 'infeasible nhưng p75 kịp'. Schema bump bonus_gap_input 1.1.0 + upcaster (schema_registry/upcasters.py có sẵn cơ chế)",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Đóng lớp lỗi kỳ-vọng-vs-realized (issue #2) — verdict mang xác suất thay vì nhị phân trên median; shift_extend hết giữ tài xế trên coin-flip"
+    },
+    {
+      "title": "Truyền counts (offered, accepted, completed) vào bonus_gap_input; chuyển công thức recoverability (a+p·R)/(o+R) từ bridge VÀO S1",
+      "action_executable": "accept_lift (đã có) dùng verdict từ MỘT nguồn; UI được thừa hưởng miễn phí nhánh 'acceptance_unrecoverable' hiện chỉ sim có",
+      "solver_dua_tren": "Đại số đóng: min_consecutive_accepts = ceil((thr·o − a)/(1 − thr)); recoverable theo công thức advice_bridge.py:954 với p = max_realized_accept (số ĐO 0.93, đã có trong config). Sim: actor.orders_offered/accepted; bảng thật: accepted_count/total_request_calculate_accept — không bịa số nào",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Xoá 'hai nguồn sự thật' mà docstring bridge tự cảnh báo; UI hết báo 'dưới ngưỡng' mù — phân biệt được còn-cứu vs hết-cứu (khác hẳn lời khuyên: cày tiếp vs đừng ôm cuốc rẻ thêm)"
+    },
+    {
+      "title": "Fallback lý thuyết theo hour-shape: rate(h) = ppt(h) × trips_per_hour_est × ŵ(h)/w̄, ŵ từ MarketStateProducer",
+      "action_executable": "Không action mới — chỉ đổi số fallback cho nhóm thiếu lịch sử (tân binh P4, nhóm UI phục vụ chính)",
+      "solver_dua_tren": "S1 nhận optional trips_per_hour_by_hour: dict[int,float]; thiếu → phẳng như cũ (backward compatible). Nguồn ŵ đi qua MarketStateProducer nên TỰ tôn trọng cờ E10 market_demand_source (oracle/realized) — không mở kênh thông tin mới ngoài cái positioning đang dùng",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Verdict cuối-khung bớt lạc quan cho nhóm fallback; đóng issue #6"
+    },
+    {
+      "title": "Quỹ giờ hiệu dụng: hours_budget_eff = budget − E[downtime tất yếu] khi SOC bảo đảm 1 lần swap trong cửa sổ",
+      "action_executable": "Không action mới — verdict sát biên bớt lật; swap vẫn do bản năng actor/kênh swap_early quyết như cũ",
+      "solver_dua_tren": "Thuần math từ state sim có sẵn: cần_swap ⟺ soc_pct − km_kỳ_vọng×consume_pct_per_km < threshold (mọi hằng từ configs vehicle); E[downtime] = median travel+queue+swap từ analytics trạm (estimator của đường station_choice dùng như ANALYTICS — kênh khuyên vẫn OFF theo D-E4-06). L1R chưa có soc ⇒ nhánh này chỉ bật ở sim/telemetry sau, gắn caveat",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Đóng issue #7 ở đúng vùng bind (hours_needed sát budget) — nơi shift_extend ra quyết định"
+    },
+    {
+      "title": "Thêm số 'đáng không': marginal_vnd_per_hour = (tier_vnd − bonus_at(points_now)) / hours_needed vào numbers",
+      "action_executable": "Card UI hiển thị 'thưởng tăng thêm ≈ Xđ/giờ bỏ ra' — tài xế tự quyết (đúng ranh giới sản phẩm: hệ thống không thực thi thay)",
+      "solver_dua_tren": "Một phép chia trên hai số S1 ĐÃ có (tier_vnd, hours_needed) + policy.bonus_at có sẵn — rule tính, agent chỉ diễn giải",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Bổ vế GIÁ TRỊ mà report hiện thiếu (S1 trả lời 'kịp không' nhưng không bao giờ 'đáng không') — đúng bài học station_choice ở mức trình bày, không đổi engine"
+    }
+  ],
+  "lop_loi_station_choice_verdict": "S1 không chọn action không gian nên KHÔNG mắc nguyên bản 'objective thiếu vế vị trí'. Nhưng mắc BIẾN THỂ cùng họ ở 3 chỗ: (1) verdict nhị phân trên median = kỳ-vọng-vs-realized — downstream biến 50-50 thành 'chắc chắn kịp' và giờ bỏ thêm có thể không được demand hấp thụ (issue #2, đúng bài học E11); (2) fallback phẳng bỏ hour-shape cầu (issue #6); (3) quỹ giờ bỏ downtime tất yếu (issue #7). Riêng lỗi nặng nhất tìm được (issue #1, mẫu số bucket) KHÔNG thuộc lớp này — nó là unit-mismatch producer/consumer, họ D-M3-17 'nhiều bản chép một sự thật'.",
+  "known_debts_not_repeated": ["D-M3-11 (rò tương lai hist l1r — đã fix, khác với lỗi mẫu số)", "D-SIM-11 (parse chuỗi reason ở consumer — issue #8 là về độ phủ ngữ nghĩa reason, khác)", "B6-PARITY (UI 1/9 solver — chỉ dùng làm ngữ cảnh severity)", "ADV-01..09 (đã sửa — issue #5 chỉ ra chỗ ADV-05 bị tái nhiễm ở TẦNG KHÁC, producer chứ không phải solver)", "D-SIM-05 (vách đá accept_lift — đã có guard ở bridge)"]
+}

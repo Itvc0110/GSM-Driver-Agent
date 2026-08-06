@@ -1,6 +1,11 @@
 # TODO — Backlog công việc
 
-> 📋 **THỨ TỰ THI CÔNG HIỆN HÀNH: `tracking/PLAN-2026-07-30-hang-doi-cong-viec.md`**
+> 🧭 **ĐIỂM VÀO SESSION MỚI: `tracking/BOOTSTRAP-SESSION.md`** (state · hàng đợi · §5 12 bẫy ·
+> **§5b la bàn quyết định**). **LỊCH TRÌNH HIỆN HÀNH: `tracking/PLAN-2026-08-06-lich-trinh-cai-thien.md`**
+> (4 sóng + "Bài học đã docs" 8 mục + "KHÔNG LÀM"). **Việc dở vì quota 2026-08-06:**
+> `tracking/HANDOFF-2026-08-06-quota-blocked-audit.md` (2 audit + lệnh nối lại).
+>
+> 📋 **Bản kế hoạch TRƯỚC (vẫn còn hiệu lực cho §8 "việc không làm"): `tracking/PLAN-2026-07-30-hang-doi-cong-viec.md`**
 > Hàng đợi đã sắp thứ tự + acceptance + chi phí cho từng mục, kèm §8 *"việc KHÔNG làm và vì sao"* để không ai đào lại. Thứ tự: ~~`L1-04`~~ ✅ **XONG (UPDATE-107) — Δ=0 tuyệt đối, giả thuyết ban đầu "28% mất hẳn" BỊ BÁC bởi chính phép đo** → ~~cổng thống kê~~ ✅ **ĐÃ CHỐT (UPDATE-103) VÀ ĐÃ NỐI (UPDATE-107)**: z Poisson-binomial `|z|>4` chạy thật trong `run_ladder` → 🔴 **`E10` advisor-cũng-nhiễu** — nay không còn bị chặn bởi `L1-04` → 3 tiên quyết cổng `rest_window` → cycle đường SẢN PHẨM (13 finding sev CAO) → `E9`.
 > ⚠ `E10` đứng trên mọi thí nghiệm kênh khác **không phải vì nó mới** mà vì advisor hiện nhận **đúng λ của generator** trong khi tài xế chỉ nhận `λ×nhiễu` ⇒ `T-047` §4 xếp con số chủ lực **+6.016đ vào cột LUNG LAY**. `E10` quyết định các Δ khác có nghĩa gì.
 

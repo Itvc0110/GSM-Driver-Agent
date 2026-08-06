@@ -1,0 +1,154 @@
+{
+  "item": "SHIFT_PLAN (S2 shift_dp — TẮT theo ĐA-07) + SHIFT_EXTEND (kéo ca sát mốc thưởng) + sp_end_only (E4/E-05)",
+  "objective_as_implemented": {
+    "shift_dp_S2": "max E[payout] = Σ_bucket exp_trips·(ppo − cash_cost·km) + terminal bonus_at(points_band·5), DP backward trên state (b, soc_band[10], points_band[49, size 5], rests_left[R+1]); actions {ONLINE, REST, SWAP, END}; ràng buộc: nghỉ tối thiểu R = f(bucket còn lại, tín dụng nghỉ đã nghỉ), terminal đòi rests_left==0 (V=−1e18 nếu chưa nghỉ đủ), ONLINE cần soc>0 & exp_trips>0, END cần rests_left==0. Với config hiện hành cash_cost_vnd_per_km=0 và swap_fee_vnd=0 (configs/pilot_dongda.yaml:281-282) ⇒ reward ONLINE ≥ 0 luôn ⇒ bài toán SUY BIẾN thành: (i) đặt R bucket nghỉ vào các bucket demand thấp nhất, (ii) timing swap khi SOC cạn. Mọi nhánh cost-aware (F-098-01 Bellman gate, C5 swap fee, B3 terms_active) là code chết trong config này — cùng họ D-E4-01.",
+    "shift_extend": "RULE (không solver): nếu gap = next_tier_gap(points) > 0 và need_min = gap/rate·60 > remaining_min (rate = points/max(0.5, online_min/60) — trung bình LỊCH SỬ cả ca) thì kéo ca add = min(need_extra·1.15, trần 60′ còn lại, world_end − shift_end). 3 lan can sức khoẻ (soc_low / fatigued / would_exceed_fatigue) là CỔNG một-chiều đứng trước, đúng ranh giới §1.2b — không phải biến tối ưu.",
+    "sp_end_only": "consult() chỉ nói khi schedule[0] của DP == 'END' (advice_bridge.py:624-625), mọi trường hợp khác return None."
+  },
+  "action_space": [
+    "S2: {ONLINE, REST, SWAP, END} per bucket 30′ — thô hơn action space thật của actor (không map go_charge/relocate; BUG-ADVICE-OVERRIDE đã xử lý phía world)",
+    "shift_extend: actor.shift_end_min += add (world.py:897-904 thi hành thật, có event + decision_id)",
+    "sp_end_only: map END → kết ca — nhưng nhánh này KHÔNG BAO GIỜ kích hoạt (xem math_issues[0])"
+  ],
+  "variables_observed": [
+    "S2 nhận: buckets_remaining, soc_pct, points_now, demand_forecast per-bucket (top-3 cell của belief cá nhân, KHÔNG rò tương lai), rest_taken_min, shift_elapsed_min (advice_bridge.build_shift_plan_input:484-528)",
+    "S2 params thật: p_accept = _acc_estimate (lịch sử as-of), completion, bucket_min=30 khớp bridge, cash/swap fee cùng nguồn config với world (solver_params:564-590 — BUG-S2-PARAMS đã sửa)",
+    "S2 có demand THEO GIỜ (eo[b], hrs[b]) và điểm peak/normal theo giờ (policy.trip_points) — trả lời câu hỏi: demand theo giờ CÓ trong DP",
+    "shift_extend nhận: soc_pct, online_min, fatigue_threshold_min, points, shift_end_min, shift_extended_min, trần extend, world_end_min"
+  ],
+  "variables_missing": [
+    {
+      "var": "λ̂ cầu theo GIỜ của khung kéo ca (shift_extend)",
+      "vi_sao_quan_trong": "need_min = gap/rate ngoại suy rate trung-bình-cả-ca (ngậm cả giờ peak điểm ×2 lúc sáng/chiều) vào khung kéo cuối ngày thường VẮNG và NGOÀI peak ⇒ hệ thống hoá việc ước LẠC QUAN thời gian đạt mốc ⇒ kéo ca mà không tới mốc: tăng work_span (guardrail tầng 5 tố) nhưng không có thưởng — đúng bài học station_choice 'thời gian bỏ ra có được demand hấp thụ không'",
+      "nguon_co_san_trong_sim": "world._actor_demand_hint (đã truyền cho consult và should_defer_rest ở world.py:932/1035 — chỉ check_shift_extend ở world.py:897 là KHÔNG được truyền); policy.trip_points(hour); self._acc_estimate cùng class"
+    },
+    {
+      "var": "phương sai / P(đạt mốc) — cả S2 lẫn shift_extend",
+      "vi_sao_quan_trong": "bonus là STEP function của điểm; cả hai kênh đều certainty-equivalent: bonus_at(E[points]) ≠ E[bonus(points)]. Với gap nhỏ (1-2 cuốc) CV của Poisson trips rất lớn — buffer ×1.15 chỉ che +15% trong khi hụt MỘT cuốc ở need 4 cuốc là −25%",
+      "nguon_co_san_trong_sim": "λ̂ belief + p_accept ⇒ Poisson tail analytic (thuần math, không cần agent bịa số)"
+    },
+    {
+      "var": "vị trí (cell) của tài xế + cạnh tranh cung trong cell (S2)",
+      "vi_sao_quan_trong": "DP coi cầu khả dụng cá nhân = min(1.2, TỔNG top-3 cell belief) — một người chỉ đứng được 1 cell; ở giờ vắng (tổng < cap) cầu bị phóng đại tới 3×, làm ONLINE trông đáng giá hơn thật và E[payout]/delta báo cáo bị thổi; giải thích một phần vì sao ĐA-07 đo shift_plan không tạo giá trị dù DP 'dự đoán' delta > 0",
+      "nguon_co_san_trong_sim": "actor.cell; world biết occupancy idle theo cell; memory realized trips/h của chính tài xế (config đã có trips_per_hour_est=1.5 dùng cho accept_lift)"
+    },
+    {
+      "var": "trạng thái trạm đổi pin (queue, pin sẵn, 11% fail) trong nhánh SWAP của S2",
+      "vi_sao_quan_trong": "SWAP mô hình = 1 bucket chắc chắn nạp đầy, chi phí 0; thế giới có hàng đợi + travel + swap_failed — chính comment shift_dp.py:229-237 thừa nhận và phải vá bằng tie-break thay vì mô hình. Kênh swap_early/station_choice ĐỌC được queue nhưng S2 thì không",
+      "nguon_co_san_trong_sim": "world.stations (queue_len, has_ready) — swap_early đã tiêu thụ ở advice_bridge.check_swap_early:656-679"
+    },
+    {
+      "var": "SOC tiêu hao phụ thuộc km thực chạy (S2)",
+      "vi_sao_quan_trong": "soc_cost là hằng/bucket ONLINE bất kể exp_trips — bucket vắng khách vẫn trừ pin như bucket kín cuốc ⇒ timing swap trong lịch lệch so với world (pin world trừ theo km lái)",
+      "nguon_co_san_trong_sim": "avg_dist_km × exp_trips của chính bucket đó (đã có trong DP loop)"
+    }
+  ],
+  "math_issues": [
+    {
+      "title": "sp_end_only CHẾT CẤU TRÚC: END không bao giờ thắng trong DP ở world zero-cost — kênh E4/E-05 bật lên sẽ im lặng 100%",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:250-254 (END chỉ được chọn khi STRICTLY > best_v) + :245-249 (REST luôn khả thi, reward 0) + :185-189 (terminal = bonus_at); src/gsm_sim/advice_bridge.py:624-625; configs/pilot_dongda.yaml:281-282 (cash=0, swap_fee=0). Probe scratchpad/probe_shift_dp.py: 0/252 case (B∈{4,12,24} × 7 profile demand kể cả demand=0 và zero_tail × 4 mức điểm × 3 SOC) có END trong schedule.",
+      "detail": "Chứng minh: với cash_cost=0, swap_fee=0, mọi reward tức thời ≥ 0 và nhánh REST luôn khả thi (V[b+1, soc, pb, nrl] hợp lệ bằng quy nạp) ⇒ giá trị TIẾP TỤC luôn ≥ bonus_at(pb·5) = giá trị END; so sánh chặt `v > best_v` nghĩa là END không bao giờ được gán vào A. Hệ quả: (a) shift_plan_end_only=true ⇒ consult luôn trả None — người đo ablation E-05 sẽ đọc nhầm 'không có ca nào đáng kết sớm' thay vì 'kênh chết cấu trúc'; (b) chuỗi next_action reason 'END — thêm giờ không tăng kỳ vọng' (shift_dp.py:375) là code unreachable; (c) 'DP sau ADV-01 đã cân mốc thưởng' trong comment config :379-381 KHÔNG đủ để END xuất hiện. Kênh chỉ có nghĩa khi policy costs ACTIVE (as_of ≥ 2029-04) hoặc world định giá thời gian. Họ D-E4-01 (kênh trơ zero-cost) nhưng đây là hệ quả cấu trúc MỚI, chưa ghi ở đâu.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "shift_extend ngoại suy rate trung-bình-cả-ca vào khung kéo: thiếu vế CẦU-THEO-GIỜ và ĐIỂM-THEO-GIỜ mà world thật sự định giá",
+      "evidence": "src/gsm_sim/advice_bridge.py:1121-1126 (rate = points/online_h, need_min = gap/rate·60) + :1191 (add = need_extra·1.15); world.py:897-898 (call site KHÔNG truyền demand_hint_fn dù :932/:1035 truyền cho 2 kênh khác)",
+      "detail": "rate lịch sử ngậm (i) tần suất cuốc của cả ngày gồm giờ cao điểm, (ii) điểm peak ×2 (point_peak=10 vs normal=5, peak 6-8h/16-18h) — trong khi khung kéo nằm SAU cuối ca (thường tối muộn, ngoài peak, cầu thấp). Cả hai thành phần đều làm rate TƯƠNG LAI bị ước cao ⇒ need_min ước thấp ⇒ add cấp thiếu ⇒ tài xế kéo ca, chịu tăng work_span, nhưng KHÔNG tới mốc — bonus không về, chỉ có ít cuốc vãn. Đúng khuôn station_choice: objective 'đạt mốc' định giá bằng một suất sinh điểm mà demand khung giờ đó không hấp thụ nổi. Kỳ vọng đạt mốc = deterministic (điểm-ước-chia-suất), KHÔNG có phương sai, KHÔNG có P(reach); buffer ×1.15 là số tuỳ tiện không neo thống kê. Kênh đang OFF (config :338) nên tác động tiềm ẩn — nhưng đây là kênh sẽ được đo ở ablation kế.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Lượng tử hoá band-5 VẪN lỗi sau ADV-01: floor kép `round(exp_trips·pph) // 5` làm DP mù mốc thưởng khi exp_trips < 0.9 giờ thường",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:204-207 (add_pts = int(round(exp_trips·pph)); npb = pb + add_pts // PBS) + :176 (pts0 = points_now // PBS floor tới −4 điểm). Probe [2]: demand/bucket 0.5-0.88 (exp_trips 0.45-0.79) ⇒ add_pts ∈ {2..4} ⇒ 0 band/bucket — points band nội bộ ĐÓNG BĂNG suốt DP y hệt lỗi ADV-01 gốc, chỉ ở mức demand thấp hơn.",
+      "detail": "Claim của fix ADV-01 'band 5 khớp point_normal=5 ⇒ mỗi cuốc giờ thường tiến ≥1 band' chỉ đúng PER-CUỐC; DP chuyển trạng thái theo KỲ VỌNG cuốc/bucket, mà cap cứng đã là 1.2 cuốc × p_accept ≈ 1.0 ⇒ chỉ bucket SÁT bão hoà mới tiến band. Ở mọi bucket exp_trips < 0.9 (toàn bộ giờ vắng thực tế) phần dư bị VỨT mỗi bucket không tích luỹ ⇒ thiên lệch hệ thống XUỐNG tới 4 điểm/bucket trong hàm giá trị ⇒ Bellman không thấy mốc 60/100/160/200 dù reconstruct proj_points (đếm điểm thật) có thể vượt mốc — hai sổ điểm lệch nhau ngay trong một report. Cộng thêm pts0 floor: tài xế 58 điểm (thiếu 2) được mô hình ở 55 (thiếu 5). Kênh OFF theo ĐA-07 nên tác động hiện tiềm ẩn, nhưng mọi lần bật lại để nghiên cứu (điều kiện reopen ghi ở config :335) đều thừa hưởng.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Cầu khả dụng cá nhân = TỔNG top-3 cell belief (không vị trí, không chia cạnh tranh) — phóng đại tới 3× ở giờ vắng, thổi E[payout] và delta của S2",
+      "evidence": "src/gsm_sim/advice_bridge.py:504-509 (đẩy top-3 cell/bucket) + src/gsm_core/solvers/shift_dp.py:147-152 (grouped[b] += expected_orders — CỘNG cả 3 cell, cap 1.2 cuốc/bucket chỉ cắt khi tổng > 1.2)",
+      "detail": "Một tài xế chỉ hiện diện ở MỘT cell; cộng cầu của 3 cell tốt nhất rồi coi là cầu cá nhân nghĩa là ở giờ vắng (tổng < cap) DP tin có gấp ~3 lần cuốc thật có thể chạm tay. S2-7 đã nhận 'chia cạnh tranh cung là MODEL GAP' nhưng phép CỘNG top-3 là tầng phóng đại riêng chưa được ghi. Hệ quả kép: (a) ONLINE thắng REST/END ở những bucket lẽ ra không đáng chạy — một phần lý giải vì sao delta DP dự đoán > 0 mà ĐA-07 đo được thu nhập ns/served xấu: thời gian 'tối ưu hoá' không được demand thật hấp thụ; (b) thứ tự bucket-vắng dùng để ĐẶT NGHỈ có thể bị đảo khi mix top-3 đổi theo giờ ⇒ chính quyết định duy nhất còn lại của DP (đặt nghỉ) cũng đứng trên số liệu méo.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Clamp world_end CỤT: 0 < add < need_extra vẫn ÁP kéo ca dù mốc thưởng đã bất khả thi trong thời gian còn lại",
+      "evidence": "src/gsm_sim/advice_bridge.py:1191-1221 — :1197 add = min(add, world_end − shift_end); chỉ nhánh add ≤ 0 trả 'infeasible_world_end' (:1198-1206); nhánh 0 < add < need_extra_min đi tiếp, áp shift_extended_min += add và tính là quyết định followed",
+      "detail": "cap_unreachable (:1148) kiểm phần-cần-thêm với TRẦN extend nhưng không có kiểm tương ứng với TRẦN world_end — ràng buộc bind một cửa mà lọt cửa kia. Ca bị clamp một phần nhận lời khuyên có lý do 'bonus_tier_within_extension_cap' (rule_report :1162) trong khi mốc KHÔNG THỂ đạt trong add đã cấp ⇒ kéo ca chắc-chắn-không-thưởng, và A/B đọc event như can thiệp có chủ đích đầy đủ. Chưa đo tần suất (b0-A từng đo 9/49 lần hoãn rơi vùng world_end ⇒ vùng này không hiếm).",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Certainty-equivalence trên terminal STEP function: bonus_at(round(E[points])) thay vì E[bonus(points)] — Jensen gap hai chiều quanh mốc",
+      "evidence": "src/gsm_core/solvers/shift_dp.py:186-188, 252, 283 (bonus_at áp lên điểm kỳ vọng đã band-hoá); advice_bridge.py:1126 (need_min deterministic)",
+      "detail": "bonus là bậc thang 60/100/160/200 → 30k/60k/115k/170k; với điểm kỳ vọng ngay TRÊN mốc, xác suất thật đạt mốc có thể chỉ ~50-60% (Poisson trips) ⇒ E[payout] báo cáo phồng đúng bằng tier_vnd×(1−P); ngay DƯỚI mốc thì ngược lại — DP có thể bỏ một bucket ONLINE đáng chạy vì 'không tới mốc' trong khi P(tới) đáng kể. Đây là gốc toán chung của cả issue #2 (shift_extend không phương sai) và của mọi con số expected_payout mà digest đưa cho tài xế.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "rate của shift_extend không có min-sample guard và mẫu số ngậm phút nghỉ",
+      "evidence": "src/gsm_sim/advice_bridge.py:1122-1123 (online_h = max(0.5, online_min/60) — floor 0.5h là guard duy nhất); config :394 có min_online_min_for_rate=30 nhưng CHỈ accept_lift dùng",
+      "detail": "Đầu/giữa ca ít mẫu, rate = points/online_h nhiễu lớn (10 điểm trong 40′ ⇒ rate 15đ/h) — thường bị chặn bởi reachable_in_shift nên tác động nhỏ; mẫu số online_min gộp cả nghỉ là nợ D-M3-19 đã ghi (chỉ cite, không tính finding mới) — hai lực ngược chiều làm need_min nhiễu cả hai phía.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "Truyền demand_hint_fn + trip_points(hour) + _acc_estimate vào check_shift_extend — need_min theo khung giờ THẬT của phần kéo",
+      "action_executable": "Giữ nguyên action (actor.shift_end_min += add — world.py:897-904 đã thi hành). Chỉ đổi cách TÍNH need_min: thay rate lịch sử bằng Σ_bucket λ̂(giờ)·p_accept·min(cap_trips)·trip_points(giờ) trên khung [shift_end, shift_end+add]",
+      "solver_dua_tren": "world._actor_demand_hint (đã truyền cho consult/should_defer_rest cùng vòng lặp), policy.trip_points, self._acc_estimate — toàn analytics có sẵn, zero số bịa",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Khử đúng vế thiếu cùng-lớp-station-choice: chỉ kéo ca khi cầu khung kéo THỰC SỰ đủ nuôi gap; giảm extension không-tới-mốc và work_span_p90 vô ích"
+    },
+    {
+      "title": "P(đạt mốc) bằng Poisson tail + ngưỡng config, thay buffer ×1.15",
+      "action_executable": "Cùng action kéo ca; thêm điều kiện nói: P(N_trips·pph ≥ gap | N ~ Poisson(Σλ̂·p_accept)) ≥ p_min (config, khuôn station_choice_min_gain_min); size add theo quantile: add* = min t sao cho P(reach trong t) ≥ q, nếu add* vượt trần ⇒ reason 'cap_unreachable' như hiện có",
+      "solver_dua_tren": "Poisson CDF analytic (thuần math, vài dòng numpy — không cần solver mới); vá luôn Jensen gap của issue #6 cho kênh này",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Chặn extension 50/50; biến 'kỳ vọng đạt mốc' từ điểm-ước sang xác suất có kiểm soát, log được confidence thật cho UPDATE"
+    },
+    {
+      "title": "Vá clamp world_end cụt: reason mới 'world_end_unreachable'",
+      "action_executable": "Trong check_shift_extend, sau :1197: nếu add < need_extra_min ⇒ note_spoken_outcome(followed=True, reason='world_end_unreachable') và trả 0.0 — y khuôn nhánh infeasible_world_end hiện có (giữ mẫu số adherence D-M3-01)",
+      "solver_dua_tren": "Không cần solver — so sánh hai số đã có trong hàm",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Không còn kéo-ca-chắc-chắn-không-thưởng; bảng veto tách được 'hết giờ thế giới' khỏi 'hết trần'"
+    },
+    {
+      "title": "Khử lượng tử hoá: PBS=1 (NB=241) hoặc thêm chiều carry {0..4} vào state",
+      "action_executable": "Không đổi action space; đổi rời rạc hoá điểm trong _solve_dp — state ~×5 (≈350k ô, vẫn vòng lặp thuần; comment ADV-01 đã hẹn 'đo lại runtime ở ladder SAU')",
+      "solver_dua_tren": "Chính shift_dp; failing test trước: DP với demand 0.8/bucket phải thấy mốc 60 khi tổng điểm kỳ vọng vượt 60 (probe [2] hiện fail tinh thần này)",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Bellman thấy mốc thưởng ở mọi mức demand — điều kiện cần trước khi bất kỳ ai bật lại shift_plan theo điều kiện reopen của ĐA-07"
+    },
+    {
+      "title": "Cap cầu cá nhân theo suất realized của CHÍNH tài xế thay cho tổng top-3 cell",
+      "action_executable": "Trong _forecast_arrays hoặc bridge: eo[b] = min(cap_trips, cầu_cell_TỐT_NHẤT hoặc λ̂ nhân share, realized_trips_per_hour·bucket/60) — realized từ memory nhiều ngày (đường D-SIM-13 đã có) hoặc trips_per_hour_est=1.5 (config :395 đang dùng cho accept_lift)",
+      "solver_dua_tren": "Analytics có sẵn (memory acceptance/trips, config est) — không mô hình cạnh tranh mới, chỉ neo cầu vào số ĐO của chính người đó",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "E[payout]/delta của S2 hết phồng ~3× ở giờ vắng; delta dự đoán tiến gần Δ đo A/B — thu hẹp đúng khoảng cách dự-đoán-vs-đo mà ĐA-07 phơi ra"
+    },
+    {
+      "title": "Tuyên bố tường minh sp_end_only chỉ sống khi costs ACTIVE + regression test END-unreachable",
+      "action_executable": "Guard khi dựng bridge: sp_end_only=true mà cash_cost==0 và swap_fee==0 ⇒ log cảnh báo 'channel structurally silent under zero-cost' (khuôn cờ-config-nói-sai-hành-vi UPDATE-117); test khẳng định 0 END trên lưới probe để ai kích hoạt nhầm sẽ thấy đỏ",
+      "solver_dua_tren": "resolve_cost_params/terms_active (B3) đã phân loại ACTIVE/OFF_BY_POLICY/UNKNOWN — chỉ cần đọc",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Người chạy ablation E-05 không đọc nhầm im lặng cấu trúc thành 'không có ca đáng kết sớm'"
+    }
+  ],
+  "notes_cau_hoi_rieng": {
+    "dp_state_space_du_bien_chua": "Có demand theo giờ (eo[b]) và điểm peak/normal theo giờ; THIẾU vị trí/cell, cạnh tranh cung, trạng thái trạm swap, SOC-theo-km, phương sai. Vị trí bị loại có chủ ý (product boundary — không khuyên reposition) nhưng hệ quả là cầu cá nhân phải được neo đúng (issue #4), không phải bỏ ngỏ.",
+    "points_band_size_5_con_loi_khong": "CÒN — floor kép không carry: mù mốc thưởng khi exp_trips<0.9 giờ thường (probe xác nhận), pts0 floor −4 điểm sát mốc (issue #3).",
+    "zero_cost_bai_toan_co_nghia_gi": "Suy biến thành đặt-R-bucket-nghỉ-vào-giờ-vắng + timing swap; END/sp_end_only vô nghĩa (issue #1); mọi vế cost là code chết (họ D-E4-01). Giá trị kênh do đó ≈ giá trị của việc dời nghỉ — và ĐA-07 đã đo nó không dương.",
+    "shift_extend_ky_vong_dat_moc": "Deterministic: need_min = gap/rate với rate trung-bình-cả-ca; KHÔNG phương sai, KHÔNG P(reach); buffer ×1.15 tuỳ tiện (issue #2, #6)."
+  }
+}

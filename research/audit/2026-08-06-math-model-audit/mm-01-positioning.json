@@ -1,0 +1,148 @@
+{
+  "item": "Kênh POSITIONING (S4 capacity_alloc + _standby_planner, trigger=capacity, positioning_overrides=wait_only) — kênh duy nhất BẬT mặc định, PASS 9/9 ĐA-08 n=100 (+6.016đ SIG)",
+  "objective_as_implemented": "Hai tầng, KHÔNG có hàm mục tiêu tiền/phút nào. Tầng view (gsm_core/features/market_state.py:76-103): mỗi ô có capacity_left = max(0, floor(λ_giờ / trips_per_driver_per_bucket) − (supply_now + supply_incoming)); ranked_cells = ô còn trần, sort sd_ratio = λ/eff giảm dần. Tầng planner (world.py:387-517): ứng viên = tài xế IDLE được phủ đứng ở ô cap_left==0 (world.py:431); preferred = ô còn trần GẦN NHẤT (world.py:442); S4 Hungarian (capacity_alloc.py:45-53) minimize Σ cost với cost[i,j] = (100−SOC)/100 nếu slot đúng preferred, ngược lại +10 PHẲNG cho MỌI ô khác. Tức objective thực = 'lấp slack trần theo ô + chống herding + ưu tiên người nhiều pin, gần' — một bài toán FEASIBILITY/anti-herding, không phải maximize kỳ vọng payout. Thi hành: coin adherence rút một lần lúc gán; vòng idle chỉ ghi đè khi bản năng là WAIT (world.py:1002-1012); RELOCATE tốn thời gian ENROUTE thật (không match được) + SOC (world.py:1115-1133).",
+  "action_space": [
+    "RELOCATE tới ô được gán (standby_plan) — chỉ khi bản năng chọn WAIT (mode wait_only); không đụng REST/GO_SWAP/END_SHIFT",
+    "Không gán (unassigned khi hết slot) = advisor im lặng, bản năng tự chạy",
+    "Nhịp: planner chạy mỗi bucket 60′; phân công không có TTL — sống tới khi thi hành hoặc tài xế đã ở đúng ô"
+  ],
+  "variables_observed": [
+    "λ cầu theo Ô × GIỜ (oracle demand_field config — theo bucket giờ, KHÔNG tĩnh; market_state.py producer :151-160)",
+    "supply_now theo ô (actor IDLE), supply_incoming (enroute_cell thật + pending advice đã phát)",
+    "SOC của ứng viên (priority), khoảng cách ô (chỉ để chọn preferred)",
+    "idle_streak theo ô (chỉ ở trigger=wait — mặc định capacity không dùng)",
+    "coverage/coin adherence per-decision (keyed sha256, giữ CRN)"
+  ],
+  "variables_missing": [
+    {
+      "var": "travel_min(i→j) trong cost gán (và trong quyết định NÓI/KHÔNG NÓI)",
+      "vi_sao_quan_trong": "Thời gian RELOCATE là phút ENROUTE không match được + tốn SOC — chi phí mà world ĐỊNH GIÁ THẬT (world.py:1120-1127) nhưng cost matrix S4 không có vế nào cho nó; chỉ preferred được chọn gần nhất, còn slot lệch preferred trả +10 phẳng bất kể xa gần",
+      "nguon_co_san_trong_sim": "world._travel_min, cell_distance_km, self._dfac — đều có sẵn tại call site world.py:442"
+    },
+    {
+      "var": "Giá trị kỳ vọng tại Ô NGUỒN (λ_origin chia cho số người ở lại)",
+      "vi_sao_quan_trong": "Ứng viên bị kéo đi chỉ vì cap_left==0, mà cap_left==0 gồm cả ô λ<1.5/bucket do floor (slots=int(λ//1.5)=0) — người duy nhất đứng ở ô λ=1.4 vẫn bị coi là 'thừa' và giá trị họ đang giữ (≈1.4 đơn/giờ) bị định giá = 0",
+      "nguon_co_san_trong_sim": "view['cells'][origin]['expected_demand'] và supply_now — cùng view đã dựng, chỉ chưa được đọc cho ô nguồn"
+    },
+    {
+      "var": "Giá trị BIÊN tại đích (Δ đơn kỳ vọng khi thêm chính mình vào eff)",
+      "vi_sao_quan_trọng": "sd_ratio chỉ dùng để LỌC/xếp hạng ô, không vào cost — Hungarian không ưu tiên ô sd cao hơn khi tranh chấp; và không ai kiểm 'đi tới đó tôi được thêm bao nhiêu đơn so với ở lại'",
+      "nguon_co_san_trong_sim": "λ, eff, capacity_left trong cùng view; phép tính λ/(eff+1) − λ_origin/eff_origin là thuần số học"
+    },
+    {
+      "var": "Dòng bản năng DỰ ĐOÁN ĐƯỢC của tài xế không-phủ / không-theo",
+      "vi_sao_quan_trong": "supply_incoming chỉ đếm enroute thật + advice pending (market_state.py:37-70). Tài xế không được phủ dùng CÙNG demand field (×nhiễu) để tự relocate về ô nóng trong cùng giờ — world biết _actor_demand_hint + idle_streak + p_move của họ nhưng planner không trừ trần cho dòng này ⇒ overfill khi coverage<100%",
+      "nguon_co_san_trong_sim": "world._actor_demand_hint, actor.idle_streak_min, behavior.consider_relocate (p_move 0.5→0.9)"
+    },
+    {
+      "var": "λ của bucket KẾ TIẾP (lookahead 1 bucket)",
+      "vi_sao_quan_trong": "Gán ở bucket h dùng λ(h); tài xế tới nơi mất 5–15′ rồi đứng phần lớn thời gian ở h (và có thể sang h+1 nếu plan thi hành trễ) — ô sắp nguội ở h+1 vẫn được lấp kín ở phút cuối của h",
+      "nguon_co_san_trong_sim": "demand_field có đủ 24 giờ — đọc λ(h+1) không rò tương lai (là expected field config, cùng nguồn với λ(h))"
+    },
+    {
+      "var": "Tuổi của phân công tại thời điểm THI HÀNH",
+      "vi_sao_quan_trong": "standby_plan/pending_targets không TTL: mode wait_only, nếu bản năng liên tục là REST/GO_SWAP/RELOCATE thì phân công + reservation sống nhiều bucket; khi cuối cùng thi hành, cầu ở đích là ảnh của bucket GÁN — không ai re-validate",
+      "nguon_co_san_trong_sim": "decision_bucket của lúc gán đã lưu trong standby_decision — so với bucket hiện tại là một phép trừ"
+    },
+    {
+      "var": "Vùng BIND của newbie guarantee + bonus gate trong giá trị biên của người nhận",
+      "vi_sao_quan_trong": "Với P4 đang bind bảo lãnh: ∂payout/∂gross = 0 CHÍNH XÁC (xem math_issues) — mọi slot gán cho họ tạo 0đ giá trị cá nhân; kênh không biết nên vẫn tiêu slot khan hiếm cho họ",
+      "nguon_co_san_trong_sim": "policy.driver_share, newbie_program.guarantee_gross_floor_vnd, actor.gross_vnd, actor.tenure_days — tất cả là rule/analytics, không cần agent bịa số"
+    }
+  ],
+  "math_issues": [
+    {
+      "title": "Objective là feasibility (lấp slack trần), KHÔNG có vế Δ-giá-trị: (đơn kỳ vọng tại đích − đơn kỳ vọng bỏ lại ở nguồn − phút ENROUTE mất match) không xuất hiện ở đâu",
+      "evidence": "capacity_alloc.py:45-53 (cost chỉ có SOC-penalty + mismatch phẳng); world.py:431,442-446 (kéo đi chỉ vì cap_left==0, đích chỉ chọn theo gần nhất); world.py:1115-1127 (world định giá travel thật: ENROUTE không match được + SOC)",
+      "detail": "Kênh thắng vì TRUNG BÌNH việc lấp ô đói thắng việc bỏ ô nguồn — nhưng từng lượt gán không được sàng: Δ-giá-trị per-move có thể ÂM (ví dụ nguồn λ=1.4/eff=1 → đích λ=3.1/eff-sau=2: biên +0.15 đơn/giờ, trừ 10-15′ ENROUTE là lỗ) và không có materiality gate nào. Đối chiếu: station_choice có gate min_gain ≥3′ (R-08), positioning KHÔNG có gate tương đương — 'chênh vặt vẫn nói'. Đây là cơ chế 'thắng DƯỚI trần' trực tiếp nhất. Độ lớn chưa đo (cần decompose per-move từ event log) — mức tin CAO là cho SỰ THIẾU VẾ (đọc thẳng code), không phải cho độ lớn thiệt hại.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "P4 tân binh ≈ 0 lợi vì policy floor HẤP THỤ biên: khi gross < 350k và online ≥ 6h, payout ≡ driver_share×floor + bonus ⇒ ∂payout/∂gross = 0 chính xác trong vùng bind",
+      "evidence": "world.py:571-578 (topup = (floor−gross)×driver_share cộng thẳng vào payout_vnd); world.py:750-751 (payout theo cuốc = driver_share×gross); archetypes.py:113-115 (MỌI P4 tenure 5-60 ngày ⇒ 100% trong cửa sổ bảo lãnh 90 ngày); configs/pilot_dongda.yaml:487-494 (floor 350k, driver_share 0.75 ⇒ trần bind 262.5k)",
+      "detail": "Positioning tăng gross của P4 nhưng topup giảm 1:1 (nhân driver_share) ⇒ Δpayout = 0 với mọi cải thiện còn nằm dưới floor ở CẢ HAI arm. Số cũ đo P4 payout ~155-214k < 262.5k ⇒ vùng bind là thật. Nhân đôi bởi bonus gate: P4 accept_base 0.80 < 0.85 ⇒ day_bonus = 0 bất kể điểm positioning kiếm thêm (advice_bridge.py:106-109, config :367-369). Hệ quả đo lường: guard 1b của ĐA-08 với P4 pass 'miễn phí' (không thể hại CŨNG không thể lợi qua kênh payout) — per-archetype CI của P4 không có power kiểm gì cả; và payout_mean_all bị kéo về dưới trần vì một archetype đóng góp ~0 theo CẤU TRÚC chứ không phải vì lời khuyên vô dụng về vị trí. Chưa reproduce trên artifact n=100 (chưa đếm % ngày-P4 bind) — cơ chế là đồng nhất thức code nên mức tin CAO, tần suất bind mức tin TB.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Stagger mù khoảng cách: slot lệch preferred trả cost +10 PHẲNG cho mọi ô ⇒ người bị stagger được gán theo thứ tự ALPHABET của slot, không phải ô-gần-thứ-nhì",
+      "evidence": "capacity_alloc.py:49-50 (cost[i,j] = pen nếu tgt==preferred else pen+10.0 — không có vế khoảng cách); capacity_alloc.py:33-38 (slots expand theo sorted(slot_caps) = thứ tự tên ô)",
+      "detail": "Khi ô preferred hết slot, Hungarian bàng quan giữa ô cách 0.5km và ô cách 5km (cùng +10) — tie vỡ theo index slot = alphabet tên ô. Phút ENROUTE chênh nhau nhiều lần giữa hai lựa chọn 'bằng giá'. Đây là chỗ cụ thể nhất mà vế chi-phí-di-chuyển bị vứt: bản thân preferred đã chọn gần nhất (world.py:442) chứng tỏ tác giả BIẾT khoảng cách quan trọng, nhưng thông tin đó không truyền vào ma trận cost.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Floor cliff của trần: slots = int(λ // 1.5) làm mọi ô λ<1.5/bucket vĩnh viễn không là ĐÍCH nhưng người đứng đó vĩnh viễn là ỨNG VIÊN bị kéo đi",
+      "evidence": "gsm_core/features/market_state.py:81-82 (slots floor, capacity_left = max(0, slots−eff)); market_state.py:99-103 (ranked chỉ gồm capacity_left>0); world.py:431 (cap_left==0 ⇒ ứng viên)",
+      "detail": "Hai hệ quả: (a) dải ô cầu-thấp-nhưng-khác-0 (0<λ<1.5) bị định giá 0 tuyệt đối làm NGUỒN — kéo người cuối cùng ra khỏi ô có ~1.4 đơn/giờ là bỏ đơn thật (đơn ở đó sẽ chết nếu không ai gần); (b) nhạy cảm phi tuyến quanh λ=1.5: λ 1.49→1.51 lật ô từ 'hút cạn' sang 'nhận thêm 1 người'. Ngoài ra trips_per_hour_est=1.5 là hằng TOÀN CỤC (config :395, ước từ trung bình) — service rate thực khác nhau theo giờ/ô thì trần lệch hệ thống. Đơn vị đã kiểm: λ là đơn/giờ, bucket 60′, trips_per_driver_per_bucket = 1.5×60/60 — nhất quán.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Free-rider / composition khi coverage<100%: sổ supply_incoming không chứa dòng bản năng dự đoán được của người không-phủ, và giá trị spillover cho họ không vào payout_mean_all",
+      "evidence": "market_state.py:37-70 (inc = enroute thật + pending advice, không có dự phóng bản năng); world.py:420-421 (covers() lọc Ở TẦNG ỨNG VIÊN — người không phủ vô hình với planner cho tới khi enroute); behavior.py:200-229 (bản năng dùng CÙNG demand field ×nhiễu, p_move tới 0.9 khi sốt ruột)",
+      "detail": "Hai chiều: (a) chống-herding chỉ hoạt động trong nội bộ tập được-khuyên — dòng bản năng đổ về cùng ô nóng trong cùng giờ không bị trừ trần ⇒ ô nóng bị overfill so với trần danh nghĩa, phần giá trị của slot bị pha loãng (kênh thắng dưới trần); (b) người không-phủ đứng lại ở ô nguồn hưởng giảm-cạnh-tranh khi người được khuyên rời đi — giá trị này rơi ra ngoài payout_mean_all (đo trên người được phủ) và chỉ hiện ở tầng đội. Lưu ý bản năng chỉ relocate ring 1-3 (cục bộ) nên hiệu ứng bị chặn trên. Chưa đo được độ lớn — cần arm coverage-sweep.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "Phân công không TTL + không re-validate lúc thi hành: mode wait_only cho phép plan 'ngủ' nhiều bucket rồi thi hành trên ảnh cầu đã cũ",
+      "evidence": "world.py:994-1012 (standby_plan chỉ pop ở 2 nhánh: đã-ở-đúng-ô hoặc đã-theo; không có kiểm tuổi); world.py:423-424 (đang có plan ⇒ bị skip khỏi batch mới, không được gán lại theo cầu mới); world.py:1002 (wait_only: bản năng ≠ WAIT ⇒ plan nằm chờ)",
+      "detail": "Tài xế coin-true nhưng liên tục bận (trip dài, REST, GO_SWAP) giữ plan + pending reservation qua nhiều giờ: (a) khi cuối cùng WAIT, họ relocate tới ô được chọn theo λ của giờ GÁN — đúng lớp lỗi 'giá trị sau hành động không được kiểm tại thời điểm hành động'; (b) reservation đè capacity_left của ô nóng suốt thời gian đó, chặn người khác được gán vào slot thực ra còn trống. Tần suất chưa đo (đa số plan thi hành trong ~2′ vì bản năng thường là WAIT) — cần đếm phân phối (bucket_thi_hành − bucket_gán) từ event log trước khi nói độ lớn.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "Myopic 1 bucket + không chiết khấu thời gian còn lại của bucket: giá trị vị trí TÍNH theo bucket giờ (không tĩnh) nhưng chỉ nhìn đúng giờ hiện tại",
+      "evidence": "market_state.py (sim producer) :151-160,162-176 (λ đọc theo hour của bucket hiện tại, cache 1 bucket); world.py:386-389 (planner chạy đầu mỗi bucket 60′)",
+      "detail": "Trả lời câu hỏi riêng: KHÔNG tĩnh — λ theo (ô, giờ) từ demand_field. Nhưng: không có vế λ(h+1) nên ô sắp nguội vẫn full trần ở cuối giờ; và người tới nơi sau travel t′ chỉ còn (60−t′−phần bucket đã trôi) phút hưởng λ(h) — kỳ vọng thực tế nhỏ hơn kỳ vọng lúc gán một hệ số không được mô hình. Với planner chạy đúng biên bucket và travel ngắn (grid Đống Đa), sai số biên — xếp THẤP.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "Thêm vế Δ-giá-trị + chi phí đường vào cost matrix S4 (giữ nguyên Hungarian)",
+      "action_executable": "Vẫn là RELOCATE qua standby_plan — actor đã thi hành được; chỉ đổi CÁCH CHỌN (ai đi, đi đâu, có đáng nói không)",
+      "solver_dua_tren": "capacity_alloc.py mở rộng cost[i,j] = −w1·(λ_j/(eff_j+1) − λ_i/eff_i) + w2·travel_min(i→j) + SOC-penalty; mọi số hạng từ view sẵn có (λ, eff, cell_distance_km, _travel_min) — thuần math, w1/w2 hiệu chỉnh từ giá-phút đo được trong sim (analytics, không phải agent bịa)",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Loại các lượt gán Δ-âm và stagger-xa; kỳ vọng nâng payout_mean_all trên cùng số lượt nói (đóng khoảng cách tới trần); đo bằng paired n=100 theo đúng ĐA-08"
+    },
+    {
+      "title": "Materiality gate cho positioning (đối xứng station_choice_min_gain_min)",
+      "action_executable": "Không gán (im lặng) khi Δ-giá-trị ước < ngưỡng — hành động 'không nói' đã có sẵn (unassigned)",
+      "solver_dua_tren": "So sánh λ_j/(eff_j+1) − λ_i/eff_i − travel_min×giá_phút với ngưỡng config (R-08); một dòng lọc ứng viên trước khi vào S4",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Cắt đuôi các lượt khuyên lỗ per-move; giảm km rỗng SIG mà không giảm vế dương (giả thuyết — phải đo, vì bài học swap_early: gate chặt quá làm kênh câm)"
+    },
+    {
+      "title": "Re-validate phân công lúc thi hành + TTL 1 bucket",
+      "action_executable": "Tại nhánh world.py:1002, nếu bucket hiện tại ≠ bucket gán: hỏi lại view — đích còn trong ranked và capacity_left>0 thì đi, không thì huỷ plan + trả reservation (log kết cục typed để giữ mẫu số adherence)",
+      "solver_dua_tren": "Chỉ đọc lại market.view(now) đã có cache — 0 solver mới; decision_id giữ nguyên, không re-roll coin (tôn trọng ĐA-04)",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Diệt lớp lỗi station_choice 'hành động trên ảnh cũ'; đồng thời giải phóng reservation ma đè trần ô nóng"
+    },
+    {
+      "title": "Trừ trần cho dòng bản năng dự đoán được (coverage<100%)",
+      "action_executable": "Không đổi hành động actor nào — chỉ đổi số cung vào view",
+      "solver_dua_tren": "count_supply cộng vào inc một kỳ vọng E[inflow] = Σ_neighbor p_move(idle_streak)·1{hint kéo về ô này} cho actor không-phủ IDLE — công thức đóng từ behavior config (idle_impatience_step, p_move), không dự báo ngoài mô hình đã có",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Giảm overfill ô nóng ở coverage thấp; kiểm bằng sweep coverage {single, 25%, 50%, all} xem Δ có đơn điệu hợp lý không"
+    },
+    {
+      "title": "Attribution-fix cho ĐA-08: cờ 'policy-absorbed' cho archetype đang bind floor/gate",
+      "action_executable": "Không đổi hành động — đổi BÁO CÁO: sim_metrics tách Δgross và Δpayout theo archetype, đánh dấu ngày-tài-xế có newbie_guarantee_topup>0 hoặc day_bonus=0-vì-acceptance",
+      "solver_dua_tren": "Thuần analytics trên event log (newbie_guarantee_topup, day_end_settle) — rule tính, agent chỉ diễn giải",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Trả lời dứt điểm 'P4 ≈ 0 lợi là do kênh vô dụng hay do floor hấp thụ' — nếu Δgross(P4) > 0 SIG mà Δpayout(P4) ≈ 0 thì kênh ĐANG tạo giá trị bị chính sách nuốt; đây là ranh giới đo lường, không đề xuất đổi hành vi khuyên với P4 khi chưa có verdict Cường"
+    }
+  ]
+}

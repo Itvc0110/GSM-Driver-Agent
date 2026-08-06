@@ -1,0 +1,196 @@
+{
+  "item": "mm-05 — họ PIN: kênh SWAP_EARLY (E4/E-03) + STATION_CHOICE (E4/E-01), cả hai TẮT mặc định. Item CASE STUDY: formalize redesign objective cho D-E4-06(b).",
+  "auditor": "MATH-MODELLING",
+  "date": "2026-08-06",
+  "files_doc": [
+    "src/gsm_sim/advice_bridge.py (check_swap_early 656-689, station_eta_min 693-706, pick_station 708-739)",
+    "src/gsm_sim/world.py (hook swap_early 973-988, _do_charge 1173-1292, standby_planner 371-509)",
+    "src/gsm_sim/behavior.py (choose_station 241-250)",
+    "src/gsm_sim/market_state.py + src/gsm_core/features/market_state.py (build_market_state)",
+    "src/gsm_core/solvers/capacity_alloc.py",
+    "configs/pilot_dongda.yaml (advice: 319-449; station: 157-163)"
+  ],
+
+  "objective_as_implemented": {
+    "station_choice": "s* = argmin_{s ∈ world.stations} [ travel_min(c0→cell_s, h) + queue_len(s)·1.5′ + 1{available_full(s, now)≤0}·max(0, min_b ready_at_b − now) ]; NÓI ⇔ eta(instinct) − eta(s*) ≥ station_choice_min_gain_min = 3′ (config:390). Đơn vị duy nhất: PHÚT downtime tới-lúc-cầm-pin-đầy. KHÔNG có vế giá trị vị trí sau đổi, không lookahead, không vế công suất. (advice_bridge.py:693-739)",
+    "swap_early": "RULE, không phải argmin: ADVISE (WAIT→GO_SWAP) ⇔ fleet=SWAP ∧ thr < SOC ≤ thr + band(15) ∧ idle_streak ≥ 10′ ∧ queue_len(nearest) ≤ 1 ∧ available_full(nearest) > 0 ∧ cadence ∧ coin. (advice_bridge.py:656-689; world.py:973-988; config:386-387). Tiền đề tuyên bố trong docstring: 'lần đổi kế là TẤT YẾU' và 'cơ hội mất gần 0' — cả hai KHÔNG được kiểm bằng biến nào ngoài SOC-band và idle_streak cá nhân."
+  },
+
+  "action_space": [
+    "station_choice: chỉ ĐỔI ĐÍCH của một GO_SWAP đã xảy ra (bản năng hoặc do swap_early) — không tạo lần swap mới, không đổi thời điểm (world.py:1205-1225, advisor GHI ĐÈ sau khi bản năng đã rút đúng chuỗi RNG).",
+    "swap_early: đè duy nhất WAIT → GO_SWAP; không cướp REST/RELOCATE/END_SHIFT (world.py:973). Đích trạm để _do_charge chọn lại.",
+    "Hệ quả vị trí là action CÓ SẴN: sau swap_done actor đứng tại cell trạm (world.py:1243 _set_pos) rồi IDLE — chọn trạm ĐÃ LÀ chọn vị trí đứng kế tiếp; đường về hotspot do bản năng relocate/kênh positioning thi hành. Redesign không cần action mới."
+  ],
+
+  "variables_observed": [
+    "actor: soc_pct, fleet, idle_streak_min, cell (qua travel_min_fn)",
+    "station (SỐNG): queue_len, batteries[].ready_at_min/.soc_pct, available_full(now)",
+    "đường đi thật: cell_distance_km × dfac (OSRM factor) × congestion theo giờ (world._travel_min qua _tmin closure, world.py:1212-1214)",
+    "instinct_station (baseline so sánh), cadence/coin state"
+  ],
+
+  "variables_missing": [
+    {
+      "var": "λ cầu theo ô × bucket giờ (demand surface)",
+      "vi_sao_quan_trong": "Vế GIÁ TRỊ VỊ TRÍ sau đổi — chính vế thiếu đã đo được ở UPDATE-160 (thời gian thắng SIG, P1 −3.863đ ÂM-SIG). Trạm 'tối ưu downtime' có thể đặt tài xế vào ô chết.",
+      "nguon_co_san_trong_sim": "world.demand_field[hour][cell] (demand.py:76, KHÔNG leak — dựng từ config λ); hoặc chuẩn hơn: MarketStateProducer.view(now)['cells'][c]['expected_demand'] (market_state.py:151-204) — cùng nguồn kênh positioning đang dùng."
+    },
+    {
+      "var": "capacity_left / sd_ratio theo ô (cầu ĐÃ TRỪ cung tại chỗ + cung đang tới)",
+      "vi_sao_quan_trong": "Trả lời đúng câu hỏi bài học station_choice: 'thời gian tiết kiệm có được demand hấp thụ không' — ô quanh trạm capacity_left=0 nghĩa là phút giải phóng chảy vào idle, không vào trips.",
+      "nguon_co_san_trong_sim": "build_market_state (gsm_core/features/market_state.py:82,94,99-103): capacity_left = max(0, ⌊λ/trips_per_driver_per_bucket⌋ − supply_effective); ranked_cells sẵn dùng."
+    },
+    {
+      "var": "số tài xế ĐANG TỚI mỗi trạm (incoming swappers)",
+      "vi_sao_quan_trong": "queue_len chỉ tăng lúc ĐẾN NƠI (world.py:1250) ⇒ trong cửa sổ travel, N tài xế coverage=all cùng thấy trạm 'vắng' và cùng được chỉ tới — fallacy of composition, đúng bài học supply_incoming ⭐ của positioning (market_state.py:13-17).",
+      "nguon_co_san_trong_sim": "CHƯA có sổ (đích trạm chỉ sống trong biến cục bộ của generator _do_charge). Cần ledger nhỏ kiểu pending_targets, HOẶC nối qua S4 capacity_alloc — solver ĐÃ hỗ trợ swap_window + station_capacity slots (capacity_alloc.py:79-84) mà world chưa nối."
+    },
+    {
+      "var": "shift_end_min + tốc độ tiêu km kỳ vọng của phần ca còn lại",
+      "vi_sao_quan_trong": "Tiền đề 'lần đổi kế là TẤT YẾU' của swap_early sai khi ca sắp hết: SOC trong band lúc còn 30′ ca ⇒ range mua thêm không bao giờ được tiêu; downtime đổi pin là chi phí ròng. P1 part-time (ca 3-4h) dính nhiều nhất — cùng nhóm bị hại ở station_choice.",
+      "nguon_co_san_trong_sim": "actor.shift_end_min (entities.py:33); trips_per_hour_est + avg_dist_km đã nằm sẵn trong bridge (advice_bridge.py:202, 259); pct_per_km từ config vehicle."
+    },
+    {
+      "var": "ready_at_min của viên pin thứ (queue_len+1)",
+      "vi_sao_quan_trong": "Người xếp hàng là người chờ PIN CHÍN — actor đến sau cần viên thứ (q+1), không phải viên sớm nhất. Thiếu nó, eta ước non tới ~105′/suất trong regime khan pin.",
+      "nguon_co_san_trong_sim": "station.batteries[].ready_at_min — CÓ SẴN, code hiện chỉ lấy min (advice_bridge.py:702-705)."
+    },
+    {
+      "var": "t_arrive = now + travel (trạng thái trạm TẠI THỜI ĐIỂM ĐẾN)",
+      "vi_sao_quan_trong": "Pin chín trong lúc di chuyển: chờ-chín đo từ now rồi CỘNG vào travel là đếm đôi phần chồng lấn — phạt oan trạm sắp-có-pin, thiên vị trạm xa đang-có-pin.",
+      "nguon_co_san_trong_sim": "Thuần số học: travel_min đã tính; chỉ cần đổi mốc trừ."
+    },
+    {
+      "var": "wait_cap_min (trần bỏ cuộc của world)",
+      "vi_sao_quan_trong": "World bỏ cuộc sau 60′ (swap_failed — mất travel+wait, SOC nguyên); solver coi chờ vô hạn là chấp nhận được ⇒ có thể argmin vào trạm mà kết cục thật là THẤT BẠI.",
+      "nguon_co_san_trong_sim": "config station.wait_cap_min (đã đọc ở world.py:1252)."
+    },
+    {
+      "var": "n_idle / median idle_streak của Ô hiện tại",
+      "vi_sao_quan_trong": "swap_early đo opportunity-cost bằng idle_streak CÁ NHÂN (n=1): không phân biệt 'rảnh vì ô chết' (đi đổi pin là đúng) với 'rảnh vì đen ở ô nóng' (10′ nữa có thể có đơn).",
+      "nguon_co_san_trong_sim": "count_idle_wait (market_state.py:73-86, đã dùng cho E10b) + λ ô từ demand_hint."
+    }
+  ],
+
+  "math_issues": [
+    {
+      "title": "MI-1 station_eta_min mô hình hàng đợi SAI CƠ CHẾ: queue là chờ PIN CHÍN, không phải chờ lượt swap — cần viên thứ (q+1), code lấy q×1.5′ + min(readies)",
+      "evidence": "src/gsm_sim/advice_bridge.py:700-706 vs src/gsm_sim/world.py:1255-1268",
+      "detail": "Trong _do_charge, cơ chế chờ DUY NHẤT là pin sẵn (poll 1′, grab atomic; KHÔNG có ràng buộc bay/service — hai actor swap đồng thời được). Vậy q người xếp trước = q người chờ pin chín, actor cần viên thứ (q+1) theo ready_at_min. Công thức hiện tại wait = q×1.5′ (+ chờ viên SỚM NHẤT nếu chưa có ready) ước non tới ~battery_recharge_min = 105′/suất xếp hàng. Ở tải hiện tại (queue 0-1) sai số nhỏ và bị che; nhưng regime kênh được thiết kế để có giá trị — sweep khan hiếm trạm, chính điều kiện reopen D-E4-02 — là regime công thức sai NẶNG nhất: argmin sẽ chỉ tới trạm 'trông rẻ' mà thật ra chờ pin chín hàng chục phút. Phải sửa TRƯỚC mọi phép đo redesign trong regime khan hiếm, nếu không giá trị vế-vị-trí bị nhiễu bởi thước downtime lệch.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-2 double-count phần chồng lấn travel–maturation: chờ-pin-chín đo từ `now` rồi CỘNG vào travel",
+      "evidence": "src/gsm_sim/advice_bridge.py:701-706 (hàm nhận now_min, không có t_arrive)",
+      "detail": "eta = travel + max(0, min_ready − now). Nếu pin chín sau 5′ và travel 8′ thì chờ thật = 0, nhưng công thức trả 8+5 = 13′. Đúng: travel + max(0, r_(q+1) − (now + travel)). Bias HỆ THỐNG (không phải noise): phạt oan trạm không-ready-nhưng-sắp-chín tới travel_min phút, thiên vị trạm xa đang-có-ready ⇒ kéo tài xế đi XA HƠN cần thiết — cùng chiều với cơ chế gây hại vị trí đã đo ở UPDATE-160.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-3 ràng buộc wait_cap của world KHÔNG BIND trong solver: trạm có W dự kiến > 60′ vẫn được argmin chọn như thể chờ được vô hạn",
+      "evidence": "src/gsm_sim/advice_bridge.py:693-706 (không đọc wait_cap) vs src/gsm_sim/world.py:1252,1270-1280 (swap_failed sau wait_cap)",
+      "detail": "Kết cục thật của 'chờ quá 60′' là swap_failed: mất travel + wait_cap, SOC nguyên, phải re-trigger. Kỳ vọng đúng của trạm như vậy là +∞ (hoặc cost thất bại + retry), không phải travel + W. Hôm nay không bind (W hiếm khi lớn); bind đúng lúc khan hiếm — cùng regime với MI-1.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-4 station_choice không có vế CÔNG SUẤT/anti-herding: mọi actor cùng cửa sổ thấy CÙNG argmin, queue_len chỉ tăng khi ĐẾN NƠI",
+      "evidence": "src/gsm_sim/advice_bridge.py:720-724 (argmin trên state tức thời) + src/gsm_sim/world.py:1250 (queue_len += 1 tại arrival); đối chiếu market_state.py:13-17 (⭐ supply_incoming) và capacity_alloc.py:79-84 (S4 đã hỗ trợ swap_window + station_capacity, không được nối)",
+      "detail": "Trong cửa sổ travel (5-15′), N tài xế coverage=all đều thấy trạm s* 'queue 0, có pin' và đều được chỉ tới ⇒ tự tạo hàng đợi mà thước đo không nhìn thấy — fallacy of composition, đúng bài học đã trả giá ở positioning (pending_targets trừ trần NGAY cho người hỏi sau, world.py:500). Hạ tầng chống dồn cho TRẠM đã tồn tại trong solver S4 (slots swap_window) nhưng kênh bypass. Ở n=100 UPDATE-160 chưa materialize (swap_wait −3,6′ SIG — tải trạm thấp, 11 tủ) nên confidence về IMPACT hiện tại là TB; về code là CAO.",
+      "severity": "CAO",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-5 swap_early thiếu ràng buộc 'tất yếu TRONG CA': không đọc shift_end_min — khuyên đổi pin cho ca sắp kết thúc là chi downtime mua range không bao giờ tiêu",
+      "evidence": "src/gsm_sim/advice_bridge.py:656-689 (không có tham chiếu shift_end_min nào trong eligibility)",
+      "detail": "Docstring tuyên bố 'SOC trong dải (thr, thr+band] nghĩa là lần đổi pin sắp tới là chắc chắn' — chỉ đúng nếu phần ca còn lại tiêu > (SOC−thr)/pct_per_km km. SOC 30% (band 20-35] còn ~6,25 km range trên ngưỡng; nhưng nếu ca chỉ còn 30-60′ và kỳ vọng ~1,5 cuốc × 3,5 km, tài xế kết ca TRƯỚC khi chạm ngưỡng ⇒ lời khuyên đổi pin 'sớm' thành đổi pin THỪA + downtime ròng. P1 part-time (ca 3-4h, 14% mix) rơi vào nhánh này nhiều nhất — cùng nhóm bị hại SIG ở station_choice. CÙNG LỚP case study: objective (rule) thiếu vế mà world định giá — giá trị pin đầy chỉ hiện thực hoá nếu demand/ca còn lại HẤP THỤ nó. Mọi biến cần có đều sẵn: shift_end_min, trips_per_hour_est, avg_dist_km, pct_per_km.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MI-6 swap_early không có vế TRAVEL tới trạm và vế VỊ TRÍ sau đổi trong eligibility; opportunity-cost đo bằng idle_streak cá nhân n=1",
+      "evidence": "src/gsm_sim/advice_bridge.py:656-657 (chữ ký chỉ nhận nearest_queue_len, nearest_has_ready — không có travel_min) + world.py:1243 (vị trí sau swap = cell trạm)",
+      "detail": "Trạm 'vắng' nhưng xa (peak + congestion, travel 2 chiều tính bằng chục phút và ~1,6%/km SOC) vẫn qua cổng — kênh tối ưu 'trạm rẻ' chứ không phải 'chuyến đi rẻ'. Sau swap actor đứng tại cell trạm ⇒ thiếu vế vị trí Y HỆT station_choice. Và 'cơ hội mất gần 0' suy từ idle_streak của MỘT người, trong khi λ ô (demand_hint) và (n_idle, median streak) của ô (count_idle_wait — đã dùng cho E10b) quan sát được: rảnh 10′ ở ô nóng giờ đỉnh ≠ rảnh 10′ ở ô chết.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MI-7 lệch thời điểm/trạm giữa tư vấn và thi hành: điều kiện 'trạm vắng có pin' kiểm ở decision tick trên trạm st_n, nhưng _do_charge re-choose + station_choice có thể redirect; gate queue≤1 cho phép người xếp trước ăn viên ready duy nhất",
+      "evidence": "src/gsm_sim/world.py:976-981 (check trên st_n) vs world.py:1205-1225 (chọn lại trạm lúc thi hành); advice_bridge.py:679 (queue_len > 1 or not has_ready)",
+      "detail": "Điều kiện đúng tại t_quyết-định có thể sai tại t_đến (state trạm đổi trong travel; trạm thực đến có thể khác st_n khi station_choice bật đồng thời). Riêng gate: queue_len=1 ∧ available_full=1 thoả điều kiện nhưng người đang xếp sẽ lấy viên ready đó ⇒ actor đến gặp trạm 0-ready, chờ chín tới wait_cap. Điều kiện đúng xấp xỉ: available_full(t_arr) ≥ queue_len + 1. Tần suất thấp ở tải hiện tại.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-8 tài liệu SAI trong nguồn sự thật về CRN: comment world.py:971 nói choose_station 'RÚT RNG (p=0.7 trạm quen)' — thân hàm 0 draw, không có logic trạm quen; avg_swap_min=1.5 hardcode trùng lặp config",
+      "evidence": "src/gsm_sim/world.py:971-972 + src/gsm_sim/behavior.py:241-250 (rng nhận vào, không dùng; chỉ sort theo khoảng cách + né queue>3) + advice_bridge.py:695 (avg_swap_min=1.5 default vs config swap_time_s 60-120)",
+      "detail": "Vô hại hôm nay (gate-ordering vẫn đúng chiều an toàn; 1.5′ = mean của 60-120s hiện hành), nhưng: (a) reasoning CRN trong comment dựa tiền đề sai — ai tin nó sẽ sắp xếp gate theo lý do không tồn tại, họ lỗi D-M3-15 'tài liệu sai nằm trong nguồn sự thật'; (b) đổi swap_time_s trong config sẽ KHÔNG đổi thước eta của advisor — drift âm thầm.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    }
+  ],
+
+  "cau_hoi_rieng_redesign_d_e4_06b": {
+    "objective_moi": "GIỮ MỘT ĐƠN VỊ (phút) — mở rộng chân trời của chính thước thời gian thay vì ghép hai thước khác đơn vị: score(s) = D(s) + T_return(s), s* = argmin. Trong đó: D(s) = T_travel(c0→cell_s, h) + W(s) + t_swap; W(s) = 0 nếu available_full(s, t_arr) > queue_len(s), ngược lại max(0, r_(q+1)(s) − t_arr) với r_(k) = ready_at_min thứ k tăng dần, t_arr = now + T_travel; W(s) := +∞ nếu thiếu viên thứ (q+1) hoặc W > wait_cap_min (sửa MI-1/MI-2/MI-3 ngay trong định nghĩa); T_return(s) = travel_min(cell_s → c*(s), h_arr) với c*(s) = ô GẦN cell_s NHẤT có capacity_left > 0 trong MarketStateProducer.view(now) — 'thời gian tới lúc SẴN SÀNG NHẬN ĐƠN Ở NƠI CÒN CẦU', không phải 'tới lúc cầm pin đầy'.",
+    "dang_hai_ve_theo_de_bai": "score(s) = w_t·Δdowntime(s) + w_p·V_pos(s) với V_pos(s) = −T_return(s) và w_t = w_p = 1: 'một phút là một phút' — không có trọng số tự do cần calibrate, không có quy đổi phút→VND nào do agent tự đặt (ranh giới §5: số tài chính chỉ ở tầng ĐO A/B ngoài, bằng payout thật của sim). w_p = 0 khôi phục kênh cũ (sau khi tách riêng fix MI-1/2/3) — cổng an toàn + ablation.",
+    "nguon_bien_vi_tri": "KHÔNG phải capacity_alloc — S4 không chứa giá trị zone nào (cost chỉ gồm SOC-priority + target-mismatch, capacity_alloc.py:44-50); nguồn đúng là (1) demand surface world.demand_field[hour][cell] và (2) market view build_market_state: capacity_left (cầu đã trừ cung tại chỗ + cung đang tới — chống composition), sd_ratio, ranked_cells. Cùng nguồn kênh positioning ĐÃ PASS 9/9 ĐA-08 đang dùng ⇒ không leak (λ config, không đọc world.orders). Khi positioning_allowed=False (supply absent): T_return := 0 có nhãn degraded — kênh rơi về objective cũ thay vì đoán.",
+    "vi_sao_khong_score_bang_VND": "Quy phút ra tiền cần ρ̂ (VND/phút-online) — thêm một tầng ước lượng và một chỗ cho 'agent tự bịa số'. Dạng thuần-phút đo được trọn bằng đại lượng có sẵn; ĐA-08 vẫn phán bằng payout ở tầng ngoài.",
+    "swap_early_bien_thieu_va_dieu_kien_bo_sung": "(a) TẤT-YẾU-TRONG-CA: chỉ khuyên khi (SOC − thr)/pct_per_km < km kỳ vọng còn lại = (shift_end_min − now)/60 · trips_per_hour_est · avg_dist_km · detour_factor (mọi tham số đã nằm trong bridge/solver_params — MI-5); (b) TIMING THEO CẦU: chỉ khuyên khi demand_index(bucket hiện tại) ≤ demand_index(bucket kế) — tái dùng demand_by_hour chuẩn hoá của build_idle_reduction_input/S7, đổi pin lúc trũng TRƯỚC đỉnh là đúng lúc nhất; (c) TRAVEL + VỊ TRÍ: gate trên D(nearest) + T_return(nearest) thay vì queue/ready thô (MI-6); (d) opportunity-cost cấp Ô: dùng (n_idle, median streak) của count_idle_wait thay cho idle_streak n=1.",
+    "phep_do_phan_biet": [
+      "PREREG 3 arm, n=100 paired-seed CRN (chuẩn UPDATE-160): A (off) · B_old (kênh hiện tại) · B_new (redesign). Chỉ tiêu chính ĐA-08 1a/1b. Câu hỏi phân biệt: CI 95% của Δpayout_P1(B_new − A) KHÔNG còn hoàn toàn < 0, trong khi Δswap_wait(B_new) vẫn ≤ 0 (được phép kém B_old — đánh đổi downtime lấy vị trí là CÓ CHỦ Ý).",
+      "MECHANISM METRIC (rẻ, log-only): với mỗi swap_done theo lời khuyên, ghi T_return thực = travel_min(cell trạm → ô capacity_left>0 gần nhất tại giờ đó). Kỳ vọng: median T_return(B_new) < B_old SIG. Kèm phân rã hấp thụ thời gian theo phương pháp UPDATE-159: Δ(idle+rest) vs Δ(trips × t_serve) — vế vị trí đúng ⇔ phần tiết kiệm chuyển từ idle sang trips.",
+      "FALSIFIER: nếu B_new cải thiện T_return SIG mà P1-harm KHÔNG đổi ⇒ giả thuyết vế-vị-trí bị BÁC cho P1; root cause còn lại là D-SIM-K3 (random-stream divergence) ⇒ đo lại sau keyed RNG trước khi kết luận gì thêm.",
+      "THỨ TỰ BẮT BUỘC: sửa MI-1/MI-2/MI-3 (thước W) TRƯỚC và đo riêng như fix trung tính ở tải hiện tại (kỳ vọng Δ≈0 vì queue hiếm — test khẳng định), rồi mới chồng vế T_return; nếu gộp một cục thì Δ đo được không quy được cho vế nào.",
+      "GUARD HERDING: chạy thêm sweep khan hiếm trạm (điều kiện D-E4-02) với coverage=all — nếu B_new làm HHI tải trạm tăng SIG thì phải nối EP-3 (sổ incoming/S4) trước khi xin bật."
+    ]
+  },
+
+  "extension_proposals": [
+    {
+      "title": "EP-1 Redesign objective station_choice: argmin [D(s) + T_return(s)] — vế vị trí bằng PHÚT từ market view",
+      "action_executable": "Không đổi action space: pick_station vẫn chỉ đổi đích GO_SWAP (world.py:1216-1225); đứng-tại-cell-trạm là hệ quả sẵn có; đường về do bản năng relocate/positioning thi hành.",
+      "solver_dua_tren": "Thuần math: station_eta_min (sửa) + cell_distance_km/_travel_min (có sẵn) + MarketStateProducer.view capacity_left (có sẵn, kênh positioning đang dùng). Không LLM, không số bịa.",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "P1-harm biến mất hoặc giảm (cơ chế: không kéo tài xế ra ô chết để tiết kiệm 3′ downtime); swap_wait nhượng lại một phần −3,6′ đã đo. Phán bằng prereg 3-arm ở trên."
+    },
+    {
+      "title": "EP-2 Sửa W(s): viên pin thứ (q+1), đánh giá tại t_arr, cap bằng wait_cap (MI-1/2/3)",
+      "action_executable": "Không đổi action — chỉ đổi thước ước lượng trong advice_bridge.station_eta_min.",
+      "solver_dua_tren": "station.batteries[].ready_at_min + queue_len + wait_cap_min config — toàn biến quan sát được tại decision time, không dự báo.",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Trung tính ở tải hiện tại (test canh Δ≈0); tiền đề bắt buộc cho mọi phép đo ở regime khan hiếm (reopen D-E4-02)."
+    },
+    {
+      "title": "EP-3 Chống dồn trạm: sổ incoming_swappers (analog pending_targets) hoặc nối kênh qua S4 swap_window slots",
+      "action_executable": "Đường 1 (rẻ): world tăng ledger station.incoming tại go_swap, giảm tại swap_done/failed; station_eta_min cộng incoming vào q. Đường 2 (đúng kiến trúc): batch tick gán swap qua capacity_alloc — solver ĐÃ hỗ trợ station_capacity (capacity_alloc.py:79-84), thiếu mỗi producer nối.",
+      "solver_dua_tren": "capacity_alloc S4 (Hungarian, có sẵn) hoặc số học ledger thuần.",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Cần trước khi bật coverage=all trong regime khan hiếm; ở tải hiện tại là guard, không phải nguồn giá trị."
+    },
+    {
+      "title": "EP-4 swap_early eligibility: thêm tất-yếu-trong-ca + timing theo cầu + travel-aware (MI-5/MI-6)",
+      "action_executable": "Không đổi action (vẫn WAIT→GO_SWAP); chỉ thêm điều kiện vào check_swap_early — mọi nhánh mới trả (False, reason) typed giữ khuôn đếm mẫu số.",
+      "solver_dua_tren": "Số học trên shift_end_min/trips_per_hour_est/avg_dist_km/pct_per_km (đã trong bridge) + demand_by_hour chuẩn hoá (khuôn S7 idle_reduction — solver có sẵn) + count_idle_wait (có sẵn).",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Cắt đúng nhánh khuyên-thừa cuối ca (nghi phạm P1); kênh vẫn dự kiến gần-trơ ở tải trạm hiện tại (D-E4-02) — giá trị thật nằm ở sweep khan hiếm."
+    },
+    {
+      "title": "EP-5 Prereg phép đo phân biệt 3-arm + mechanism metrics + ablation w_p=0",
+      "action_executable": "scripts/run_parallel.py + cổng adherence D-M3-10 đã nối; thêm log-only metric T_return-thực và phân rã UPDATE-159.",
+      "solver_dua_tren": "Hạ tầng đo A/B paired-seed hiện hành; không solver mới.",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Phân biệt được 3 giả thuyết root-cause của D-E4-06: thiếu-vế-vị-trí (B_new cứu P1) vs noise D-SIM-K3 (không gì đổi) vs thước-downtime-lệch (EP-2 một mình đổi verdict)."
+    }
+  ],
+
+  "cau_5_cung_lop_station_choice": "station_choice LÀ case study (mắc theo định nghĩa — objective cận thị argmin downtime, thiếu vế vị trí; xác nhận as-implemented tại advice_bridge.py:693-739, không cite lại như finding mới — đã là D-E4-06). swap_early MẮC CÙNG LỚP ở hai điểm ĐỘC LẬP với nợ đã ghi: (MI-5) thiếu vế 'giá trị pin đầy có được phần ca còn lại hấp thụ không' — bản sao trực tiếp của câu hỏi 'thời gian tiết kiệm có được demand hấp thụ không'; (MI-6) thiếu vế vị trí sau đổi + travel, vì sau swap actor đứng tại cell trạm y như station_choice. Ngoài lớp đó, họ pin còn một lớp lỗi RIÊNG chưa ghi nợ: THƯỚC KỲ VỌNG CHỜ SAI CƠ CHẾ (MI-1/2/3) — vô hình ở tải hiện tại, quyết định ở đúng regime mà D-E4-02 hẹn mở lại."
+}

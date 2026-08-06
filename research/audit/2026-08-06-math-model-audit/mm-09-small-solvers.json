@@ -1,0 +1,194 @@
+{
+  "item": "MM-09 — 3 solver nhỏ: penalty_explain.py (S8) + weekly_khoan.py (S5) + mission_knapsack.py (S6)",
+  "audit_date": "2026-08-06",
+  "auditor": "MATH-MODELLING subagent",
+  "objective_as_implemented": {
+    "penalty_explain_S8": "KHÔNG phải optimizer — rule thuần: tổng các khoản trừ status != 'waived' trong 30 ngày (days_back=30, from_l1r.py:405), so acceptance/fulfillment (1 dòng statistic_daily gần nhất) với bonus_min_acceptance/bonus_min_completion + CLIFF_MARGIN=0.03, sinh actions tuân thủ từ dict _TYPE_VN hardcode. confidence hằng 0.8 (penalty_explain.py:98,136).",
+    "weekly_khoan_S5": "Đại số khả thi tất định: gap = max(0, quota_min - revenue_so_far); hours_needed = gap / avg_rev_per_hour(realized tuần-tới-nay); clawback = gap x clawback_rate (tuyến tính, rate 0..1 theo schema policy_bundle@1.0.0:137-144); feasible <=> gap==0 OR (hours_needed <= hours_budget AND days_active+days_remaining >= min_days) (weekly_khoan.py:73-91). Không bịa quota khi None (đúng §5).",
+    "mission_knapsack_S6": "0/1 knapsack DP chính xác trên lưới 15 phút: max SUM(reward_vnd) s.t. SUM(slots(remaining_count/trips_per_hour)) <= slots(hours_budget_remaining); items sort theo mission_id, tie-break deterministic (mission_knapsack.py:60-81). Mission bị loại nếu remaining<=0, reward<=0, hoặc cost > cap."
+  },
+  "action_space": [
+    "S8: KHÔNG có action trong world — chỉ text giải thích + actions tuân thủ dạng câu (F3).",
+    "S5: hàm ý 'chạy thêm ~X giờ trong tuần' — action mà actor sim THỰC HIỆN ĐƯỢC (go_online/kéo dài ca) nhưng KHÔNG có kênh advice_bridge nào nối.",
+    "S6: 'chọn tập mission theo đuổi' — trong world.py:779-795 mission là PASSIVE (mọi cuốc trong window tự tiến độ hoá MỌI mission active), tức action 'chọn mission' KHÔNG tồn tại trong world; action thật duy nhất là phân bổ giờ lái vào window.",
+    "CẢ BA: mồ côi production — không call site nào ngoài tests (xem math_issues #1)."
+  ],
+  "variables_observed": [
+    "S5: driver_income_daily (total_fee/commission per ngày, cắt tại t_now — chống rò tương lai AUDIT A1 S5-1, from_l1r.py:241-246), driver_online_hours_sap_id (giờ online tuần-tới-nay, :250-253), kpi_driver_platform_calculator_gbq (week key), policy.weekly_quota + policy.version (:259,268).",
+    "S6: public_mission (rewards.vnd, start/end_time, mission_type), public_user_mission_progress (target/done/state), trips_per_hour đo từ 90 ngày income+online (from_l1r.py:283-290), hours_budget_remaining do caller truyền.",
+    "S8: driver_penalization_ATA (amount, type, status, 30 ngày), driver_statistic_daily (acceptance/fulfillment/cancellation — 1 dòng gần nhất, from_l1r.py:426-434), policy.bonus_min_acceptance/completion (:435-436), khoan_gap_vnd (tham số, không ai truyền trong production)."
+  ],
+  "variables_missing": [
+    {
+      "var": "S5: giờ ĐÃ chạy hôm nay + phân phối giờ/ngày lịch sử của CHÍNH tài xế",
+      "vi_sao_quan_trong": "hours_budget = min(giờ-tới-24h, 10) + days_remaining*10 (from_l1r.py:256-257) — hằng số 10h/ngày, KHÔNG trừ giờ đã chạy hôm nay, KHÔNG dùng năng lực thật của tài xế => verdict feasible bị thổi phồng hệ thống; tài xế 6h/ngày được báo 'khả thi' rồi dính truy thu.",
+      "nguon_co_san_trong_sim": "driver_online_hours_sap_id đã được ĐỌC ngay trong cùng function (from_l1r.py:250-253) nhưng chỉ dùng làm mẫu số rate, không dùng làm capacity."
+    },
+    {
+      "var": "S5: cấu trúc cầu theo thứ (dow) + phương sai doanh số ngày",
+      "vi_sao_quan_trong": "rate forward = mean realized tuần-tới-nay: đầu tuần chỉ có weekday, phần còn lại có friday 1.10 / weekend 1.05 (world tự định giá dow, pilot_dongda.yaml:303-305); không CI, không shrinkage về 90 ngày lịch sử => pacing chia TUYẾN TÍNH theo kỳ vọng điểm, đúng chữ 'kỳ-vọng-vs-realized' của câu hỏi giao.",
+      "nguon_co_san_trong_sim": "driver_income_daily 90 ngày per-day => tính được mean/std theo dow thuần analytics; config dow của world là ground truth đối chiếu."
+    },
+    {
+      "var": "S6: window_start/window_end + mission_type của mission",
+      "vi_sao_quan_trong": "producer đưa windows vào input (from_l1r.py:306-309) nhưng solver VỨT khi dựng item (mission_knapsack.py:56-58) => không có ràng buộc khung giờ, không xử lý hai mission chồng khung giờ; mission hết hạn sau 30 phút nhưng cần 2.5h vẫn 'khả thi' nếu tổng budget đủ.",
+      "nguon_co_san_trong_sim": "chính input mission_select_input; world.py:782-783 có m['window'] là ground truth."
+    },
+    {
+      "var": "S6: giá trị thay thế của giờ (payout/h kỳ vọng ngoài mission)",
+      "vi_sao_quan_trong": "objective = reward-only; giờ chỉ là ràng buộc => vế chi phí cơ hội mà world THẬT SỰ định giá (giờ lái luôn sinh fare) bị thiếu — đúng lớp station_choice 'objective thiếu vế mà world định giá'.",
+      "nguon_co_san_trong_sim": "avg payout/h tính được từ driver_income_daily + driver_online_hours_sap_id (cùng nguồn rate của S5)."
+    },
+    {
+      "var": "S8: policy.version trong input và trong source của numbers",
+      "vi_sao_quan_trong": "diễn giải phạt trích ngưỡng chính sách mà KHÔNG có version — vi phạm trực tiếp §5 'nguồn có trích dẫn, có version'; không truy vết được khuyên theo bundle nào khi policy đổi (clawback 0.20 -> 0.40 HN/HCM 04/05/2026 là ví dụ policy versioned thật).",
+      "nguon_co_san_trong_sim": "PolicyBundle.version có sẵn; pattern chuẩn đã tồn tại ở weekly_khoan: pv = f'policy_v:{policy.version}|basis=...' (weekly_khoan.py:38) và policy_bundle_version trong input (from_l1r.py:268)."
+    },
+    {
+      "var": "S8: phân biệt status 'pending' vs 'applied' của khoản trừ",
+      "vi_sao_quan_trong": "enum status = applied|pending|waived (schemas/l1r/driver_penalization_ATA.schema.json:57-63); solver chỉ loại 'waived' (penalty_explain.py:40) => khoản PENDING (chưa trừ, đang trong cửa sổ giải trình 48h) bị cộng vào total và digest nói 'kỳ này ghi nhận X khoản trừ, tổng Y' như tiền ĐÃ mất.",
+      "nguon_co_san_trong_sim": "field status đã nằm sẵn trong từng record của input."
+    }
+  ],
+  "math_issues": [
+    {
+      "title": "CẢ BA SOLVER MỒ CÔI: không call site production nào — chưa từng qua cổng ĐA-08 (cùng lớp B6-PARITY)",
+      "evidence": "grep '.solve(' toàn src/ + ui/: advice_bridge.py:67 chỉ import bonus_feasibility/idle_reduction/shift_dp; world.py:383 capacity_alloc; multiday.py:37 idle_reduction; ui/backend/app/adapters/advisor.py:19,204 bonus_feasibility; ui/backend/app/services/advice_checkpoint.py:39 bonus_feasibility+shift_dp; pipeline.py:1-5,59 nhận solver_reports TỪ CALLER; router.py:14-22 chỉ liệt kê TÊN. Call site duy nhất của S5/S6/S8 = tests/",
+      "detail": "penalty_explain, weekly_khoan, mission_knapsack có đủ schema + producer + template render (templates.py:48-141) nhưng KHÔNG caller production nào chạy solve() và sản xuất report cho pipeline. Mọi lỗi bên dưới là NỢ TIỀM ẨN sẽ kích hoạt khi ai đó nối router->solver (giống bẫy BUCKET_MIN 30/60 đã ghi T-046). Cùng lớp B6-PARITY (UI chỉ chạy 1/9 solver) nhưng rộng hơn: đây là 3/9 solver mà KHÔNG bề mặt nào (sim, UI, script) gọi. Theo spec §5 ĐA-08 (advisor-objective-model-v2.md:231-267) kênh chưa qua chỉ tiêu kép thì không được coi là có giá trị.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S6: cost cộng dồn mâu thuẫn với cơ chế mission PASSIVE của chính world — một cuốc tiến độ hoá MỌI mission active cùng lúc",
+      "evidence": "src/gsm_sim/world.py:779-795 (loop for m in self.mission_catalog: MỘT trip hoàn thành trong window cộng +1 cho TẤT CẢ mission active) vs src/gsm_core/solvers/mission_knapsack.py:44,60-73 (cost_h = remaining/tph riêng cho TỪNG mission, DP cộng dồn cost)",
+      "detail": "Trong world đã implement, mission là đếm-chung: 2 mission target 10 cuốc chồng window được hoàn thành bằng CÙNG 10 cuốc (~10/tph giờ), nhưng knapsack tính cần 2x(10/tph) giờ và có thể LOẠI một mission 'không vừa quỹ giờ' trong khi thực tế nó tự xong. Factor double-count kinh điển (checklist adversarial). Chiều ngược lại: nếu mission_type nào đó exclusive thì tập chosen có thể bất khả thi về khung giờ. Cả hai chiều sai vì solver vứt window + mission_type (mission_knapsack.py:56-58 vs from_l1r.py:306-309).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S6: không có ràng buộc khung giờ — mission sắp hết hạn vẫn 'khả thi' theo tổng budget; budget hiệu dụng phải là min(budget, window_end - t_now)",
+      "evidence": "mission_knapsack.py:52-54 (chỉ check cost > cap toàn cục); from_l1r.py:298-300 (producer chỉ lọc mission ĐANG active tại t_now, giữ window trong record nhưng solver không đọc)",
+      "detail": "Mission active lúc t_now nhưng window_end = t_now+30' với remaining 5 cuốc / tph 2 = 2.5h vẫn qua check nếu budget ca còn 4h => khuyên theo đuổi mission bất khả thi tuyệt đối. Ràng buộc như-đã-viết KHÔNG bind ở đúng chỗ world bind (bind-thiếu).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S5: feasible tính trên quỹ giờ HƯ CẤU — hằng 10h/ngày, không trừ giờ đã chạy hôm nay, không dùng năng lực thật của tài xế",
+      "evidence": "from_l1r.py:220 (hours_per_day=10.0 default), :256-257 (hours_budget = min(giờ-tới-24h, 10) + days_remaining*10) vs :250-253 (giờ online thật ĐÃ đọc nhưng chỉ dùng cho rate); weekly_khoan.py:89-91 (enough_hours/days_ok/feasible)",
+      "detail": "Ràng buộc capacity không-bind một chiều: t_now=20:00 tài xế đã chạy 10h vẫn được cộng 4h budget hôm nay; days_ok giả định active MỌI ngày còn lại. Kết hợp => 'feasible=True' lạc quan hệ thống, đúng loại claim THUẬN LỢI phải verify kỹ nhất; hệ quả tài chính thật là clawback 20-40% phần gap. Chiều digest ngược lại (hours_needed) thì trung thực hơn vì có sensitivity -20/-40%.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S5: pacing tuyến tính theo mean realized — không phương sai ngày, không hiệu ứng dow, không shrinkage; kỳ vọng forward != mean backward",
+      "evidence": "weekly_khoan.py:82-87 (hours_needed = gap/rate điểm), :103-110 (sensitivity chỉ 2 kịch bản cứng -20%/-40%); from_l1r.py:249-253 (rate = revenue/online_h tuần-tới-nay); configs/pilot_dongda.yaml:303-305 (world có dow level friday 1.10/weekend 1.05)",
+      "detail": "TRẢ LỜI CÂU HỎI GIAO: pacing CHIA ĐỀU TUYẾN TÍNH, không xét phương sai ngày. Ba lỗi kỳ-vọng-vs-realized chồng nhau: (a) mẫu tuần-tới-nay nhỏ và lệch cấu trúc (đầu tuần toàn weekday, phần còn lại có friday/weekend mà world định giá khác); (b) giờ BIÊN bỏ thêm để đuổi khoán không earn bằng giờ trung bình (đêm muộn/ô bão hoà) — chính bài học station_choice 'thời gian bỏ thêm có được demand hấp thụ ở rate giả định không'; (c) không CI => digest '≈X giờ' đọc như số chắc. Sensitivity một phía có đỡ nhưng không thay được phương sai đo từ 90 ngày sẵn có.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S6: objective reward-only thiếu vế chi phí cơ hội của giờ — và trong world hiện tại chi phí cơ hội thật là ~0 nên bài toán 'chọn tập' đặt SAI câu hỏi",
+      "evidence": "mission_knapsack.py:60-83 (value = reward_vnd thuần, giờ chỉ là ràng buộc); world.py:779-795 (mission passive: không cần 'chọn', cứ chạy là tiến độ)",
+      "detail": "Nếu mission đòi đi lệch tuyến (mission_type routing) thì thiếu vế -cost_h x payout/h => có thể khuyên đuổi mission 40k/3h trong khi giờ đó kiếm hơn từ cuốc thường. Nếu mission passive (như world hiện implement) thì cost thật ~0, mọi mission đáng 'nhận' và câu hỏi có giá trị duy nhất là 'dồn giờ lái vào window nào / có đáng kéo dài tới target không' — một bài marginal-value với reward cliff, KHÔNG phải knapsack chọn tập. Cùng khung lỗi station_choice: objective cực tiểu/cực đại một đại lượng nội bộ (giờ, downtime) mà không có vế giá trị world định giá.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "S8: KHÔNG có policy version trong nguồn trích — source literal 'policy_v:threshold' / 'policy_v:weekly_quota', input không mang policy_bundle_version",
+      "evidence": "penalty_explain.py:72,78,111 (source string không version) vs weekly_khoan.py:38 (pv = f'policy_v:{policy.version}|basis=...') và from_l1r.py:268 (policy_bundle_version trong weekly_khoan_input); schemas/l3/penalty_explain_input.schema.json không có field policy version (grep 'policy|version' chỉ ra view_version/schema_version)",
+      "detail": "TRẢ LỜI CÂU HỎI GIAO: diễn giải phạt CHƯA có nguồn policy version. Số tiền trừ có provenance tốt (penalization_id từng khoản), nhưng ngưỡng chính sách và rule-text tuân thủ (_TYPE_VN hardcode :22-30) không version, không citation KB — vi phạm ranh giới §5 'trả lời chính sách dựa trên nguồn có trích dẫn, có version'. Clawback rate versioned theo market (0.20 -> 0.40, schema policy_bundle:144) chứng minh version là thật chứ không hình thức.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S8: khoản PENDING bị cộng vào 'tổng đã trừ' — trộn kỳ vọng với realized, đúng chỗ quyền giải trình 48h quan trọng nhất",
+      "evidence": "penalty_explain.py:40 (chỉ loại status=='waived'), :54-55,118 (total + digest 'kỳ này ghi nhận X khoản trừ, tổng Y'); schemas/l1r/driver_penalization_ATA.schema.json:57-63 (enum applied|pending|waived)",
+      "detail": "Khoản pending là khoản CHƯA thành tiền mất và là đối tượng chính của caveat giải trình 48h (:83-87) — nhưng solver trình bày nó không phân biệt với applied trong total_deducted_vnd/breakdown. Realized-vs-expected mismatch ở chính output tài chính của solver.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S6: hai default khác nhau cho cùng trips_per_hour — fallback 2.0 (producer) vs 1.5 đo được (config advice) => cost giờ bị đánh giá thấp ~25-33% khi thiếu lịch sử",
+      "evidence": "from_l1r.py:289 (else 2.0) vs configs/pilot_dongda.yaml:395 (trips_per_hour_est: 1.5, comment 'đo được ~1.4-1.5')",
+      "detail": "Cùng đại lượng, hai nguồn sự thật ('hai tên một sự thật' — cùng họ T-046). Với tài xế mới không lịch sử, tph=2.0 làm cost_h giảm 25% so với 1.5 => knapsack nhồi nhiều mission hơn khả năng thật, đúng nhóm P4 tân binh nghe lời nhất.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S6: lượng tử hoá slot bằng int(round()) hai phía — cost tròn XUỐNG 0 tạo mission 'miễn phí' không trừ budget, cap tròn LÊN thổi budget",
+      "evidence": "mission_knapsack.py:24-25 (_slots = int(round(h*60/15))), :44-45 (cost item), :33 (cap)",
+      "detail": "cost_h < 7.5 phút => cost=0 slot: item luôn được DP chọn (alt = prev[w]+v > best) và hours_used đếm thiếu; budget 0.2h => cap=1 slot (15') — hào phóng 6'. Sai số nhỏ nhưng KHÔNG conservative về cùng một phía; floor cho cap và ceil cho cost mới đúng chiều an toàn.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "S8: lệch chân trời — phạt gộp 30 ngày nhưng rates lấy 1 dòng ngày gần nhất => risk 'near/below' từ snapshot nhiễu",
+      "evidence": "from_l1r.py:411-412 (days_back=30 cho penalties) vs :426-434 (stat = đúng 1 dòng driver_statistic_daily gần nhất); penalty_explain.py:63-78 (so trực tiếp với ngưỡng)",
+      "detail": "acceptance_rate một ngày có phương sai lớn (ít offer); so điểm-với-ngưỡng + CLIFF_MARGIN 0.03 trên snapshot 1 ngày dễ nháy trạng thái below/near/ok theo ngày. Nếu policy đánh giá theo tuần (day_bonus theo ngày thì đúng hơn nhưng vẫn là ngày HÔM QUA, không phải kỳ phạt 30 ngày đang giải thích). Kèm lỗi ngữ nghĩa: bonus_min_acceptance là ngưỡng ĐỦ ĐIỀU KIỆN THƯỞNG, không phải ngưỡng bị PHẠT — digest 'dưới mức tối thiểu theo chính sách' trong ngữ cảnh giải-thích-phạt làm tài xế hiểu sai hậu quả (mất thưởng != bị trừ tiền) (from_l1r.py:435-436, penalty_explain.py:120-122).",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "ĐA-08 không chạy được cho S5/S6/S8 bằng twin-world hiện tại nếu thiếu cầu nối hành vi — sim có mission mechanics nhưng KHÔNG có cơ chế khoán tuần/clawback",
+      "evidence": "world.py:135-139,779-795 (mission có trong world — SIM-XANH P2); grep 'weekly_quota|khoan' trong src/gsm_sim: 0 kết quả về quota (chỉ quota nghỉ của rest_commit, advice_bridge.py:895,940); specs/advisor-objective-model-v2.md:252-267 (chuẩn kênh = 30+ paired seed CRN)",
+      "detail": "Muốn bật S5 như một kênh phải có (a) cơ chế khoán+clawback trong world (chưa có) hoặc (b) tuyên bố rõ 'KHÔNG THỂ KIỂM bằng sim, cần nguồn đo khác' theo khung data-contract-counterfactual §4. S6 thì world ĐÃ có mission => một kênh 'dồn giờ vào window mission' là đo được ngay bằng chuẩn ĐA-08 hiện hành — nhưng phải sửa cost model (issue #2,#3) trước, nếu không sẽ lặp station_choice: tối ưu một objective mà world không định giá.",
+      "severity": "TB",
+      "confidence": "TB",
+      "cung_lop_station_choice": true
+    }
+  ],
+  "extension_proposals": [
+    {
+      "title": "S5 pacing v2: capacity thật + rate theo dow + CI — thuần analytics, không LLM",
+      "action_executable": "Advice F1 dạng diễn giải ('cần ~X giờ, khoảng [X1,X2], nên dồn vào thứ 6/cuối tuần') — không cần action world mới; nếu nối vào sim thì map sang kéo dài ca/go_online là action actor sẵn có.",
+      "solver_dua_tren": "weekly_khoan.py giữ nguyên khung; producer from_l1r.py sửa: capacity_hat = quantile p75 online_time/ngày 28 ngày (bảng đã đọc sẵn :250-253) trừ giờ đã chạy hôm nay; rate_dow = mean±std revenue/h theo thứ từ driver_income_daily 90 ngày; hours_needed thành phân bổ theo ngày còn lại với CI từ std — đại số đóng, deterministic.",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Đảo chiều bias 'feasible lạc quan' (issue #4) và trả lời đúng câu 'kỳ-vọng-vs-realized' (#5); digest có khoảng thay vì số điểm, khớp ranh giới §5 'không hứa chắc'."
+    },
+    {
+      "title": "S6 knapsack v2: mô hình giờ-theo-window với đếm-chung — khớp cơ chế world đã implement",
+      "action_executable": "Action thật trong world = LÁI trong khung giờ w (actor làm được sẵn: chạy cuốc như thường); lời khuyên = 'giữ online trong window 18-20h, còn thiếu k cuốc là chạm target 2 mission'.",
+      "solver_dua_tren": "Thay item-knapsack bằng bài phủ-window: chia trục giờ theo union windows; biến h_w = giờ lái trong window w (<= min(budget phân bổ, độ dài w còn lại từ t_now)); tiến độ mission m = tph x SUM(h_w : w giao window_m) đếm CHUNG (đúng world.py:781-789); thưởng đạt khi >= target. Bài toán nhỏ, tối ưu bằng DP theo window hoặc enumeration (số mission/ngày ít) — vẫn deterministic, đối chiếu brute-force như test hiện có.",
+      "chi_phi_uoc": "vừa",
+      "ky_vong": "Diệt double-count (#2) + window-infeasibility (#3); mở đường đo ĐA-08 thật vì world có mission mechanics sẵn (#12)."
+    },
+    {
+      "title": "S6: vế chi phí cơ hội có điều kiện theo mission_type",
+      "action_executable": "Chỉ áp cho mission đòi đi lệch (reposition/zone): lời khuyên kèm số 'thưởng 40k nhưng ước bỏ lỡ ~Y đ fare' — số do analytics tính, agent chỉ diễn giải.",
+      "solver_dua_tren": "value_m = reward_m - cost_h_m x payout_per_hour_hat, với payout_per_hour_hat từ driver_income_daily/driver_online_hours_sap_id (cùng pipeline rate S5); mission passive giữ value = reward, cost = 0 (chỉ hiển thị tiến độ, không 'chọn').",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Đóng vế thiếu cùng-lớp-station-choice (#6) mà không đụng ranh giới 'agent không bịa số'."
+    },
+    {
+      "title": "S8 provenance v2: policy version + tách pending/applied",
+      "action_executable": "Chỉ đổi nội dung text/numbers của advice F3 — không action world.",
+      "solver_dua_tren": "Copy pattern weekly_khoan: producer nhận policy, ghi policy_bundle_version vào input (schema penalty_explain_input thêm field, bump view_version); solver dùng pv = f'policy_v:{version}' cho mọi threshold; breakdown tách theo status (applied = 'đã trừ', pending = 'đang chờ — còn quyền giải trình 48h'); _TYPE_VN chuyển thành lookup policy KB có citation khi KB sẵn (use_kb đang False cho F3, router.py:20-21 — bước 1 cứ version-hoá từ bundle).",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Đóng vi phạm §5 về version (#7) + realized-vs-pending (#8); tăng giá trị của caveat 48h vì trỏ đúng khoản pending."
+    },
+    {
+      "title": "Gate nối dây: trước khi wire 3 solver mồ côi vào bất kỳ bề mặt nào, chạy checklist ĐA-08-hoặc-tuyên-bố-KHÔNG-THỂ-KIỂM",
+      "action_executable": "Quy trình, không phải code chạy trong world: S6 đo được bằng sim (mission có sẵn trong world) theo 30+ paired seed; S5/S8 ghi rõ 'sim không có cơ chế khoán/phạt' và xếp vào khung VỮNG/LUNG LAY/KHÔNG THỂ KIỂM của data-contract-counterfactual §4.",
+      "solver_dua_tren": "Hạ tầng parallel A/B + estimator cohort ĐA-08 sẵn có (specs §5); không cần solver mới.",
+      "chi_phi_uoc": "nhỏ",
+      "ky_vong": "Chặn lặp lại đúng kịch bản station_choice: bật kênh có objective nội bộ đẹp nhưng world không định giá."
+    }
+  ],
+  "answers_to_assigned_questions": {
+    "penalty_explain_policy_version": "KHÔNG — nguồn 'policy_v:threshold'/'policy_v:weekly_quota' không mang version (penalty_explain.py:72,78,111); input không có policy_bundle_version (khác weekly_khoan_input, from_l1r.py:268); rule-text tuân thủ hardcode không citation. Xem math_issues #7.",
+    "weekly_khoan_pacing": "CHIA ĐỀU TUYẾN TÍNH theo kỳ vọng điểm (gap/rate), KHÔNG xét phương sai ngày/dow; chỉ có 2 kịch bản sensitivity cứng -20/-40%. Xem math_issues #5, và capacity hư cấu #4.",
+    "mission_knapsack_constraints": "Ràng buộc DUY NHẤT: tổng slot 15' <= budget slot. KHÔNG xét xung đột/chồng khung giờ — windows có trong input nhưng bị vứt; nghiêm trọng hơn: world đã implement mission ĐẾM CHUNG nên cost cộng dồn là double-count so với ground truth. Xem math_issues #2, #3.",
+    "solver_mo_coi": "CẢ BA (penalty_explain, weekly_khoan, mission_knapsack) đều mồ côi production — chỉ tests gọi solve(); production chỉ chạy bonus_feasibility (sim+UI), shift_dp (sim+UI), idle_reduction (sim), capacity_alloc (world). Cùng lớp B6-PARITY. Xem math_issues #1."
+  }
+}

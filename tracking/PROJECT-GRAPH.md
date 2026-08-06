@@ -2,9 +2,11 @@
 
 > **Canonical reading map for agents.** This file is an index and routing contract, not a replacement for evidence. Read `CLAUDE.md` first, then this graph, then only the route and correction chain required by the task.
 >
-> **Reconciled:** 2026-07-27 · **UPDATE coverage:** 66 canonical UPDATE files (`001–012`, `019–072`; `013–018` were never canonical after the remote numbering change). `UPDATE_TEMPLATE.md` is excluded.
+> **Reconciled:** 2026-08-06 · **UPDATE coverage:** **155 file** `UPDATE-*.md`, số cao nhất **160** (dãy THIẾU `013–018` và có số TRÙNG do song song remote — **đếm bằng lệnh**, đừng suy từ số cao nhất: `(Get-ChildItem tracking\updates -Filter "UPDATE-*.md" | Measure-Object).Count`). `UPDATE_TEMPLATE.md` is excluded.
 >
 > ✅ **Nợ index ĐÃ TRẢ (2026-07-29, UPDATE-092):** `UPDATE-073..092` nay có trong **§3.7**. Trước đó lệnh validation §9 của chính file này **đang FAIL** (18 link thiếu) — nay `PROJECT_GRAPH_VALIDATION_OK`. Chạy lại §9 sau mỗi lần thêm UPDATE.
+>
+> 📍 **Chương trình hiện hành (2026-08-06):** §3.7b phủ chương trình TỐI ƯU ADVISOR E1–E5 (`UPDATE-151..160` — review 21 agent → sửa công thức → oracle arm → kênh E4 → NO-GO `station_choice`). PR #6 của Khánh dùng dãy `144..150` (checkpoint/Flutter — đọc UPDATE files trực tiếp). Lịch trình kế: `tracking/PLAN-2026-08-06-lich-trinh-cai-thien.md`; la bàn quyết định: `BOOTSTRAP-SESSION.md` §5b.
 
 ## 1. Bootstrap contract
 
@@ -247,6 +249,7 @@ files (074–091) had no graph link. Do not delete rows here without re-running 
 | [UPDATE-156](updates/UPDATE-156-e03-swap-early.md) | **E-03 đổi-pin-sớm**: payout ns; wait nền 5,7′ (chi phí định né vốn nhỏ) → `D-E4-02`; quan sát treo rest +7,7% CI sạch → `D-E4-03`. 🔴 **Meta-finding E4**: giá trị advisor tập trung họ VỊ TRÍ ⇒ E-01 lên đầu, E-02 tụt cuối | `DONE-CODE` (kênh TẮT) | bridge/world/registry/tests | Bug tự bắt: grid.stations (geo) ≠ self.stations (sống) |
 | [UPDATE-157](updates/UPDATE-157-e01-station-choice.md) | **E-01 gợi TRẠM: tín hiệu cơ chế THẬT đầu tiên của E4** — `swap_wait` **−3,77′ [−4,45; −3,11]** (−66%), `charge_min_p90_F_swap` **−38,9′**; payout +1.152 ns. 🔴 Hai quan sát một-chiều (rest +281 TRÙNG MẪU E-03; span p90 +15,6) → `D-E4-03` mở rộng thành TIÊN QUYẾT. Kênh giữ TẮT | `DONE-CODE` (kênh TẮT) | bridge/world/registry/tests | `station_eta_min` chỉ đọc trạng thái sống |
 | [UPDATE-159](updates/UPDATE-159-de403-root-cause-ui-labels.md) | **D-E4-03 ĐÓNG** (2 probe: rest +281 = phụ-thuộc-cửa-sổ-seed; span +15,6 = cơ chế thật nhưng +3,5% < tol 10%) + **UI bản-cuối stakeholder**: `channel_labels.py` một nguồn nhãn VN, quét mã hiệu nội bộ khỏi dashboard/web + **lịch trình 4 sóng** `PLAN-2026-08-06-lich-trinh-cai-thien.md` | `DONE-CODE` | sim/dashboard/docs | Commit 8c4c498 |
+| [UPDATE-161](updates/UPDATE-161-co-che-dispatch-va-don-tai-lieu.md) | **Cơ chế "rảnh thêm ≠ cuốc thêm"** (rc-01, đọc code tĩnh): eligible **chỉ IDLE** ⇒ nghỉ không vớt được đơn *theo thiết kế*; bán kính bắt đơn 2,2km/ETA 11′; 🔴 `BUG-DISPATCH-SHORTLIST` (2,2km < 3,1km ETA-khả-thi, chưa sửa) + 🆕 **`D-SIM-K6` cooldown 10′ ≥ patience 10′ giết cặp vĩnh viễn**; cầu ngoại sinh ⇒ chỉ vớt đơn CHẾT mới thành trips. **Phân loại root cause `UNRESOLVED`** (rc-02/03/04 QUOTA-BLOCKED). Kèm **dọn tài liệu điểm-vào** (số stale ở CLAUDE/GRAPH/BOOTSTRAP/TODO) | `UNRESOLVED` (cơ chế) + `DONE-CODE` (docs) | research/docs | Artifact `research/audit/2026-08-06-root-cause-idle/rc-01-mechanism.json` · nối lại: `HANDOFF-2026-08-06-quota-blocked-audit.md` |
 | [UPDATE-160](updates/UPDATE-160-station-choice-no-go-da08.md) | **`station_choice` NO-GO bật mặc định** — chấm MÁY theo văn bản ĐA-08 (script `cham_da08_station_choice.py`) trên n=100: FAIL 1a (payout −33đ ns) + FAIL 1b (**P1 −3.863đ ÂM-SIG**); swap_wait −3,6′ SIG vẫn đứng. Reopen `D-E4-06` (keyed RNG / redesign objective + vế vị trí / amendment). Sinh **la bàn quyết định** BOOTSTRAP §5b + bài học 8 | `DONE-CODE` (kênh giữ TẮT) | config-comment/docs/scripts | CORRECTS kỳ vọng bật của UPDATE-159 — văn bản thắng ký ức; n=30 lừa lần 4 |
 
 ### 3.8 AdviceCheckpoint shadow cycle

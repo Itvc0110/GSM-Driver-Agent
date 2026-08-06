@@ -1,0 +1,118 @@
+{
+  "task": "RC-01 — bản đồ cơ chế dispatch/demand (chỉ đọc code; mọi khẳng định có file:line)",
+  "date": "2026-08-06",
+  "method": "Đọc tĩnh src/gsm_sim/{dispatcher,demand,runner,world,behavior,entities,sim_metrics}.py + configs/pilot_dongda.yaml. KHÔNG chạy sim, KHÔNG đo — kết luận ở đây là CƠ CHẾ, không phải phân loại root-cause cuối (phân loại cuối cần đo ở RC-02+).",
+  "answers": {
+    "1_don_sinh_khi_nao": {
+      "tra_loi": "PRE-GENERATE toàn bộ trace CẢ NGÀY trước khi sim chạy (exogenous, deterministic theo seed, dùng chung mọi arm — nền CRN). Số đơn/giờ ~ Poisson(orders_per_day × hour_share × env_factor); t rải đều trong giờ. Trong lúc chạy, đơn được INJECT vào open pool đúng lúc t_min <= now, tại đầu mỗi dispatch tick.",
+      "evidence": [
+        "src/gsm_sim/demand.py:5-8 — docstring: 'Trace ngoại sinh ... được sinh TRƯỚC khi chạy sim → dùng chung cho mọi arm (nền CRN)'",
+        "src/gsm_sim/demand.py:90-171 — generate_orders: Poisson per-hour (dòng 132-137), t_min = hour*60 + uniform(0,60) (dòng 139)",
+        "src/gsm_sim/runner.py:138 — orders = generate_orders(...) trước khi dựng World",
+        "src/gsm_sim/world.py:597-605 — _inject_orders() đẩy đơn t_min<=now vào open_orders + transition OPEN",
+        "src/gsm_sim/world.py:625 — _inject_orders gọi ở đầu MỖI dispatch tick"
+      ]
+    },
+    "2_match_khi_nao_ttl": {
+      "tra_loi": "Đơn chưa match NẰM HÀNG ĐỢI (dict open_orders) và được thử lại MỖI dispatch tick (5 giây-sim) cho tới khi match hoặc hết patience. KHÔNG phải offer-một-lần-rồi-chết. TTL = patience per-order, rút sẵn lúc sinh (exogenous, CRN-safe): lognormal median 5', sigma 0.5, cap 10'. Proc expiry quét mỗi 0.5' và EXPIRE đơn có (now - open_since) > patience. NHƯNG có cooldown theo CẶP: cùng (đơn, tài xế) không được chào lại trong offer_cooldown_min = 10' (default, config không override) sau decline/SOC-skip — vì cooldown 10' >= patience max 10', MỘT lần từ chối giết cặp đó VĨNH VIỄN đối với đơn đó.",
+      "evidence": [
+        "src/gsm_sim/world.py:161-165 — open_orders dict + con trỏ; world.py:676-677 chỉ pop khi ACCEPT",
+        "src/gsm_sim/world.py:622-635 — _dispatcher_proc: tick = time.dispatch_tick_s/60, mỗi tick gọi match_batch(list(open_orders.values()), idle, ...)",
+        "configs/pilot_dongda.yaml:25 — dispatch_tick_s: 5",
+        "src/gsm_sim/world.py:607-619 — _order_expiry_proc: quét 0.5', expire khi now-t0 > patience_min",
+        "src/gsm_sim/demand.py:118-121,145 — patience lognormal(median, sigma) cap max, rút lúc SINH đơn",
+        "configs/pilot_dongda.yaml:153-155 — patience_median_min: 5.0, patience_sigma: 0.5, patience_max_min: 10.0",
+        "src/gsm_sim/world.py:171-172 — offer_cooldown_min default 10.0 (grep config: KHÔNG có key này trong pilot_dongda.yaml ⇒ dùng default)",
+        "src/gsm_sim/world.py:641-646 — cooldown áp cho cặp (order_id, actor_id) sau lần chào gần nhất (ghi ở decline world.py:669-673 lẫn SOC-skip world.py:654-664 vì offer_history ghi TRƯỚC khi xét, world.py:646)"
+      ]
+    },
+    "3_tieu_chi_match": {
+      "tra_loi": "HAI TẦNG. Tầng 1 (shortlist): ứng viên = tài xế IDLE đứng trong grid_disk(pickup_cell, k_max=6) — hình học hex H3 res 9, ~2.22 km; trong shortlist lọc tiếp ETA <= eta_max = 11'. ETA = haversine(actor, pickup) × hệ số đường OSRM theo cặp cell / tốc độ hiệu dụng (mưa/tắc). Tầng 2: Hungarian (scipy linear_sum_assignment) tối thiểu TỔNG ETA trên toàn batch; mỗi tài xế tối đa 1 đơn/tick; cặp ETA>11' không bao giờ gán. Greedy chỉ là fallback (matching='greedy' hoặc n_o×n_d>200k) và cũng xếp theo ETA, không phải euclid. Về T-045c: xếp-hạng-euclid-trần (bad_hex) ĐÃ được thay bằng ETA-road-factor từ UPDATE-080; phần euclid CÒN SÓT là shortlist tầng 1 theo vòng hex — chính là BUG-DISPATCH-SHORTLIST đã ghi hồ sơ nhưng CHƯA SỬA: k=6 phủ 2.22km trong khi ETA 11' cho phép tới ~3.14km ⇒ tài xế thoả ETA ở 2.2-3.1km bị loại ÂM THẦM, không log — 'đơn chết dù có người trong tầm với' (nguyên văn comment config).",
+      "evidence": [
+        "src/gsm_sim/dispatcher.py:107-116 — tầng 1: grid_disk(order.pickup_cell, k_max), lọc eta <= eta_max",
+        "src/gsm_sim/dispatcher.py:94-105 — _eta: haversine × factor_fn(cell cặp, OSRM) / speed × 60",
+        "src/gsm_sim/dispatcher.py:118-134 — tầng 2: linear_sum_assignment trên cost=ETA, INFEASIBLE=1e6, lọc cặp không khả thi",
+        "src/gsm_sim/dispatcher.py:72-76 — 'Mỗi tài xế nhận tối đa 1 đơn/tick. Cặp có ETA > eta_max không bao giờ được gán'",
+        "src/gsm_sim/dispatcher.py:10-27 — docstring UPDATE-080: greedy-haversine (bad_hex, 293/3520 lượt bỏ oan) đã thay bằng Hungarian; greedy giữ làm baseline",
+        "src/gsm_sim/dispatcher.py:42,119,136-151 — MAX_PAIRS=200000; fallback greedy xếp theo (eta, actor_id)",
+        "configs/pilot_dongda.yaml:119,142,147 — matching: batch; candidate_ring_k_max: 6; eta_max_min: 11",
+        "configs/pilot_dongda.yaml:121-142 — comment BUG-DISPATCH-SHORTLIST (UPDATE-079): 'ĐÃ TÌM RA, CHƯA SỬA ĐƯỢC ... đơn chết dù có người trong tầm với'",
+        "tracking/TODO.md:34 — 'T-045c (đơn bỏ oan chưa đo lại)' vẫn là nợ mở"
+      ]
+    },
+    "4_eligible_khi_nao": {
+      "tra_loi": "CHỈ ActorState.IDLE là eligible — dispatcher lọc đúng một điều kiện state == IDLE mỗi tick. ENROUTE (đi đón, relocate, deadhead về lõi), ON_TRIP, CHARGING (toàn bộ chuỗi đi-tới-trạm + xếp hàng + swap), REST, OFFLINE đều KHÔNG nhận được đơn. Idle tại trạm sau khi đổi pin xong: ELIGIBLE NGAY — state gán IDLE ngay sau swap (cả nhánh swap_failed), dispatcher đọc state trực tiếp (không đọc segments; segments chỉ là log hậu kiểm) nên tick 5s kế tiếp đã có thể chào đơn, không cần 'thoát segment'. Caveat vị trí: sau swap tài xế đứng ở CELL TRẠM; nếu cell đó ngoài lõi thì vòng actor kế tiếp ép deadhead về lõi (ENROUTE — mất eligibility suốt đường về). Lưu ý thêm: trong 2' timeout của nhánh WAIT tài xế vẫn IDLE nên dispatcher bắt được giữa chừng — nhưng idle_min đã cộng đủ 2' TRƯỚC timeout (overcount <=2'/lần bị bắt).",
+      "evidence": [
+        "src/gsm_sim/world.py:628 — idle = [a for a in self.actors.values() if a.state == ActorState.IDLE] (điều kiện eligible DUY NHẤT)",
+        "src/gsm_sim/world.py:639 — gán chỉ thi hành nếu actor.state vẫn IDLE (chống stale trong cùng tick)",
+        "src/gsm_sim/world.py:1239 — actor.state = CHARGING đặt TRƯỚC cả đoạn di chuyển tới trạm (ineligible từ lúc quyết định đi swap)",
+        "src/gsm_sim/world.py:1287 — sau swap_done: actor.state = IDLE ngay (swap_failed: world.py:1274)",
+        "src/gsm_sim/world.py:1243 — vị trí sau swap = trạm thật (_set_pos station.lat/lon)",
+        "src/gsm_sim/world.py:856-857 — idle ngoài lõi ⇒ _relocate_to_core (deadhead); world.py:819 state=ENROUTE suốt đường về",
+        "src/gsm_sim/world.py:1121-1123 — RELOCATE tự nguyện: state=ENROUTE suốt đường đi (ineligible)",
+        "src/gsm_sim/world.py:1106-1111 — REST: state=REST, rest_min += uniform(20,45)' (ineligible trọn khoảng nghỉ)",
+        "src/gsm_sim/world.py:1135-1140 — nhánh WAIT: idle_min += 2.0 rồi mới timeout(2.0), state vẫn IDLE (eligible trong lúc chờ)"
+      ]
+    },
+    "5_demand_co_gian_theo_cung": {
+      "tra_loi": "KHÔNG. Demand ngoại sinh HOÀN TOÀN: trace sinh trước run từ config (orders_per_day, hour_weights, zone weight POI, env weather/event); không có bất kỳ feedback nào từ cung/giá/thời-gian-chờ về số đơn sinh ra. Hành vi khách duy nhất phụ thuộc runtime là EXPIRE theo patience — nhưng patience cũng rút sẵn lúc sinh đơn (per-order, exogenous). Backlog REVIEW-092-4 'cầu co giãn theo thời gian chờ' đang DEFERRED — xác nhận đây là thiết kế có chủ đích, chưa mở.",
+      "evidence": [
+        "src/gsm_sim/demand.py:90-171 — generate_orders chỉ đọc grid/cfg/policy/seed/env/road, không đọc trạng thái cung",
+        "src/gsm_sim/demand.py:30,145 — patience là field của Order, rút lúc sinh (CRN-safe)",
+        "src/gsm_sim/demand.py:76-87 — expected_demand_field từ CONFIG (chống future-leak) — belief actor cũng không đọc realized",
+        "tracking/TODO.md:31 — 'REVIEW-092-4 | Cầu co giãn theo thời gian chờ (demand.py ngoại sinh hoàn toàn) | → DEFERRED'"
+      ]
+    },
+    "6_ket_luan_co_che": {
+      "tra_loi": "Theo code, tài xế rảnh thêm X phút ở cell C giờ H CHỈ vớt được một đơn-lẽ-ra-chết khi TẤT CẢ điều kiện sau đồng thời đúng trong X phút đó: (a) tại một tick 5s nào đó actor đang state=IDLE (không phải REST/CHARGING/ENROUTE — tức thời gian rảnh 'ở dạng WAIT' mới đếm, thời gian chảy vào rest +235' là KHÔNG THỂ vớt đơn theo thiết kế); (b) tồn tại đơn OPEN có pickup_cell sao cho C nằm trong grid_disk(pickup, 6) ≈ <=2.2km hex VÀ ETA(C→pickup) <= 11' theo tốc độ hiệu dụng giờ H (giờ cao điểm tốc độ giảm ⇒ bán kính ETA co lại); (c) tick đó rơi trong cửa sổ patience của đơn (median 5', max 10' kể từ inject); (d) Hungarian không gán C cho đơn khác cùng tick và không có phương án tổng-ETA rẻ hơn giao đơn cho người khác; (e) cặp (đơn, actor) chưa bị decline/SOC-skip trước đó (cooldown 10' >= patience max ⇒ một lần từ chối là cặp chết vĩnh viễn); (f) SOC đủ pickup+trip với margin 8pp; (g) coin decide_accept ăn (p quanh accept_base, điều biến kinh tế w=0.7, z kẹp ±2). Hệ quả cấu trúc: 'rảnh thêm' KHÔNG tự động chuyển thành 'phục vụ thêm' — nó phải rảnh ĐÚNG CHỖ (trong 2.2km/11' quanh pickup), ĐÚNG LÚC (trùng cửa sổ patience 5-10'), Ở ĐÚNG TRẠNG THÁI (IDLE-WAIT, không phải rest/relocate/charging), và THẮNG phép gán toàn cục. Ngoài ra bản năng di chuyển khi rảnh chỉ dò belief (config-prior × noise, KHÔNG phải cầu realized) trong ring 1-3 (~0.35-1km) giới hạn TRONG LÕI, và trong lúc relocate thì mất eligibility — nghĩa là cơ chế tự-tìm-về-chỗ-đơn-chết của tài xế rảnh vừa mù thông tin vừa ngắn chân.",
+      "evidence": [
+        "world.py:628 (IDLE-only) + world.py:1106-1111 (REST ineligible) + world.py:1239 (CHARGING ineligible)",
+        "dispatcher.py:107-116 + configs/pilot_dongda.yaml:142,147 (2.2km shortlist, ETA 11')",
+        "world.py:607-619 + configs:153-155 (patience 5'/10')",
+        "dispatcher.py:118-134 (gán tối ưu tổng — cá nhân có thể thua phép gán toàn cục)",
+        "world.py:641-646 + world.py:171-172 (cooldown 10' theo cặp)",
+        "world.py:649-663 (SOC gate margin 8pp), behavior.py:57-101 (decide_accept)",
+        "behavior.py:199-231,234-238 (relocate theo belief, ring 1-3, chỉ cell LÕI); world.py:1121-1123 (mất eligibility khi relocate)",
+        "world.py:1142-1171 (_actor_demand_hint = expected field TỪ CONFIG × noise — không thấy đơn chết realized)"
+      ]
+    }
+  },
+  "evidence": [
+    {"claim": "Đơn pre-generate cả ngày, exogenous, CRN", "file_line": "src/gsm_sim/demand.py:5-8,90-171; src/gsm_sim/runner.py:138"},
+    {"claim": "Đơn chưa match nằm hàng đợi, retry MỖI tick 5s tới khi hết patience — không phải offer-một-lần", "file_line": "src/gsm_sim/world.py:161-165,622-635; configs/pilot_dongda.yaml:25"},
+    {"claim": "TTL đơn = patience per-order lognormal median 5' cap 10', quét expiry mỗi 0.5'", "file_line": "src/gsm_sim/world.py:607-619; src/gsm_sim/demand.py:118-121,145; configs/pilot_dongda.yaml:153-155"},
+    {"claim": "Cooldown 10' theo cặp (đơn,tài xế) sau decline/SOC-skip; 10' >= patience_max 10' ⇒ một lần từ chối = cặp chết vĩnh viễn", "file_line": "src/gsm_sim/world.py:171-172,641-646; configs/pilot_dongda.yaml:155"},
+    {"claim": "Match = shortlist hex k=6 (~2.2km) + ETA<=11' + Hungarian min tổng ETA; cost là ETA-road-factor, KHÔNG còn euclid-greedy (UPDATE-080)", "file_line": "src/gsm_sim/dispatcher.py:10-27,94-134; configs/pilot_dongda.yaml:119,142,147"},
+    {"claim": "BUG-DISPATCH-SHORTLIST (đã ghi hồ sơ, CHƯA SỬA): shortlist hex 2.22km < bán kính ETA-khả-thi ~3.14km ⇒ loại âm thầm tài xế 2.2-3.1km, 'đơn chết dù có người trong tầm với'", "file_line": "configs/pilot_dongda.yaml:121-142; tracking/TODO.md:34 (T-045c đơn bỏ oan chưa đo lại)"},
+    {"claim": "Eligible = CHỈ state IDLE; REST/CHARGING/ENROUTE/ON_TRIP/OFFLINE không nhận đơn", "file_line": "src/gsm_sim/world.py:628"},
+    {"claim": "Sau swap xong: IDLE ngay tại cell trạm, eligible từ tick kế (không cần thoát segment; dispatcher không đọc segments)", "file_line": "src/gsm_sim/world.py:1287,1274,1243; world.py:100-103 (segments = log)"},
+    {"claim": "Idle ngoài lõi bị ép deadhead về lõi (ENROUTE, ineligible suốt đường)", "file_line": "src/gsm_sim/world.py:856-857,819-829"},
+    {"claim": "Demand hoàn toàn ngoại sinh, không co giãn theo cung; co giãn theo chờ đang DEFERRED", "file_line": "src/gsm_sim/demand.py:90-171; tracking/TODO.md:31"},
+    {"claim": "idle_min CHỈ cộng ở nhánh WAIT khi state=IDLE (eligible); thời gian chết ở trạm (đi+xếp hàng+swap) vào charge_min, KHÔNG vào idle_min; rest vào rest_min", "file_line": "src/gsm_sim/world.py:1135-1140,1273,1284,1109-1111; src/gsm_sim/sim_metrics.py:129 (fleet metric đọc actor.idle_min)"},
+    {"claim": "Kẽ hở đo nhỏ của idle_min: cộng 2' TRƯỚC timeout ⇒ bị dispatcher bắt giữa chừng thì <=2' đếm trùng vào cả idle lẫn phục vụ", "file_line": "src/gsm_sim/world.py:1136,1140"},
+    {"claim": "Bản năng tìm chỗ khi rảnh: relocate theo BELIEF (config-prior × noise per-actor, không đọc realized), ring 1→3 (~0.35-1km) khi sốt ruột, CHỈ trong lõi", "file_line": "src/gsm_sim/behavior.py:199-231,234-238; src/gsm_sim/world.py:1142-1171; configs/pilot_dongda.yaml:205-207"}
+  ],
+  "h_kha_thi_co_che": [
+    {
+      "gia_thuyet": "H1 (CALIBRATION — đơn chết rơi vào giờ/nơi mọi tài xế bận, thời gian rảnh thêm rơi giờ khác)",
+      "kha_thi_co_che": true,
+      "phan_xu_bang_code": "KHÔNG phân xử được bằng đọc code — demand theo hour_weights ngoại sinh (demand.py:65-73,132-137) nên hoàn toàn có thể lệch pha với thời điểm swap được giải phóng; cần đo phân bố (giờ, cell) của order EXPIRED vs phân bố (giờ, cell) của idle-tăng-thêm giữa hai arm. UNRESOLVED — chuyển RC-02 đo."
+    },
+    {
+      "gia_thuyet": "H2 (POSITION MISMATCH — tài xế rảnh thêm đứng ở cell trạm, đơn chết ngoài bán kính dispatch)",
+      "kha_thi_co_che": true,
+      "phan_xu_bang_code": "KHẢ THI RÕ về cơ chế, ba mảnh code độc lập cùng hướng: (i) capture radius cứng 2.2km hex + ETA 11' (dispatcher.py:107-116, configs:142,147) — rảnh ngoài bán kính là vô hình với đơn, bất kể rảnh bao lâu; thêm dải mù 2.2-3.1km của BUG-DISPATCH-SHORTLIST (configs:121-142); (ii) sau swap tài xế IDLE tại CELL TRẠM (world.py:1243,1287) và kênh station_choice chọn trạm theo ít-chờ chứ không theo gần-cầu (world.py:1216-1225 pick_station) ⇒ điểm tái xuất phát có thể lệch xa cầu hơn baseline; (iii) cơ chế tự sửa vị trí (relocate bản năng) mù realized-demand, ngắn chân (ring<=3, ~1km, chỉ lõi) và mất eligibility trong lúc di chuyển (behavior.py:199-238, world.py:1121-1123). Còn thiếu: số đo khoảng cách thực từ cell-idle-tăng-thêm tới cell-đơn-EXPIRED — cần RC-02."
+    },
+    {
+      "gia_thuyet": "H3 (DISPATCHER GAP — không match idle với đơn chờ dù gần)",
+      "kha_thi_co_che": "một phần",
+      "phan_xu_bang_code": "Hai vế của H3 như phát biểu bị code BÁC: (a) 'offer một lần rồi chết' SAI — hàng đợi + retry mỗi tick 5s (world.py:622-635); (b) 'xếp hạng euclid T-045c' KHÔNG còn đúng cho phép gán — cost là ETA×road-factor, Hungarian toàn cục từ UPDATE-080 (dispatcher.py:10-27,94-134). NHƯNG hai gap THẬT có văn bản vẫn khớp tinh thần H3: (i) shortlist tầng 1 vẫn là hình học hex (di sản euclid) — BUG-DISPATCH-SHORTLIST loại âm thầm ứng viên 2.2-3.1km, comment config tự nhận 'đơn chết dù có người trong tầm với' (configs:121-142, TODO.md:34: chưa đo lại); (ii) offer_cooldown 10' >= patience_max 10' (world.py:171-172, configs:155) ⇒ đơn chỉ-một-ứng-viên mà bị decline một lần là chết chắc dù tài xế đó rảnh suốt phần đời còn lại của đơn. Mức đóng góp định lượng: UNRESOLVED — cần đo tỉ lệ EXPIRED có >=1 tài xế IDLE trong tầm ETA tại ít nhất một tick của đời đơn."
+    },
+    {
+      "gia_thuyet": "H4 (VISIBILITY — idle đếm cả trạng thái không nhận được đơn)",
+      "kha_thi_co_che": "yếu",
+      "phan_xu_bang_code": "Ở mức counter, code KHÔNG ủng hộ H4: idle_min chỉ cộng trong nhánh WAIT khi state=IDLE — đúng trạng thái eligible (world.py:1135-1140); thời gian chết ở trạm vào charge_min (world.py:1273,1284), nghỉ vào rest_min (world.py:1109-1111) — không lẫn vào idle. Fleet metric đọc đúng actor.idle_min (sim_metrics.py:129). Hai kẽ nhỏ còn lại: (i) overcount <=2'/lần khi dispatcher bắt tài xế giữa timeout WAIT (idle_min cộng trước, world.py:1136,1140) — hai arm cùng chịu, khó tạo Δ +520'; (ii) CHƯA kiểm chứng ở đây: báo cáo E-01 n=100 có đọc idle từ actor.idle_min hay tự dựng từ segment-gap (world.py:101-103 gợi ý 'idle = khoảng trống giữa segment' cho Gantt) — nếu đường segment-gap thì khoảng trống chứa cả lát chờ-hàng-không-thuộc-segment và cần soi riêng. Việc kiểm đường đọc metric của report thuộc RC tiếp theo."
+    }
+  ],
+  "ghi_chu_cho_nghich_ly": "Cơ chế cho phép phát biểu lại nghịch lý chính xác hơn: (1) +235' rest là thời-gian-không-thể-vớt-đơn THEO THIẾT KẾ (IDLE-only eligibility, world.py:628) — phần này không phải 'sim kém' mà là model choice có chủ đích; (2) +520' idle CHỈ chuyển thành đơn nếu trùng chỗ (2.2km/11') + trùng lúc (patience 5-10') + thắng gán toàn cục — demand ngoại sinh không đàn hồi nên tổng đơn không tăng theo cung rảnh, chỉ tái phân phối đơn CHẾT (EXPIRED) mới tạo thêm trips; (3) tồn tại ít nhất một defect dispatcher ĐÃ ghi hồ sơ chưa sửa (BUG-DISPATCH-SHORTLIST) đúng hình dạng 'đơn chết dù có người trong tầm' — nhưng nó tồn tại Ở CẢ HAI ARM nên muốn quy Δ cho nó phải chứng minh arm B đặt tài xế rảnh vào đúng dải mù nhiều hơn arm A. Phân loại cuối (BUG/MODEL GAP/CALIBRATION GAP/VISIBILITY GAP): UNRESOLVED ở bước RC-01 — cần số đo RC-02 (phân bố giờ/cell của EXPIRED vs idle-Δ, khoảng cách idle→EXPIRED, tỉ lệ EXPIRED có ứng viên khả thi)."
+}

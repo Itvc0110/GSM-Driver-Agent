@@ -1,0 +1,137 @@
+{
+  "item": "MM-11 CẮT NGANG — INFORMATION SET: advisor THẤY gì tại thời điểm quyết định vs world BIẾT gì",
+  "ngay_audit": "2026-08-06",
+  "files_da_doc": [
+    "configs/pilot_dongda.yaml (khối advice:)",
+    "src/gsm_sim/advice_bridge.py (toàn bộ 1243 dòng — mọi check_*/consult/pick_station)",
+    "src/gsm_sim/world.py (toàn bộ 1292 dòng — hook _actor_proc, _standby_planner, _do_charge)",
+    "src/gsm_sim/market_state.py", "src/gsm_sim/demand.py", "src/gsm_sim/entities.py",
+    "src/gsm_sim/behavior.py", "src/gsm_sim/policy.py (trip_points)",
+    "src/gsm_core/features/market_state.py", "src/gsm_core/solvers/capacity_alloc.py (cost matrix)",
+    "specs/advisor-objective-model-v2.md §5 (ĐA-08)"
+  ],
+  "objective_as_implemented": "Item cắt ngang — không có một objective duy nhất; mỗi kênh giải một bài toán rút gọn trên một LÁT CẮT thông tin riêng: (1) shift_plan/S2: DP maximize payout kỳ vọng theo bucket trên demand_forecast = BELIEF NHIỄU CÁ NHÂN của tài xế (advice_bridge.py:484-528 nhận demand_hint_fn = World._actor_demand_hint, world.py:932); (2) accept_lift/S1: feasibility mốc thưởng trên (points, tiers, rates) — không dùng biến không gian nào; (3) shift_extend/RULE: argmin phút kéo thêm sao cho gap_points/rate ≤ add, rate = points/online_h TRUNG BÌNH NGÀY, KHÔNG có biến giờ (advice_bridge.py:1117-1148); (4) rest_window/S7: chọn khung giờ demand_index thấp nhất từ belief nhiễu, không có vế cung (advice_bridge.py:807-835); (5) swap_early: rule 4 điều kiện trên (soc band, idle_streak, queue trạm GẦN NHẤT, pin ready) (advice_bridge.py:657-689); (6) station_choice: argmin travel+queue×1.5′+ready-wait (advice_bridge.py:693-739 — NO-GO D-E4-06); (7) positioning/S4: Hungarian minimize Σ[(100−soc)/100 + 10·1{zone≠preferred}] s.t. capacity_left theo ô, capacity_left = ⌊λ/1.5⌋ − (supply_now + incoming + pending advice) (capacity_alloc.py:44-50, gsm_core/features/market_state.py:76-102, world.py:371-517).",
+  "action_space": [
+    "shift_plan → {None(ONLINE), REST, GO_SWAP/GO_CHARGE, END_SHIFT} ghi đè action bản năng (advice_bridge.py:74-88, world.py:932-967) — OFF mặc định (ĐA-07)",
+    "accept_lift → actor.accept_lift += 0.10 (trần 0.15) (advice_bridge.py:799-801)",
+    "shift_extend → actor.shift_end_min += add (trần 60′, clamp world_end) (advice_bridge.py:1189-1221) — OFF mặc định",
+    "rest_window → cam kết rest_commit_due_min + hành động thay thế alt (RELOCATE) trong lúc chờ (advice_bridge.py:863-944, world.py:1033-1064) — OFF mặc định",
+    "swap_early → action := GO_SWAP (world.py:973-988) — OFF mặc định",
+    "station_choice → đổi station đích trong _do_charge (world.py:1205-1225) — OFF, NO-GO",
+    "positioning → standby_plan[actor] = cell; vòng idle đổi WAIT→RELOCATE(cell) (world.py:990-1012) — ON mặc định (wait_only)"
+  ],
+  "bang_information_set": {
+    "chu_thich": "Hàng = biến world BIẾT tại hook quyết định; cột = kênh DÙNG (✓) / KHÔNG dùng (✗). Kênh: SP=shift_plan, AL=accept_lift, SE=shift_extend, RW=rest_window, SW=swap_early, ST=station_choice, PO=positioning.",
+    "rows": [
+      {"bien": "Vị trí + state MỌI actor (cell/lat/lon/enroute_cell)", "nguon": "world.actors; market_state.count_supply/count_idle_wait", "SP": "✗", "AL": "✗", "SE": "✗", "RW": "✗", "SW": "✗", "ST": "✗ (mù tài xế khác đang ĐỔ VỀ trạm — xem MI-4b)", "PO": "✓ (supply_now + incoming + pending_targets)"},
+      {"bien": "Queue + pin ready + ready_at_min MỌI trạm", "nguon": "world.stations (Station sống)", "SP": "✗ (DP có action SWAP nhưng mù trạng thái trạm)", "AL": "✗", "SE": "✗", "RW": "✗ (khuyên 'dồn đổi pin vào khung X' mù pin trạm)", "SW": "✓ (chỉ trạm instinct gần nhất)", "ST": "✓ (quét tất cả trạm)", "PO": "✗"},
+      {"bien": "λ surface oracle (demand_field {hour:{cell:λ}} từ config)", "nguon": "world.demand_field (demand.py:76-87)", "SP": "✗ — chỉ nhận λ×NHIỄU cá nhân", "AL": "✗", "SE": "✗ (đáng dùng: kéo ca vào giờ λ tụt)", "RW": "✗ — chỉ nhận bản chuẩn hoá của λ×nhiễu", "SW": "✗", "ST": "✗ (chính là vế thiếu D-E4-06)", "PO": "✓ oracle (E10 — đã có nợ riêng)"},
+      {"bien": "open_orders REALTIME (đơn đang mở chưa match, theo ô + tuổi đơn)", "nguon": "world.open_orders + order_open_since (world.py:164-165, 597-605)", "SP": "✗", "AL": "✗", "SE": "✗", "RW": "✗", "SW": "✗", "ST": "✗", "PO": "✗ — KHÔNG KÊNH NÀO dùng, xem variables_missing #1"},
+      {"bien": "Thời tiết/env (rain series, demand_factor, supply-dropout α)", "nguon": "world.envctx (exogenous, quan-sát-được-tại-now)", "SP": "✗", "AL": "✗", "SE": "✗", "RW": "✗", "SW": "✗", "ST": "✗", "PO": "✗ — cả demand_field lẫn belief đều KHÔNG nhân env factor trong khi generator CÓ (MI-6)"},
+      {"bien": "Congestion + tốc độ theo (cell, giờ)", "nguon": "world._eff_speed/_travel_min", "SP": "✗ (kinh tế bucket phẳng theo giờ)", "AL": "✗", "SE": "✗", "RW": "✗", "SW": "✗", "ST": "✓ (travel_min_fn của world, world.py:1212-1214)", "PO": "✗ (cost không có cả distance — MI-3)"},
+      {"bien": "Lịch sử cá nhân (counters trong ngày + DriverMemory nhiều ngày)", "nguon": "actor.* + bridge.memory", "SP": "✓ (p_accept/completion as-of)", "AL": "✓", "SE": "✓ (rate=points/online_h)", "RW": "✓ (idle_by_hour, planned_rest_hour hôm qua)", "SW": "✓ (idle_streak)", "ST": "✗", "PO": "✓ (soc trong priority)"},
+      {"bien": "Policy (tiers, point_window_hours, gates acceptance/completion)", "nguon": "self.policy", "SP": "✓", "AL": "✓", "SE": "✓ tiers nhưng ✗ point_window_hours — MI-2", "RW": "✗", "SW": "✗", "ST": "✗", "PO": "✗"},
+      {"bien": "SOC pin cá nhân (telemetry)", "nguon": "actor.soc_pct — ⚠ data THẬT không có (comment advice_bridge.py:517, nhãn sẵn)", "SP": "✓", "AL": "✗", "SE": "✓ (rail)", "RW": "✓ (rail)", "SW": "✓", "ST": "— (gián tiếp)", "PO": "✓"},
+      {"bien": "fatigue_threshold_min (trait TIỀM ẨN của actor)", "nguon": "actor.fatigue_threshold_min", "SP": "✗", "AL": "✗", "SE": "✓ rail (advice_bridge.py:1113,1145)", "RW": "✓ rail (advice_bridge.py:892)", "SW": "✗", "ST": "✗", "PO": "✗ — god-view có kiểm soát, xem MI-5b"},
+      {"bien": "Realized trace TƯƠNG LAI (world.orders phần còn lại của ngày)", "nguon": "world.orders_sorted", "SP": "✗", "AL": "✗", "SE": "✗", "RW": "✗", "SW": "✗", "ST": "✗", "PO": "✗ — ĐÚNG: không kênh nào đọc; guard M0-3 còn sống (không tìm thấy future-leak cứng MỚI)"}
+    ]
+  },
+  "variables_observed": [
+    "positioning: supply_now/incoming theo ô + pending advice + λ oracle theo (giờ, ô) + soc cá nhân + idle_streak (trigger wait) — lát cắt GIÀU nhất",
+    "station_choice/swap_early: queue_len, batteries[].ready_at_min, available_full(now) của trạm; travel_min có congestion",
+    "shift_plan/rest_window: belief cầu = λ config × nhiễu lognormal cá nhân (world.py:1142-1171), soc, points, rest_taken, idle_by_hour",
+    "accept_lift/shift_extend: counters chào-nhận-hoàn-thành as-of, points, tiers, online_min, DriverMemory",
+    "mọi kênh: coin adherence keyed sha256 (không tiêu RNG chung — DET-01/02 đã sửa)"
+  ],
+  "variables_missing": [
+    {"var": "open_orders theo ô (cầu THẬT đang mở, chưa match) + tuổi đơn", "vi_sao_quan_trong": "Đây chính là biến trả lời câu hỏi bài học station_choice: 'thời gian giải phóng có được demand hấp thụ không'. Positioning hiện chỉ dùng λ KỲ VỌNG; một ô λ cao nhưng đơn đang được phục vụ hết ≠ ô λ vừa nhưng 4 đơn đang mở sắp hết patience. Đơn đã tồn tại ⇒ đọc nó KHÔNG phải rò tương lai; platform thật nhìn thấy đúng biến này.", "nguon_co_san_trong_sim": "world.open_orders + world.order_open_since (world.py:164-165); Order.pickup_cell có sẵn — chỉ cần groupby cell trong MarketStateProducer.view"},
+    {"var": "env.demand_factor(now) / rain-supply α cho phía advisor", "vi_sao_quan_trong": "Generator sinh đơn với λ×env_f (demand.py:135-137) nhưng expected_demand_field KHÔNG có env (demand.py:76-87) và MarketStateProducer._demand đọc thẳng field đó (market_state.py:151-160) ⇒ trong scenario mưa, capacity_left và trigger positioning sai HỆ THỐNG (cầu peak +22% advisor không thấy, cung rụng theo α advisor cũng không thấy). Mưa-tại-now là exogenous quan sát được, không phải tương lai.", "nguon_co_san_trong_sim": "world.envctx.demand_factor(t) — đã tồn tại, generator đang dùng; mặc định dry ⇒ nhánh trơ (họ D-E4-01)"},
+    {"var": "point_window_hours + λ hour-shape cho shift_extend", "vi_sao_quan_trong": "Kéo ca xảy ra ở CUỐI ca (thường sau 21h với P5/P7) nhưng need_min = gap/rate dùng rate trung bình cả ngày (đa phần kiếm ở peak). World trả 0 điểm cho đơn đặt ngoài 6-21h ⇒ vế 'điểm kiếm được trong cửa sổ kéo' bị định giá sai tới mức vô nghĩa — xem MI-2.", "nguon_co_san_trong_sim": "policy.trip_points(hour) (policy.py:86-92) + world.demand_field hour-shape — cả hai đã có, thuần rule"},
+    {"var": "Cung cạnh tranh theo giờ cho rest_window (S7)", "vi_sao_quan_trong": "S7 chọn 'khung vắng khách' bằng demand_index thuần cầu (advice_bridge.py:820-822). Giá trị làm việc một khung = cầu TRÊN MỖI tài xế active, không phải cầu thô: khung trưa λ thấp nhưng cung cũng rút (config ghi 'khung trưa DƯ cung 1.1-1.5 đơn/tài xế') — nghỉ vào khung λ thấp nhưng cạnh tranh thấp hơn nữa là nghỉ SAI khung. Cùng dạng thiếu-vế với station_choice.", "nguon_co_san_trong_sim": "world.actors[*].shift_start/end_min hoặc count theo state từng giờ — platform-side hợp lệ"},
+    {"var": "Sổ 'inbound swappers' theo trạm (ai đang trên đường tới trạm nào)", "vi_sao_quan_trong": "queue_len chỉ tăng khi TỚI NƠI (world.py:1250) trong khi state=CHARGING đã set lúc khởi hành (world.py:1239) ⇒ trạm 0 queue nhưng 3 người đang đổ về trông 'rẻ'. Đây đúng là fallacy-of-composition mà pending_targets đã giải cho positioning nhưng CHƯA có bản trạm — điều kiện tiên quyết nếu reopen D-E4-06 ở coverage=all.", "nguon_co_san_trong_sim": "mirror pending_targets: ghi station đích lúc go_swap (hiện là biến cục bộ trong _do_charge, cần thêm 1 field/ledger)"},
+    {"var": "Khoảng cách candidate→zone-được-gán trong cost S4", "vi_sao_quan_trong": "World định giá km rỗng thật (pin, thời gian, mất matching khi ENROUTE) nhưng cost Hungarian chỉ có +10 phẳng cho zone≠preferred — xem MI-3.", "nguon_co_san_trong_sim": "cell_distance_km(grid, a.cell, zone) — world đã tính được ở chỗ chọn preferred (world.py:442)"}
+  ],
+  "math_issues": [
+    {
+      "title": "MI-1 — RNG-stream contamination: alt_action_fn của rest_window rút RNG hành vi CHUNG trước cadence/coin ⇒ quyết định BỊ NÉN hoặc KHÔNG NGHE vẫn dịch chuỗi ngẫu nhiên của actor, phá pairing CRN",
+      "evidence": "src/gsm_sim/advice_bridge.py:916 (alt = alt_action_fn(actor)) đứng TRƯỚC :922 (cadence_allows) và :933 (coin_follows); src/gsm_sim/world.py:1034-1038 truyền lambda consider_relocate(..., self.rng, ...) = stream hành vi seed^0xBEEF; behavior.py:228 consider_relocate rút rng.random() khi best_cell≠cell; nhánh commit :898 cũng rút mỗi tick",
+      "detail": "Kỷ luật CRN của repo (comment world.py:882-884: 'bản năng luôn tiêu RNG y World A, advisor chỉ GHI ĐÈ') và fix DET-01/DET-02 (coin keyed, không tiêu stream chung) bị tái vi phạm ở đường mới D-M3-04-FIX (2026-08-05): khi kênh rest_window BẬT, mỗi lần should_defer_rest đi tới dòng 916 nó gọi consider_relocate trên world.rng — kể cả khi sau đó trả 'not_followed' (coin từ chối, :936) hoặc '' (cadence nén, :923). Arm đối chứng (kênh tắt) return sớm ở 'no_window' TRƯỚC dòng 916 nên không rút. Hệ quả: tài xế KHÔNG nghe lời (P3/P5 adherence 0.30 ⇒ ~70% quyết định) vẫn bị lệch mọi draw hành vi phía sau (decide_accept, rest ngắn, meal, p_move) so với arm A ⇒ Δ(B−A) của mọi phép đo rest_window sau 2026-08-05 trộn nhiễu trôi-stream với hiệu ứng lời khuyên — đúng lớp lỗi 'arm đối chứng phải SẠCH' (bài học DET-01). Chưa reproduce bằng fingerprint chạy thật (chỉ đọc code), nhưng đường code là tất định và không có nhánh né. Fix thuần math: rút p_move của đường-advisor bằng keyed hash như adherence_coin, hoặc chỉ gọi alt_action_fn SAU coin và ghi mẫu số 'no_alt_action' bằng đánh giá deterministic (best_cell≠cell không cần draw — draw chỉ ở p_move).",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-2 — shift_extend giả định tốc độ kiếm điểm HẰNG theo giờ, trong khi world trả 0 điểm ngoài 6-21h: kéo ca sau 21h KHÔNG BAO GIỜ đóng được gap, lời khuyên = thêm giờ làm không thêm thưởng",
+      "evidence": "src/gsm_sim/advice_bridge.py:1117-1148 (rate = actor.points/online_h trung bình ngày, need_min = gap_points/rate×60 — không có biến giờ); src/gsm_sim/policy.py:86-92 (trip_points trả 0 khi order_hour ∉ point_window_hours); configs/pilot_dongda.yaml:254 (point_window_hours = 6..21); src/gsm_sim/world.py:752 (điểm cộng theo GIỜ KHÁCH ĐẶT)",
+      "detail": "Objective ngầm của kênh: 'kéo thêm need_extra phút thì điểm tăng rate×need_extra ⇒ chạm mốc'. World định giá điểm theo GIỜ: peak 10, normal 5, NGOÀI CỬA SỔ 0. Ca kết thúc muộn (P7 kết 23-24h, P5 chiều-tối) là đúng nhóm hay 'sát mốc còn thiếu' — phần kéo rơi vào 22-24h nơi mọi cuốc đặt sau 21h = 0 điểm ⇒ gap không bao giờ đóng; tài xế trả work-span + pin + km thật, nhận 0đ thưởng thêm. Thêm nữa rate trung bình ngày trộn giờ peak (10đ) vào ước lượng cho giờ off-peak (5đ) ⇒ ngay cả kéo TRONG cửa sổ, need_min bị ước NON ~2× ⇒ kéo không đủ, cũng trượt mốc (họ 'hiệu ứng vách đá' mà D-SIM-05 đã chứng minh cho accept_lift). Đây CHÍNH XÁC là lớp station_choice: objective thiếu vế GIÁ TRỊ THEO THỜI GIAN mà world định giá tường minh, và 'phút kéo thêm' không được điểm hấp thụ vì cửa sổ điểm không phải nút cổ chai lúc đó. Kênh OFF mặc định ⇒ chưa nhiễm số headline; nhưng đây là lý do định lượng để mọi lần bật đo lại phải sửa trước. Chưa chạy reproduce số (đọc code + config), cơ chế là số học tất định.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MI-3 — cost Hungarian của positioning (S4) KHÔNG định giá khoảng cách: zone≠preferred phạt PHẲNG +10 bất kể 0,4km hay 3km ⇒ km rỗng là chi phí world thu thật nhưng objective mù",
+      "evidence": "src/gsm_core/solvers/capacity_alloc.py:44-50 (cost[i,j] = pen if tgt==preferred else pen+10.0 — pen chỉ là SOC); src/gsm_sim/world.py:442-446 (distance chỉ dùng để CHỌN preferred = ô còn trần gần nhất); world.py:1115-1134 (relocate thật tiêu thời gian + SOC theo _travel_min/consume_soc)",
+      "detail": "Khi preferred hết slot, mọi zone thay thế có cùng cost pen+10 ⇒ linear_sum_assignment phân biệt bằng thứ tự index, không bằng chi phí thật. Tài xế có thể bị gán xuyên quận trong khi có zone còn trần gần hơn — world tính đủ phút ENROUTE (mất khả năng match suốt đường đi) + pin, nhưng solver không thấy vế đó. Ở trigger wait (E10b) vấn đề NẶNG HƠN: ô fired bị loại khỏi zones ⇒ tỷ lệ candidate rơi vào nhánh phạt-phẳng tăng. Cùng lớp station_choice ở dạng đối ngẫu: station_choice cực tiểu downtime thiếu vế VỊ TRÍ-sau-hành-động; positioning cực đại lấp-trần thiếu vế CHI PHÍ-đi-tới. Kênh này ON mặc định và PASS ĐA-08 9/9 (n=100, +6.016đ SIG) ⇒ lỗi không lật kết luận hiện hành, nhưng là dư địa/nguy cơ khi đổi trigger hoặc mở coverage; veto 8(b) km-rỗng là guardrail đang đỡ hộ.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": true
+    },
+    {
+      "title": "MI-4 — station_eta_min ước wait sai ở trạm tải cao: queue×1.5′ giả định người xếp trước LUÔN có pin ready; bỏ qua coupling pin-sạc-105′ cho người thứ k và bỏ qua inbound swappers ⇒ kỳ-vọng vs realized lệch đúng ở chỗ quyết định đổi trạm",
+      "evidence": "src/gsm_sim/advice_bridge.py:699-706 (wait = queue_len×avg_swap_min; chỉ cộng ready-wait khi available_full≤0 và chỉ min(readies) — cho NGƯỜI ĐẦU); src/gsm_sim/world.py:1239 (state=CHARGING lúc khởi hành) vs :1250 (queue_len+=1 chỉ khi TỚI NƠI); configs: battery_recharge_min=105, slots=6",
+      "detail": "Ba lỗi kỳ vọng cùng hướng LẠC QUAN: (a) trạm có 1 pin ready + queue 3 ⇒ model cộng 4.5′ nhưng người thứ 2+ phải chờ pin chín (~tới 105′ trừ phần đã sạc); (b) đo queue tại lúc QUYẾT ĐỊNH, không project tới lúc TỚI (travel_min sau — trạm 'vắng' xa hơn có thể đông lên trước khi tới); (c) tài xế khác đang đổ về trạm vô hình (không có sổ inbound). Kênh đã NO-GO vì vế vị trí (D-E4-06 — KHÔNG lặp lại ở đây); ba lỗi này là ĐIỀU KIỆN BỔ SUNG phải sửa trước khi reopen, đặc biệt ở coverage=all nơi (c) tạo herding trạm — đúng fallacy-of-composition mà market_state đã giải cho ô cầu nhưng chưa cho trạm. Chưa reproduce (kênh tắt), suy từ code tất định.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-5 — BẤT ĐỐI XỨNG nguồn cầu giữa các kênh: S2/S7 tối ưu trên belief NHIỄU CÁ NHÂN của tài xế, S4 trên λ oracle — advisor một hệ nhưng hai 'sự thật' về cầu; S2/S7 nhại lại đúng cái bias nó lẽ ra phải sửa",
+      "evidence": "src/gsm_sim/advice_bridge.py:484-509 + 820-822 (demand_forecast/demand_by_hour dựng từ demand_hint_fn); src/gsm_sim/world.py:932, 1034-1037 (truyền _actor_demand_hint = λ×lognormal(σ theo archetype), world.py:1142-1171); src/gsm_sim/market_state.py:151-160 (positioning đọc demand_field oracle)",
+      "detail": "Về đo lường thì dùng belief cá nhân cho S2 là lựa chọn CÓ CHỦ Ý chống future-leak (docstring SIM-3), nhưng về MÔ HÌNH advisor nó nghịch: giá trị cốt lõi của advisor là THÔNG TIN TỐT HƠN tài xế (Q-08), vậy mà kênh lịch-ca và kênh nghỉ lập kế hoạch trên chính ước lượng méo của người được khuyên (P4 tân binh σ lớn nhất ⇒ lời khuyên cho người cần nhất lại nhiễu nhất). E10 đã đặt đúng câu hỏi này cho positioning (oracle vs realized λ̂) nhưng KHÔNG phủ S2/S7 — đây là case mới cùng họ, chiều ngược (kênh nghèo thông tin hơn chuẩn, không phải giàu hơn thực tế). Nhất quán hoá = cho S2/S7 cùng nguồn MarketStateProducer._demand (oracle hay realized tuỳ arm E10) thay vì belief bản năng; bản năng vẫn giữ belief riêng (ranh giới sim-measurement).",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-5b — god-view CÓ KIỂM SOÁT: rail mệt của shift_extend/rest_window đọc trait tiềm ẩn actor.fatigue_threshold_min — biến không hệ thật nào quan sát được ⇒ hiệu lực rail đo trong sim KHÔNG chuyển giao được sang product",
+      "evidence": "src/gsm_sim/advice_bridge.py:892 (should_defer_rest), :1113 và :1145 (check_shift_extend so online_min với actor.fatigue_threshold_min — tham số archetype sampling, entities.py:37)",
+      "detail": "Không vi phạm §1.2b (rail một chiều, chỉ CHẶN, không đưa mệt vào objective — hướng đúng). Nhưng đây là god-view theo nghĩa information-set: ngưỡng mệt THẬT của từng người là latent; product chỉ có proxy (giờ online từ log, tự khai). Sim đo 'rail chặn đúng N ca' với ground truth ⇒ số veto/would_exceed_fatigue là TRẦN LẠC QUAN của rail thật. Cần nhãn PROXY khi trích số rail cho stakeholder + một arm đo rail-trên-proxy (vd ngưỡng cố định 600′) để biết độ rơi. Không tìm thấy future-leak cứng mới ở các kênh (khác E10): world.orders tương lai không bị đọc ở đường advice nào — đã rà mọi input builder.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-6 — advisor mù env: expected_demand_field không nhân env.demand_factor trong khi generator CÓ ⇒ mọi scenario mưa/event làm capacity_left, trigger wait và DP đều sai hệ thống một phía (kênh trơ trong config khô mặc định — họ D-E4-01, nhưng đây là INPUT sai chứ không phải chi-phí-zero)",
+      "evidence": "src/gsm_sim/demand.py:135-137 (lam = orders_per_day×share×env_f) vs demand.py:76-87 (expected_demand_field KHÔNG có env); src/gsm_sim/market_state.py:160 (._demand đọc demand_field); configs environment.rain.demand delta_peak 0.22, supply alpha 0.10-0.45",
+      "detail": "Mưa tại-now là exogenous quan sát được (tài xế lẫn platform đều thấy trời mưa) ⇒ nhân env_f(now) vào λ phía ADVISOR không phải rò tương lai. Thiếu nó: dưới mưa cầu thật +22% quanh đỉnh và cung rụng theo α nhưng slots = ⌊λ_khô/1.5⌋ ⇒ capacity_left ước NON ⇒ positioning ngừng khuyên đúng lúc chênh cung-cầu lớn nhất (lúc advisor đáng giá nhất). Hôm nay scenario mặc định dry ⇒ zero ảnh hưởng số hiện hành; ghi để chặn trước khi ai bật rain arm và đọc Δ như 'advisor vô dụng khi mưa'.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-7 — comment nói dối về information set: world.py khẳng định 'choose_station RÚT RNG (p=0.7 trạm quen)' và docstring behavior.choose_station cũng ghi p=0.7, nhưng implementation 0 draw ⇒ hàng rào CRN của swap_early đang đúng NHỜ MAY; ai 'khôi phục' p=0.7 sẽ tái tạo đúng MI-1 ở call-site trước coin",
+      "evidence": "src/gsm_sim/world.py:971-976 (comment + call choose_station dưới cờ ch_swap_early, TRƯỚC check_swap_early/coin); src/gsm_sim/behavior.py:241-250 (choose_station: sort theo distance + 1 lần né queue>3, không dùng tham số rng)",
+      "detail": "Hai chỗ tài liệu-trong-code mô tả một cơ chế ngẫu nhiên không tồn tại. Rủi ro là hành vi bậc hai: call-site world.py:976 chạy khi kênh BẬT và TRƯỚC mọi coin — nếu p=0.7 được cài đúng như docstring hứa, mỗi tick WAIT của tài xế được phủ sẽ tiêu draw stream chung dù không có lời khuyên nào ra ⇒ cùng lớp contamination MI-1. Fix rẻ: sửa 2 docstring hoặc gỡ tham số rng khỏi chữ ký cho fail-loud.",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "cung_lop_station_choice": false
+    },
+    {
+      "title": "MI-8 — trips_per_driver_per_bucket hằng 1.5 mọi giờ mọi ô khi quy cầu ra slots: năng suất phục vụ thật đổi theo giờ (tốc độ peak 17 vs night 30 km/h, cấu trúc chờ) ⇒ trần capacity lệch theo giờ một cách hệ thống",
+      "evidence": "src/gsm_sim/market_state.py:112 (trips_per_hour_est config 1.5); gsm_core/features/market_state.py:81-82 (slots = demand // tppb); configs advice.trips_per_hour_est ghi 'đo được ~1.4-1.5' (trung bình, không theo giờ)",
+      "detail": "slots = ⌊λ/1.5⌋ dùng một hằng calibration trung bình ngày. Giờ peak: cuốc lâu hơn (17km/h + congestion cap 0.35) ⇒ 1 tài xế nuốt ÍT cuốc hơn ⇒ ô cần NHIỀU người hơn slots nói ⇒ trần ước NON đúng giờ cầu đỉnh; đêm ngược lại. Sai số cùng chiều mỗi giờ, không phải noise. Đây là calibration-gap chứ không phải bug; nêu vì nó là mẫu số của capacity_left — biến trung tâm của kênh ON duy nhất. Ước lượng theo giờ có sẵn từ event log (trips completed / driver-online-hour theo giờ) — thuần analytics.",
+      "severity": "THẤP",
+      "confidence": "TB",
+      "cung_lop_station_choice": false
+    }
+  ],
+  "extension_proposals": [
+    {"title": "E1 — MarketStateView + cầu-mở-realtime: thêm open_orders_by_cell (đếm + tuổi max) vào view, trộn có nhãn với λ (vd demand_eff = λ_bucket + w·open_now)", "action_executable": "relocate qua standby_plan hiện có (world.py:990-1012) — không action mới", "solver_dua_tren": "capacity_alloc giữ nguyên; chỉ producer đổi input (market_state.py.view). Cần fingerprint-guard: cờ tắt ⇒ bit-identical", "chi_phi_uoc": "nhỏ", "ky_vong": "trả lời trực tiếp 'demand có hấp thụ thời gian giải phóng không' — hướng người rỗi vào nơi có đơn ĐANG chờ thay vì nơi kỳ vọng; kỳ vọng giảm đơn EXPIRED giờ đỉnh (hiện 20-30%)"},
+    {"title": "E2 — định giá khoảng cách trong cost S4: cost[i,j] = pen_soc + β·dist_km(candidate, zone_j) (β đổi từ đơn vị km sang cùng thang pen), bỏ phạt phẳng +10", "action_executable": "cùng action relocate hiện có", "solver_dua_tren": "capacity_alloc (Hungarian) — chỉ đổi ma trận cost; derive_allocation_input thêm cột dist do world tính bằng cell_distance_km sẵn có", "chi_phi_uoc": "vừa", "ky_vong": "giảm km-rỗng SIG (veto 8b khoẻ hơn) mà giữ 1a/1b ĐA-08; bắt buộc regate n=100 vì đổi hành vi kênh ON"},
+    {"title": "E3 — shift_extend v2 nhận thức giờ: need_min giải từ Σ_h [trips_per_hour(h; λ-shape chuẩn hoá) × trip_points(h)] trên cửa sổ [now, end+add]; add* = min add sao cho tổng điểm ≥ gap; không nghiệm ⇒ im lặng (reason mới points_window_closed)", "action_executable": "shift_end_min += add (đã có, có trần + policy lock)", "solver_dua_tren": "rule thuần trên policy.trip_points + world.demand_field hour-share — 0 tham số mới ngoài cái đã có", "chi_phi_uoc": "nhỏ", "ky_vong": "diệt lớp lời khuyên 'kéo ca sau 21h vô ích' TRƯỚC khi kênh được bật đo lại; đúng tinh thần R-08 (không có gì để nói thì im)"},
+    {"title": "E4 — vá MI-1: draw p_move của đường-advisor bằng keyed hash (adherence_coin style, key = actor·bucket·'alt_move') thay vì world.rng; hoặc tách quyết định 'có nơi tốt hơn không' (deterministic, 0 draw) khỏi 'có đi không' (draw sau coin)", "action_executable": "không đổi action space — chỉ đổi nguồn ngẫu nhiên của một draw", "solver_dua_tren": "gsm_core.lifecycle.cadence.adherence_coin đã có; consider_relocate tách 2 pha là refactor thuần", "chi_phi_uoc": "nhỏ", "ky_vong": "arm đối chứng sạch trở lại cho mọi phép đo rest_window; điều kiện tiên quyết trước khi tin bất kỳ Δ nào của kênh này sau 2026-08-05"},
+    {"title": "E5 — sổ inbound-swappers theo trạm (pending_swap_targets mirror của pending_targets) + project queue tới thời điểm TỚI trạm", "action_executable": "GO_SWAP với station đích đã có trong _do_charge", "solver_dua_tren": "station_eta_min mở rộng: wait_k = max(0, ready_time_of_kth_battery − arrival) với k = queue + inbound; batteries[].ready_at_min đã cho đủ dữ kiện — thuần math, 0 dự báo", "chi_phi_uoc": "vừa", "ky_vong": "điều kiện reopen D-E4-06 ở coverage=all không tự tạo herding trạm; sửa cả 3 lỗi MI-4 một lần"},
+    {"title": "E6 — env-aware advisor: MarketStateProducer._demand nhân envctx.demand_factor(now) (và tuỳ chọn giảm trips_per_driver theo speed_factor) — chỉ phía advisor, belief bản năng GIỮ NGUYÊN", "action_executable": "không action mới", "solver_dua_tren": "envctx đã có sẵn trong World; đổi 1 hàm producer, cổng an toàn: env None/dry ⇒ nhân 1.0 bit-identical", "chi_phi_uoc": "nhỏ", "ky_vong": "advisor không mù đúng lúc chênh cung-cầu lớn nhất; mở đường đo arm rain có nghĩa"}
+  ],
+  "ket_luan_lop_loi_station_choice": "Item cắt ngang tìm thấy 2 case CÙNG LỚP station_choice (objective thiếu vế mà world định giá): MI-2 (shift_extend mù point_window_hours — vế giá-trị-theo-giờ của điểm) và MI-3 (positioning S4 mù khoảng cách gán — vế chi-phí-đi-tới); MI-4/MI-8 là kỳ-vọng-vs-realized cùng họ nhưng nhẹ hơn. Phát hiện NẶNG nhất của item lại thuộc lớp ĐO LƯỜNG: MI-1 contamination stream RNG ở đường rest_window mới (2026-08-05) — không phải lỗi objective nhưng làm mọi Δ tương lai của kênh đó không tin được. KHÔNG tìm thấy future-leak cứng MỚI kiểu E10 (đã rà mọi input builder: không đường nào đọc world.orders phần chưa xảy ra); god-view mới duy nhất là trait tiềm ẩn fatigue_threshold_min trong rails (MI-5b, có kiểm soát, cần nhãn PROXY khi báo số)."
+}
