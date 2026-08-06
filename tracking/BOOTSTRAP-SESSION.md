@@ -385,6 +385,42 @@ nhận 404 — đừng kết luận "endpoint chết" từ một 404).
 
 ---
 
+## §5b. 🧭 LA BÀN QUYẾT ĐỊNH — quyết định loại nào thì đọc file nào (Cường yêu cầu 2026-08-06)
+
+> Nguyên tắc gốc (chỉ thị Cường): *"đọc tài liệu quan trọng trước khi ra quyết định — dựa vào
+> research, brainstorm và kiến thức, KHÔNG dựa trên ký ức"*. Case study: UPDATE-160 — ký ức đã
+> hạ chuẩn duyệt kênh thành "cơ chế + vô hại"; văn bản thật (ĐA-08) đòi tiền CI-loại-0 +
+> no-harm per-archetype ⇒ chấm lại bằng máy cho verdict NGƯỢC (NO-GO, P1 bị hại −3,9k SIG).
+
+**A. Khi nào NGHIÊN CỨU THÊM (đo/probe/đọc) thay vì làm ngay?** Bất kỳ điều nào đúng:
+1. Quyết định phụ thuộc con số **chưa có**, hoặc chỉ có ở **n<30** / **một cửa sổ seed** (bẫy
+   "n nhỏ lừa" đã sập 4 lần — trips +5,5 "CI sạch" n=30 chết ở n=100).
+2. "Hiệu ứng" chưa đọc được **cơ chế trong code** (nhánh `if`) — probe trước, root-cause sau.
+3. Thay đổi chạm **ranh giới**: sức khoẻ (§1.2b), tiền/policy, contract/ID, mặc định config.
+
+**B. Duyệt một CẢI TIẾN (kênh/solver/metric) — đọc theo thứ tự:**
+1. `tracking/BOOTSTRAP-SESSION.md` §5 (bẫy) + §2 (state) — mình có đang lặp lại bẫy cũ không?
+2. **Chuẩn chấp nhận bằng văn bản**: `specs/advisor-objective-model-v2.md` **§5 ĐA-08**
+   (5 tầng + amendment 1a/1b + veto 8/9(b)) · §1.2b ranh giới sức khoẻ. KHÔNG chấm bằng trí nhớ —
+   chấm bằng script trên artifact (mẫu: `scripts/cham_da08_station_choice.py`).
+3. **Tiền lệ**: UPDATE-087 (đo n=100 thế nào) + UPDATE-089 (bật positioning cần gì, amendment).
+4. `tracking/PLAN-2026-08-06-lich-trinh-cai-thien.md` — thứ tự ưu tiên + "Bài học đã docs".
+5. `tracking/DEFERRED.md` — cái định làm có đang nằm chờ với reopen-condition chưa thoả không?
+
+**C. Recheck SAI LẦM CŨ để quyết NO-GO — đọc:**
+1. `tracking/PLAN-2026-08-06-lich-trinh-cai-thien.md` mục **"Bài học đã docs"** (8 mục, tích luỹ)
+   + mục **"KHÔNG LÀM (và vì sao)"**.
+2. §5 file này (12 bẫy đã sập) — nhất là: arm đối chứng bẩn, ORACLE-03, n nhỏ, artifact treo.
+3. `tracking/DEFERRED.md` — mọi NO-GO đều phải có **reopen condition** ghi sẵn; muốn làm lại
+   một thứ đã NO-GO thì kiểm reopen condition trước, không mở lại bằng cảm tính.
+4. Correction chain trong `tracking/PROJECT-GRAPH.md` — UPDATE nào đã bị CORRECTED thì số của nó
+   chết, đọc bản đính chính.
+
+**D. Ai quyết?** Chuẩn nói FAIL ⇒ agent chỉ được NO-GO + ghi reopen condition; **muốn bật
+vẫn được nhưng là NỚI CHUẨN — chỉ Cường quyết, và phải sửa spec trước, không xé lẻ từng case.**
+
+---
+
 ## §6. Quy trình bắt buộc (rút gọn — bản đầy đủ ở `CLAUDE.md` §3/§4/§4b)
 
 1. **Plan mode trước** mọi thay đổi code/contract/docs quan trọng. Hỏi lại điều chưa rõ, đừng đoán.

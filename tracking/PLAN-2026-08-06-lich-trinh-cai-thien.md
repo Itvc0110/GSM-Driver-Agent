@@ -18,12 +18,17 @@
 6. **UI là bản cuối cho stakeholder** — mã hiệu nội bộ ở comment/docs; nhãn từ MỘT nguồn
    (`channel_labels.py`), ID nội bộ không đổi (contract).
 7. **Push UPDATE ngay khi được phép commit** — gom local là mời đụng số với remote (2 lần).
+8. **Quyết định duyệt/bật phải chấm bằng VĂN BẢN + MÁY, không bằng ký ức** (UPDATE-160): ký ức
+   đã hạ chuẩn ĐA-08 thành "cơ chế + vô hại"; văn bản đòi tiền-CI-loại-0 + no-harm/archetype ⇒
+   verdict NGƯỢC (P1 −3,9k SIG chỉ hiện ở n=100). Kèm hệ quả: **thời gian tiết kiệm ≠ tiền** khi
+   demand không phải nút cổ chai — kiểm "ai hấp thụ thời gian giải phóng" trước khi kỳ vọng payout.
+   La bàn quyết định đầy đủ: `tracking/BOOTSTRAP-SESSION.md` §5b.
 
 ## SÓNG 1 — đang chạy / tuần này (độ tin phép đo + quyết định bật kênh)
 
 | # | Việc | Loại | Vì sao trước | Trạng thái |
 | --- | --- | --- | --- | --- |
-| 1.1 | **Chốt D-E4-03**: span break-sensitivity (đang chạy) → verdict artifact/cơ chế; nếu sạch ⇒ **bật mặc định `station_choice`** (Cường uỷ quyền) + 100 seed xác nhận | advisor | Kênh đầu tiên có sản xuất THẬT (trips +5,5 ✅) đang chờ đúng một kiểm | 🔄 |
+| 1.1 | **Chốt D-E4-03** ✅ (UPDATE-159) → đo 100 seed → **NO-GO bật mặc định** (UPDATE-160): FAIL ĐA-08 1a+1b (P1 −3,9k SIG); reopen ở DEFERRED `D-E4-06` (keyed RNG đo lại / redesign objective + vế vị trí / amendment spec) | advisor | — | ✅ ĐÓNG (NO-GO) |
 | 1.2 | **D-SIM-K3 keyed RNG** (`rng(seed, actor, purpose)` hoặc event tape) | sim 🔴 | Đòn bẩy cao nhất toàn repo: MỌI Δ đang lẫn random-stream divergence — gỡ được thì mọi phép đo A/B sạch hơn hẳn, và loại quan sát "phụ thuộc cửa sổ seed" khỏi bàn | tuần này |
 | 1.3 | **Oracle trên config-all sau E1b** (chuẩn 100 seed) — trần nội dung của TOÀN advisor sau khi công thức đã sửa | advisor | Số định hướng đầu tư (khâu nghe vs nội dung) đã có cho kênh ship; cần bản full | sau 1.1 |
 | 1.4 | V-31 + K-01(b) ACK + D-QD4-05 — **chờ verdict Cường** | — | Chặn các nhánh liên quan | ⏳ |
