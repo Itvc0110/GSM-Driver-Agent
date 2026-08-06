@@ -1,0 +1,67 @@
+﻿{
+    "summary":  "Phép đo per-archetype (payout_mean_P1..P7, net_mean_P*) về mặt TOÁN là đúng: `_cohort_metrics` lấy mean không chọn lọc trên mọi tài xế của archetype (parallel.py:119-146, tránh bias argmax Q-11), roster hai arm giống hệt nhờ CRN nên diff-of-means == mean-of-paired-diffs; `compare()` tính d_seed = B−A từng seed rồi `bootstrap_ci` resample theo SEED (một phần tử = một seed, đúng prereg D-M3-04; multiday nén ngày→seed qua `_mean_dicts` parallel.py:228-243 trước khi bootstrap). NHƯNG (1) dưới pipeline mặc định coverage=\"single\" (run_pair:207, run_ladder:459, scripts/run_parallel.py:44 không truyền coverage) chỉ 1 tài xế được advise ⇒ Δ per-archetype bị pha loãng ~1/k và gần như thuần nhiễu; fix touched-set của UPDATE-114 chỉ áp cho tầng 5 sức khoẻ, KHÔNG áp cho tầng payout. (2) Công suất: n=90 × mix ⇒ nhóm 5–18 người (P3≈5, P5/P7≈11, P1≈13, P4/P6≈16, P2≈18), SE per-seed lớn hơn all-cohort √(90/k) lần (P2 2.2× … P3 4.1×); muốn ngang công suất của payout_mean_all ở 30 seed cần ~150 (P2) tới ~500 (P3) seed, trong khi chính comment parallel.py:167-168 ghi ở n=30 cả tầng hệ thống all-cohort còn CI chứa 0 ⇒ CI per-archetype ở 30 seed chỉ dùng thăm dò. Kèm 14 cổng hai chiều (7 arch × payout+net) α=0.05 không hiệu chỉnh đa kiểm định. (3) Lỗ khác đã REPRODUCE bằng stub: scripts/run_parallel.py:62 KeyError \u0027significant\u0027 trên hàng `n_actors_scope` (SCOPE_KEYS chỉ có \u0027role\u0027) ⇒ CLI in ladder CRASH — số per-archetype hiện không in ra được; `n_insufficient` so cứng với 30 kể cả khi min_seeds=100 (parallel.py:422, đo được: n=30+min_seeds=100 → n_insufficient=False); xveto_*/commit_* lọt bảng significance HAI CHIỀU (xveto_fired_n → significant:True) — đúng lỗ Goodhart mà HEALTH_KEYS_ONE_WAY sinh ra để chặn. NỐI RẺ NHẤT vào tab A/B (dashboard.py:670-717): `pr.system_a/b` của `_run_pair_cached` ĐÃ chứa sẵn payout_mean_P1..P7/net_mean_P* (run_pair:224-225 → _system_metrics → _cohort_metrics) — thêm một st.dataframe lọc key theo prefix \"payout_mean_\"/\"net_mean_\" hiển thị A/B/Δ (chỉ trừ hai số đã có, giữ nguyên tắc \"dashboard không tự tính\"); CI thì KHÔNG tính trong dashboard mà tái dùng khuôn đọc-file của dsim06_sweep (dashboard.py:719-745): đọc JSON từ `scripts/run_parallel.py --json` và render ci95/significant của các key payout_mean_P*. Bắt buộc kèm nhãn: tab đang chạy run_pair coverage=\"single\" ⇒ Δ per-archetype bị pha loãng — hoặc truyền coverage=\"all\" cho nút chạy của tab.",
+    "findings":  [
+                     {
+                         "id":  "F1",
+                         "claim":  "CLI đo ladder CRASH: run_parallel.py in mọi hàng system không one_way_gate bằng d[\u0027significant\u0027], nhưng hàng n_actors_scope (SCOPE_KEYS) chỉ có \u0027role\u0027 — KeyError, per-archetype Δ hiện không in ra được qua script chuẩn",
+                         "evidence":  "scripts/run_parallel.py:59-64 (dòng 62 d[\u0027significant\u0027]); src/gsm_sim/parallel.py:444-445 (SCOPE_KEYS row không có \u0027significant\u0027); REPRODUCE bằng stub compare() 30 pair: KeyError tại key n_actors_scope",
+                         "severity":  "CAO",
+                         "fix_hint":  "run_parallel.py:60 skip thêm hàng có \u0027role\u0027 (hoặc dùng d.get(\u0027significant\u0027, False))"
+                     },
+                     {
+                         "id":  "F2",
+                         "claim":  "Δ per-archetype bị PHA LOÃNG cấu trúc: _cohort_metrics mean trên MỌI tài xế archetype, không có biến thể touched-set; pipeline mặc định coverage=\u0027single\u0027 (run_pair, run_ladder, scripts/run_parallel.py không truyền coverage) ⇒ chỉ 1 tài xế được advise, payout_mean_P4 Δ ≈ Δ_target/16 và 6 archetype còn lại thuần nhiễu+spillover; kênh thưa (rest_window chạm ~10%) pha loãng ~10× ngay cả coverage=\u0027all\u0027 — fix touched-set UPDATE-114 chỉ nối vào tầng 5 sức khoẻ, không nối tầng payout",
+                         "evidence":  "src/gsm_sim/parallel.py:119-146 (_cohort_metrics không có tham số actor_ids), parallel.py:207 và parallel.py:459 (coverage=\u0027single\u0027 mặc định), scripts/run_parallel.py:44 (không truyền coverage); đối chiếu sim_metrics.py:487-504 (touched_actors + lời cảnh báo pha loãng ~10×) và parallel.py:198-201 (chỉ health dùng)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Thêm _cohort_metrics(result, actor_ids=touched) song song bản toàn-cohort (khoá riêng payout_mean_touched_*), và mặc định coverage=\u0027all\u0027 khi mục tiêu là per-archetype"
+                     },
+                     {
+                         "id":  "F3",
+                         "claim":  "n_insufficient so cứng với MIN_SEEDS_FOR_SIGNIFICANCE=30 kể cả khi caller truyền min_seeds=100 (contrast biến-thể): n=50 variant ⇒ n_insufficient=False nhưng mọi significant=False vì sàn 100 — consumer đọc n_insufficient=False sẽ tưởng mẫu đủ",
+                         "evidence":  "src/gsm_sim/parallel.py:422 (\u0027n_insufficient\u0027: n \u003c MIN_SEEDS_FOR_SIGNIFICANCE) vs parallel.py:424-426 (min_seeds_for_sig có thể là 100); ĐO ĐƯỢC: compare(pairs, min_seeds=100) với n=30 trả n_insufficient=False",
+                         "severity":  "CAO",
+                         "fix_hint":  "Đổi thành n \u003c ms (dùng chính min_seeds_for_sig đã resolve)"
+                     },
+                     {
+                         "id":  "F4",
+                         "claim":  "Công suất per-archetype: nhóm KHÔNG phải 13 đều — n=90 × mix ⇒ P3≈5, P5/P7≈11, P1≈13, P4/P6≈16, P2≈18; SE per-seed lớn hơn all-cohort √(90/k) lần (P2 2.2×, P4/P6 2.4×, P1 2.7×, P5/P7 2.9×, P3 4.1×); để ngang công suất payout_mean_all@30seed cần ~30×90/k seed: P2~150, P4/P6~167, P1~214, P5/P7~250, P3~500. Ở 30 seed, CI per-archetype chỉ dùng THĂM DÒ (chính comment code ghi ở n=30 tầng hệ thống all-cohort còn CI chứa 0)",
+                         "evidence":  "configs/pilot_dongda.yaml:228 (n: 90), 229-242 (mix P1 0.14 … P3 0.06 … P2 0.20); src/gsm_sim/parallel.py:167-168 (n=30 mọi tầng hệ thống CI chứa 0); parallel.py:374-381 (SD theo seed ~40k đo thật cho variant contrast)",
+                         "severity":  "TB",
+                         "fix_hint":  "Prereg 1-2 archetype đích + gộp strata (vd part-time {P1}, thưa {P3,P5,P7}) thay vì 7 ô lẻ; hoặc MIN_SEEDS riêng per-archetype ≈ 30×90/k"
+                     },
+                     {
+                         "id":  "F5",
+                         "claim":  "14 cổng significance hai chiều per-archetype (7 arch × payout+net) mỗi cổng α=0.05, KHÔNG hiệu chỉnh family-wise trong _sig ⇒ xác suất ≥1 false-significant có thể tới ~50%; tương phản: cổng adherence đã dẫn xuất |z|\u003e4 chính vì bài 28 ô — tầng Δ không có tương đương",
+                         "evidence":  "src/gsm_sim/parallel.py:404-413 (_sig chỉ kiểm CI+n), parallel.py:452 (áp cho mọi key system kể cả payout_mean_P*); sim_metrics.py:745-751 (lý do |z|\u003e4 family-wise 28 ô)",
+                         "severity":  "TB",
+                         "fix_hint":  "Bonferroni α/7 cho bộ per-archetype, hoặc gắn nhãn \u0027exploratory — no FWER control\u0027 vào các hàng payout_mean_P* trong compare()"
+                     },
+                     {
+                         "id":  "F6",
+                         "claim":  "xveto_* (extend rails) và commit_* (sổ cam kết nghỉ) được nối vào health_guardrail SAU khi HEALTH_KEYS_ONE_WAY chốt danh sách ⇒ lọt nhánh significance HAI CHIỀU và được run_parallel in \u0027\u003c-- ĐỘNG TỚI HỆ THỐNG\u0027 — đúng lỗ Goodhart mà cổng một chiều sinh ra để chặn (veto tăng đọc thành hệ thống \u0027tốt lên\u0027)",
+                         "evidence":  "src/gsm_sim/parallel.py:390-395 (HEALTH_KEYS_ONE_WAY chỉ có veto_*/work_span/drive_min, không có xveto_*/commit_*); sim_metrics.py:517-521 (extend_rails nối vào health_guardrail), sim_metrics.py:360-385 (commit ledger); REPRODUCE: compare() stub trả xveto_fired_n → {\u0027significant\u0027: True}",
+                         "severity":  "TB",
+                         "fix_hint":  "Thêm xveto_soc_low_n/xveto_fatigued_n/xveto_would_exceed_fatigue_n/xveto_fired_n + commit_*_n vào HEALTH_KEYS_ONE_WAY (giữ xveto_calls_n hai chiều theo docstring của nó)"
+                     },
+                     {
+                         "id":  "F7",
+                         "claim":  "Hàng system (nơi chứa payout_mean_P*) chỉ có delta_mean+ci95 — thiếu mean_a/mean_b (mức nền per-archetype) và n_positive (độ ổn định dấu theo seed) mà nhánh driver có; UI muốn hiển thị per-archetype tử tế sẽ thiếu hai cột này",
+                         "evidence":  "src/gsm_sim/parallel.py:443 (row system) vs parallel.py:432-438 (row driver có mean_a/mean_b/n_positive)",
+                         "severity":  "TB",
+                         "fix_hint":  "Thêm mean_a/mean_b/n_positive cho các key có prefix payout_mean_/net_mean_ trong nhánh system của compare()"
+                     },
+                     {
+                         "id":  "F8",
+                         "claim":  "compare() lấy danh sách key từ pairs[0] duy nhất: archetype vắng ở seed đầu bị RƠI IM LẶNG khỏi báo cáo, vắng ở seed sau ⇒ KeyError; và `float(... or 0)` ép None→0 im lặng. Với roster cố định n=90 hôm nay không nổ, nhưng gãy với config n nhỏ/mix thưa (P3 0.06 ⇒ config n\u003c17 có thể ra 0 tài xế P3)",
+                         "evidence":  "src/gsm_sim/parallel.py:429, 440-441 (iterate pairs[0], p.system_b[key] truy cập cứng, `or 0`)",
+                         "severity":  "THAP",
+                         "fix_hint":  "Union key trên mọi pair + .get(key) với đánh dấu missing thay vì ép 0"
+                     },
+                     {
+                         "id":  "F9",
+                         "claim":  "Phần ĐÚNG cần ghi nhận: hướng bootstrap theo SEED đúng prereg (một phần tử = một seed, multiday nén ngày→seed trước khi bootstrap nên không pseudo-replicate theo ngày); diff-of-archetype-means == mean-of-paired-diffs vì roster hai arm identical (CRN, có fingerprint_actors canh); per-archetype mean không chọn lọc nên không dính bias argmax của pick_target",
+                         "evidence":  "src/gsm_sim/parallel.py:228-243 (_mean_dicts + lý do), 329-338 (run_pair_multiday một PairResult/seed), 354-366 (bootstrap_ci resample phần tử = seed), 98-116 (pick_target có nhãn BIASED-DIAGNOSTIC, không dùng cho cohort); sim_metrics.py:388-411 (fingerprint_actors)",
+                         "severity":  "THAP"
+                     }
+                 ]
+}

@@ -1,0 +1,79 @@
+﻿{
+    "summary":  "(a) parallel.py có 6 arm kênh trong CHANNEL_LADDER (s2_only, rest_window, accept_lift, positioning, all, none — mỗi arm sở hữu cả pseudo-channel positioning_overrides để \"none\" thật sự sạch) + 3 đường chạy: run_pair (A=advice-off vs B=channels, coverage single/all), run_pair_multiday (CẢ HAI arm bật advice, channels tường minh, cấm CHANNEL_LADDER[\"rest_window\"] vì trộn shift_plan), run_ladder (mặc định steps s2_only→accept_lift→all, cache World A theo seed). (b) KHÔNG có arm oracle-adherence nào được định nghĩa sẵn — ladder chỉ biến thiên KÊNH, không biến thiên p nghe lời; nhưng khái niệm này đã được hạ tầng hỗ trợ và test canh (test_impossible_gate_respects_full_compliance_arm chạy adherence 1.0 toàn archetype, cổng BẤT KHẢ đã sửa để không TREO oan). (c) Đường rẻ nhất: override config `advice.adherence_by_archetype = {P1..P7: 1.0}` trên cfg.data TRƯỚC khi gọi run_pair/run_ladder — mẫu y hệt đã có ở scripts/run_sensitivity.py:84 và ui/backend demo_session.py:74; bridge merge config tại advice_bridge.py:155, coin đọc p tại :444; KHÔNG sửa DEFAULT_ADHERENCE (khoá config tồn tại đúng để được đổi — docstring nominal_adherence). Bẫy duy nhất: nominal của cổng thống kê lấy từ CHÍNH cfg truyền vào run_ladder, nên override phải nằm ở cfg gốc chứ không chỉ ở config arm B, nếu không cổng bắn oan (mẫu D-R20). p=1.0 tự nó KHÔNG tiêu RNG (coin là sha256 thuần, không đụng self.rng). (d) Risk thật khi so oracle vs realistic: (1) D-SIM-K3 — coin không trôi RNG nhưng HÀNH VI lệch cực đại làm hai run tiêu random theo thứ tự khác nhau, Δ lẫn hệ quả thật + random-stream divergence; (2) đây là so HAI BIẾN THỂ advice ⇒ cần ≥100 seed (MIN_SEEDS_FOR_VARIANT_COMPARISON) và thiết kế ghép cặp hiệu-của-hiệu, không phải 30; (3) tầng 5 sức khoẻ một chiều sẽ đổi số mạnh (nhiều rest/extend được thi hành) — chỉ được đọc là tố giác suy giảm; (4) tránh đọc Δ driver-level trên target argmax (BUG-EVAL-ARGMAX). Mọi số adherence là ASSUMPTION/MOCK, chưa có số thật (UPDATE-046).",
+    "findings":  [
+                     {
+                         "id":  "ARM-TABLE-01",
+                         "claim":  "CHANNEL_LADDER có đúng 6 arm: s2_only (chỉ S2 shift_plan), rest_window (S2+rest), accept_lift (S2+cảnh báo ngưỡng thưởng), positioning (chỉ wait_only, =B3w), all (mọi kênh+wait_only), none (không can thiệp thật sự — positioning_overrides off tường minh để bất biến với product default)",
+                         "evidence":  "src/gsm_sim/parallel.py:39-52 (dict CHANNEL_LADDER), :33-38 (comment vì sao ladder sở hữu pseudo-channel positioning_overrides)",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "ARM-TABLE-02",
+                         "claim":  "Ba đường chạy: run_pair = World A advice-off vs World B channels (coverage single|all, đo adherence CẢ HAI arm); run_ladder = lặp CHANNEL_LADDER[name] trên cùng target, mặc định steps (\u0027s2_only\u0027,\u0027accept_lift\u0027,\u0027all\u0027), cache World A theo seed; run_pair_multiday = CẢ HAI arm bật advice với channels_a/channels_b BẮT BUỘC tường minh, cấm dùng CHANNEL_LADDER[\u0027rest_window\u0027] vì nó bó kèm shift_plan=True đã bị ĐA-07 tắt vì có hại",
+                         "evidence":  "src/gsm_sim/parallel.py:205-225 (run_pair), :457-494 (run_ladder + steps mặc định :458), :273-338 (run_pair_multiday; cấm rest_window ladder :303-305; channels_a bắt buộc :295-301)",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "COIN-01",
+                         "claim":  "Cơ chế coin: MỘT coin cho MỘT quyết định — key = f\"{actor_id}-{topic}-{decision_bucket(now_min)}\" + material_revision; adherence_coin(seed, key, rev) \u003c p với p = self.adherence[archetype] (merge DEFAULT_ADHERENCE ← config advice.adherence_by_archetype); decision_bucket = lưới 30 phút (DECISION_BUCKET_MIN=30.0); coin là hàm thuần sha256, VÔ ĐIỀU KIỆN với cờ cadence (DET-01) và không tiêu self.rng (DET-02)",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:436-460 (coin_follows), :155 (merge config), :444 (đọc p); src/gsm_core/lifecycle/cadence.py:61-66 (decision_bucket), :173-182 (adherence_coin sha256)",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "COIN-02",
+                         "claim":  "DEFAULT_ADHERENCE = {P1:0.55, P2:0.50, P3:0.30, P4:0.75, P5:0.30, P6:0.50, P7:0.50}, fallback 0.50 — là ASSUMPTION có lập luận CHƯA có số thật (tân binh nghe nhiều nhất, top/lão làng ít nhất); configs/pilot_dongda.yaml hiện đặt TRÙNG y hệt default",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:90-98 (định nghĩa + nhãn ASSUMPTION, ref UPDATE-046); configs/pilot_dongda.yaml:426-433",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "ORACLE-01",
+                         "claim":  "(b) KHÔNG có arm oracle-adherence (100% nghe theo) trong CHANNEL_LADDER hay bất kỳ đường production nào — ladder chỉ biến thiên KÊNH, p nghe lời luôn lấy từ config/default; tuy nhiên khái niệm đã được thiết kế đón trước: cổng BẤT KHẢ đã sửa để arm adherence=1.0 KHÔNG bị TREO oan (bounds nominal per-kênh tính từ result.config), có test canh chạy 1.0 cho toàn bộ 7 archetype qua run_once thật",
+                         "evidence":  "src/gsm_sim/parallel.py:39-52 (không bậc nào đổi adherence); tests/test_adherence_gate.py:256-277 (test_impossible_gate_respects_full_compliance_arm — chính chữ \u0027so thế giới không advisor vs HOÀN TOÀN tuân thủ\u0027); src/gsm_sim/sim_metrics.py:646-661 (bounds nominal cho cổng bất khả)",
+                         "severity":  "TB"
+                     },
+                     {
+                         "id":  "ORACLE-02",
+                         "claim":  "(c) Đường rẻ nhất để có arm adherence=1.0: override config `cfg.data[\u0027advice\u0027][\u0027adherence_by_archetype\u0027] = {P1..P7: 1.0}` rồi chạy run_pair/run_ladder như thường — KHÔNG cần sửa code bridge (merge sẵn tại :155) và KHÔNG sửa DEFAULT_ADHERENCE; mẫu override y hệt đã tồn tại ở hai chỗ",
+                         "evidence":  "scripts/run_sensitivity.py:84 (`cb.data[\"advice\"][\"adherence_by_archetype\"] = {archetype: adh}` — sweep adherence đã làm đúng cách này); ui/backend/app/services/demo_session.py:74; src/gsm_sim/advice_bridge.py:155; docstring nominal_adherence src/gsm_sim/parallel.py:528-539: \u0027Khoá config đó tồn tại để được đổi (quét độ nhạy, calibrate E10)\u0027",
+                         "fix_hint":  "Thêm biến thể arm bằng cách clone cfg (deep-copy như _cfg_with) + set adherence_by_archetype toàn 1.0; nếu muốn arm có tên trong ladder thì cần mở rộng run_ladder vì CHANNEL_LADDER chỉ chở channels, không chở adherence",
+                         "severity":  "TB"
+                     },
+                     {
+                         "id":  "ORACLE-03",
+                         "claim":  "(c) BẪY khi override: run_ladder gọi aggregate_adherence(pairs, nominal=nominal_adherence(cfg)) với cfg GỐC truyền vào — nếu adherence=1.0 chỉ được tiêm vào config arm B (bên trong vòng lặp) mà không có trong cfg gốc, cổng thống kê |z|\u003e4 so đo-được-1.0 với null-0.75/0.30 ⇒ TREO oan hàng loạt rồi cổng bị tắt (đúng mẫu D-R20 đã xảy ra); override phải nằm trên cfg TRƯỚC khi gọi để cả coin lẫn null-hypothesis cùng thấy 1.0",
+                         "evidence":  "src/gsm_sim/parallel.py:492 (nominal=nominal_adherence(cfg)), :528-539 (docstring: \u0027Null của phép kiểm PHẢI là tham số của chính run được kiểm\u0027, ref UPDATE-107); tests/test_adherence_gate.py:220-239 (test khoá hành vi nominal-theo-run)",
+                         "fix_hint":  "Override cfg.data[\u0027advice\u0027][\u0027adherence_by_archetype\u0027] trên cfg truyền vào run_ladder/run_pair; arm A advice-off không rút coin nên không nhiễm",
+                         "severity":  "CAO"
+                     },
+                     {
+                         "id":  "ORACLE-04",
+                         "claim":  "(c) p=1.0 tự nó KHÔNG gây trôi RNG: adherence_coin là hàm thuần sha256 của (seed, decision_id, material_revision), không tiêu self.rng — bật/tắt hay đổi p không xê dịch stream `covers` của kênh khác (DET-02 đã ghi); coin luôn trả True vì mọi giá trị [0,1) \u003c 1.0",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:453-460 (keyed coin vô điều kiện + DET-02: \u0027self.rng không còn bị coin tiêu\u0027); src/gsm_core/lifecycle/cadence.py:173-182",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "RISK-K3-01",
+                         "claim":  "(d) Risk chính khi so oracle vs realistic là D-SIM-K3: dù coin không tiêu RNG, HÀNH VI lệch (oracle thi hành 100% lời khuyên) làm hai run cùng seed tiêu thụ random theo THỨ TỰ khác nhau ⇒ Δ cuối lẫn 4 thành phần (hệ quả thật · random-stream divergence · solver feedback · policy/adherence divergence); arm oracle là điểm CỰC ĐẠI phân kỳ hành vi so với realistic nên nhiễm nặng nhất; D-SIM-K3 còn MỞ (giải pháp đề xuất: keyed RNG seed+actor_id+purpose+event_id hoặc exogenous event tape, chưa làm)",
+                         "evidence":  "tracking/HANDOFF-KHANH-2026-08-04.md:201 (D-SIM-K3 🔴 \u0027đòn bẩy cao nhất... mọi Δ trong repo đều lẫn 4 thành phần\u0027), :279-282 (\u0027hai run cùng seed nhưng một khi hành vi lệch, chúng tiêu thụ random theo thứ tự khác nhau\u0027); tracking/updates/UPDATE-138-lan-can-suc-khoe-kenh-keo-ca.md:138 (\u0027cùng seed ≠ cùng realization\u0027)",
+                         "severity":  "CAO"
+                     },
+                     {
+                         "id":  "RISK-STAT-01",
+                         "claim":  "(d) So oracle-arm vs realistic-arm là so HAI BIẾN THỂ advice, KHÔNG phải A/B có-vs-không ⇒ ngưỡng 30 seed không đủ: cần MIN_SEEDS_FOR_VARIANT_COMPARISON = 100 (đo thật SD ~40k đ/seed ⇒ n≈105) và thiết kế GHÉP CẶP hiệu-của-hiệu (cùng World A theo seed, hai nhánh B), caller phải truyền min_seeds=100 vào compare()",
+                         "evidence":  "src/gsm_sim/parallel.py:374-381 (hằng 100 + bài học \u0027chạy 30 seed hai lần rồi kết luận\u0027), :404-413 (_sig nhận min_seeds, ghi rõ contrast biến-thể cần 100)",
+                         "severity":  "CAO"
+                     },
+                     {
+                         "id":  "RISK-HEALTH-01",
+                         "claim":  "(d) Arm oracle làm nhiều lời khuyên rest/extend được thi hành ⇒ số tầng 5 sức khoẻ (rest_min_total, veto_*, work_span_*, drive_min_*) đổi mạnh — các khoá này là cổng MỘT CHIỀU chống Goodhart, cấm gắn significant hai chiều/đọc thành \u0027hệ thống tốt lên\u0027; đồng thời arm \u0027all\u0027 bó kèm shift_plan=True đã bị ĐA-07/UPDATE-087 TẮT vì có hại — oracle trên \u0027all\u0027 là oracle trên một kênh đã biết có hại (sức khoẻ KHÔNG phải biến tối ưu, spec §1.2b)",
+                         "evidence":  "src/gsm_sim/parallel.py:384-401 (HEALTH_KEYS_ONE_WAY + lý do chống Goodhart), :303-305 (cấm rest_window ladder vì shift_plan có hại), :48-49 (arm \u0027all\u0027 có shift_plan: True)",
+                         "severity":  "TB"
+                     },
+                     {
+                         "id":  "RISK-ARGMAX-01",
+                         "claim":  "(d) Nếu đọc Δ driver-level của arm oracle trên tài xế đích argmax (pick_target) thì nhiễm BUG-EVAL-ARGMAX: chọn cực trị của World A làm mọi can thiệp kéo về trung bình ⇒ Δ âm bất kể nội dung; tiêu chí phải đọc payout_mean_P4/payout_mean_all từ _cohort_metrics (không chọn lọc)",
+                         "evidence":  "src/gsm_sim/parallel.py:98-116 (docstring ⛔ BIASED-DIAGNOSTIC, sign-flip 5 seed: argmax-A −19.654đ vs mean-P4 +3.610đ), :119-127 (_cohort_metrics là estimator không bias)",
+                         "severity":  "TB"
+                     }
+                 ]
+}

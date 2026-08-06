@@ -1,0 +1,190 @@
+﻿{
+    "items":  [
+                  {
+                      "file":  "tests/test_health_boundary.py",
+                      "action":  "GIU",
+                      "reason":  "Cổng D-M3-08 cơ chế 2 (fatigue KHÔNG trên đường tới tiền, tests/test_health_boundary.py:1). Bắt lỗi THẬT của chính agent: log advice_extend_veto rò token fatigue_threshold_min vào scope MONEY tại world.py:873 (tracking/updates/UPDATE-138-lan-can-suc-khoe-kenh-keo-ca.md:206-215) và bắt K-03 trôi tầm quét khi fingerprint_actors chuyển vào src/ (UPDATE-140-cycle-b-dm304-revert.md:145). 12 test (UPDATE-111:22)."
+                  },
+                  {
+                      "file":  "tests/_health_boundary_manifest.py",
+                      "action":  "GIU",
+                      "reason":  "Manifest money-scope PIN CỨNG cho scanner D-M3-08 (tests/_health_boundary_manifest.py:1). Là \u0027thước\u0027 của test_health_boundary — sửa/xóa = đổi tầm quét cổng ranh giới sức khoẻ (tracking/BOOTSTRAP-SESSION.md:83: đổi tầm quét phải chạy lại test_health_boundary)."
+                  },
+                  {
+                      "file":  "tests/_health_boundary_scan.py",
+                      "action":  "GIU",
+                      "reason":  "Scanner ranh giới sức khoẻ↔tiền (tests/_health_boundary_scan.py:1) — engine của test_health_boundary. Không phải test module nhưng cổng chết nếu mất nó."
+                  },
+                  {
+                      "file":  "tests/test_policy_locked_keys.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-08 cơ chế 1 — khoá chính sách sức khoẻ khỏi sweep/override (tests/test_policy_locked_keys.py:1). Một trong \u0027ba chốt sức khoẻ\u0027 Cường chốt cùng phán quyết đảo C2 (UPDATE-111-ba-chot-suc-khoe-va-phan-quyet-dao-c2.md:19, 8 test). Bỏ = sweep có thể tối ưu hoá trên biến sức khoẻ, vi phạm spec §1.2b."
+                  },
+                  {
+                      "file":  "tests/test_rest_rails_guardrail.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-05 — lan can tầng 5 theo bảng enforce spec §1.2b (tests/test_rest_rails_guardrail.py:1; UPDATE-111:28, 12 test). Là cổng trực tiếp của ranh giới CỐ ĐỊNH \u0027sức khoẻ không phải biến tối ưu\u0027."
+                  },
+                  {
+                      "file":  "tests/test_shift_extend_rails.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 CỔNG D-QD4-03/V-28 — lan can sức khoẻ kênh KÉO CA (tests/test_shift_extend_rails.py:1). 13 test gồm 2 test chạy run_once THẬT (UPDATE-138:73,117). Kênh shift_extend là kênh duy nhất kéo người ở LẠI ca — bỏ cổng là mở đường advice kéo ca không lan can."
+                  },
+                  {
+                      "file":  "tests/test_rest_commit.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-04-FIX — hoãn nghỉ = CAM KẾT, nhánh rơi không được là WAIT (tests/test_rest_commit.py:1). 16 test đỏ-trước (UPDATE-142-dm304-fix-cam-ket-nghi.md:58). Vá lỗ thật của đường đo nghỉ trong A/B multiday."
+                  },
+                  {
+                      "file":  "tests/test_health_source_wired.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 D-M3-13 — bắt lỗi thật: tầng 5 đường A/B có HÀM GỘP nhưng KHÔNG có nguồn dữ liệu (tests/test_health_source_wired.py:1; UPDATE-116-tang-5-khong-co-nguon-du-lieu.md:57, 8 test; commit 8b8f0b1). Bỏ = tầng sức khoẻ có thể lại \u0027đo\u0027 trên dây đứt."
+                  },
+                  {
+                      "file":  "tests/test_health_gate_touched.py",
+                      "action":  "GIU",
+                      "reason":  "Tầng 5 phải đo trên NHÓM BỊ CHẠM, không chỉ tổng cohort — lỗi do vòng soi D-M3-04 bắt (tests/test_health_gate_touched.py:1; UPDATE-114-nam-lo-duong-ong-ab-va-e10b-low.md:67, 3 test). Bỏ = guardrail sức khoẻ pha loãng trên mẫu số sai."
+                  },
+                  {
+                      "file":  "tests/test_adherence_gate.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-10 — cổng hợp lệ MỌI arm A/B: adherence PHẢI nằm trong artifact (tests/test_adherence_gate.py:1). 9 test (UPDATE-102-d-m3-01-mau-so-adherence.md:227) + cổng thống kê chạy thật trong run_ladder (UPDATE-107:24). Đây là mẫu số adherence — trục đo của toàn chương trình F0."
+                  },
+                  {
+                      "file":  "tests/test_adherence_ruler_fix.py",
+                      "action":  "GIU",
+                      "reason":  "SỬA THƯỚC adherence kênh VỊ TRÍ — Cường duyệt 2026-07-31 (tests/test_adherence_ruler_fix.py:1; UPDATE-113-sua-thuoc-adherence-positioning.md:74, 4 test). Regression của quyết định đã duyệt; bỏ = thước đo positioning có thể trôi lại."
+                  },
+                  {
+                      "file":  "tests/test_control_arm_gate.py",
+                      "action":  "GIU",
+                      "reason":  "Ba lỗ THẬT của đường ống A/B do vòng D-M3-04 bắt (tests/test_control_arm_gate.py:1; UPDATE-114:67, 4 test). Memory \u0027Arm đối chứng phải SẠCH\u0027 ghi lỗi thật DET-01 từng làm báo SỐ SAI cho Cường — cổng này chính là chốt chống tái phát."
+                  },
+                  {
+                      "file":  "tests/test_dm304_multiday_ab.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 CỔNG đường đo D-M3-04: run_pair_multiday + 4 cổng STOP (tests/test_dm304_multiday_ab.py:1; UPDATE-140:131, 16 test). Đường đo A/B multiday vừa revert-rồi-fix (UPDATE-140/142) — đụng vào là mất 4 cổng STOP vừa dựng."
+                  },
+                  {
+                      "file":  "tests/test_evaluator_unbiased.py",
+                      "action":  "GIU",
+                      "reason":  "Regression BUG-EVAL-ARGMAX — bug đo lường thật, chọn cực trị gây bias −4%…+14% (tests/test_evaluator_unbiased.py:3; UPDATE-085:38). Mutation ME1 + placebo-zero proof (UPDATE-086-artifact24-estimator-khong-bias.md:17,84). Bỏ = evaluator có thể bias lại mà mọi Δ A/B vẫn \u0027xanh\u0027."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_product_adherence_leaks.py",
+                      "action":  "GIU",
+                      "reason":  "Ba lỗ đo lường của ĐƯỜNG SẢN PHẨM — phản biện 2026-07-31, đều reproduce được (ui/backend/tests/test_product_adherence_leaks.py:1; UPDATE-112-fix-6-lo-san-pham-va-thong-nhat-luoi-quyet-dinh.md:56, 9 test). Adherence phía product; nằm ngoài testpaths mặc định nên càng dễ bị \u0027tối ưu\u0027 nhầm."
+                  },
+                  {
+                      "file":  "tests/test_advice_topic_registry.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 CỔNG fail-closed: mọi topic advice phải phân loại đo/khuyên-mềm, topic lạ ⇒ unknown ⇒ ĐỎ. CHỨNG MINH BẰNG SEVER-RESTORE THẬT: sever mũi 3 → ĐỎ (tracking/QUYET-DINH-2026-08-03-khuyen-mem-khong-do.md:130,260). Là chốt của quyết định \u0027khuyên mềm không đo\u0027 (UPDATE-135:31, UPDATE-137:122)."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_soft_advice_no_trace.py",
+                      "action":  "GIU",
+                      "reason":  "CỔNG đường GHI: POST /advice/action từ chối 422 cho \u0027followed\u0027 trên khuyên mềm + cờ server + contract mọi nhánh (ui/backend/tests/test_soft_advice_no_trace.py:1; UPDATE-135-khoa-ngoai-va-khuyen-mem-khong-do.md:32,345 — gồm cổng chặn tái phát cards.js). Bỏ = trace đồng ý cho khuyên mềm quay lại mẫu số adherence."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_v2_soft_advice_no_trace.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 CỔNG đường ghi THỨ TƯ (AdviceCheckpoint v2) — lỗ tìm ra khi hợp nhất taxonomy QD4 (ui/backend/tests/test_v2_soft_advice_no_trace.py:1; UPDATE-137-qd4-hop-nhat-taxonomy-topic.md:121, 19 test, HTTP đầu-cuối với thẻ rest sinh thật). HANDOFF-KHANH-2026-08-04.md:167 liệt kê nó là cổng canh việc gỡ ranh giới ở record_response/router."
+                  },
+                  {
+                      "file":  "tests/test_cards_js_soft_gate.py",
+                      "action":  "GIU",
+                      "reason":  "Bọc cổng JS ui/web/tests/cards_soft_gate.mjs vào suite Python để nó KHÔNG bị bỏ chạy (tests/test_cards_js_soft_gate.py:1; UPDATE-137:130, 3 test gồm test chống rút ruột). Bỏ = cổng JS thành cổng trang trí không ai chạy."
+                  },
+                  {
+                      "file":  "tests/test_future_leak_l1r.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-11 — 7 bug RÒ RỈ THÔNG TIN TƯƠNG LAI thật ở L3 view (tests/test_future_leak_l1r.py:1; commit 844888/844988f, UPDATE-115:134 — 18 test). Mutation-proof: đảo từng fix về hành vi cũ ⇒ suite đỏ từng lần (UPDATE-115-ro-ri-thong-tin-tuong-lai-l1r.md:145)."
+                  },
+                  {
+                      "file":  "tests/test_future_leak_gate.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 D-M3-12 CỔNG THƯỜNG TRỰC — canh HỌ deriver (7 deriver, prefix-vs-full so sánh per-field), không chỉ ca cụ thể (tests/test_future_leak_gate.py:1; UPDATE-118-hai-cong-thuong-truc.md:17,38; commit a63a1ca). Đây đúng loại cổng \u0027sập một lần là mọi số counterfactual nghi ngờ\u0027."
+                  },
+                  {
+                      "file":  "tests/test_config_flags_wired.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 D-M3-15 CỔNG: mọi cờ pilot_dongda.yaml phải có người ĐỌC (tests/test_config_flags_wired.py:1). Bắt lỗi thật: 3 cờ nói SAI hành vi + module chết (UPDATE-117-quet-co-che-mo-coi.md:69; tracking/TODO.md:516; commit 5a13fb0). Bỏ = cơ chế mồ côi tái xuất không ai biết."
+                  },
+                  {
+                      "file":  "tests/test_state_colors_single_source.py",
+                      "action":  "GIU",
+                      "reason":  "🔴 D-M3-16a — chỉ MỘT bảng màu trạng thái (tests/test_state_colors_single_source.py:1). Sinh từ lỗi thật: bảng màu XUNG ĐỘT trong module chết tìm thấy ở UPDATE-117 (UPDATE-118:61; BOOTSTRAP-SESSION.md:220). Cổng single-source-of-truth cho cách stakeholder đọc dashboard."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_demo_pricing.py",
+                      "action":  "GIU",
+                      "reason":  "Bắt hard-code UI: cùng distance phải cho đúng gross/payout của Simulator (ui/backend/tests/test_demo_pricing.py:2; UPDATE-073-simulator-web-fare-unification.md:44). Trực tiếp giữ ranh giới TIỀN của CLAUDE.md §5 (tách gross/payout, UI không tự tính)."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_range_matches_engine.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-17 — CỔNG UI↔engine ĐẦU TIÊN của repo: tầm pin UI phải suy từ CÙNG hệ số engine (ui/backend/tests/test_range_matches_engine.py:1; UPDATE-121-tam-pin-ui-khop-engine.md:60, 12 test). Sinh từ bug thật do smoke e2e bắt: UI tự tính phạm vi pin khác engine (commit f38ff25)."
+                  },
+                  {
+                      "file":  "tests/test_net_metric.py",
+                      "action":  "GIU",
+                      "reason":  "B1 — thước net_mean_all phải ĐỌC sổ chi phí actor.cost_vnd, Cường đã duyệt (tests/test_net_metric.py:1; UPDATE-093:39). Có mutation guards riêng thêm sau debate review (UPDATE-098-debate-review-thu-nhap-nhan-qua-herding.md:57, commit b251d6e3). Là định nghĩa \u0027estimated net\u0027 — tiền hiển thị."
+                  },
+                  {
+                      "file":  "tests/test_cost_ledger.py",
+                      "action":  "GIU",
+                      "reason":  "Sổ CHI PHÍ riêng T-045b + hạn hiệu lực policy (tests/test_cost_ledger.py:1). Nguồn số cho net metric; bỏ = chi phí có thể bịa/hết-hạn mà không ai canh — vi phạm \u0027mọi số tài chính do rule/analytics tính\u0027."
+                  },
+                  {
+                      "file":  "tests/test_c1_cost_term.py",
+                      "action":  "GIU",
+                      "reason":  "B2 — chi phí vận hành vào objective S2 (tests/test_c1_cost_term.py:1). Chính lượt viết nó tự bắt bẫy VACUOUS test và chứng minh lại bằng mutation MB1 ⇒ đỏ đúng 2 test (UPDATE-094-b2-c1-cost-term-he-so-0.md:32,44). Cổng tiền-trong-solver đã mutation-proof."
+                  },
+                  {
+                      "file":  "tests/test_c5_swap_cost.py",
+                      "action":  "GIU",
+                      "reason":  "C5 — SWAP có GIÁ (spec objective-v2 §6, plan Cường duyệt 2026-07-29) (tests/test_c5_swap_cost.py:1). Mutation MC1 (bỏ −fee) ⇒ ĐỎ đúng 2 test chủ đích, restore xanh (UPDATE-097-c5-swap-co-gia.md:27)."
+                  },
+                  {
+                      "file":  "tests/test_b3_policy_costs.py",
+                      "action":  "GIU",
+                      "reason":  "B3 — POLICY quyết định giá trị chi phí theo (track, as_of), plan đã duyệt (tests/test_b3_policy_costs.py:1; UPDATE-095). Giữ nguyên tắc số tiền đến từ policy có version, không hardcode."
+                  },
+                  {
+                      "file":  "tests/test_bridge_passes_solver_params.py",
+                      "action":  "GIU",
+                      "reason":  "BUG-S2-PARAMS — bridge phải truyền tham số THẬT cho shift_dp (tests/test_bridge_passes_solver_params.py:1). Chính lỗ này giải thích vì sao mutation MUT10 (giá swap gấp đôi) SỐNG SÓT toàn suite (UPDATE-078-bug-s2-params-va-model-gap-nghi.md:59; UPDATE-074:18). Bỏ = solver lại \u0027đoán\u0027 tham số tiền."
+                  },
+                  {
+                      "file":  "tests/test_shift_dp.py",
+                      "action":  "GIU",
+                      "reason":  "S2 ShiftDP — nơi mutation MUT10 từng lọt vào repo và lịch SWAP sai gấp đôi chi phí (UPDATE-074-mut10-blocker-and-advice-loss.md:14,18). Sau vá: \u0027re-apply mutation → đỏ đúng chỗ\u0027 (UPDATE-074:62). 19 test là lưới duy nhất trên solver tiền/lịch trung tâm."
+                  },
+                  {
+                      "file":  "tests/test_m0_integrity.py",
+                      "action":  "GIU",
+                      "reason":  "T-030/M0 — regression + invariant bảo toàn (tests/test_m0_integrity.py:1). Checklist adversarial CLAUDE.md §4b bắt buộc kiểm \u0027time/money/battery/order conservation\u0027 mỗi update — đây là nơi các bất biến đó sống."
+                  },
+                  {
+                      "file":  "tests/test_sim_realism.py",
+                      "action":  "GIU",
+                      "reason":  "SIM-1 REALISM GATE — chống trôi 3 tỷ lệ nền, 30 seed (tests/test_sim_realism.py:1; UPDATE-044:97). Từng là chốt kiểm khi thay dispatcher tầng 2 Hungarian (UPDATE-080:111) và fix dispatch biên giới (UPDATE-079:137). Bỏ = mọi kết luận thu nhập đứng trên nền sim có thể đã trôi."
+                  },
+                  {
+                      "file":  "tests/test_run_smoke.py",
+                      "action":  "GIU",
+                      "reason":  "Smoke 1 run đầy đủ + DETERMINISM + invariants (tests/test_run_smoke.py:1). Determinism là tiền đề của CRN/A-B; mất cổng này thì nondeterminism lọt vào là mọi Δ hết nghĩa. Rẻ để chạy, đắt để mất."
+                  },
+                  {
+                      "file":  "tests/test_schema_matches_gsm_spec.py",
+                      "action":  "GIU",
+                      "reason":  "GATE — mock l1r phải khớp CHÍNH XÁC metadata 13 bảng GSM Cường cung cấp 2026-07-24 (tests/test_schema_matches_gsm_spec.py:1). Ranh giới hợp tác dữ liệu thật (specs/real-data/* phụ thuộc); trôi schema là mọi đường counterfactual data-contract lệch nguồn."
+                  },
+                  {
+                      "file":  "tests/test_cadence_policy.py",
+                      "action":  "GIU",
+                      "reason":  "ĐA-04 — MỘT LUẬT nhịp advice cho CẢ sim và UI (tests/test_cadence_policy.py:1; UPDATE-099-da04-cadence-mot-luat.md). Cùng test_cadence_sim là bằng chứng \u0027washout đã chết\u0027 (tests/test_cadence_sim.py:1) — bỏ là mở lại nguy cơ sim và UI hai nhịp khác nhau, đúng loại lệch mà ranh giới đo lường của SIM cấm."
+                  }
+              ],
+    "stance_summary":  "BÊN GIỮ: 37 file dưới đây là bất khả xâm phạm vì mỗi cái hoặc (a) là cổng đã chứng minh bằng sever-restore/mutation thật (topic registry sever mũi 3 → ĐỎ tại QUYET-DINH-2026-08-03:130,260; future-leak mutation từng-fix-một tại UPDATE-115:145; MC1/MB1/ME1...), hoặc (b) là regression của bug THẬT từng làm báo số sai cho Cường (DET-01 arm đối chứng bẩn → test_control_arm_gate; BUG-EVAL-ARGMAX bias −4%..+14% → test_evaluator_unbiased; MUT10 giá swap ×2 sống sót toàn suite → test_shift_dp + test_bridge_passes_solver_params; UI tự tính tầm pin khác engine → test_range_matches_engine), hoặc (c) đứng thẳng trên ranh giới CỐ ĐỊNH của dự án: sức khoẻ không phải biến tối ưu (test_health_boundary từng bắt chính agent rò fatigue token vào scope MONEY — UPDATE-138:206), tiền do rule tính (demo_pricing, net_metric, cost_ledger), adherence là trục đo F0 (adherence_gate D-M3-10, soft-advice-no-trace 2 đường ghi), và 4 cổng thường trực (future_leak_gate, config_flags_wired, state_colors, health_source_wired). Lưu ý cấu trúc: 5 file thuộc ui/backend/tests/ nằm NGOÀI testpaths mặc định — chúng dễ bị cắt \u0027vô hình\u0027 nhất nên phải được nêu đích danh. Muốn giảm 22-56 phút runtime, hãy nhắm vào test trùng lặp ngoài danh sách này (đàm phán ở các file solver/pipeline dày), tuyệt đối không nhắm vào cổng; và nhớ _health_boundary_manifest.py/_health_boundary_scan.py không có tên test_* nhưng là ruột của cổng sức khoẻ — xóa chúng là giết cổng mà suite vẫn \u0027xanh\u0027."
+}

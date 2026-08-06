@@ -1,0 +1,205 @@
+﻿{
+    "stance_summary":  "TRỌNG TÀI — phán quyết sau khi verify trực tiếp. Bốn nguyên tắc quyết định: (1) NIGHTLY KHÔNG TỒN TẠI — ci.yml:1-4 tự khai \u0027CI DRAFT, CHƯA ACTIVE: repo hiện làm việc local\u0027 ⇒ BÁC toàn bộ nhánh \u0027hạ xuống nightly\u0027 của bên cắt (sim_realism 30-seed, washout 5-seed, repro cycle-W, rest_commit 3-seed): hạ tier bây giờ = xoá lặng lẽ; mở lại khi CI bật thật. (2) DUYỆT khử run trùng config trong-file + cache conftest xuyên file (tests/conftest.py hiện không tồn tại — Glob rỗng) với 3 điều kiện cứng: cache trả deepcopy/frozen; cặp determinism/exact-repeat luôn giữ ≥1 run TƯƠI (không được lấy cả hai vế từ cache — test_run_smoke, test_cadence_sim:163-166, test_net_metric:98-109); test_parallel_worlds đứng NGOÀI cache hoàn toàn. (3) Chỉ GỘP khi cùng fixture — bắt được bên cắt sai một chỗ trọng yếu: test_multiday.py:255 dùng week_offset=2 (khác config days=7/8 ở dòng 198/243), assert đóng-tuần-lúc-run-kết-thúc cần run kết thúc đúng ngày đó ⇒ KHÔNG gộp 3 run tuần; chỉ duyệt tái dùng days=5 (dòng 107 trùng fixture dòng 30) + 1 fixture days=1 kèm deepcopy (mutation thật tại dòng 275/294). (4) Mọi cổng ranh giới health/money/adherence/registry/leak GIỮ NGUYÊN — hai bên vốn đồng thuận, đo được là gần miễn phí (dm304 = 0.2s). BÁC các vụ gộp 0-giây thuần vệ sinh (sweep_helpers, checkpoint_templates, ui test_api) — churn \u003e lợi. Ước lượng tiết kiệm SAU phán quyết: dedupe trong-file ≈ 100-120s + cache conftest xuyên file ≈ 60-120s + bundle realdata ≈ 30-60s ⇒ ≈ 3.5-5 phút mỗi lượt suite (thấp hơn 8-12 phút bên cắt hứa vì phần nightly bị bác); thêm ≈ 3-4 phút nữa tự mở khoá khi CI/nightly active. Không BO trắng file nào — hai bên cũng không ai đề xuất BO.",
+    "items":  [
+                  {
+                      "file":  "tests/test_sim_realism.py",
+                      "action":  "GIU",
+                      "reason":  "BÁC nightly-only: ci.yml:1 \u0027CHƯA ACTIVE\u0027 — hạ tier = mất cổng realism 30-seed (N_SEEDS=30, tests/test_sim_realism.py:32-33) ngay bây giờ. File đã tự tối ưu bộ nhớ bằng digest (dòng 46-47) và fixture module (89-92). Mở lại đề xuất 2-tier KHI CI bật (ci.yml:47-57 đã thiết kế sẵn nightly-calibration chạy đúng file này)."
+                  },
+                  {
+                      "file":  "tests/test_adherence_gate.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt MỘT PHẦN: run_pair (dòng 69) và run_ladder (dòng 80) cùng all-channels seed 1000 ⇒ share 1 fixture module (~10-15s). KHÔNG đụng run dòng 269 (config adherence_by_archetype=1.0 KHÁC — test_impossible_gate_respects_full_compliance_arm phải có run riêng). Giữ nguyên 100% assert — đây là cổng D-M3-10, trục đo F0."
+                  },
+                  {
+                      "file":  "tests/test_rest_commit.py",
+                      "action":  "GIU",
+                      "reason":  "BÁC giảm 1 seed: assert bảo toàn + \u0027cơ chế có đường chạy\u0027 cộng dồn QUA 3 seed (tests/test_rest_commit.py:227,243-246 — tong[\u0027made\u0027]\u003e0, tong[\u0027kept\u0027]\u003e0); 1 seed làm assert mất power hoặc flaky. Nightly chưa tồn tại (ci.yml:1). Cổng D-M3-04-FIX cam-kết-nghỉ, mới vá (UPDATE-142)."
+                  },
+                  {
+                      "file":  "tests/test_adherence_ruler_fix.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Trung dung giữa GOP (cắt) và GIU (giữ): GIỮ FILE RIÊNG — hồ sơ UPDATE-113 Cường duyệt 2026-07-31 (docstring dòng 1-11), không tan vào file cổng chung; nhưng 2 run_once nội bộ chuyển sang đọc cache conftest (cùng all-channel seed 1000). Nửa đầu file là synthetic events (dòng 21-60) vốn đã nhanh. Tiết kiệm ~6-8s, không mất narrative."
+                  },
+                  {
+                      "file":  "tests/test_net_metric.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt: baseline dòng 33/46 → 1 fixture; run bật-cost dòng 49 tái dùng làm r1 của cặp exact-repeat dòng 99-100, giữ ĐÚNG 1 run tươi làm r2 (cặp determinism không được lấy cả hai vế từ cache). Mọi mutation-guard B1 (dòng 63-93, UPDATE-098) giữ nguyên assert. ~6s. Điều kiện: audit không mutation giữa các test dùng chung run."
+                  },
+                  {
+                      "file":  "tests/test_cost_ledger.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt share 1 run bật-cost giữa test_cost_reconciles và test_cost_fields_do_not_change_behavior (~6s); assert reconcile + hạn hiệu lực policy (T-045b) giữ nguyên — file vẫn là nguồn số cho net metric, chỉ bỏ run thừa."
+                  },
+                  {
+                      "file":  "tests/test_cadence_sim.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt NỬA ĐẦU: 2 run y hệt config verify được (dòng 111 và 145 cùng _cfg(accept_lift,shift_extend,rest_window) seed=1000) + dòng 255 → 1 module fixture (-14s). BÁC nửa sau: washout 5-seed GIỮ 5 seed per-PR — CLAUDE.md §4b đòi ≥5 seed cho stochastic regression và nightly chưa chạy (ci.yml:1). Cặp exact-repeat dòng 163-166 giữ run tươi."
+                  },
+                  {
+                      "file":  "tests/test_multiday.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt MỘT PHẦN, bác phần chính: KHÔNG gộp 3 run tuần — dòng 255 dùng week_offset=2 (KHÁC config dòng 198 days=8 và 243 days=7), và assert đóng-tuần-lúc-run-KẾT-THÚC (dòng 240-249) cần run kết thúc đúng ngày đó — \u0027chỉ gộp khi cùng fixture\u0027 fail. DUYỆT: test_no_future_leak tái dùng fixture md days=5 (dòng 107 trùng dòng 28-30, -11s) + 1 fixture days=1 cho dòng 137/270/289/307 KÈM deepcopy bắt buộc (mutation thật tại dòng 275 a.accept_lift=0.10 và 294 a.idle_by_hour={}). Tiết kiệm ~25s thay vì 55-65s."
+                  },
+                  {
+                      "file":  "tests/test_lifecycle_review_fixes.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt dedupe run dòng 87 trùng fixture dòng 36 (-11s) + xét gộp 2 run config-variant NẾU config thật sự trùng (phải verify trước khi gộp). BÁC chuyển repro cycle-W sang nightly — nightly chưa active (ci.yml:1); regression của finding đã fix vẫn chạy mỗi PR."
+                  },
+                  {
+                      "file":  "tests/test_xanh_detail.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt share 1 run days=3 cho test_week1_bonus (dòng 152) và test_tenure (dòng 164), chuẩn hoá 1 seed (~8s). Mất mát khai đúng: đa dạng 2 seed tình cờ — chấp nhận được vì cả hai chỉ assert cơ chế bonus/tenure, không phải phân phối."
+                  },
+                  {
+                      "file":  "tests/test_environment.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt: 1 run rain của cặp determinism tái dùng cho test metrics (~6s); giữ 1 run tươi cho vế còn lại của cặp. BẮT BUỘC giữ baseline dry≡None (dòng 56) — kiểm tương đương biên, cả hai bên đồng ý."
+                  },
+                  {
+                      "file":  "tests/test_standby_capacity.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt: cặp determinism dòng 169-170 trùng config fixture dòng 52 ⇒ fixture + 1 rerun tươi (~3-6s). Không mất assert."
+                  },
+                  {
+                      "file":  "tests/test_market_demand_override.py",
+                      "action":  "RUT-GON",
+                      "reason":  "Duyệt share run baseline giữa test_absent_override_is_bit_identical và test_override_flows_only_into_the_planner (~3-6s); vế so bit-identical vẫn phải có 1 run tươi đối chiếu."
+                  },
+                  {
+                      "file":  "tests/conftest.py",
+                      "action":  "GOP",
+                      "reason":  "DUYỆT TẠO MỚI cache session-scoped run_once/run_multiday keyed (config-fingerprint, seed) — 113 call site sim trùng lặp xuyên file là nguồn thời gian lớn nhất (ước 1.5-3 phút). ĐIỀU KIỆN CỨNG: (a) trả deepcopy hoặc frozen-proxy — test_multiday.py:275,294 chứng minh test CÓ mutate RunResult; (b) cặp determinism/exact-repeat không bao giờ lấy cả hai vế từ cache; (c) test_parallel_worlds.py và cặp determinism gốc của test_run_smoke đứng NGOÀI cache (máy đo A/B + tầng phát hiện sớm nhất phải độc lập); (d) fingerprint phải gồm TOÀN BỘ config data, không chỉ tên file."
+                  },
+                  {
+                      "file":  "tests/test_realdata_gen.py",
+                      "action":  "GOP",
+                      "reason":  "Duyệt chuẩn hoá 15 file generate_realdata(days=8) seed riêng về 1-2 bundle session-scoped (test_solver_properties.py:51, test_weekly_khoan.py:152,170...). ĐIỀU KIỆN: giữ đúng 1 test determinism tự sinh lại từ đầu; assert bám số seed-specific phải re-derive theo seed chung TRƯỚC khi đổi — không nới ngưỡng để \u0027cho xanh\u0027 (mẫu D-R20)."
+                  },
+                  {
+                      "file":  "tests/test_demo_trace_neutrality.py",
+                      "action":  "GOP",
+                      "reason":  "Duyệt gộp vào file demo-trace chung với test_demo_trace.py + test_demo_checkpoint_alignment.py, dedupe _default_run(1000) (dòng 7) qua cache. Mất: chỉ granularity lịch sử git — chấp nhận."
+                  },
+                  {
+                      "file":  "tests/test_b4_rename_disutility.py",
+                      "action":  "GOP",
+                      "reason":  "Duyệt: bỏ run_once seed=1 (dòng 27 — comment tự nhận \u0027chạy được là đủ\u0027), giữ check tĩnh (dòng 15-20 config key, dòng 30-34 World.__init__ source chống tái xuất accept_cost_per_pickup_km_vnd) gộp vào test_b3_policy_costs.py. Mất live-run smoke ~3s giá trị thấp — rename đã xong, guard tĩnh đủ."
+                  },
+                  {
+                      "file":  "tests/test_daily_reset_streak.py",
+                      "action":  "GOP",
+                      "reason":  "Duyệt gộp vào test_multiday.py (cùng domain reset-ngày D-E10-01), tái dùng run days≥2 sẵn có. Không mất assert."
+                  },
+                  {
+                      "file":  "tests/test_checkpoint_templates.py",
+                      "action":  "GIU",
+                      "reason":  "BÁC gộp — cùng phán quyết cho tests/test_sweep_helpers.py và ui/backend/tests/test_api.py (đại diện 6 file nhỏ ui/backend): bên cắt tự khai \u0027lợi runtime ≈0\u0027. Gộp 0-giây đổi lấy churn git-history + review + rủi ro trượt tên khi ui/backend vốn NGOÀI testpaths (pyproject.toml:42 — bẫy 56-test đã sập một lần, CLAUDE.md §2). Không đáng."
+                  },
+                  {
+                      "file":  "tests/test_dm304_multiday_ab.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN 2 BÊN: 0.2s cả file (bên cắt tự đo), 16 test = 4 cổng STOP của phép đo D-M3-04 (prereg khoá, UPDATE-140:131). Cắt được 0 giây, mất cổng sống còn."
+                  },
+                  {
+                      "file":  "tests/test_health_boundary.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: cổng D-M3-08 fatigue-không-trên-đường-tới-tiền; từng bắt chính agent rò token fatigue vào scope MONEY (UPDATE-138:206-215). KÈM CẢ tests/_health_boundary_scan.py và tests/_health_boundary_manifest.py — không phải test module, 0 runtime thu thập, nhưng là ruột của cổng: xoá chúng thì suite vẫn xanh mà cổng đã chết."
+                  },
+                  {
+                      "file":  "tests/test_advice_topic_registry.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: cổng fail-closed phân loại topic đo/khuyên-mềm, sever-proven (sever mũi 3 → ĐỎ, QUYET-DINH-2026-08-03:130,260). 28 test unit gần miễn phí."
+                  },
+                  {
+                      "file":  "tests/test_future_leak_gate.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN — giữ CẢ CẶP với test_future_leak_l1r.py, không gộp: gate tự khai không bắt leak per-field (dòng 17-20), l1r canh ca per-field cụ thể — hai tầng thật, không trùng. D-M3-12 cổng thường trực (UPDATE-118:17,38)."
+                  },
+                  {
+                      "file":  "tests/test_future_leak_l1r.py",
+                      "action":  "GIU",
+                      "reason":  "D-M3-11, 7 bug rò tương lai thật, mutation-proof từng-fix-một (UPDATE-115:145). Synthetic rows unit-fast — cắt không lợi giây nào."
+                  },
+                  {
+                      "file":  "tests/test_config_flags_wired.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN — đại diện họ scan tĩnh gần miễn phí giữ nguyên: test_state_colors_single_source.py (D-M3-16a, bảng màu xung đột thật UPDATE-118:61), test_env_loader_inline_comment.py, test_cards_js_soft_gate.py (bọc cổng JS khỏi bị bỏ chạy, UPDATE-137:130), ui test_osrm_endpoints_wired.py. Cổng D-M3-15 chống cờ mồ côi — 3 cờ nói SAI hành vi từng sập (UPDATE-117:69)."
+                  },
+                  {
+                      "file":  "tests/test_rest_rails_guardrail.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: lan can sức khoẻ tầng 5, sever-proven (xoá lan can → veto 54/90→0/90 mà test khác vẫn xanh — docstring file). ~14s mua ranh giới CỐ ĐỊNH §1.2b."
+                  },
+                  {
+                      "file":  "tests/test_policy_locked_keys.py",
+                      "action":  "GIU",
+                      "reason":  "Không tranh chấp — đại diện họ chốt sức khoẻ giữ nguyên cùng test_health_gate_touched.py (đo trên nhóm BỊ CHẠM, UPDATE-114:67) và test_health_source_wired.py (D-M3-13 tầng 5 từng \u0027đo trên dây đứt\u0027, UPDATE-116:57). Khoá chính sách sức khoẻ khỏi sweep — vi phạm spec §1.2b nếu bỏ."
+                  },
+                  {
+                      "file":  "tests/test_shift_extend_rails.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: cổng D-QD4-03/V-28 mới nhất họ ranh giới sức khoẻ, kênh duy nhất kéo người Ở LẠI ca; 2 run_once ~6s chấp nhận được (UPDATE-138:73,117). Có thể ăn cache conftest nếu config trùng, không giảm assert."
+                  },
+                  {
+                      "file":  "tests/test_parallel_worlds.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN — và là NGOẠI LỆ TƯỜNG MINH của cache conftest: máy đo A/B (CRN, draw-count, arm A untouched) phải chạy run ĐỘC LẬP, không share, không cache. Bài học DET-01 trong memory dự án. 35s mua niềm tin cho mọi con số báo Cường."
+                  },
+                  {
+                      "file":  "tests/test_control_arm_gate.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: 3 lỗ đường ống A/B thật từ vòng D-M3-04 (UPDATE-114:67); chính bài học \u0027arm đối chứng phải SẠCH\u0027 từng làm báo số sai. 4 test rẻ."
+                  },
+                  {
+                      "file":  "tests/test_run_smoke.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN — kèm điều kiện: cặp determinism GỐC của file này phải luôn chạy TƯƠI, ngoài cache conftest, vì mọi đề xuất share-run ở file khác đứng trên tiền đề cặp này còn nguyên (~12s, chính bên cắt thừa nhận)."
+                  },
+                  {
+                      "file":  "tests/test_m0_integrity.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: bất biến bảo toàn time/money/battery/order (T-030) — danh mục adversarial self-review bắt buộc CLAUDE.md §4b. Được phép ĐỌC run từ cache conftest (~7-10s về ~0) nhưng không giảm assert nào."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_soft_advice_no_trace.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN — giữ nguyên parametrize topic×path: 4 đường ghi khác nhau, trim chỉ mua vài giây đổi lấy hở path đặc-cách-một-topic. Kèm ui/backend/tests/test_product_adherence_leaks.py (3 lỗ đo lường đường sản phẩm, UPDATE-112:56) — cả hai NGOÀI testpaths mặc định (pyproject.toml:42) nên dễ bị cắt vô hình nhất, nêu đích danh để không ai \u0027tối ưu\u0027 nhầm."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_v2_soft_advice_no_trace.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: đường ghi thứ tư AdviceCheckpoint v2 (QĐ-4 §6b, UPDATE-137:121), mới vá — theo nguyên tắc sever-restore là cổng nóng nhất. HANDOFF-KHANH-2026-08-04:167 chỉ định nó canh record_response/router."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_range_matches_engine.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN: D-M3-17 cổng parity UI↔engine đầu tiên của repo, sinh từ bug thật UI tự tính tầm pin khác engine (commit f38ff25, UPDATE-121:60). Đúng loại cổng mọi đề xuất cắt phải tránh."
+                  },
+                  {
+                      "file":  "ui/backend/tests/test_contracts.py",
+                      "action":  "GIU",
+                      "reason":  "ĐỒNG THUẬN — kèm ui/backend/tests/test_demo_pricing.py (UI không tự tính tiền, cùng distance phải ra đúng gross/payout của Simulator — ranh giới TIỀN CLAUDE.md §5, UPDATE-073:44): điểm đồng bộ web↔Flutter, suite ui/backend vốn nhanh, không phải nguồn thời gian."
+                  },
+                  {
+                      "file":  "tests/test_evaluator_unbiased.py",
+                      "action":  "GIU",
+                      "reason":  "Không tranh chấp: regression BUG-EVAL-ARGMAX (bias −4%..+14%, UPDATE-085:38) + mutation ME1 + placebo-zero (UPDATE-086:17,84). Bỏ = evaluator có thể bias lại mà mọi Δ vẫn xanh."
+                  },
+                  {
+                      "file":  "tests/test_shift_dp.py",
+                      "action":  "GIU",
+                      "reason":  "Không tranh chấp — đại diện họ tiền-trong-solver giữ nguyên: test_bridge_passes_solver_params.py (lỗ khiến MUT10 giá swap ×2 sống sót toàn suite, UPDATE-078:59), test_c1_cost_term.py (mutation MB1, UPDATE-094:32,44), test_c5_swap_cost.py (MC1, UPDATE-097:27), test_b3_policy_costs.py (số tiền từ policy có version). Tất cả mutation-proven, unit-fast; được ăn cache nếu có run trùng."
+                  },
+                  {
+                      "file":  "tests/test_schema_matches_gsm_spec.py",
+                      "action":  "GIU",
+                      "reason":  "Không tranh chấp: gate mock l1r khớp CHÍNH XÁC metadata 13 bảng GSM thật (ranh giới hợp tác dữ liệu — memory \u0027GSM partnership\u0027); specs/real-data/* phụ thuộc trực tiếp. Trôi schema = mọi đường counterfactual lệch nguồn."
+                  },
+                  {
+                      "file":  "tests/test_cadence_policy.py",
+                      "action":  "GIU",
+                      "reason":  "Không tranh chấp: ĐA-04 MỘT LUẬT nhịp cho cả sim và UI (UPDATE-099); cùng test_cadence_sim là bằng chứng washout đã chết — đúng ranh giới đo lường của SIM (memory dự án). Unit-level, rẻ."
+                  }
+              ]
+}

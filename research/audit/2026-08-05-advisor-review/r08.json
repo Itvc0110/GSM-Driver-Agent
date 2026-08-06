@@ -1,0 +1,89 @@
+﻿{
+    "findings":  [
+                     {
+                         "id":  "BUG-PROBE-SPY",
+                         "claim":  "[fixable-ngay] Spy `spy_claim` trong probe adherence sai chữ ký: gọi `orig_claim(self, actor, topic, now_min, bucket_min)` (5 arg) trong khi `_claim_effect` thật chỉ nhận `(self, actor, topic, now_min)` — probe sẽ TypeError ngay lần _claim_effect đầu tiên, toàn bộ cột \u0027claim đầu/claim chặn/HỤT\u0027 không chạy được (phát hiện 2026-08-05, chưa có mục tracking).",
+                         "evidence":  "scripts/probe_adherence_truth.py:93-94 và :101 (monkeypatch) vs src/gsm_sim/advice_bridge.py:343-344 (chữ ký thật không có bucket_min; key nội bộ dùng decision_bucket(now_min) mặc định tại :353)",
+                         "severity":  "TB",
+                         "fix_hint":  "Bỏ tham số bucket_min ở spy_claim và ở lời gọi orig_claim cho khớp chữ ký thật; thêm test smoke chạy probe trên 1 seed để đường script được phủ (cùng họ BUG-MOCKGEN-CLI: đường entry không test nào chạm)."
+                     },
+                     {
+                         "id":  "BUG-PARALLEL-NINSUF",
+                         "claim":  "[fixable-ngay] `compare()` tính `n_insufficient` theo HẰNG `MIN_SEEDS_FOR_SIGNIFICANCE = 30`, bỏ qua tham số `min_seeds` — khi caller truyền `min_seeds=100` (so biến-thể-vs-biến-thể theo T-041 1b\u0027), artifact với n=30..99 báo `n_insufficient=False` trong khi `significant` bị chặn ở ngưỡng 100: hai cờ trong cùng artifact mâu thuẫn, consumer đọc cờ này sẽ tin nhầm là đủ mẫu.",
+                         "evidence":  "src/gsm_sim/parallel.py:422 (`\"n_insufficient\": n \u003c MIN_SEEDS_FOR_SIGNIFICANCE`) vs :424-426 (`min_seeds_for_sig` = tham số) và :437 (`_sig(lo, hi, n, ms)`); hằng 30 tại :371. Lưu ý: vị trí thật là :422, không phải :309 như gợi ý ban đầu",
+                         "severity":  "TB",
+                         "fix_hint":  "Đổi thành `n \u003c ms` (sau khi resolve ms), kèm 1 test: compare(pairs_n50, min_seeds=100) phải ra n_insufficient=True."
+                     },
+                     {
+                         "id":  "D-QD4-05+D-M3-19",
+                         "claim":  "[cần-thiết-kế] `online_min` là proxy mệt nhưng GỘP cả thời gian chờ/nghỉ/sạc: cả `should_defer_rest` lẫn `check_shift_extend` chặn theo `online_min \u003e fatigue_threshold_min` ⇒ tài xế nghỉ nhiều bị lan can chặn oan, tài xế lái liên tục ít giờ hơn thì lọt; mọi thiết kế liều-mệt tương lai (E11) kế thừa bẫy này.",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:779, :991, :1008 (ba chỗ gate theo online_min); src/gsm_sim/world.py:844 (`online_min += (now - last)` gộp chờ + serve + charge); src/gsm_sim/behavior.py:160; tracking/DEFERRED.md:103 (D-QD4-05) và :97 (D-M3-19)",
+                         "severity":  "TB",
+                         "fix_hint":  "Tách `drive_min` (sim_metrics.continuous_work đã tính được) và sửa CẢ HAI kênh cùng lúc — sửa một bên tạo bất đối xứng mới, đúng thứ D-QD4-03 vừa đóng. Làm cùng D-M3-19; đổi hành vi ⇒ plan mode + đo lại."
+                     },
+                     {
+                         "id":  "D-M3-18",
+                         "claim":  "[cần-thiết-kế + một phần của-Khánh] 40/150 tài xế trong catalog là XE HƠI nhưng bảng dữ liệu không có field đội pin: backend trả cờ `vehicle_range_km_applicable=false` và web hiện \u0027chưa có cơ sở\u0027, nhưng app Flutter CHƯA đọc cờ nên vẫn hiện số tầm pin vô căn cứ; không được trả null vì `driver_state.dart:56` ép `as num` sẽ crash app.",
+                         "evidence":  "tracking/DEFERRED.md:79 (D-M3-18, sev CAO); tracking/HANDOFF-KHANH-2026-08-04.md:149-151 (phần Flutter đã bàn giao Khánh)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Phần data/backend (thêm field đội pin hoặc suy từ archetype + tham số tiêu hao xe hơi) là việc mình có thể plan; phần Flutter đọc cờ THUỘC KHÁNH (đã ghi AUDIT-CHECKLIST-cho-Khanh.md) — không tự sửa."
+                     },
+                     {
+                         "id":  "B6-PARITY",
+                         "claim":  "[cần-thiết-kế] UI sản phẩm chỉ chạy 1/9 solver — adapter advisor của ui/backend chỉ gọi `bonus_feasibility` ⇒ mọi phép đo/A-B trên đường sản phẩm đang đo một sản phẩm KHÁC sản phẩm ship (cùng gốc với D-R22: sản phẩm ship 1/5 kênh).",
+                         "evidence":  "ui/backend/app/adapters/advisor.py:19 (import duy nhất bonus_feasibility), :204 (`bonus_feasibility.solve(...)` — điểm gọi solver duy nhất); tracking/TODO.md:27 (B6-PARITY, HIGH)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Việc nối thêm solver vào adapter là thay đổi kiến trúc sản phẩm — cần plan mode + quyết định phạm vi ship; không phải fix cỡ giờ."
+                     },
+                     {
+                         "id":  "REVIEW-092-5",
+                         "claim":  "[fixable-ngay (qua plan mode)] `Draft202012Validator` được dựng KHÔNG có `format_checker` ⇒ từ khoá `format: date-time` vô hiệu trên 15 schema — timestamp rác (vd `2029-02-31`, chuỗi bất kỳ) lọt qua validate() vào store append-only.",
+                         "evidence":  "src/gsm_core/schema_registry.py:148 (`Draft202012Validator(self.schema(entity, version))` — dòng trôi từ :143 ghi trong tracking); tracking/TODO.md:33 (REVIEW-092-5, MED, kèm reproduce `bonus_gap_input.t_now = \"KHONG-PHAI-NGAY-THANG\"` → validate trả []); tracking/DEFERRED.md:65 (D-F098-B mục 03: cần plan mode)",
+                         "severity":  "TB",
+                         "fix_hint":  "Truyền `format_checker=Draft202012Validator.FORMAT_CHECKER` (cần extra `rfc3339-validator`); chạy lại validate trên mock 90 ngày trước khi merge vì có thể lộ record cũ đã lọt."
+                     },
+                     {
+                         "id":  "BUG-MOCKGEN-CLI",
+                         "claim":  "[fixable-ngay (sau root-cause protocol)] Entrypoint CLI `python -m gsm_core.mockgen.generate` crash `AttributeError: \u0027str\u0027 object has no attribute \u0027items\u0027` tại generate.py:50 TRƯỚC khi tới verify_round1 — đường CLI không được test nào phủ (test gọi thẳng hàm), nghi `adapter_sim._tables_from_run` trả str ở một nhánh.",
+                         "evidence":  "tracking/TODO.md:290-295 (BUG-MOCKGEN-CLI, PRE-EXISTING, reviewer reproduce 2026-07-29); src/gsm_core/mockgen/generate.py:49-51 (dict-comprehension `r.items()` — nổ nếu records chứa str)",
+                         "severity":  "TB",
+                         "fix_hint":  "Theo chuỗi bắt buộc CLAUDE.md §4b: reproduce → root cause → test CLI smoke → narrow fix. Không sửa mù theo phỏng đoán \u0027nghi adapter_sim\u0027."
+                     },
+                     {
+                         "id":  "T-045c",
+                         "claim":  "[cần-thiết-kế] Dispatcher xếp hạng ứng viên theo HAVERSINE trong khi ETA thật biến thiên theo cặp ô (factor p10 1,24 → p90 1,94) ⇒ đo được 293/3.520 lượt đơn bị bỏ OAN (8,3%); REVIEW-092 xác nhận \u0027đơn bỏ oan chưa đo lại\u0027 vẫn là nợ mở.",
+                         "evidence":  "src/gsm_sim/dispatcher.py:15 (chú thích bad_hex), :97 và :103 (haversine trong shortlist); tracking/TODO.md:188-192 (T-045c TODO, kèm 4 test bắt buộc ở hồ sơ 13-* §4.3) và :34 (nhắc lại nợ)",
+                         "severity":  "TB",
+                         "fix_hint":  "Xếp hạng theo ETA thật + thử tiếp ứng viên kế (có trần). ĐỔI HÀNH VI dispatch ⇒ lệch mọi baseline, phải plan + đo lại 30 seed; đừng kỳ vọng nó giải quyết chờ-hàng-giờ (chỉ 8,3%)."
+                     },
+                     {
+                         "id":  "T-045e",
+                         "claim":  "[fixable-ngay phần nhãn UI / cần-thiết-kế phần l1r] `soc_pct` có BA nguồn cho một biến: UI vẫn sinh SOC PROXY bằng sha256 → 30..95 và hiển thị cho tài xế (theo T-045e là chưa có nhãn MOCK trên UI — vi phạm CLAUDE.md §5); l1r trả None ⇒ `shift_dp` im lặng giả định pin ĐẦY, không hạ confidence.",
+                         "evidence":  "ui/backend/app/adapters/mockdata.py:117-119 (sha256 → 30 + h[0] % 66, vẫn sống 2026-08-05); tracking/TODO.md:207-212 (T-045e TODO). Lưu ý: D-M3-17/UPDATE-121 chỉ sửa HỆ SỐ tầm pin, không sửa nguồn SOC — trạng thái nhãn trên UI sau các update gần nhất cần kiểm lại trước khi trích",
+                         "severity":  "TB",
+                         "fix_hint":  "Nhãn PROXY/MOCK cạnh số SOC trên UI là fix rẻ đúng ranh giới; phần l1r (None ⇒ hạ confidence thay vì giả định đầy) chạm solver ⇒ cycle riêng."
+                     },
+                     {
+                         "id":  "D-A3-01b",
+                         "claim":  "[cần-thiết-kế] Advice NO-OP (lời khuyên không đổi hành vi thực tế) vẫn được đếm là `followed` (41/70 ở lần đo cũ, BRIDGE-3) ⇒ mọi con số adherence TUYỆT ĐỐI vẫn bị thổi dù washout D-A3-01 đã chết; Δ A/B thừa hưởng phần này.",
+                         "evidence":  "tracking/DEFERRED.md:61 (D-A3-01b, TODO sev TB, tách từ D-A3-01 sau UPDATE-099)",
+                         "severity":  "TB",
+                         "fix_hint":  "Cần định nghĩa \u0027advice có tác dụng\u0027 ở tầng bridge (so hành vi có-vs-không lời khuyên trong cùng tick) rồi loại NO-OP khỏi tử số — là thiết kế phép đo, bắt buộc mở trước khi công bố adherence tuyệt đối."
+                     },
+                     {
+                         "id":  "D-M3-06-window-past",
+                         "claim":  "[cần-Cường] Khung thời gian S7 `rest_window` chỉ ra LUÔN nằm phía sau (window_past) — mục này bị HẠ ƯU TIÊN dựa trên lý lẽ \u0027lan can sức khoẻ đã khoá trần kênh ở 29%\u0027, nhưng UPDATE-139 (2026-08-05) đo lại cho thấy lan can chỉ chặn thật 8,8%, thứ khoá kênh chính là LOGIC KHUNG ⇒ một trụ của quyết định hạ ưu tiên đã mất, cần Cường xét lại khi duyệt hàng đợi.",
+                         "evidence":  "tracking/DEFERRED.md:93 (D-M3-06, DEFERRED sev THẤP kèm ghi chú 2026-08-05 \u0027lý lẽ hạ ưu tiên MẤT MỘT TRỤ\u0027)",
+                         "severity":  "THAP",
+                         "fix_hint":  "Không tự sửa — đây là quyết định ưu tiên của Cường; nếu mở lại thì thuộc chuỗi D-M3-04-FIX (kênh nghỉ đang TẮT + MỀM, bật lại cần prereg mới theo Q-16a)."
+                     },
+                     {
+                         "id":  "K-01/K-02/K-03",
+                         "claim":  "[của-Khánh — CHỈ LIỆT KÊ, không tự sửa] 5 test FAIL + 1 lỗi collection đỏ SẴN trên origin/main thuộc claim Khánh: K-01 = 3 test (bất đồng chính sách cadence QUEUE≠PRESENT khi đang lái + 2 test checkpoint_trace vì scripts/ thiếu __init__.py); K-02 = test_demo_advice_ack.py import `from ui.backend.tests...` gây lỗi COLLECTION chặn CẢ suite ui/backend; K-03 = cổng money-manifest (cổng RANH GIỚI SỨC KHOẺ) đỏ thường trực vì 4 hàm mới chạm token tiền chưa phân loại ⇒ cổng mất tác dụng bắt vi phạm tiếp theo.",
+                         "evidence":  "tracking/BOOTSTRAP-SESSION.md:84-103 (đã chứng minh đỏ sẵn bằng git worktree origin/main); tracking/HANDOFF-KHANH-2026-08-04.md:82 (K-02), :111 (K-03), :139 (K-01); tracking/BOOTSTRAP-SESSION.md:132 (\u0027K-01 là mục cho KHÁNH\u0027)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Không đề xuất tự sửa. K-02 đang chặn cả suite sản phẩm và K-03 vô hiệu hoá cổng sức khoẻ khi đỏ thường trực — chỉ nên nhắc Khánh theo HANDOFF-KHANH-2026-08-04.md (đã có 3 lựa chọn viết sẵn)."
+                     }
+                 ],
+    "summary":  "Gom 12 bug/nợ đang mở toàn repo (đọc DEFERRED.md 113 dòng + TODO.md 549 dòng + BOOTSTRAP-SESSION + xác minh code từng chỗ), phân loại: fixable-ngay = BUG-PROBE-SPY (spy _claim_effect thừa arg bucket_min ⇒ TypeError, scripts/probe_adherence_truth.py:93-94 vs advice_bridge.py:343-344), BUG-PARALLEL-NINSUF (n_insufficient dùng hằng 30 thay vì min_seeds — vị trí thật parallel.py:422, không phải :309), REVIEW-092-5 (format_checker thiếu, schema_registry.py:148), BUG-MOCKGEN-CLI, nhãn MOCK cho SOC sha256 (mockdata.py:117-119). Cần-thiết-kế = D-QD4-05+D-M3-19 (online_min gộp nghỉ/sạc nhưng là proxy mệt ở advice_bridge.py:779/991/1008 — phải sửa cả hai kênh cùng lúc), B6-PARITY (UI ship 1/9 solver, advisor.py:204), T-045c (dispatch haversine bỏ oan 8,3%), D-A3-01b (NO-OP đếm followed), phần backend của D-M3-18. Cần-Cường = D-M3-06 window_past (trụ hạ ưu tiên đã mất theo UPDATE-139) + các mục chờ verdict không đưa vào list (D-R02 PULL/PUSH, V-22 trajectory.py, D-F098-B 04/05 taxonomy). Của-Khánh = K-01/K-02/K-03 (5 fail + 1 collection error đỏ sẵn trên origin/main; K-02 chặn cả suite ui/backend, K-03 làm cổng ranh giới sức khoẻ mất tác dụng) + phần Flutter của D-M3-18 + D-POL-04 corpus. Ghi chú stale: hai \u0027lỗi sản phẩm sửa ngay\u0027 trong D-M3-07 (DEFERRED.md:94) đã hết hiệu lực — topic default \u0027bonus\u0027 ĐÃ fix (advice.py:65-69, DEFAULT_TOPIC=\u0027brief\u0027), guard budget_mode!=fifo chưa áp dụng được vì budget_mode chưa tồn tại trong code (chỉ có trong spec E1). Các mục TB/THẤP khác còn mở nhưng không vào top-12: D-M3-09 (pytest testpaths, docs đã chặn), D-M3-02 (assert_crn yếu), D-R11b (ca qua nửa đêm reset ngân sách), D-SIM-11 (parse chuỗi tiếng Việt), T-042 mục 3b/4/5/6/7, D-E10-05/06/07, D-SIM-K1..K5 (đề xuất Khánh, chưa claim), D-A3-02/03/05/06."
+}

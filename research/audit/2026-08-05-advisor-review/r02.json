@@ -1,0 +1,89 @@
+﻿{
+    "summary":  "Lọc tracking/DEFERRED.md (113 dòng) + tracking/TODO.md (549 dòng), mọi mục còn MỞ, phân 5 nhóm (kèm nhóm dư \"giữ-defer\" cho mục có điều kiện mở lại còn nguyên nghĩa nhưng chưa kích hoạt).\n\n(a) LÀM ĐƯỢC NGAY không cần Cường:\n- REVIEW-092-5 / D-F098-B(03): thêm format_checker vào Draft202012Validator — 15 schema date-time đang không validate (TODO.md:33)\n- D-M3-09: thêm ui/backend/tests vào testpaths (kiểm conftest trước) (DEFERRED.md:96)\n- BUG-MOCKGEN-CLI: CLI mockgen crash trước verify, chưa test phủ (TODO.md:290)\n- D-M3-07-bugs: 2 lỗi sản phẩm \"sửa ngay bất kể E1\" — topic default \"bonus\" ở GET /advice + thiếu guard budget_mode!=fifo (DEFERRED.md:94)\n- T-041-1b\u0027: rerun ghép cặp n≈105 kết luận dấu fix BUG-S2-PARAMS (TODO.md:75)\n- T-042 mục 3b/4/5/6/7/8: shrunk_rate vào SIM · payout từ ledger 4 nguồn · hợp nhất bonus_at/day_bonus · vá cards.js ghép tiền ngoài verifier · SourceEnvelope · dọn feasible thừa (TODO.md:223-234)\n- T-045c: dispatcher xếp hạng theo ETA thật — 8,3% đơn bỏ oan (TODO.md:188-192)\n- T-045e: S2 soc_pct=None giả định pin đầy + SOC bịa hiển thị không nhãn mock (TODO.md:207-212)\n- D-M3-18 (phần backend/view): field đội pin + tham số tiêu hao xe hơi (DEFERRED.md:79)\n- D-M3-16(c): bucket metrics 15\u0027 thật (plan+prereg riêng) (DEFERRED.md:77)\n- Việc nhỏ độc lập: D-SIM-07/08/11/15/19 · D-UI-02 · D-R11b/R20/R21/R22 · D-M3-03 · D-C6-04 · D-ĐA04-01 · D-ARCH-A2 · D-E10-06 (n_salt≥10, ~2,5h máy) · D-E10-07 (bootstrap 2 tầng) · D-QD4-05 (tách drive_min CẢ HAI kênh) · R5-B (rerun khi có quota)\n\n(b) CHỜ VERDICT CƯỜNG:\n- Visual gates treo: V-01..V-09 (T-018/T-021/T-030) · V-10 (UX-CARDS/R1/R4/R5-A + D-UI-01) · V-16 (UI-FARE-01) · V-18 (ĐA-04) · V-20 (E11) · V-22 (xoá/giữ trajectory.py — D-M3-16b) · V-23 (WEEK2-REPORT) · V-25 (WEB-DEMO-UNIFIED + D-M3-17) · V-26/V-27 (SOFT-ADVICE-01/03) · V-30 (D-M3-04-FIX) (TODO.md:501-543)\n- T-047: 4 mục phụ lục data-contract WAITING-VERDICT (TODO.md:64)\n- REVIEW-092-3: chốt định nghĩa adherence DECISION vs EVENT (TODO.md:30)\n- Q-07 (dispatch shortlist, hướng (c) đã chọn — research được nhưng chốt là Cường) · Q-09 (D-ĐA04-03 budget priority, 4 phương án chờ) · Q-10/Q-12 (veto km-rỗng/9 đổi-pin) · Q-16a (bật lại rest_window kinh tế = prereg MỚI + Cường)\n- D-R02 (PUSH vs PULL — quyết định sản phẩm) · D-R17 (chọn MỘT bucket 20/30/60) · D-F098-B(04/05) (kiến trúc + taxonomy track) · T-043 (mốc 200 điểm hợp lý?) · C2′ (đo hay không — quyết định riêng) · D-M3-06 window_past (xét lại khi Cường duyệt hàng đợi — trụ \"trần 29%\" đã mất theo UPDATE-139) · D-VIS-01 (multiday replay bắt buộc TRƯỚC verdict bật kênh nghỉ)\n\n(c) THUỘC KHÁNH:\n- D-POL-04: corpus T-004 thiếu record Vận Doanh 23/02/2026 + conflict flag — sev cao F0 correctness (DEFERRED.md:27)\n- T-009b: Flutter mobile contract-first (TODO.md:463)\n- SOFT-ADVICE-02: weather soft card + Flutter tôn trọng ranh giới soft (TODO.md:540)\n- D-M3-18-Flutter: app chưa đọc cờ vehicle_range_km_applicable — 40/150 tài xế car thấy số vô căn cứ (DEFERRED.md:79)\n- D-QD4-02-precheck: kiểm advice_checkpoint.db cũ trên máy Khánh (record pre-fix có thể mang accepted trên topic mềm) (DEFERRED.md:111)\n- T-013: join FB group (cần người thật) (TODO.md:467)\n\n(d) OBSOLETE (điều kiện mở lại mất nghĩa):\n- D-POL-05 + chuỗi bị nó chặn (D-POL-01/02/03/06, D-SIM-02): điều kiện \"khi có data thật GSM\" CHẾT theo chỉ thị Cường 2026-07-30 \"sẽ không có data thật từ GSM hay được cung cấp gì thêm\" ⇒ phải reclassify thành MOCK/ASSUMPTION vĩnh viễn thay vì BLOCKED (TODO.md:64, DEFERRED.md:28-29)\n- D-GCP-01: cùng lý do (giữ defer chủ ý, nhưng điều kiện mở không bao giờ kích hoạt) (DEFERRED.md:17)\n- D-ĐA04-02: cần ≥1 tuần telemetry nút bấm NGƯỜI THẬT — không bao giờ có (DEFERRED.md:60)\n- D-SIM-04 (phần dư \"số thật vẫn cần\"): chết cùng lý do (DEFERRED.md:35)\n- D-003: điều kiện \"sau khi có bản clone T-009\" đã đạt từ 2026-07-26 + UI thật đã import ⇒ tiền đề defer hết (DEFERRED.md:9, TODO.md:462)\n- D-002: pin đã trong sim + UI đọc engine range band (UPDATE-121) ⇒ OBE (DEFERRED.md:8)\n- D-004b: đã impl qua S7/PI-5b + positioning wait_only mặc định (UPDATE-089) ⇒ chỉ cần đóng trạng thái (DEFERRED.md:30)\n- D-005: chỉ có nghĩa nếu mở lại pack cũ — pack chết vĩnh viễn (DEFERRED.md:11)\n- T-003: generator demand bị engine sim hiện hành vượt qua (TODO.md:456)\n- T-005: so sánh CrewAI moot — pipeline tự viết đã quá sâu (C6 + CKPT-P1..P5) (TODO.md:458)\n- T-006/T-007/T-008: khung F1/F2/F3 đã giao qua C6 + PI-5a..c + Track UI (TODO.md:459-461)\n- T-011: contract v2 đã giao qua schemas registry đa phiên bản + ui/contracts + advice_v2 (TODO.md:465)\n- T-031..T-037 (track M1-M3 cũ PAUSED/BLOCKED): bị SIM-1..5 + SIM-XANH (OSRM thật) + dashboard replay/journey vượt; chỉ phần weather/event traces (T-034) còn sống dưới tên PI-6/D-EXT-01 (TODO.md:433-491)\n- D-M3-05a (defer_cap trơ, mở khi D-M3-04 xong): điều kiện đạt nhưng kênh nay SOFT+OFF sau REVERT ⇒ moot tới khi Q-16a (DEFERRED.md:92)\n- D-M3-19/E11 bản cũ: D-M3-04 REVERT + quyết định khuyên-mềm ⇒ thiết kế Phase B chết, chỉ hồi sinh quanh V2/UX (DEFERRED.md:97)\n- D-C6-02 + D-A3-06 (phần router free-text): §12 F0 tối giản không-chat ⇒ legacy hoá (DEFERRED.md:21,58)\n\n(e) NÂNG ƯU TIÊN theo chỉ thị \"tối ưu advisor hết mức\":\n- B6-PARITY (HIGH): sản phẩm ship chạy 1/9 solver — mọi tối ưu advisor không tới tay tài xế, A/B đang đo sản phẩm KHÁC sản phẩm ship (TODO.md:27)\n- E9 chọn lọc TRONG kênh: lever kế tiếp theo chính hàng đợi sau khi E1 headroom≈0 (TODO.md:4, DEFERRED.md:94)\n- D-E10-05: chọn k theo Δ TIỀN thay MAE — R của B_real có thể bị báo thấp 65% (DEFERRED.md:87)\n- D-SIM-K3 (+D-M3-02): keyed RNG — nền của mọi phép đo tối ưu, mọi Δ hiện lẫn 4 thành phần (DEFERRED.md:98)\n- D-SIM-K4/K5 + REVIEW-092-1/2: short-horizon + forced paired branch + đo nhân quả từng lượt advice (DEFERRED.md:99-100, TODO.md:28-29)\n- T-041 §2/§3/§4: C1/C5 chi phí + C3 CVaR + C4 MarketStateView vào objective — kênh vị trí là kênh SIG+ duy nhất (TODO.md:81-85)\n- D-A3-02 (MEMSTATE-1): nối completion_hist vào bridge — advisor hết khuyên sai địa chỉ nghẽn (DEFERRED.md:53)\n- T-045e: S2 hết giả định pin đầy — advice an toàn hơn (TODO.md:207)\n- D-SIM-03 phần còn lại: kênh cho S3/S5/S6/S8/S9 — mở rộng action-space advisor (DEFERRED.md:34)\n- D-A3-01b: loại NO-OP khỏi followed — số adherence trung thực làm nền tối ưu (DEFERRED.md:61)\n- T-042-3b + D-SIM-18: estimator một-luật + shrinkage — advice trigger bớt theo nhiễu (TODO.md:223, DEFERRED.md:48)\n- CKPT-P6 + D-C6-03: LLM live shadow→canary→opt-in — nấc cuối pipeline advisor (TODO.md:530, DEFERRED.md:22)\n- T-044/ĐA-06 + D-A3-05: chất lượng card noticing/following theo §12 — T-044 đã hết bị chặn (READY) (TODO.md:246-248, DEFERRED.md:57)\n- D-SIM-K1/K2: tách execution/followed + phân loại caused/consistent_with (DEFERRED.md:101-102)\n- D-C6-01: KB retrieval relevance — điều kiện mở (\"F0 lên UI thật\") đã đạt (DEFERRED.md:20)\n\nGIỮ-DEFER (điều kiện còn nguyên, không thuộc a-e): D-001, D-008/T-015, D-009, D-010 phần còn defer, D-SIM-01, D-SIM-16, D-EXT-01/PI-6, D-ĐA04-04, D-F098-A, D-E10-02/03/04, D-QD4-02, REVIEW-092-4, T-019/T-020/T-027 (arm C placebo của T-020 chưa từng dựng — cân nhắc gộp vào cụm đo nhân quả nhóm e).",
+    "findings":  [
+                     {
+                         "id":  "B6-PARITY",
+                         "claim":  "Sản phẩm ship chỉ gọi 1/9 solver (bonus_feasibility) — mọi tối ưu advisor ở engine không tới tay tài xế và A/B đang đo một sản phẩm KHÁC sản phẩm ship; đây là mục (e) số 1 dưới chỉ thị \u0027tối ưu advisor hết mức\u0027",
+                         "evidence":  "tracking/TODO.md:27 (trỏ ui/backend/app/adapters/advisor.py:190)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Nối các solver còn lại qua adapter advisor backend; làm được không cần verdict (plan mode)"
+                     },
+                     {
+                         "id":  "D-POL-05-OBSOLETE",
+                         "claim":  "Điều kiện mở lại \u0027khi có data thật GSM\u0027 của D-POL-05 đã chết theo chỉ thị Cường 2026-07-30 (\u0027sẽ không có data thật từ GSM hay được cung cấp gì thêm\u0027) ⇒ toàn chuỗi bị nó chặn (D-POL-01/02/03/06, D-SIM-02, D-ĐA04-02, D-GCP-01) là OBSOLETE ở tư cách BLOCKED",
+                         "evidence":  "tracking/TODO.md:64 (T-047) + tracking/DEFERRED.md:28-29",
+                         "severity":  "TB",
+                         "fix_hint":  "Reclassify các mục BLOCKED-D-POL-05 thành PROXY/ASSUMPTION vĩnh viễn có nhãn, đúng tinh thần T-047 §4"
+                     },
+                     {
+                         "id":  "D-SIM-K3",
+                         "claim":  "Chưa có keyed RNG ⇒ mọi Δ trong repo lẫn 4 thành phần (hệ quả thật / random-stream divergence / solver feedback / adherence) — sai độ chắc của TẤT CẢ số đo; là nền bắt buộc trước mọi vòng tối ưu advisor mới",
+                         "evidence":  "tracking/DEFERRED.md:98",
+                         "severity":  "CAO",
+                         "fix_hint":  "Làm cùng D-M3-02 + D-SIM-K4/K5; bắt buộc prereg + đo lại toàn bộ, không sửa lẻ"
+                     },
+                     {
+                         "id":  "D-M3-18",
+                         "claim":  "40/150 tài xế trong catalog là XE HƠI nhưng app vẫn hiện tầm pin theo hệ số xe máy vì Flutter chưa đọc cờ vehicle_range_km_applicable; backend cũng chưa có field đội pin/tham số xe hơi",
+                         "evidence":  "tracking/DEFERRED.md:79 + tracking/TODO.md:538",
+                         "severity":  "CAO",
+                         "fix_hint":  "Tách 2 phần: backend/view (nhóm a — agent làm được), Flutter đọc cờ (nhóm c — claim của Khánh, đã ghi AUDIT-CHECKLIST-cho-Khanh.md); KHÔNG trả null (driver_state.dart:56 ép as num ⇒ crash)"
+                     },
+                     {
+                         "id":  "D-E10-05",
+                         "claim":  "Tiêu chí chọn k* của kênh vị trí đang tối ưu SAI ĐẠI LƯỢNG (MAE dự báo thay vì Δ tiền) — R thật của B_real có thể cao hơn 65%, tức kết luận hiện hành BẢO THỦ; đúng nghĩa đen \u0027tối ưu advisor hết mức\u0027",
+                         "evidence":  "tracking/DEFERRED.md:87",
+                         "severity":  "TB",
+                         "fix_hint":  "Cycle riêng: chọn k bằng Δ tiền trên tuning seeds, n≥100, prereg mới; CẤM đổi k_star của prereg E10 đã khoá"
+                     },
+                     {
+                         "id":  "E9-D-M3-07",
+                         "claim":  "E1 (trọng tài ngân sách) headroom≈0 ở cấu hình sản phẩm ⇒ lever kế tiếp là E9 chọn lọc TRONG kênh; kèm 2 lỗi sản phẩm sửa được NGAY bất kể E1: topic default \u0027bonus\u0027 ở GET /advice và thiếu guard budget_mode!=fifo",
+                         "evidence":  "tracking/DEFERRED.md:94 + tracking/TODO.md:4",
+                         "severity":  "TB",
+                         "fix_hint":  "2 bug nhỏ vào nhóm (a) ngay; E9 cần plan mode + prereg; E1 chỉ mở lại khi Cường bật một kênh ÂM"
+                     },
+                     {
+                         "id":  "T-045e",
+                         "claim":  "soc_pct có BA nguồn cho MỘT biến: l1r=None làm shift_dp im lặng giả định pin ĐẦY (khuyên tài xế 15% pin như 100%), UI hiển thị SOC sha256-bịa không nhãn mock — vi phạm CLAUDE.md §5",
+                         "evidence":  "tracking/TODO.md:207-212",
+                         "severity":  "CAO",
+                         "fix_hint":  "Sửa UI trước (rẻ, đúng ranh giới); kiểm lại phần nào UPDATE-121 đã phủ (chỉ range band, chưa chắc nhãn SOC)"
+                     },
+                     {
+                         "id":  "D-A3-02",
+                         "claim":  "MEMSTATE-1: completion_hist ghi nhưng CHẾT — S1 vẫn nhận completion_rate=1.0 đầu ca ⇒ advisor khuyên nâng tỷ lệ NHẬN trong khi nghẽn là HOÀN THÀNH (khuyên sai địa chỉ)",
+                         "evidence":  "tracking/DEFERRED.md:53",
+                         "severity":  "TB",
+                         "fix_hint":  "Nối completion_hist vào bridge, gộp vào ĐA-01 estimator thống nhất; nhóm (e) + làm được không cần verdict"
+                     },
+                     {
+                         "id":  "D-A3-01b",
+                         "claim":  "Advice NO-OP vẫn được đếm \u0027followed\u0027 (41/70 ở lần đo cũ) ⇒ adherence cao hơn thực chất dù washout đã chết — mọi Δ A/B thừa hưởng; số adherence trung thực là tiền đề cho tối ưu advisor",
+                         "evidence":  "tracking/DEFERRED.md:61",
+                         "severity":  "TB",
+                         "fix_hint":  "Định nghĩa \u0027advice có tác dụng\u0027 ở tầng bridge (so hành vi có-vs-không trong cùng tick), loại NO-OP khỏi tử số"
+                     },
+                     {
+                         "id":  "VERDICT-BACKLOG",
+                         "claim":  "~15 cổng verdict/visual đang treo trên Cường (V-01..V-09, V-10, V-16, V-18, V-20, V-22, V-23, V-25, V-26, V-27, V-30 + Q-07/Q-09/Q-10/Q-12/Q-16a + REVIEW-092-3 + T-047 phụ lục) — hàng đợi lớn nhất của dự án là hàng đợi verdict, không phải hàng đợi code",
+                         "evidence":  "tracking/TODO.md:501-543 + tracking/DEFERRED.md:110",
+                         "severity":  "TB",
+                         "fix_hint":  "Gom một phiên review verdict batch cho Cường; PENDING-REVIEW.md phải được nhắc lại sau mỗi update theo harness"
+                     },
+                     {
+                         "id":  "D-M3-19-E11",
+                         "claim":  "E11 Phase B (đo giá trị nghỉ) chết kép: quyết định soft-advice cấm coin adherence cho kênh nghỉ VÀ D-M3-04 đã REVERT ⇒ câu hỏi đúng còn lại là UX (\u0027gợi ý nghỉ thế nào cho thấy được tôn trọng\u0027), không phải sim; spec e11 mới nằm untracked trong repo mâu thuẫn trực tiếp quyết định",
+                         "evidence":  "tracking/DEFERRED.md:97 + specs/simulation/e11-plan-nghi-co-gia-tri.md (untracked, git status)",
+                         "severity":  "TB",
+                         "fix_hint":  "Chờ V-20; nếu hồi sinh phải thiết kế lại quanh V2 (tầng 5 sức khoẻ), không nối tiếp bản cũ"
+                     },
+                     {
+                         "id":  "TODO-LEGACY-ROWS",
+                         "claim":  "Cụm hàng legacy T-003/T-005/T-006..008/T-011/T-031..T-037 đã bị công việc kế nhiệm vượt qua (C6+PI-5+Track UI, SIM-1..5, SIM-XANH OSRM, registry đa phiên bản) nhưng vẫn đứng TODO/READY/BLOCKED — nhiễu cho mọi lần đọc backlog",
+                         "evidence":  "tracking/TODO.md:456-491 (bảng T-001..T-039) + tracking/TODO.md:433-437 (M1-M3 PAUSED)",
+                         "severity":  "THAP",
+                         "fix_hint":  "Docs-only cycle: đóng/SUPERSEDED từng hàng với con trỏ tới UPDATE kế nhiệm; cần UPDATE-### kèm theo đúng quy trình §4"
+                     }
+                 ]
+}

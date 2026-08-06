@@ -1,0 +1,73 @@
+﻿{
+    "summary":  "UI-side ĐÃ có cảnh báo acceptance/completion dưới ngưỡng thưởng qua đường S1 (cả nhánh already_maxed-at-risk lẫn nhánh infeasible, reason_code acceptance_below_threshold/completion_below_threshold) — tương đương một phần advice_bonus_gate của sim. THIẾU: (1) cảnh báo PHÒNG NGỪA \"sát ngưỡng\" — solver S1 đã tính sẵn acceptance_cliff trong sensitivity nhưng UI adapter vứt bỏ; (2) nhắc SOC thấp — chỉ có styling pill với ngưỡng 25 hardcode ở client (lệch engine 20, họ D-M3-17), S2 bị gate capability-only vì chưa có nguồn SOC runtime tin cậy (proxy bị cấm tường minh); (3) cảnh báo rating — chỉ hiển thị, và repo chưa có ngưỡng rating nào trong policy để trích dẫn; (4) S8 penalty risks (below/near ngưỡng) có solver + template nhưng không nối vào UI recap. Mọi số là MOCK.",
+    "findings":  [
+                     {
+                         "id":  "CO-1",
+                         "claim":  "CÓ: cảnh báo acceptance/completion dưới ngưỡng thưởng trên đường UI v1 (S1) — card \u0027Đủ điểm mốc cao nhất, nhưng thưởng đang có nguy cơ không được trả\u0027 và card infeasible với reason_code acceptance_below_threshold/completion_below_threshold",
+                         "evidence":  "ui/backend/app/adapters/advisor.py:213-244 (nhánh already_maxed at-risk, numbers=[] có chủ ý), advisor.py:273-291 (nhánh infeasible), advisor.py:307-317 (_infeasible_text: \u0027Tỷ lệ nhận đang dưới ngưỡng chính sách — dù đủ điểm thì thưởng vẫn không được trả\u0027); ràng buộc từ solver: src/gsm_core/solvers/bonus_feasibility.py:105-112,119-141,173-174",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "CO-2",
+                         "claim":  "CÓ: template fallback C6 cũng render cùng cảnh báo (gap_sentence đọc ok_acceptance/ok_completion; _penalty_sentence render risks below/near) — nhưng đường C6/F3 này KHÔNG được UI backend serve, chỉ S1 adapter chạy thật",
+                         "evidence":  "src/gsm_core/advisor/templates.py:210-236 (_gap_sentence: \u0027tỷ lệ NHẬN đang dưới ngưỡng... phần thưởng sẽ không được trả\u0027), templates.py:150-156 (_penalty_sentence \u0027đang dưới/đang sát mức tối thiểu\u0027); UI recap chỉ gọi api.advice→S1: ui/web/js/cards.js:335-346",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "CO-3",
+                         "claim":  "CÓ (một phần): SOC thấp chỉ có styling pill đổi màu ở client với ngưỡng 25 HARDCODE — trong khi engine dùng swap_soc_threshold_pct=20; UI tự đặt ngưỡng khác engine, đúng họ lỗi D-M3-17 (UI tự tính khác canonical source)",
+                         "evidence":  "ui/web/js/app.js:104-106 (`socElement.classList.toggle(\"low\", soc \u003c 25)`); configs/pilot_dongda.yaml:274 (`swap_soc_threshold_pct: 20`); đường demo replay app.js:410 còn không toggle low",
+                         "severity":  "TB",
+                         "fix_hint":  "Backend trả cờ soc_low (so với ngưỡng đọc từ configs/pilot_dongda.yaml qua Config.load, như _range_band mockdata.py:58-63) trong driver_state; app.js chỉ đọc cờ, không tự so 25"
+                     },
+                     {
+                         "id":  "THIEU-1",
+                         "claim":  "THIẾU: cảnh báo PHÒNG NGỪA \u0027acceptance sát ngưỡng\u0027 (cliff) — solver S1 ĐÃ TÍNH sẵn sensitivity param acceptance_cliff (trong [ngưỡng, ngưỡng+0.03]) nhưng UI adapter chỉ đọc solution/numbers, vứt toàn bộ sensitivity; grep ui/ không có consumer nào của acceptance_cliff. Sim có advice_bonus_gate phòng ngừa từ đầu ca, UI chỉ cảnh báo KHI ĐÃ dưới ngưỡng",
+                         "evidence":  "src/gsm_core/solvers/bonus_feasibility.py:209-214 (acceptance_cliff: \u0027vài lần từ chối nữa có thể mất TOÀN BỘ thưởng dù đủ điểm\u0027); ui/backend/app/adapters/advisor.py:204-291 không đụng report[\u0027sensitivity\u0027]; đối chiếu sim: src/gsm_sim/advice_bridge.py:633-693 (check_bonus_gate, khuyên phòng ngừa từ đầu ca)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Input đã sẵn NGAY trong _advice_raw: report[\u0027sensitivity\u0027] (advisor.py:204). Thêm một item kind=\u0027info\u0027 khi có param acceptance_cliff; số ngưỡng/tỷ lệ phải vào numbers[] để qua verifier V1 (_verify_item advisor.py:323-329)"
+                     },
+                     {
+                         "id":  "THIEU-2",
+                         "claim":  "THIẾU: UI không phân biệt \u0027còn gỡ được hay không\u0027 cho acceptance dưới ngưỡng — sim chỉ khuyên khi _advice_would_help (khuyên nửa vời tệ hơn không khuyên, hiệu ứng vách đá D-SIM-05); UI luôn nói \u0027khó khả thi... giữ tỷ lệ tốt cho ngày mai\u0027 bất kể tỷ lệ hôm nay còn kéo lên trên ngưỡng được không",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:655-663 (_advice_would_help + skipped_advice); ui/backend/app/adapters/advisor.py:284-286 (câu cố định, không kiểm khả năng gỡ)",
+                         "severity":  "TB",
+                         "fix_hint":  "Input sẵn: acceptance as-of từ _rate_asof (advisor.py:117-131), ngưỡng policy().bonus_min_acceptance (advisor.py:28-37), số offer lũy kế từ driver_statistic_daily (cột total_request_calculate_accept, _RATE_COLS advisor.py:94-97) — đủ để tính \u0027nhận hết N offer còn lại có vượt ngưỡng không\u0027 như sim"
+                     },
+                     {
+                         "id":  "THIEU-3",
+                         "claim":  "THIẾU: không có nhắc/advice SOC thấp nào (đi đổi pin) trên cả v1 lẫn v2 — S2 (shift_dp, solver duy nhất biết SOC/SWAP) bị gate capability-only: UnavailableRuntimeStateProvider trả None ⇒ reasons[\u0027S2\u0027]=\u0027missing_state\u0027, và ADVICE_V2_ENABLED=0 mặc định; docstring CẤM tường minh dùng mockdata._soc_proxy để qua gate (đây là quyết định thiết kế, không phải quên)",
+                         "evidence":  "ui/backend/app/services/advice_checkpoint.py:1-6 (docstring cấm proxy), :57-62 (UnavailableRuntimeStateProvider), :206-209 (missing_state); ui/backend/app/routers/advice_v2.py:38-39 (flag tắt mặc định); ui/backend/app/adapters/mockdata.py:116-119 (_soc_proxy hash deterministic)",
+                         "severity":  "TB",
+                         "fix_hint":  "Input sẵn trong driver_state view cho một reminder UI-side gắn nhãn MOCK (không qua S2): soc_percent + soc_source=\u0027MOCK\u0027 (mockdata.py:191-196), vehicle_range_km_low/high + vehicle_range_km_applicable (mockdata.py:66-88,206), danh sách 11 trạm OSM (mockdata.py:262-276), ngưỡng swap_soc_threshold_pct từ config. Nếu muốn advice thật thì cần quyết định của Cường về nguồn SOC runtime — không tự lách gate"
+                     },
+                     {
+                         "id":  "THIEU-4",
+                         "claim":  "THIẾU: cảnh báo rating sắp mất mốc — UI chỉ HIỂN THỊ rating (avg/n/five_rate) ở màn Cài đặt, không so với ngưỡng nào; và repo hiện KHÔNG có ngưỡng rating trong policy/config (mục rating trong pilot_dongda.yaml chỉ là RNG sinh rating khách mock), nên muốn cảnh báo phải có nguồn policy trích dẫn trước (CLAUDE §5: không bịa chính sách)",
+                         "evidence":  "ui/web/js/app.js:169-172 (chỉ render \u0027★ avg (n lượt · x% 5★)\u0027); ui/backend/app/adapters/mockdata.py:218-222 (rating từ driver_statistic_daily: total_rating/count_rating_5_star/total_order_rating); configs/pilot_dongda.yaml:452-454 (rating = RNG stream sinh mock, không phải ngưỡng); grep penalty_explain.py không có \u0027rating\u0027",
+                         "severity":  "TB",
+                         "fix_hint":  "Input dữ liệu ĐÃ sẵn (rating.n/avg/five_rate trong driver_state); phần thiếu là NGƯỠNG có trích dẫn — cần một entry research/policy về mốc rating GSM trước khi viết cảnh báo, ghi vào backlog thay vì bịa số"
+                     },
+                     {
+                         "id":  "THIEU-5",
+                         "claim":  "THIẾU: S8 penalty_explain (risks below/near ngưỡng + actions \u0027nâng X lên mức tối thiểu Y%\u0027) không được nối vào UI recap — solver và template C6 đều có sẵn nhưng recap card chỉ gọi advisor.advice (S1); namespace advice_id của boundary cũng chỉ chừa s1-/s2-/s4-/s7-, không có s8",
+                         "evidence":  "src/gsm_core/solvers/penalty_explain.py:61-78 (risks below/near, CLIFF_MARGIN 0.03), :108-109 (actions); src/gsm_core/advisor/templates.py:150-156 (render); ui/web/js/cards.js:335 (recap → api.advice = S1); ui/backend/app/routers/advice.py:343 (_REAL_ADVICE_ID_PREFIXES không có \u0027s8-\u0027)",
+                         "severity":  "TB",
+                         "fix_hint":  "Input dựng penalty_explain_input phần lớn sẵn: rates từ driver_statistic_daily (như _rate_asof), thresholds từ advisor.policy(); bảng penalization thuộc 13 bảng GSM trong data catalog — cần kiểm bảng này có trong data/mock/realdata-v1 trước khi khai adapter S8 cho recap"
+                     },
+                     {
+                         "id":  "THIEU-6",
+                         "claim":  "THIẾU (nhỏ): màn Thu nhập hiển thị \u0027nhận X%\u0027 theo ngày nhưng không có so ngưỡng/nhãn cảnh báo; backend không expose ngưỡng bonus_min_acceptance/completion qua bất kỳ endpoint nào nên client không thể làm đúng mà không hardcode (lại D-M3-17)",
+                         "evidence":  "ui/web/js/app.js:134 (render acceptance_rate trần); ui/backend/app/adapters/mockdata.py:256 (history có acceptance_rate); ngưỡng chỉ sống trong advisor.policy() (advisor.py:28-37), không router nào trả ra",
+                         "severity":  "THAP",
+                         "fix_hint":  "Thêm khối policy_thresholds (bonus_min_acceptance/bonus_min_completion + policy_bundle_version) vào driver_state hoặc catalog response — một nguồn, client chỉ đọc"
+                     },
+                     {
+                         "id":  "THIEU-7",
+                         "claim":  "THIẾU (nhỏ): thứ tự chọn reason_code/lý do che mất cảnh báo tỷ lệ — khi vừa hết quỹ giờ VỪA acceptance dưới ngưỡng, cả reason_code lẫn _infeasible_text chỉ nói \u0027quỹ giờ không đủ\u0027, tài xế không biết tỷ lệ mình đang dưới ngưỡng (thông tin vẫn hữu ích cho ngày mai); nudge còn rút gọn message về số đầu tiên nên câu cảnh báo tỷ lệ chỉ nằm sau nút \u0027Vì sao\u0027",
+                         "evidence":  "ui/backend/app/adapters/advisor.py:274-280 (enough_hours xét trước, chỉ MỘT reason_code), advisor.py:307-317 (return sớm ở nhánh enough_hours); ui/web/js/cards.js:315-319 (shortMsg = số đầu tiên hoặc câu đầu)",
+                         "severity":  "THAP",
+                         "fix_hint":  "constraints đã có đủ cả ba cờ trong solution (bonus_feasibility.py:234-235) — có thể ghép nhiều lý do thay vì elif, hoặc thêm câu phụ khi ok_acceptance/ok_completion=False dù enough_hours=False"
+                     }
+                 ]
+}

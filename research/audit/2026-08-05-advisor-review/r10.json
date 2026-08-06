@@ -1,0 +1,89 @@
+﻿{
+    "summary":  "Audit 5 kênh advisor sim (shift_plan/S2, accept_lift/S1, shift_extend, rest_window/S7, positioning/S4). Không tìm thấy rò rỉ tương lai; coin/cadence/claim-effect đúng thiết kế; shift_plan, accept_lift, positioning tắt là trơ thật. 12 finding: 3 CAO — (1) DP S2 làm tròn band điểm mỗi bucket (add_pts//15) nên mốc thưởng ngày gần như không lái được lịch (giờ thường 5đ/cuốc ⇒ 0 band vĩnh viễn, bucket 30′ thì cả giờ peak cũng 0), (2) shift_extend kéo ca không hề so need_min với thời gian ca còn lại ⇒ kéo ca cả khi mốc đạt được trong ca, (3) lan can mệt thứ 3 đo mệt tại thời điểm khuyên thay vì mệt dự phóng cuối ca và dùng need_min thay vì add=1.15×need. Còn lại: baseline S2 không được tín dụng nghỉ (delta thổi phồng), S1 coi lịch sử 0.0 điểm/giờ là thiếu dữ liệu (ngược REVIEW-C9), rest_window tắt vẫn ghi event advice_rest_veto (không trơ về event stream), gate accept_lift parse chuỗi tiếng Việt thay vì constraints typed, và 5 lỗi nhỏ về kế toán phút hoãn, đếm cung đôi, giờ \u003e23, tham số chết, ước lượng offer còn lại.",
+    "findings":  [
+                     {
+                         "id":  "ADV-01",
+                         "severity":  "CAO",
+                         "claim":  "S2 shift_dp: tiến trình điểm trong DP bị floor mỗi bucket (`pb + add_pts // PBS`) nên với point_normal=5 (add_pts ≤ ~12 \u003c PBS=15) band điểm KHÔNG BAO GIỜ tăng ở giờ thường — mốc thưởng ngày (60/100/160/200đ) gần như không ảnh hưởng lịch DP; với bucket_min=30 thì cả giờ peak cũng cho 0 band. Phần dư điểm giữa các bucket bị vứt bỏ (8 bucket × 11đ = 88đ thật nhưng DP thấy 0).",
+                         "evidence":  "src/gsm_core/solvers/shift_dp.py:197 (add_pts = int(round(exp_trips*pph))), :200 (npb_online = pb + add_pts // PBS), :267 (reconstruct cùng floor); cap exp_trips ≤ 60/25×p_acc ≈ 2.23 (shift_dp.py:138-139,145); configs/pilot_dongda.yaml:252-253 (point_peak 10, point_normal 5), DEFAULT_PARAMS points_band_size=15 (shift_dp.py:22). Hệ quả kép: expected_payout báo cáo cộng bonus_at(proj_points) THẬT (shift_dp.py:276) trong khi lịch được chọn không hề tối ưu cho bonus đó — schedule[0] (hành động bridge thi hành, advice_bridge.py:600) có thể là END/REST sai khi ONLINE thêm sẽ chạm mốc.",
+                         "fix_hint":  "Truyền phần dư điểm vào state (track điểm thô thay vì band, hoặc tích luỹ remainder qua bucket); test với point_normal=5, bucket 60\u0027 và 30\u0027 kiểm tier 60 lái được lịch."
+                     },
+                     {
+                         "id":  "ADV-02",
+                         "severity":  "CAO",
+                         "claim":  "shift_extend: công thức KHÔNG so need_min với thời gian ca CÒN LẠI (shift_end_min − now_min) — kéo ca được cấp cả khi mốc điểm đạt được ngay trong ca hiện tại (kéo vô ích tới ~69′, tăng work span không thêm thưởng), và khi chỉ cần kéo một phần (need 70′, còn 60′) thì vẫn cộng nguyên need_min×1.15 thay vì phần thiếu.",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:995-1011 (chuỗi guard không có so sánh nào với shift_end_min − now_min; hàm được world gọi MỌI tick idle từ đầu ca — world.py:889), :1049 (add = min(need_min*1.15, cap) — không trừ thời gian ca còn lại). Docstring tự mâu thuẫn: \"nếu không thì hoãn chỉ làm tài xế mệt thêm mà không thêm thưởng\" (advice_bridge.py:946-947).",
+                         "fix_hint":  "Chỉ kích khi now+need_min \u003e shift_end_min; add = (need_min − (shift_end_min − now_min)) × 1.15 clamp trần."
+                     },
+                     {
+                         "id":  "ADV-03",
+                         "severity":  "CAO",
+                         "claim":  "Lan can sức khoẻ thứ 3 của shift_extend (would_exceed_fatigue) đo SAI đại lượng: so `online_min hiện tại + need_min` với ngưỡng mệt, trong khi mệt thực khi extension có hiệu lực là `online_min + (shift_end − now) + add`; đồng thời dùng need_min trong khi lượng áp thật là add = 1.15×need_min. Khuyên lúc 10h cho ca kết 22h qua guard dễ dàng dù cuối ca đã vượt ngưỡng — lời khuyên đẩy tài xế qua ngưỡng mệt mà rail không bắt (ranh giới §1.2b).",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:1008 (if actor.online_min + need_min \u003e actor.fatigue_threshold_min) vs :1049 (add = need_min*1.15); không nhánh nào cộng (shift_end_min − now_min). Ví dụ số: threshold 720′, online 300′, ca còn 400′ ⇒ guard 360 ≤ 720 pass, nhưng cuối ca 700 + add 69 = 769 \u003e 720.",
+                         "fix_hint":  "Guard theo mệt dự phóng: online_min + max(0, shift_end_min − now_min) + add \u003e fatigue_threshold_min, tính SAU khi biết add."
+                     },
+                     {
+                         "id":  "ADV-04",
+                         "severity":  "TB",
+                         "claim":  "S2 baseline không được TÍN DỤNG nghỉ: `_baseline_naive_rest` gọi `_required_rest(B, params)` không truyền rest_taken_min/shift_elapsed_min trong khi nhánh DP có (spi sẵn hai trường) ⇒ baseline bị ép nghỉ nhiều hơn DP một cách hệ thống khi tài xế đã nghỉ ⇒ delta_payout (số bán ra của kênh shift_plan) thổi phồng.",
+                         "evidence":  "src/gsm_core/solvers/shift_dp.py:288 (R = _required_rest(B, params)) vs :162 (_required_rest(B, params, spi.get(\"rest_taken_min\"), spi.get(\"shift_elapsed_min\"))); bridge luôn emit hai trường từ schema 1.1.0 (src/gsm_sim/advice_bridge.py:510-511).",
+                         "fix_hint":  "Truyền cùng state vào baseline; hoặc ghi caveat delta khi rest_taken_min \u003e 0."
+                     },
+                     {
+                         "id":  "ADV-05",
+                         "severity":  "TB",
+                         "claim":  "S1 bonus_feasibility coi lịch sử 0.0 điểm/giờ là THIẾU dữ liệu (`hist[bucket] \u003e 0`) và rơi về ước lượng lý thuyết dương (1.5 cuốc/h × điểm) ⇒ kết luận feasible lạc quan — ngược trực tiếp REVIEW-C9 ở bridge (\"lịch sử 0.0 là dữ liệu HỢP LỆ ⇒ S1 phải kết luận infeasible\"). Cùng họ: fallback trong-ngày của bridge đòi `actor.points \u003e 0` nên tài xế online đủ lâu mà 0 điểm cũng ra hist rỗng → lý thuyết.",
+                         "evidence":  "src/gsm_core/solvers/bonus_feasibility.py:47-49 (if bucket in hist and hist[bucket] \u003e 0: … else theoretical) vs src/gsm_sim/advice_bridge.py:871-876 (comment REVIEW-C9 khẳng định điều ngược lại) và :877 (elif … and actor.points \u003e 0). Hệ quả: gate `_advice_would_help` của accept_lift tin nhầm \"đủ giờ để với mốc\".",
+                         "fix_hint":  "Đổi điều kiện thành `hist.get(bucket) is not None`; nhánh 0.0 trả rate 0 để enough_hours=False."
+                     },
+                     {
+                         "id":  "ADV-06",
+                         "severity":  "TB",
+                         "claim":  "Kênh rest_window TẮT không trơ về event stream: world log `advice_rest_veto` (channel=\"rest_window\", reason soc_low/fatigued/no_window…) cho MỌI lần bản năng chọn REST kể cả khi channel off / advice disabled / actor ngoài coverage, vì hai rail sức khoẻ đứng TRƯỚC cổng kênh (cổng kênh nằm trong rest_window_hour). Bất đối xứng với shift_extend vốn trả channel_off ĐẦU TIÊN và world chỉ log reason thuộc EXTEND_RAILS — đúng nguyên tắc chính world nêu (\"kênh tắt mà vẫn ghi event ⇒ phá tính so-sánh-được\"). Số veto_calls/xveto của rest_rails_audit bị bơm bởi run không có kênh.",
+                         "evidence":  "src/gsm_sim/world.py:1004-1035 (gọi should_defer_rest và log veto vô điều kiện; không kiểm ch_rest_window); src/gsm_sim/advice_bridge.py:777-780 (soc_low/fatigued trước), :733 (cổng kênh chỉ ở rest_window_hour) — đối chiếu :985-986 (shift_extend trả channel_off trước) và world.py:897 (lọc EXTEND_RAILS), world.py:904-906 (nguyên tắc bị vi phạm).",
+                         "fix_hint":  "Trong world, chỉ log advice_rest_veto khi advice.enabled ∧ ch_rest_window ∧ covers(actor); hoặc should_defer_rest trả reason \"channel_off\" đầu hàm và world lọc như EXTEND_RAILS."
+                     },
+                     {
+                         "id":  "ADV-07",
+                         "severity":  "TB",
+                         "claim":  "Gate accept_lift `_advice_would_help` phân loại điểm nghẽn bằng cách PARSE CHUỖI tiếng Việt của infeasible_reason (\"quỹ\", \"hoàn thành\", \"tỷ lệ nhận\") trong khi S1 đã trả booleans typed `solution[\"constraints\"]` (ok_acceptance/ok_completion/enough_hours) đúng cho việc này — đổi wording ở solver là gate hỏng im lặng (đúng mẫu lỗi hai-nguồn-sự-thật D-SIM-09 mà chính docstring hàm này viện dẫn).",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:917-925 (reason = rep.get(\"infeasible_reason\"); blocked_elsewhere = (\"quỹ\" in reason) or (\"hoàn thành\" in reason); … \"tỷ lệ nhận\" not in reason) vs src/gsm_core/solvers/bonus_feasibility.py:133-135, 234-235 (constraints typed có sẵn ở cả hai nhánh).",
+                         "fix_hint":  "Đọc sol[\"constraints\"]: chỉ khuyên khi not ok_acceptance ∧ ok_completion ∧ enough_hours."
+                     },
+                     {
+                         "id":  "ADV-08",
+                         "severity":  "THAP",
+                         "claim":  "Kế toán phút hoãn của rest_window lệch lưới giờ: `minutes_to` đo từ ĐẦU giờ hiện tại tới đầu giờ X nhưng (a) bị cộng nguyên vào `rest_deferred_min` (khoảng hoãn thật = minutes_to − now%60, phóng đại tới 59′/lần ⇒ defer_cap 120′ cạn sớm) và (b) kiểm khả thi `now_min + minutes_to \u003e shift_end_min` từ chối nhầm khung thực ra bắt đầu trước khi hết ca. Cả hai lệch về phía bảo thủ nhưng làm số deferred_total_min trong event sai đơn vị đo.",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:797 (minutes_to = ((target − hour) % 24) * 60), :798 (now_min + minutes_to \u003e shift_end_min), :826-827 (rest_commit_due_min = (now_min − now_min%60) + minutes_to nhưng rest_deferred_min += minutes_to).",
+                         "fix_hint":  "defer thật = rest_commit_due_min − now_min; dùng nó cho cả cap check lẫn cộng dồn."
+                     },
+                     {
+                         "id":  "ADV-09",
+                         "severity":  "THAP",
+                         "claim":  "count_supply đếm ĐÔI một actor IDLE có pending advice: +1 supply_now tại ô đang đứng VÀ +1 supply_incoming tại ô đích — vi phạm chính bất biến docstring \"một actor đóng góp tối đa MỘT đơn vị cung\". Trần capacity_left bị trừ kép (bảo thủ) và ô nguồn/đích cùng bị nén ứng viên.",
+                         "evidence":  "src/gsm_sim/market_state.py:43-44 (docstring bất biến) vs :57-61 (if IDLE: now[a.cell]+=1; pend = pending.get(...); if pend: inc[pend]+=1 — không loại trừ nhau).",
+                         "fix_hint":  "IDLE có pending ⇒ chỉ đếm ở inc[pend] (hoặc chỉ ở now) — chọn một và test."
+                     },
+                     {
+                         "id":  "ADV-10",
+                         "severity":  "THAP",
+                         "claim":  "S2 `_forecast_arrays` đệm bucket thiếu bằng `hrs[-1] + 1` KHÔNG modulo 24 ⇒ giờ ≥ 24 được truyền vào policy.trip_points/is_peak. Hiện vô hại vì trip_points trả 0 cho giờ ngoài window (6–21), nhưng ngữ nghĩa giờ sai im lặng — ca vắt đêm mà ai mở khung điểm ban đêm là điểm bị mất không dấu vết.",
+                         "evidence":  "src/gsm_core/solvers/shift_dp.py:147-150 (hrs.append(hrs[-1] + 1 if hrs else 12)); gsm_core/policy.py:86-90 (trip_points: order_hour not in point_window_hours → 0, giờ 24+ không bao giờ khớp).",
+                         "fix_hint":  "hrs.append((hrs[-1] + 1) % 24)."
+                     },
+                     {
+                         "id":  "ADV-11",
+                         "severity":  "THAP",
+                         "claim":  "Hai bẫy bảo trì trong bridge: (a) `coin_follows` có tham số `bucket_min` CHẾT — khai trong chữ ký nhưng thân hàm không dùng, ai truyền để đổi lưới coin (vd positioning 60′) sẽ không có tác dụng gì, im lặng; (b) comment bảng \"kênh nào cần cổng R-01\" vẫn nói rest_window \"+= 2.0 MỖI TICK\" — đã lỗi thời so với D-M3-04-FIX (cộng MỘT lần lúc cam kết), dễ dẫn người sửa sau đặt lại cổng sai chỗ.",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:436-460 (bucket_min: float | None = None không xuất hiện trong body — key dùng decision_bucket(now_min) mặc định), :363-366 (comment \"+2.0 mỗi tick\") vs :826-827 (thực tế cộng minutes_to một lần).",
+                         "fix_hint":  "Xoá tham số chết; cập nhật comment theo D-M3-04-FIX."
+                     },
+                     {
+                         "id":  "ADV-12",
+                         "severity":  "THAP",
+                         "claim":  "`_acceptance_recoverable` ước offer còn lại R = (offers/online_min) × (shift_end − now) dùng WALL-CLOCK còn lại (gồm cả thời gian sẽ nghỉ/sạc, và shift_end có thể đã bị shift_extend kéo dài) trong khi mẫu số là phút online — R phóng đại ⇒ \"còn gỡ kịp\" lạc quan hơn thực, khuyên nâng tỷ lệ ở ca thực tế không gỡ nổi (đúng hiệu ứng vách đá D-SIM-05 mà gate này sinh ra để chặn).",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:849-851 (remaining_min = shift_end_min − now_min; elapsed = max(1.0, actor.online_min); R = (o/elapsed) * remaining_min) — tử số rate theo phút ONLINE, nhân với phút LỊCH.",
+                         "fix_hint":  "Chiết khấu remaining theo tỷ lệ online/lịch quan sát được của chính tài xế (online_min / (now − shift_start))."
+                     }
+                 ]
+}

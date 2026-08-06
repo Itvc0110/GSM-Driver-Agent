@@ -1,0 +1,63 @@
+﻿{
+    "summary":  "(a) Đội CHARGE trong sim là Feliz S/Evo200 pack LFP 3,5 kWh CỐ ĐỊNH (research/economics/driver-cost-structure-2026.md:67-69), còn trạm swap phát pack LFP 1,5 kWh (dòng 45) — phần cứng KHÔNG tương thích ⇒ lời khuyên \"đổi pin thay vì sạc\" trong ca là VÔ NGHĨA VẬT LÝ cho đội charge; phiên bản thật duy nhất là quyết định TÀI SẢN (thuê xe swap 50-60k/ngày đã gồm đổi pin miễn phí, dòng 103) — ngoài action space trong ca. (b) Thiết kế rẻ nhất KHẢ THI không phải cross-fleet mà là 2 hướng: (i) trong đội SWAP — advice \"đổi pin SỚM trước giờ đỉnh\": kênh executable đã có sẵn (advice_bridge._map_action đã map solver SWAP→GO_SWAP, coin_follows đo adherence), chỉ cần 1 rule/template so sánh E[travel+wait bây giờ] vs E[giờ đỉnh] từ queue trạm — KHÔNG cần solver mới; điểm chặn duy nhất: behavior.py:151-152 để GO_SWAP là ưu tiên 1 CHỈ khi SOC≤20, không có action \"đổi sớm\" ở SOC 20-35 — cần thêm 1 nhánh nhỏ; (ii) kinh tế swap-vs-charge (sau 2029: 9.000đ/lượt + thuê pin 175k/tháng vs sạc nhà 70-93đ/km) là bài SWEEP THEO COHORT qua config đã chừa sẵn chỗ (pilot_dongda.yaml:276-282), không phải choice point trong ca. (c) Giữ 2 nhóm cứng thì trung bình che: fleet bị trộn lẫn hoàn toàn với archetype (P1=100% charge part-time tối vs P2/P4/P6/P7=100% swap full-time) nên so thu nhập 2 đội là so persona chứ không phải so công nghệ pin; charge_min lưỡng đỉnh (1-2 phút vs 210 phút) làm mean vô nghĩa; Δ advice bị pha loãng vì 77% cohort không thể phản ứng khác theo cấu tạo; và phía TIỀN của swap-vs-charge hiện bằng 0 ở CẢ HAI đội (swap_fee_vnd=0, cash_cost_vnd_per_km=0) nên sim chỉ nhìn thấy phía THỜI GIAN.",
+    "findings":  [
+                     {
+                         "id":  "SWAP-01",
+                         "claim":  "Đội CHARGE = Feliz S/Evo200 pack 3,5 kWh LFP cố định; trạm swap dùng pack 1,5 kWh — không tương thích phần cứng, xe đội charge KHÔNG swap được ⇒ advice \u0027đổi thay vì sạc\u0027 trong ca vô nghĩa vật lý cho đội này",
+                         "evidence":  "research/economics/driver-cost-structure-2026.md:45 (pack swap LFP 1,5 kWh), :67-69 (Feliz S/Evo200 3,5 kWh, dịch vụ 100-130 km); configs/pilot_dongda.yaml:271-273 (hai suất tiêu hao 1.6 vs 0.85 %/km = hai loại xe khác nhau)",
+                         "severity":  "CAO",
+                         "fix_hint":  "Không xây choice point cross-fleet trong ca; phiên bản thật là quyết định tài sản (thuê xe swap 50-60k/ngày gồm đổi pin miễn phí — driver-cost-structure-2026.md:103) thuộc advice dài hạn/pre-shift, sim không A/B được nếu không mô hình hóa đổi xe"
+                     },
+                     {
+                         "id":  "SWAP-02",
+                         "claim":  "Choice point không tồn tại ở BẤT KỲ tầng nào: behavior chia cứng theo fleet ở ưu tiên 1, và ngay cả kênh advice cũng map cứng — solver ra \u0027SWAP\u0027 thì actor đội charge bị dịch thành GO_CHARGE",
+                         "evidence":  "src/gsm_sim/behavior.py:151-152 (`GO_SWAP if actor.fleet == FleetType.SWAP else GO_CHARGE`, ưu tiên 1 khi SOC≤threshold); src/gsm_sim/advice_bridge.py:1093-1095 (_map_action: SWAP → GO_SWAP/GO_CHARGE theo fleet); src/gsm_sim/entities.py:157 (fleet là danh tính, không đổi qua ngày — multi-day cũng không diễn đạt được chuyển đổi)",
+                         "severity":  "CAO"
+                     },
+                     {
+                         "id":  "SWAP-03",
+                         "claim":  "Gán fleet theo archetype: P1=charge, P2/P4/P6/P7=swap, P3/P5=mixed 50/50 ⇒ kỳ vọng ~23% charge (~21/90) vs ~77% swap (~69/90); fleet bị confound hoàn toàn với persona (giờ ca, accept_base, sigma)",
+                         "evidence":  "src/gsm_sim/archetypes.py:36-54 (cột fleet từng archetype), :57-63 (_pick_fleet); configs/pilot_dongda.yaml:234-243 (mix P1 .14 charge + 0.5×(P3 .06 + P5 .12) = .23, charge_fleet_ratio_p3p5=0.5)",
+                         "severity":  "TB"
+                     },
+                     {
+                         "id":  "SWAP-04",
+                         "claim":  "Thời gian swap THẬT trong sim = travel tới trạm + wait xếp hàng (cap 60 phút, hết cap → swap_failed rời trạm SOC nguyên) + swap 60-120s; charge = travel về nhà + 210 phút cứng, luôn về SOC 100%",
+                         "evidence":  "src/gsm_sim/world.py:1185-1235 (travel :1187, vòng chờ pin ready :1206-1219, wait_cap :1203, swap_failed :1221-1230, swap_s :1232-1235, charge_min += travel+wait+swap_s :1235); world.py:1151-1169 (leg về nhà + home_charge_min=210 :1166, soc=100 :1169); configs/pilot_dongda.yaml:159-163, :275",
+                         "severity":  "TB"
+                     },
+                     {
+                         "id":  "SWAP-05",
+                         "claim":  "Phía TIỀN của swap-vs-charge hiện KHÔNG được mô hình: swap_fee_vnd=0 (đúng chính sách Platform độc quyền tới 2029) NHƯNG tiền điện sạc nhà 70-93đ/km cũng =0 (cash_cost_vnd_per_km=0) ⇒ khác biệt duy nhất sim nhìn thấy là downtime; so \u0027net income\u0027 2 đội từ sim là sai do thiếu sót",
+                         "evidence":  "configs/pilot_dongda.yaml:276-282 (swap_fee_vnd: 0, cash_cost_vnd_per_km: 0, comment ghi rõ số sweep 9000đ/lượt + 150đ/km); src/gsm_sim/world.py:1242 (cost_vnd += swap_fee_vnd — sổ riêng, không đụng payout); research/economics/driver-cost-structure-2026.md:74-75 (70-93đ/km sạc nhà)",
+                         "severity":  "TB",
+                         "fix_hint":  "Nếu muốn nói chuyện kinh tế swap-vs-charge thì chạy sweep theo cohort×thời điểm (config đã chừa comment), không cần sửa behavior"
+                     },
+                     {
+                         "id":  "SWAP-06",
+                         "claim":  "Thiết kế rẻ nhất KHẢ THI cho choice point: trong đội SWAP, thêm action \u0027đổi pin sớm\u0027 ở dải SOC trên threshold (vd 20-35%) trước giờ đỉnh — kênh executable + đo adherence ĐÃ CÓ SẴN, chỉ thiếu rule so sánh thời gian (E[travel+wait bây giờ] vs E[giờ đỉnh] từ queue_len/battery ready_at của trạm), KHÔNG cần solver mới",
+                         "evidence":  "src/gsm_sim/advice_bridge.py:599-613 (BridgedAdvice.mapped_action thi hành schedule[0], coin_follows đo follow/ignore), :1093-1095 (SWAP đã map được sang GO_SWAP); trạng thái trạm đã có sẵn để rule đọc: src/gsm_sim/world.py:1201 (queue_len), :1207-1208 (batteries ready_soc_pct/ready_at_min); điểm chặn duy nhất: behavior.py:151-152 chỉ cho GO_SWAP khi SOC≤20",
+                         "severity":  "TB",
+                         "fix_hint":  "1 nhánh nhỏ trong choose_idle_action hoặc alt_action_fn của should_defer_rest (advice_bridge.py:750-785 đã có pattern hành động thay thế); tôn trọng ranh giới: rule tính số, agent chỉ diễn giải"
+                     },
+                     {
+                         "id":  "SWAP-07",
+                         "claim":  "Trung bình cohort che: (1) charge_min lưỡng đỉnh — swap 1-2 phút vs charge 210 phút, mean vô nghĩa; (2) Δ của mọi advice về pin bị pha loãng vì 77% cohort (đội swap) downtime vốn đã rẻ còn 23% (đội charge) không thể hành động khác theo cấu tạo; (3) tín hiệu tắc trạm giờ đỉnh (swap_failed sau 60 phút chờ) chỉ chạm đội swap — biến mất trong average 2 đội",
+                         "evidence":  "src/gsm_sim/world.py:1166 (210 phút) vs :1232-1233 (60-120s); world.py:1221-1230 (swap_failed); tỷ lệ đội từ configs/pilot_dongda.yaml:234-243",
+                         "severity":  "CAO",
+                         "fix_hint":  "Mọi metric pin phải báo THEO FLEET (và theo archetype vì confound SWAP-03), kèm phân phối/percentile thay vì mean"
+                     },
+                     {
+                         "id":  "SWAP-08",
+                         "claim":  "Sự kiện sạc giữa ca của đội charge là hiếm-nhưng-thảm-họa và bị mean nuốt mất: P1 (toàn bộ đội charge thuần) ca chỉ 3-4h với tầm khả dụng ~94 km (80%/0.85%/km) nên gần như không bao giờ sạc giữa ca; actor charge duy nhất dễ dính 210 phút là P3/P5 mixed-draw ca dài 8-12h",
+                         "evidence":  "src/gsm_sim/archetypes.py:37 (P1 shift_len 3-4h, fleet charge), :39,41 (P3 11-12h, P5 8-9h, mixed); configs/pilot_dongda.yaml:273-274 (0.85%/km, threshold 20)",
+                         "severity":  "THAP"
+                     },
+                     {
+                         "id":  "SWAP-09",
+                         "claim":  "Quan hệ SOC↔km duy nhất trong behavior (_range_km_est) hiện KHÔNG có caller — quyết định đi đổi pin dùng ngưỡng SOC thô, không dùng km còn lại ⇒ rule so sánh thời gian mới (SWAP-06) sẽ là nơi đầu tiên thực sự dùng nó",
+                         "evidence":  "src/gsm_sim/behavior.py:124-131 (docstring \u0027Hàm hiện chưa có caller\u0027, giữ vì test_config_flags_wired.py canh số dẫn xuất)",
+                         "severity":  "THAP"
+                     }
+                 ]
+}
