@@ -294,3 +294,21 @@ theo thứ tự khác nhau** ⇒ Δ cuối cùng lẫn cả hệ quả thật l�
    Luôn `read_text(encoding="utf-8")`.
 5. **Cổng nào không tự chứng minh bắn được thì là cổng trang trí** — sever-restore đủ bốn bước:
    tiêm vào file nguồn thật · chạy pytest thật · restore · verify `sha256`.
+
+
+---
+
+## BỔ SUNG 2026-08-06 (chương trình tối ưu advisor E1–E5, UPDATE-151..151)
+
+Hai việc MỚI cho Flutter (backend + web đã xong — UPDATE-154):
+
+1. **Đọc `policy_thresholds` từ payload advice** (`bonus_min_acceptance/completion` + nguồn
+   `policy_v:`) — TUYỆT ĐỐI không hardcode ngưỡng ở client (họ lỗi D-M3-17: web từng hardcode
+   SOC 25 ≠ engine 20, đã sửa; app đừng lặp lại).
+2. **Render thẻ cliff phòng ngừa**: item mới `reason_code = "acceptance_near_threshold"`,
+   `advice_id` đuôi `-cliff`, `numbers` RỖNG CÓ CHỦ Ý (không hứa tiền) — thẻ info thường,
+   KHÔNG nút "Làm theo" đặc biệt; message do solver cấp, đừng viết lại lời.
+
+Nhắc lại còn nguyên: K-01 (3 test + 1 bất đồng chính sách an toàn cần verdict) · K-02
+(collection error chặn suite ui/backend) · K-03 (4 hàm chưa phân loại money-manifest) ·
+D-M3-18 phần Flutter (đọc cờ `vehicle_range_km_applicable`).

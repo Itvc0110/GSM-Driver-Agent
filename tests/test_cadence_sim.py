@@ -49,6 +49,13 @@ def run_gate():
     return run_once(_cfg(accept_lift=True), seed=1000)
 
 
+@pytest.fixture(scope="module")
+def run_full3():
+    """E5 dedupe (phán quyết r13): BA test dưới từng chạy y hệt run này ba lần (~14s).
+    Chỉ ĐỌC — cặp determinism ở `test_run_events_bit_identical` vẫn chạy TƯƠI, ngoài fixture."""
+    return run_once(_cfg(accept_lift=True, shift_extend=True, rest_window=True), seed=1000)
+
+
 def test_washout_dead_two_units_converge(run_gate):
     """Dấu hiệu washout CHẾT: hai đơn vị đo HỘI TỤ.
 
@@ -106,9 +113,9 @@ def test_recheck_does_not_reroll(run_gate):
     assert not flip, f"{len(flip)} quyết định bị RE-ROLL (washout): {list(flip)[:3]}"
 
 
-def test_cadence_caps_and_suppression_events():
+def test_cadence_caps_and_suppression_events(run_full3):
     """Ngân sách/cooldown thật sự nén, và mỗi lần nén để lại reason TYPED (không spam)."""
-    r = run_once(_cfg(accept_lift=True, shift_extend=True, rest_window=True), seed=1000)
+    r = run_full3
     sup = [e for e in r.events if e.kind == "advice_suppressed"]
     assert sup, "phải có event advice_suppressed khi nhịp nén"
     reasons = {e.detail.get("reason") for e in sup}
@@ -140,9 +147,9 @@ def test_cadence_config_actually_parsed_from_yaml():
     assert b.cadence_cfg.max_proactive_per_shift == 6, b.cadence_cfg
 
 
-def test_budget_respected_per_driver():
+def test_budget_respected_per_driver(run_full3):
     """≤6 proactive/ca cho các kênh tính ngân sách (positioning ngoài budget — có căn cứ)."""
-    r = run_once(_cfg(accept_lift=True, shift_extend=True, rest_window=True), seed=1000)
+    r = run_full3
     per_actor: dict[int, int] = {}
     budgeted = {"advice_bonus_gate", "advice_shift_extend", "advice_rest_window",
                 "advice_given"}
@@ -242,7 +249,7 @@ def test_cadence_state_does_not_leak_across_days():
         assert per_actor and max(per_actor.values()) <= 6, (i, max(per_actor.values()))
 
 
-def test_suppressed_events_are_not_phantom():
+def test_suppressed_events_are_not_phantom(run_full3):
     """R-08: chỉ ghi "bị nén" khi THẬT SỰ có lời khuyên để nói.
 
     Ba kênh từng hỏi `cadence_allows` ở ĐẦU hàm — trước khi biết có nội dung gì — nên mỗi
@@ -252,7 +259,7 @@ def test_suppressed_events_are_not_phantom():
 
     Bất biến kiểm ở đây: **một kênh chưa từng NÓI thì cũng không được có event bị NÉN** —
     nếu nó chưa bao giờ có gì để nói thì không có gì để nén."""
-    r = run_once(_cfg(accept_lift=True, shift_extend=True, rest_window=True), seed=1000)
+    r = run_full3
     spoken = {"advice_bonus_gate": "accept_lift", "advice_shift_extend": "shift_extend",
               "advice_rest_window": "rest_window"}
     said = {ch for k, ch in spoken.items() if any(e.kind == k for e in r.events)}
