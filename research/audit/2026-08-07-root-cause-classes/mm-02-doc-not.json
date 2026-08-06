@@ -1,0 +1,162 @@
+{
+  "item": "mm-02-shift-family.json (SHIFT_PLAN S2 shift_dp + SHIFT_EXTEND + sp_end_only) — đọc nốt + TỰ KIỂM trên code, gắn lớp L1..L6",
+  "doc_ngay": "2026-08-07",
+  "cach_lam": "Đọc hết artifact → mở từng file:line → viết 5 probe chạy thật (uv run) trên shift_dp, demand_field, actor hint, khung kéo ca, và đường l1r sản phẩm. Mọi con số dưới đây là SỐ TÔI ĐO, trừ chỗ ghi rõ DERIVED.",
+  "probe_da_chay": [
+    "probe A — END reachability: 7 mức chi phí × 225 cấu hình (B×points×SOC×demand) = 1.575 lần solve",
+    "probe B — floor band: add_pts//PBS theo eo; pts0 floor",
+    "probe C — λ(cell,hour) từ config pilot + hint per-actor (90 actor × 19 giờ × 3 seed = 5.130 cặp)",
+    "probe D — khung kéo ca vs point_window_hours (5 seed × 90 actor = 450)",
+    "probe E — đường SẢN PHẨM: derive_shift_plan_input_l1r trên mock l1r 90 ngày (20 driver × 4 giờ × 3 ngày = 2.100 bucket)"
+  ],
+
+  "findings": [
+    {
+      "title": "END BẤT KHẢ ở MỌI mức chi phí — không chỉ world zero-cost. REST là hành động phần thưởng 0 xét TRƯỚC END với so sánh CHẶT ⇒ V[b,soc,pb,0] ≥ bonus_at(pb·PBS) bằng quy nạp ⇒ END không bao giờ thắng. Điều kiện reopen của mm-02 #1 và của S2-5 (\"kênh chỉ có nghĩa khi policy costs ACTIVE, as_of ≥ 2029-04\") là VÔ HIỆU, và guard mà mm-02 đề xuất (chỉ cảnh báo khi cash==0 và fee==0) là guard ÂM TÍNH GIẢ",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/shift_dp.py:245-249 (REST vô điều kiện, v = 0.0 + V[b+1,soc,pb,nrl], nrl=0 khi rl=0) · :250-254 (END: v = bonus_at(pb*PBS), `if v > best_v` — CHẶT, xét SAU REST) · :186-188 (terminal V[B,soc,pb,0] = bonus_at(pb*PBS)) · mm-02 đề xuất sai ở extension_proposals[5]. ĐO: 0/225 case có END ở CẢ 7 mức chi phí, kể cả cash=1.000.000đ/km + swap_fee=1.000.000đ (probe A). S2-5 lập luận dominance qua ONLINE (`khi online_net > 0`) nên phụ thuộc chi phí; lập luận qua REST thì KHÔNG.",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "L3 (cơ chế MỒ CÔI: cờ `shift_plan_end_only` advice_bridge.py:241/:624 + action END + reason shift_dp.py:376 đều không có đường sống) — cơ chế gây ra là L4 (END đứng SAU REST trong chuỗi, so sánh chặt nuốt mọi thế hoà). KHÔNG phải L5: chi phí không liên quan. Đây là phần MỚI so với S2-5, và nó BÁC một điều kiện reopen đã ghi."
+    },
+    {
+      "title": "mm-02 #5 — clamp world_end CỤT: 0 < add < need_extra vẫn ÁP kéo ca; `cap_unreachable` chỉ gác TRẦN extend, không có cổng tương ứng cho TRẦN thế giới",
+      "severity": "TB",
+      "confidence": "CAO (cấu trúc) / THẤP (tần suất — CHƯA ĐO số lượt thật)",
+      "evidence_file_line": "src/gsm_sim/advice_bridge.py:1148-1149 (`if need_extra_min > extend_max − shift_extended: return 'cap_unreachable'`) vs :1191 (add = min(need_extra×1.15, trần extend)) → :1197 (add = min(add, world_end − shift_end)) → :1198 chỉ chặn add ≤ 0 → :1219 áp. ĐO (probe D, 5 seed × 90 actor): 32/450 = 7,1% actor có shift_end trong vòng 60′ trước world_end ⇒ dân số RỦI RO (không phải tần suất sự kiện — còn phải qua gap/guardrail/cadence/coin).",
+      "tu_kiem": true,
+      "lop": "L4",
+      "ghi_chu": "⚠ PHẢN BIỆN CHÍNH TÔI: vùng này là TẬP CON của vùng D-ADV-02. Clamp một phần đòi shift_end > 1.380′ (23:00) ⇒ toàn bộ khung kéo nằm ở giờ ≥23 ⇒ `policy.trip_points` trả 0 (policy.py:86-90, config :254 point_window_hours 6..21). ⇒ **cổng-HẸP của D-ADV-02 đã chốt sẽ xoá 100% vùng này ở config hiện hành**; mm-02 #5 chỉ còn giá trị CẤU TRÚC (nếu world_end hoặc cửa sổ điểm đổi). Không đáng một cycle riêng."
+    },
+    {
+      "title": "mm-02 #6 — certainty-equivalence trên terminal BẬC THANG: bonus_at(điểm-kỳ-vọng-đã-band-hoá) thay cho E[bonus(điểm)]; shift_extend cũng deterministic (không P(đạt mốc))",
+      "severity": "TB",
+      "confidence": "CAO (cấu trúc) / KHÔNG KIỂM (độ lớn: con số \"P thật ~50-60%\" của artifact là DERIVED, tôi không đo)",
+      "evidence_file_line": "src/gsm_core/solvers/shift_dp.py:188 (terminal), :252 (END), :283 (`exp_payout += bonus_at(proj_points)`) — bonus_at áp lên MỘT điểm ước, không lấy kỳ vọng qua phân phối; src/gsm_sim/advice_bridge.py:1126 (need_min = gap/rate×60, không phương sai) + :1191 (buffer ×1.15 không neo thống kê)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "KHÔNG thuộc L1..L6. Cùng HỌ với `D-ADV-05` (verdict feasible nhị phân trên median, không CI) nhưng khác code site — D-ADV-05 là S1/bonus_feasibility, đây là S2/shift_dp + shift_extend. Đây là một MODEL GAP loại \"điểm-ước thay cho phân phối\", lớp mà bản đồ 6 lớp chưa có ô."
+    },
+    {
+      "title": "mm-02 #3 (phần MỚI dùng được) — `pts0 = points_now // PBS` floor tới 4 điểm: tài xế 58 điểm được DP mô hình ở 55; 98 → 95",
+      "severity": "THẤP-TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/shift_dp.py:176 (`pts0 = min(NB-1, int(spi['points_now']) // PBS)`). ĐO (probe B): 56→55 (mất 1), 57→55 (2), 58→55 (3), 59→55 (4), 98→95 (3), 99→95 (4). Sát mốc 60 thì lệch 4 điểm là lệch ĐÚNG CHỖ quyết định.",
+      "tu_kiem": true,
+      "lop": "L2",
+      "ghi_chu": "S2-1/S2-2 (đã biết) nói về floor TRANSITION `add_pts // PBS` mỗi bucket; dòng :176 là một floor KHÁC, ở điểm KHỞI ĐIỂM, chưa thấy ghi ở đâu. Xếp L2 vì nó sống sót cùng lý do S2-2 sống sót: fixture test chọn số chằn (charter đã liệt ADV-01 test vào L2)."
+    },
+    {
+      "title": "mm-02 #3 (phần CHÍNH) — \"floor kép làm DP mù mốc thưởng khi exp_trips < 0,9\": ĐÚNG về cơ chế nhưng CHẾ ĐỘ CẦU ĐÓ GẦN NHƯ KHÔNG XẢY RA ở cả hai đường",
+      "severity": "THẤP (hạ từ CAO)",
+      "confidence": "CAO",
+      "evidence_file_line": "shift_dp.py:204-207. ĐO đường SIM (probe C, 3 seed × 90 actor × 19 giờ = 5.130 cặp, cap ĐÚNG 2,4): add_pts < 5 ở 0,1% (5/5.130). ĐO đường SẢN PHẨM (probe E, l1r 20 driver × 4 giờ × 2 ngày = 1.400 bucket, ngày 2026-08-15 và 2026-09-28): add_pts ∈ {9, 11}, add_pts < 5 = **0,0%**, eo==0 = 0,0%.",
+      "tu_kiem": true,
+      "lop": "L2",
+      "ghi_chu": "Trùng S2-2 (đã biết) về cơ chế; phần \"dư\" mà mm-02 tuyên bố (chế độ demand thấp) tôi ĐO ra là ~0% ở cả hai shape ⇒ không mở thêm việc. Chỉ đạt được ở cold-start ngày đầu của dữ liệu (xem finding l1r cold-start dưới)."
+    },
+    {
+      "title": "mm-02 #4 — \"cộng top-3 cell phóng đại tới 3× ở giờ vắng, thổi E[payout]/delta\": hệ quả bị ĐO KHÁC. Cap nuốt phần lớn; tác dụng THẬT là ĐẨY eo lên trần ⇒ làm nặng thêm S2-3 (mất tín hiệu), không phải thổi phồng payout",
+      "severity": "TB (giữ, nhưng ĐỔI HỆ QUẢ)",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/advice_bridge.py:504-509 (top-3 cell/bucket) + src/gsm_core/solvers/shift_dp.py:147-152 (grouped[b] += ..., cap). ĐO (probe C, 5.130 cặp, cap 2,4): CẢ HAI vượt cap (cộng VÔ HẠI) 33,4% · chỉ tổng-top-3 vượt cap (cộng ĐẨY LÊN TRẦN) 58,8% · cả hai dưới cap (phóng đại trực tiếp) 7,8%. Tỷ lệ eo(top3)/eo(1 cell): **median 1,24× · max 2,98×** — KHÔNG phải \"3× ở giờ vắng\". eo == cap ở **92,2%** bucket (median 2,400).",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "Hệ quả (b) của artifact (\"thứ tự bucket-vắng để ĐẶT NGHỈ bị đảo\") không đứng được: eo phẳng ở 92,2% ⇒ không có thứ tự nào để đảo; đòn bẩy nghỉ còn lại của DP là thang ĐIỂM theo giờ (peak 10 vs thường 5), không phải cầu. ⚠ **LỖI BẰNG CHỨNG CỦA ARTIFACT**: mm-02 ghi \"cap 1,2 cuốc/bucket\" — SAI trên đường sim. Bridge truyền `bucket_min = 60` (configs/pilot_dongda.yaml:403, advice_bridge.py:172 và :579) ⇒ cap_trips = 60/25 = **2,4**. mm-07 S2-3 dùng đúng 2,4."
+    },
+    {
+      "title": "mm-02 #2 — \"shift_extend ngoại suy rate trung-bình-cả-ca\": vế CẦU/ĐIỂM THEO GIỜ trùng D-ADV-02 (đã biết, đã đo 18,2–20,8%); vế RIÊNG của mm-02 (\"rate ngậm peak ⇒ need_min ước NON\") ĐÃ BỊ ĐO NGƯỢC DẤU ở vòng sau",
+      "severity": "CAO→CITE (không phải finding mới)",
+      "confidence": "THẤP cho phần riêng của mm-02",
+      "evidence_file_line": "Code ĐÚNG như artifact mô tả, tôi tự kiểm: src/gsm_sim/advice_bridge.py:1122-1123 (online_h = max(0.5, online_min/60); rate = points/online_h) · :1126 (need_min) · :1191 (×1.15) · src/gsm_sim/world.py:897-898 call site KHÔNG truyền demand_hint_fn trong khi :932 (consult) và :1038-1039 (should_defer_rest) CÓ truyền. NHƯNG: tracking/DEFERRED.md:122 (D-ADV-02 mục (c)) đã ĐO tỷ lệ need_S1/need_flat, n=59: **p50 = 1,000 · max 1,132 · 13 lượt THẤP hơn vs 1 lượt cao hơn** ⇒ giả thuyết \"peak làm need_min lệch có hệ thống\" KHÔNG được số liệu đỡ.",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "⚠ Và extension_proposal[0] của mm-02 (truyền demand_hint vào check_shift_extend, tính need_min theo khung giờ thật) CHÍNH LÀ bản `W_END` mà refuter đã đo: còn **13,6%** lượt nói được (mất ~86%) ⇒ **đã bị bác**; bản được chốt là `cổng-HẸP` (`_points_possible` làm cổng một chiều, giữ 72/88). Đọc nốt mm-02 KHÔNG mở thêm việc gì cho shift_extend."
+    },
+    {
+      "title": "mm-02 #7 — `rate` của shift_extend không có min-sample guard, trong khi đường S1 CÓ: hai quy ước cho cùng một đại lượng điểm/giờ",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/advice_bridge.py:1122-1123 (guard duy nhất là floor `max(0.5, ·)`) vs :993 (`elif actor.online_min >= self.min_online_min_for_rate and actor.points > 0`) — `min_online_min_for_rate` đọc ở :258, config :394, và CHỈ có MỘT consumer là :993. Mẫu số ngậm phút nghỉ = D-M3-19 (CITE).",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "Ba quy ước cùng tồn tại cho \"điểm/giờ\": memory day-average (D-ADV-04b), in-shift có guard (:993), in-shift không guard (:1122)."
+    },
+
+    {
+      "title": "MỚI (tôi tìm) — HỌ SHIFT CÓ CHẠM ĐƯỜNG SẢN PHẨM: `shift_dp.solve` được nối thẳng vào backend, chỉ bị chặn bởi việc CHƯA CÓ runtime provider (`missing_state`), không phải bởi ĐA-07",
+      "severity": "TB (hôm nay trơ) / CAO (ngày ai đó cắm provider)",
+      "confidence": "CAO",
+      "evidence_file_line": "ui/backend/app/services/advice_checkpoint.py:39 (import shift_dp) · :213-225 (derive_shift_plan_input_l1r → registry.validate → shift_dp.solve) · :206-209 (`state = runtime_state_provider.get_state(...)`; không fresh ⇒ `reasons['S2']='missing_state'`, return) · :55-62 `UnavailableRuntimeStateProvider` là default sản phẩm · router ui/backend/app/routers/advice_v2.py:77-89. ĐO shape sản phẩm (probe E, ngày 2026-08-15 & 2026-09-28): eo==0 **0,0%**, cap 2,4 BIND **88,6%** ⇒ **S2-3 (eo phẳng, hết tín hiệu cầu) SỐNG NGUYÊN trên đường sản phẩm**, không chỉ trong sim.",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "Đây là câu trả lời cho câu hỏi 4. `B6-PARITY` nói \"S1 là solver DUY NHẤT đường sản phẩm chạy\" — đúng về THỰC THI hôm nay, nhưng S2 đã được đi dây đầy đủ (validate schema, artifact, candidate, presenter) và cách một `RuntimeStateProvider` là chạy. ⇒ mọi câu \"S2-x không nhiễm số ship vì kênh TẮT theo ĐA-07\" là ĐÚNG NHƯNG KHÔNG ĐỦ: cổng thật là `missing_state`, và ĐA-07 không gác đường này."
+    },
+    {
+      "title": "MỚI (tôi tìm) — DEMO của Track UI BẬT `shift_plan: True` dù ĐA-07 đã TẮT nó trong config pilot; adherence ép 0 nên sim không đổi, nhưng artifact/nội dung S2 vẫn được sinh cho bề mặt Cường xem",
+      "severity": "TB",
+      "confidence": "CAO cho code path / CHƯA TỰ KIỂM phần hiển thị",
+      "evidence_file_line": "ui/backend/app/services/demo_session.py:68-71 (`advice['channels'] = {'shift_plan': True, 'accept_lift': True, 'shift_extend': False, 'rest_window': False}`) · :74-76 (adherence_by_archetype = 0.0 mọi archetype) · :67 (positioning_overrides='off') · :77-78 (checkpoint_shadow.enabled=True, presentation_mode='template') — đối chiếu configs/pilot_dongda.yaml:336 (`shift_plan: false` theo ĐA-07). Đường sinh: advice_bridge.consult :599-614 gọi `shift_dp.solve` rồi `_capture_checkpoint('S2', …)` TRƯỚC coin ⇒ adherence 0 KHÔNG chặn việc sinh artifact.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "Cùng khuôn UPDATE-117 (cờ config nói SAI hành vi thực): đọc pilot config thì tin shift_plan đã tắt toàn hệ; thực tế demo bật lại. Ảnh hưởng ĐỘNG LỰC HỌC sim = 0 (adherence 0, docstring :49-56 tuyên bố observer-only, tôi đọc và thấy đúng) ⇒ KHÔNG lật số A/B nào. Nhưng nội dung S2 (lịch, next_action, digest \"E[payout] … hơn baseline …\") mang đủ S2-1/S2-2/S2-3 đi vào checkpoint artifact. ⚠ Tôi CHƯA mở UI để xem nó có render ra card hay không."
+    },
+    {
+      "title": "MỚI (nhỏ) — comment `ACTIONS` khai tie-break priority SAI so với code: khai (ONLINE, REST, SWAP, END), code chạy ONLINE → SWAP → REST → END",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/shift_dp.py:16 (`ACTIONS = (\"ONLINE\", \"REST\", \"SWAP\", \"END\")  # thứ tự = tie-break priority`) vs thứ tự thực thi :225 (ONLINE) → :239 (SWAP) → :245 (REST) → :251 (END); đảo SWAP/REST là CÓ CHỦ Ý từ Cycle R/H3 (:229-237) nhưng dòng :16 không được sửa theo.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "Nhỏ, nhưng nó chính là thứ làm người đọc (kể cả S2-5) suy ra dominance qua ONLINE thay vì qua REST ⇒ ra sai điều kiện reopen. Sửa một dòng comment."
+    },
+    {
+      "title": "MỚI (nhỏ, cold-start) — dự báo l1r rỗng cho mọi giờ SAU t_now khi lịch sử chưa phủ: ngày đầu của dữ liệu, 94,3% bucket có eo = 0 ⇒ DP suy biến về kế hoạch TOÀN SWAP (S2-4) NGAY TRÊN ĐƯỜNG SẢN PHẨM",
+      "severity": "THẤP (không sống với mock 90 ngày)",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:517-518 (`all_trips = [t for t in _rows(l1r,'trips') if request_time <= t_now]` — lọc theo DẤU THỜI GIAN TUYỆT ĐỐI, không phải \"cùng giờ của các ngày trước\") + :522-533 (giờ không có (hour,cell) ⇒ không sinh dòng) + shift_dp.py:154-157 (thiếu bucket ⇒ đệm eo=0). ĐO (probe E): t_now = 2026-07-01 (ngày ĐẦU của 90 ngày) ⇒ eo==0 **94,3%** (660/700 bucket), add_pts<5 97,1%; t_now = 2026-08-15 hoặc 2026-09-28 ⇒ eo==0 **0,0%**.",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Bộ lọc là ĐÚNG (chống rò tương lai, D-M3-11) — hệ quả cold-start mới là vấn đề. Ghi lại để ai bật S2 sản phẩm với dữ liệu ngắn không đọc nhầm 'không có cầu' thành sự thật."
+    }
+  ],
+
+  "lop_thong_ke": {
+    "tong_so_finding_da_xep": 12,
+    "L1": 4,
+    "L2": 2,
+    "L3": 2,
+    "L4": 1,
+    "L5": 0,
+    "L6": 0,
+    "KHONG": 3,
+    "nhan_xet_ve_gia_thuyet_lop": [
+      "L5 (world zero-cost) = 0 ở họ shift, VÀ artifact đã xếp NHẦM finding lớn nhất của nó vào L5. Tôi đo được END bất khả ở cash=1e6đ/km + fee=1e6đ ⇒ nguyên nhân là THỨ TỰ CỔNG (L4) + cơ chế mồ côi (L3), không phải chi phí bằng 0. Bài học lớp: L5 là một cách kể chuyện HẤP DẪN và dễ gán sai — phải thử can thiệp (bật chi phí lên) trước khi gán L5.",
+      "3/12 finding KHÔNG vào được lớp nào, và cả ba cùng MỘT khuôn mà bản đồ 6 lớp chưa có ô: **objective mô hình hoá bằng ĐIỂM ƯỚC / thiếu một vế mà world thực sự định giá** (Jensen trên bậc thang; cầu-theo-giờ của shift_extend; cạnh tranh cung). Artifact tự gọi khuôn này là 'cùng lớp station_choice' và gắn cho 3/7 finding của nó. ⇒ Đề nghị **L7 — objective thiếu vế / dùng điểm-ước thay phân phối**, có sẵn 3 thực thể ở riêng họ shift (+ D-ADV-05, + station_choice/D-E4-06 ngoài họ).",
+      "L1 là lớp ĐÔNG NHẤT ở họ shift (4/12) và cả 4 đều rẻ để sửa (một cách tính, một comment, một cờ) — khớp giả thuyết trung tâm của charter.",
+      "L2 (test ghim vô hiệu) xuất hiện 2 lần và cả hai đều là ĐIỀU KIỆN sống sót, không phải nguyên nhân gốc — nên khi lập cycle, L2 phải là 'cổng chặn tái diễn' đi kèm fix, không phải một cycle riêng."
+    ]
+  },
+
+  "tra_loi_cau_hoi_4": {
+    "con_finding_nao_ngoai_D-ADV-02_va_S2-1..S2-6": "CÓ 4, nhưng chỉ 2 đáng làm: (1) END bất khả ở MỌI mức chi phí ⇒ huỷ điều kiện reopen của S2-5 và huỷ guard mà mm-02 đề xuất; (2) S2 đã được đi dây trên backend sản phẩm, cổng thật là `missing_state` chứ không phải ĐA-07. Hai cái nhỏ: pts0 floor (:176) và comment ACTIONS sai thứ tự. Bốn finding còn lại của mm-02 (#2 shift_extend, #3 floor chế độ demand thấp, #4 top-3, #5 clamp) đều HOẶC trùng nợ đã biết HOẶC bị số liệu của tôi hạ độ lớn/đổi hệ quả.",
+    "co_cham_duong_san_pham_khong": "CÓ — hai chỗ, cả hai đều CHƯA từng ghi: (a) `ui/backend/app/services/advice_checkpoint.py:213-225` gọi thẳng `shift_dp.solve` cho candidate S2, chỉ bị chặn bởi `UnavailableRuntimeStateProvider` (:55-62) ⇒ ĐA-07 KHÔNG gác đường này; và trên chính shape l1r đó tôi đo cap BIND 88,6% ⇒ S2-3 sống trên đường sản phẩm. (b) `ui/backend/app/services/demo_session.py:68-71` bật `shift_plan: True` cho demo (adherence 0 ⇒ không đổi động lực học, nhưng vẫn sinh artifact/nội dung S2 cho bề mặt review).",
+    "canh_bao_ve_pham_vi": "Cả hai đều là MOCK/demo data, không phải tài xế thật. Không có số nào đã báo cho tài xế bị nhiễm. Nhưng câu 'kênh TẮT theo ĐA-07 nên vô hại' phải sửa lại thành 'kênh tắt trong SIM; trên backend nó tắt vì THIẾU DỮ LIỆU RUNTIME'."
+  },
+
+  "toi_da_tu_bac_bo": [
+    "❌ RÚT LẠI — 'lệch ĐƠN VỊ giờ→bucket 30′': tôi đã dựng xong finding (λ của demand_field là đơn/GIỜ, bridge ghi thẳng vào bucket ⇒ 2×) và đo 99,7% cap-bind với cap 1,2. SAI. `advice.bucket_min = 60` (configs/pilot_dongda.yaml:403, advice_bridge.py:172) ⇒ bucket = 1 giờ ⇒ ĐƠN VỊ KHỚP, và cap đúng là 2,4. Tôi đã đo lại toàn bộ với cap 2,4. Quy tắc charter #3 (mở nguồn gốc con số ra đọc trước) bắt được lỗi này — và cùng lỗi đó đang nằm trong evidence của mm-02 #4 (nó ghi cap 1,2).",
+    "❌ RÚT LẠI — 'đường sản phẩm có 94,3% bucket cầu = 0': đúng SỐ nhưng sai NGÀY — tôi chọn t_now ở ngày ĐẦU của 90 ngày mock. Đo lại ở 2026-08-15 và 2026-09-28: 0,0%. Chỉ giữ lại như ghi chú cold-start.",
+    "⚠ KHÔNG relay — 'rate ngậm peak ⇒ need_min ước NON ~2×' (mm-02 #2): D-ADV-02 mục (c) đã đo p50 = 1,000 và 13-vs-1 NGƯỢC chiều. Nếu tôi relay theo artifact thì đây là lần thứ hai một claim đã-bị-đo-ngược được đưa lên."
+  ],
+
+  "chua_tu_kiem": [
+    "Tần suất THẬT của vùng clamp một phần (0 < add < need_extra) — tôi chỉ đo dân số rủi ro 7,1%, chưa chạy sim đếm sự kiện. Kênh shift_extend đang TẮT nên không chạy được tự nhiên.",
+    "Demo UI có RENDER nội dung S2 ra card cho người xem hay chỉ lưu artifact — tôi đọc code sinh artifact, chưa mở dashboard.",
+    "Độ lớn Jensen gap (mm-02 #6) — con số 'P thật ~50-60%' của artifact là DERIVED, tôi không đo và không dùng.",
+    "mm-02 #4 trên đường l1r: tôi đo cap-bind 88,6% nhưng chưa tách riêng đóng góp của phép cộng top-3 ở shape đó (chỉ tách ở shape sim)."
+  ],
+
+  "ghi_chu": "Kết luận đọc-nốt mm-02: artifact CÓ một finding thật sự quan trọng (sp_end_only chết cấu trúc) nhưng gán SAI nguyên nhân (đổ cho world zero-cost) ⇒ kéo theo một điều kiện reopen sai và một guard vô dụng; 4/7 finding còn lại hoặc trùng nợ đã biết (D-ADV-02, S2-2, S2-3, S2-7) hoặc bị số đo của tôi hạ độ lớn (3× → median 1,24×) hoặc đã bị vòng sau đo ngược dấu. Giá trị lớn nhất của vòng này KHÔNG nằm trong artifact mà nằm ở chỗ tự kiểm dẫn tới: (i) chứng minh dominance qua REST (độc lập chi phí) và (ii) phát hiện S2 đã đi dây trên backend sản phẩm sau cổng `missing_state`. Về giả thuyết lớp: 9/12 finding vào được L1..L6 (L1 đông nhất, L5 rỗng và từng bị gán nhầm), 3/12 rơi ra ngoài theo đúng MỘT khuôn ⇒ bản đồ lớp là công cụ dùng được nhưng THIẾU ít nhất một ô (L7 — objective thiếu vế / điểm-ước thay phân phối), và L5 là ô dễ gán nhầm nhất, phải chứng minh bằng can thiệp (bật chi phí) trước khi dùng."
+}

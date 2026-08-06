@@ -1,0 +1,155 @@
+{
+  "lop": "L5 — world zero-cost lam ca HO kenh tro",
+  "dinh_nghia": "Dinh nghia charter: cash_cost_vnd_per_km = 0 / swap_fee = 0 => moi co che dua tren CHI PHI mat phanh => ca ho kenh tro hoac suy bien. Dinh nghia SAC LAI sau khi do (xem ly_do_phan_xu): mot dai luong TIEN chi gan vao DUNG MOT nhanh cua mot phep so sanh ma moi nhanh con lai co gia tri tien === 0. Dat he so ve 0 khong chi 'bo phanh' — no lam phep so sanh SUY BIEN thanh hoa (tie) hoac thanh hang so, va su suy bien do VO HINH vi khong co cong nao doi chieu the-gioi-khong-gia voi the-gioi-co-gia.",
+
+  "pattern_da_quet": [
+    "grep -rn 'cash_cost_vnd_per_km|cash_cost' . (toan repo)",
+    "grep -rn 'swap_fee' . (toan repo)",
+    "grep -rnE '(cost|fee|fine|penalty|price|rent|tien|phi)[a-z_]*\\s*:\\s*(0|0\\.0)\\s*(#|$)' configs/  -> CHI 2 hit: pilot_dongda.yaml:281-282",
+    "grep -rn -i 'cost' src/gsm_core/ --include=*.py",
+    "grep -rn -i 'cost_vnd|cost_km|_cost\\b|cost=' src/gsm_sim/ --include=*.py",
+    "grep -rn 'net_mean|net_vnd|estimated_net|net_after|cost_vnd|net_income' ui/ src/ scripts/ (py,dart,ts,tsx,js,html)",
+    "grep -rn 'expected_swap_cost_vnd|baseline_swap_cost_vnd|terms_active' . (tim consumer)",
+    "grep -rn 'policy_costs_as_of' --include=*.py --include=*.yaml . (tim call site production)",
+    "grep -rn 'net_mean_all' scripts/  (tim dinh nghia thu hai)",
+    "grep -rn -iE 'cost|phi |chi phi|km|vnd' src/gsm_core/solvers/{idle_reduction,weekly_khoan,bonus_feasibility,f3_patterns,anomaly_alert}.py",
+    "grep -rn -iE 'tiet kiem|saving|vnd|per_km' ui/backend/app/ --include=*.py",
+    "grep -rnE '(cost|fee|penalty|phat)[a-z_]*\\s*[:=]\\s*0(\\.0)?\\b' src/ --include=*.py",
+    "grep -rn -iE 'cancel|huy|expired' src/gsm_sim/world.py | grep -iE 'payout|vnd|cost|phat'  -> 0 hit (huy don khong co gia tien truc tiep; phanh la bonus_min_completion)",
+    "grep -rl 'payout_mean_all|net_mean_all' tracking/  vs  ... | xargs grep -l -E 'cash_cost|swap_fee|zero-cost'  (dem ket luan thieu caveat)",
+    "grep -rl 'net_mean' tracking/  vs  cung tap co caveat"
+  ],
+
+  "do_da_chay": {
+    "probe_1_phan_ky_net_mean_all": "scratchpad/probe_l5.py — 5 seed (1000..1004), configs/pilot_dongda.yaml. SHIP: cost_total_vnd = 0 CHAN, net_parallel == net_e10 == payout_mean_all. COST ON (cash=150, fee=9000): cost_total 2,13-2,30 trieu; net_parallel 216.947-239.413 vs net_e10 240.633-264.010 => PHAN KY 23.685 / 24.189 / 24.303 / 24.597 / 25.603 d (9,8-10,3% payout).",
+    "probe_2_phanh_swap": "scratchpad/probe_swapbrake.py — 5 profile cau x 2 SOC x 2 diem = 20 case, B=8, bucket 60'. Tong bucket SWAP: fee=0 -> 48; fee=9000 -> 6 (8x). Profile 'duoi_0' [4,3,2,1,0,0,0,0] (duoi ca thuc te, KHONG phai cau=0 suy bien) sinh 3-4 SWAP gia o fee=0, 0 o fee=9000.",
+    "probe_3_luoi_cash_x_fee": "scratchpad/probe_end.py — 6 profile x 2 SOC x 3 diem = 36 case moi to hop. (a) cash in {0,70,150,250,1000,2000,4000,4300,4325} voi fee=0: histogram hanh dong BAT BIEN TUNG BIT (ONLINE=150 REST=36 SWAP=102). Chi tu cash=4400 moi doi (ONLINE=35, SWAP=217). Nguong dai so = ppo/avg_dist = 12.975/3 = 4.325 d/km. Chi phi THUC 70-250 d/km => duoi nguong 17-62 lan. (b) END = 0/36 o TAT CA 9 to hop cash{0,250,4400} x fee{0,9000,50000}."
+  },
+
+  "thuc_the": [
+    {
+      "id": "L5-01",
+      "file_line": "src/gsm_core/solvers/shift_dp.py:239-244 (nhanh SWAP: v = -swap_fee + V[b+1, NS-1, pb, rl]) + :245-249 (REST reward === 0.0) + :227,243,248 (so sanh CHAT `v > best_v`)",
+      "vi_sao_thuoc_lop": "swap_fee la DAI LUONG TIEN DUY NHAT phan biet SWAP voi REST. Ca hai deu cho thu nhap tuc thoi 0. fee=0 => v(SWAP) = V[b+1, SOC_day, ...] >= v(REST) = V[b+1, SOC_giu, ...] luon dung (SOC day khong bao gio te hon), va tie-break xet SWAP TRUOC => SWAP chiem moi the hoa. Khong co rang buoc SOC nao cho phep/ngan swap.",
+      "hau_qua": "DO: 48 vs 6 bucket SWAP tren 20 case (8x). Suy bien KHONG chi o cau=0 (S2-4) ma ca o profile duoi ca thuc te 'duoi_0' (3-4 SWAP gia). advice_bridge._map_action bien SWAP thanh hanh dong go_swap that => neu shift_plan duoc bat lai (hien TAT theo DA-07, configs/pilot_dongda.yaml:333), tai xe duoc khuyen di doi pin o phan lon bucket cuoi ca. VOI AI: tai xe bi keo khoi cau; va bat ky phep do A/B sau do se ghi 'advisor lam giam thu nhap' ma khong biet nguyen nhan la mot tie-break.",
+      "moi_hay_da_biet": "DA_BIET (S2-4, mm-07-s2.json) — nhung co so MOI: dinh luong 8x, va chung minh suy bien lan sang profile KHONG suy bien"
+    },
+    {
+      "id": "L5-02",
+      "file_line": "src/gsm_core/solvers/shift_dp.py:193-203 (cash_km; cost_per_trip = cash_km * avg_dist_km; online_net = exp_trips * (ppo - cost_per_trip))",
+      "vi_sao_thuoc_lop": "cash_cost chi nhan vao DUY NHAT nhanh ONLINE; REST = 0, SWAP = -fee, END = bonus_at. Vi khong nhanh nao khac phu thuoc cash, cash chi la mot phep CO GIAN don dieu tren phan thuong cua ONLINE => argmax KHONG THE doi cho toi khi online_net doi DAU.",
+      "hau_qua": "DO: 0 -> 4.325 d/km bat bien tung bit tren 36 case. Nguong lat = ppo/avg_dist = 4.325 d/km; chi phi that 70-250 d/km, tuc DUOI nguong 17-62 lan. => (a) PHAN BIEN de xuat sua CO SAN cua repo: tracking/DEFERRED.md:111 (D-E4-01) mo lai bang 'sweep cost theo cohort x thoi diem' va tracking/PLAN-cycle-wx-2026-07-29.md:108 de nghi sweep {0,70,150,250} — DO cho thay ca 4 muc cho ket qua Y HET, nen sweep se tra Delta = 0 va rat de bi doc nham thanh 'chi phi khong quan trong'. (b) menh de 'cash_cost=0 chan duong km->tien' (D-ADV-01) dung ve CO CHE nhung sai ve HAM Y: bat gia THUC cung khong mo duoc duong do.",
+      "moi_hay_da_biet": "MOI"
+    },
+    {
+      "id": "L5-03",
+      "file_line": "src/gsm_core/solvers/shift_dp.py:430-431 (expected_swap_cost_vnd = n_swaps * fee_out; baseline_swap_cost_vnd tuong tu) — va `n_swaps` KHONG co trong solution (:423-432)",
+      "vi_sao_thuoc_lop": "Truong 'minh bach chi phi' cua C5 la mot TICH co mot thua so bang 0 => no HUY thong tin thay vi truyen thong tin.",
+      "hau_qua": "Mot lich co 7 bucket SWAP bao cao `expected_swap_cost_vnd: 0.0` — giong het lich co 0 SWAP. Consumer khong phan biet duoc, va khong the tu dinh gia lai sau vi n_swaps khong duoc expose. => khang dinh o tracking/updates/UPDATE-097-c5-swap-co-gia.md:15 ('consumer du so de tinh net cong bang cho CA HAI lich') la SAI duoi config ship. VOI AI: moi consumer doc SolverReport de dung net.",
+      "moi_hay_da_biet": "MOI"
+    },
+    {
+      "id": "L5-04",
+      "file_line": "scripts/measure_e10.py:468 va scripts/measure_l104.py:52 (net_mean_all = mean(a.payout_vnd)) VS src/gsm_sim/parallel.py:132,141 va src/gsm_sim/sim_metrics.py:156-161 (net = payout - cost_vnd)",
+      "vi_sao_thuoc_lop": "HAI cong thuc cho CUNG mot ten khoa `net_mean_all`. Chung trung nhau CHI VI cost_vnd === 0. Zero-cost khong tao ra loi — no CHE mot loi da co san.",
+      "hau_qua": "DO 5 seed: bat chi phi that (150 d/km + 9.000 d/luot) => hai dinh nghia lech 23.685-25.603 d/nguoi/ngay (9,8-10,3% payout). Do lech nay lon GAP 4-6 LAN hieu ung advisor tung duoc bao (+6.016 d, +4.000 d). Ngay ai do bat chi phi, artifact E10 va L104 se im lang bao GROSS duoi ten NET trong khi parallel.py bao NET that. tests/test_net_metric.py chi canh duong parallel._cohort_metrics, KHONG canh duong scripts => cong hien tai khong bat duoc.",
+      "moi_hay_da_biet": "MOI"
+    },
+    {
+      "id": "L5-05",
+      "file_line": "tracking/QUYET-DINH-2026-07-30-nam-diem.md:95 (cong: Delta net_mean_all > 0, CI95 khong trum 0, n>=100) + tracking/PLAN-2026-07-30-hang-doi-cong-viec.md:65-68 + tracking/updates/UPDATE-107-l104-dao-nguoc-gia-thuyet-va-cong-thong-ke.md:51-55 (bao 'net_mean_all +0.00 [0.00, 0.00] ns')",
+      "vi_sao_thuoc_lop": "Cong QUYET DINH cua chuong trinh dat tren mot chi tieu TEN LA NET nhung DO GROSS PAYOUT — vi cost === 0, va vi duong script (L5-04) khong tru cost gi ca.",
+      "hau_qua": "Moi phan quyet PASS/NO-GO da chay qua cong nay thuc chat la phan quyet ve payout gop, khong phai ve thu nhap rong. Rui ro khong o hom nay (cost=0 nen hai so bang nhau) ma o cho: cong khong tu doi ten khi the gioi doi. DEM: 31 file trong tracking/ mang so tien tu sim, 21 file KHONG chua chuoi cash_cost/swap_fee/zero-cost. Hep hon va nang hon: 20 file dung chu 'net_mean', 13 trong so do KHONG ghi caveat (7 file CO: DEFERRED.md, OPEN-THREADS-2026-07-28.md, PLAN-cycle-wx-2026-07-29.md, PROJECT-GRAPH.md, UPDATE-094, UPDATE-097, UPDATE-098).",
+      "moi_hay_da_biet": "MOI"
+    },
+    {
+      "id": "L5-06",
+      "file_line": "src/gsm_sim/world.py:522-525 (chot chi phi km MOT lan trong _settle_end_of_run) + :1295 (swap fee tai su kien). TAP DOC day du cua cost_vnd: chi src/gsm_sim/parallel.py:132,138,156 va src/gsm_sim/sim_metrics.py:156 — deu la THUOC DO chay SAU run.",
+      "vi_sao_thuoc_lop": "So chi phi khong co consumer HANH VI nao. Khong actor, khong solver, khong dispatcher doc actor.cost_vnd. Rieng chi phi km lai duoc chot MOT lan cuoi ngay nen ve nguyen tac khong the anh huong quyet dinh trong ngay.",
+      "hau_qua": "So `cost_vnd` la KE TOAN THUAN. Duong DUY NHAT chi phi cham vao hanh vi la mot lan doc RIENG cung khoa config o src/gsm_sim/advice_bridge.py:205,587 -> shift_dp params. => 'bat chi phi len' KHONG lam the gioi phan ung; chi thuoc do va solver phan ung. Moi ke hoach 'sweep cost de kenh chi phi song lai' phai nham vao duong SOLVER chu khong phai so. Xac nhan bang do: probe_1 — payout_mean_all GIONG HET tung dong giua SHIP va COST-ON tren ca 5 seed (247.728,43 / 253.204,79 / 240.633,23 / 264.010,92 / 247.180,66).",
+      "moi_hay_da_biet": "MOI"
+    },
+    {
+      "id": "L5-07",
+      "file_line": "src/gsm_core/solvers/shift_dp.py:332 (as_of = params.get('policy_costs_as_of')) — 0 call site production; grep chi ra tests/test_b3_policy_costs.py va tests/test_c5_swap_cost.py. Hau qua o :416-420 (caveat \"chi phi X UNKNOWN — dung 0, KHONG bia so\") va :433-436 (terms_active).",
+      "vi_sao_thuoc_lop": "Co che DUY NHAT tuyen bo 'so hang tien nay dang TAT / UNKNOWN' chi bat khi caller truyen as_of. Vi the gioi khong co gia, khong ai co dong co truyen no => co che khai bao chet, va cai zero tro thanh IM LANG thay vi duoc NOI RA.",
+      "hau_qua": "Moi loi khuyen S2 sinh trong sim (src/gsm_sim/advice_bridge.py:606) va moi report tu duong khong-as_of KHONG mang terms_active, KHONG mang caveat chi phi. Duoi CLAUDE.md §5 (tach gross/payout/net, neu ro dieu kien) day la mot khai bao bat buoc dang bi bo qua theo MAC DINH chu khong theo quyet dinh.",
+      "moi_hay_da_biet": "MOI (giao L3/L5 — co che mo coi, nhung nguyen nhan mo coi la zero-cost)"
+    },
+    {
+      "id": "L5-08",
+      "file_line": "src/gsm_core/solvers/bonus_feasibility.py:225-244 (digest + solution: hours_needed, trips_needed, tier_vnd; caveats :220-223 khong co so hang chi phi nao) -> ui/backend/app/adapters/advisor.py:279-312 (the SAN PHAM 'Con voi duoc moc thuong {tier_vnd} hom nay ... khoang {hours_needed} gio chay nua'). Input: src/gsm_core/features/bonus_gap.py — khong co truong chi phi.",
+      "vi_sao_thuoc_lop": "Ham muc tieu cua S1 co PHAN THUONG bang tien va CHI PHI bang GIO, khong he co so hang tien cho gio do. Day la duong SAN PHAM (ui/backend), khong phai sim.",
+      "hau_qua": "The noi voi tai xe 'con voi duoc' ma khong dinh gia phan phai bo ra. Duoi zero-cost dieu do dung; duoi chi phi that (70-250 d/km, sau 31/03/2029 con them phi swap) phep 'dang hay khong dang' khong tinh duoc bang so hien co. TU DANH GIA MUC TB, va chi ghi la VANG MAT CAU TRUC: chua chung minh con so nao dang sai (the noi ve TINH KHA THI, khong hua net); uoc luong do lon (~1.500 d cho 2,3 gio o 150 d/km, so voi tier 30.000 d) la so DERIVED, CHUA DO.",
+      "moi_hay_da_biet": "MOI"
+    },
+    {
+      "id": "L5-09",
+      "file_line": "tests/test_c1_cost_term.py:88-96 (test_moderate_cost_keeps_gross_payout_reporting — cash=100 d/km, ASSERT lich KHONG doi) vs :82 va :104-106 (test duy nhat chung minh so hang 'can' dung 5.000 d/km) va tests/test_f098_defects.py:70,95 (4.327 d/km)",
+      "vi_sao_thuoc_lop": "Bo test cua chinh so hang chi phi PIN su suy bien lam hanh vi KY VONG: no khang dinh o muc gia THUC (100 d/km) lich khong doi, va chi chung minh so hang can o muc 4.327-5.000 d/km — tuc 20-62x thuc te, va vua dung tren nguong lat dau 4.325 ma L5-02 do duoc.",
+      "hau_qua": "Suite xanh vinh vien du so hang chi phi tro trong TOAN DAI GIA THUC. Khong test nao hoi 'so hang nay co song trong dai gia THUC khong'. Ai doc suite se tin so hang da duoc kiem chung.",
+      "moi_hay_da_biet": "MOI (giao L2/L5)"
+    },
+    {
+      "id": "L5-10",
+      "file_line": "src/gsm_sim/advice_bridge.py:690-706 (station_eta_min = travel_min + queue_len*avg_swap_min) + :708-739 (pick_station argmin theo ETA)",
+      "vi_sao_thuoc_lop": "Ham muc tieu chon tram THUAN PHUT, khong co so hang tien nao. Duoi swap_fee=0 dieu do dung tam thoi, nhung phep so 'tram nao loi hon' khong mo rong duoc khi phi khac nhau theo tram/thoi diem.",
+      "hau_qua": "Ket luan NO-GO cua tracking/updates/UPDATE-160-station-choice-no-go-da08.md (payout -33 d ns; P1 -3.863 d AM-SIG du swap_wait -3,6' SIG) duoc do trong the gioi ma tiet kiem PHUT khong the thanh TIEN. Ket luan van co the dung, nhung no chua tra loi duoc cau hoi ma no ve nhu da tra loi.",
+      "moi_hay_da_biet": "DA_BIET (D-E4-06 / D-ADV-01 — CITE, khong bao lai)"
+    }
+  ],
+
+  "phan_chung_va_doi_chung": [
+    {
+      "id": "BAC-01 — E-05 / sp_end_only KHONG thuoc L5",
+      "file_line": "configs/pilot_dongda.yaml:382 (shift_plan_end_only: false) + src/gsm_sim/advice_bridge.py:241,624",
+      "bang_chung": "probe_3: END = 0/36 case o TAT CA 9 to hop cash{0, 250, 4.400} x fee{0, 9.000, 50.000}. Ngay o cash=4.400 (tren nguong lat dau) va fee=50.000, nhanh END van khong duoc chon lan nao. => su im lang cua E-05 KHONG do zero-cost. Nguyen nhan nam cho khac (mm-02-shift-family.json da do 0/252 case va chi vao shift_dp.py:250-254: END chi thang khi CHAT hon, trong khi REST luon kha thi voi reward 0).",
+      "ket_luan": "Charter README.md:17 xep E-05 vao L5 la SAI. Neu ai sua L5 roi cho rang E-05 duoc sua theo, ho se sai."
+    },
+    {
+      "id": "DOI-CHUNG-01 — zero-cost CO KHAI BAO thi khong gay hai",
+      "file_line": "ui/backend/app/adapters/mockdata.py:231 (est_net_vnd = None, 'chua du known costs + definition') + src/gsm_core/features/from_l1r.py:231-232 + src/gsm_core/features/session_summary.py:43 + configs/pilot_dongda.yaml:275-282 (comment noi ro 0 = chinh sach that, kem so cho sweep) + docs/reports/week2/Week2-Report-Driver-Advisor-Team.md:120",
+      "y_nghia": "Duong SAN PHAM tu choi hien net khi thieu chi phi — dung CLAUDE.md §5. Cac cho nay CO cung cai zero ma KHONG sinh loi. Bien phan biet khong phai 'co zero hay khong' ma la 'zero co duoc KHAI BAO tai diem tieu thu hay khong'."
+    },
+    {
+      "id": "DOI-CHUNG-02 — cadence.enabled: false la zero-cost o chieu NGAN SACH CHU Y",
+      "file_line": "configs/pilot_dongda.yaml:412-441 (cadence.enabled: false; count_positioning_in_budget: false)",
+      "y_nghia": "Cung KHUON (mot he so phanh dat ve 0 lam ca ho kenh advice mien phi ve chu y) NHUNG duoc khai bao cuc lon ngay tai config va o tracking/PLAN-2026-07-29-cadence-thuoc-san-pham.md, kem ca LUAT DO khi tat. => bang chung manh nhat cho phan xu MOT_PHAN: khuon nay co the vo hai hoan toan khi duoc khai bao."
+    }
+  ],
+
+  "lop_co_that": "MOT_PHAN",
+
+  "ly_do_phan_xu": "CO mot co che chung, do duoc, chia se boi L5-01..L5-07 va L5-09: mot dai luong tien gan vao DUNG MOT nhanh cua mot phep so sanh ma cac nhanh khac co gia tri tien === 0. Khi he so ve 0, argmax khong con phu thuoc no (L5-02: bat bien tung bit tren toan dai 0-4.325 d/km) hoac phep so sanh sup thanh tie va bi tie-break quyet dinh (L5-01: 8x SWAP). Do la CAU TRUC, khong phai cach ke chuyen gon. Bang chung manh nhat la L5-04: hai cong thuc khac nhau cua cung khoa `net_mean_all` TRUNG NHAU CHI VI cost === 0 — zero-cost khong tao loi, no CHE mot loi da co (lech 23.685-25.603 d, do 5 seed). NHUNG lop bi phan xu MOT_PHAN vi ba ly do co bang chung: (1) mot thanh vien charter neu ten bi BAC bang do — E-05 im lang o ca 9 to hop cash x fee, nen no co nguyen nhan khac; (2) menh de trung tam 'bat gia that thi phanh song lai' SAI voi cash_cost — o gia THUC (70-250 d/km) khong gi doi; chi swap_fee moi la phanh that. Nghia la cai hong khong phai CON SO 0 ma la CAU TRUC 'chi mot nhanh co tien'; (3) hai doi chung (mockdata est_net=None; cadence.enabled=false) cho thay cung cai zero co the hoan toan vo hai khi duoc KHAI BAO tai diem tieu thu. => Ten dung hon cho lop: 'PHEP SO SANH MOT-BEN-CO-TIEN + ZERO KHONG KHAI BAO'. Sua bang cach 'bat chi phi len' se that bai; sua bang cach bat KHAI BAO va bat DOI CHIEU hai the gioi thi trung dich.",
+
+  "cong_chan_tai_dien": {
+    "ten": "tests/test_money_term_liveness.py — cong LUONG THE GIOI (dual-world), 3 phan, chay trong suite",
+    "vi_sao_kha_thi": "Ca 3 phan chay o muc solver / ham thuan / stub, khong can chay sim day du. Toan bo probe cua bao cao nay chay < 90 giay tren may nay.",
+    "G1_mot_ten_mot_cong_thuc": {
+      "lam_gi": "Dung mot RunResult STUB (danh sach actor gia voi payout_vnd va cost_vnd > 0 — khong chay sim). Goi MOI producer cua khoa net_mean_all trong repo: gsm_sim.parallel._cohort_metrics, scripts.measure_e10._row_common, scripts.measure_l104 (tach ham). Assert ba ket qua BANG NHAU khi cost_vnd > 0.",
+      "hom_nay": "DO — lech ~24.000 d. Phai ship kem fix: hai script import _cohort_metrics thay vi tu tinh mean(payout).",
+      "bat_thanh_vien_moi_the_nao": "Phan COMPLETENESS: test tu grep src/ + scripts/ tim moi module chua chuoi 'net_mean'; module nao khong nam trong danh sach producer da dang ky => FAIL. Nguoi them producer thu 4 se thay do ngay."
+    },
+    "G2_quet_do_nhay_bat_buoc_tren_DAI_GIA_THUC": {
+      "lam_gi": "Bang dang ky MONEY_PARAMS = [(ten, dai_gia_THUC, nguon_trich_dan)], vd ('cash_cost_vnd_per_km', (70, 250), 'research/economics/driver-cost-structure-2026.md'), ('swap_fee_vnd', (0, 9000), 'ibid'). Voi moi tham so: chay shift_dp.solve tren luoi co dinh (6 profile cau x 2 SOC x 3 diem = 36 case) o CAN DUOI va CAN TREN cua dai THUC, so histogram hanh dong, roi dan nhan LIVE hoac INERT vao mot snapshot JSON commit trong repo.",
+      "assert_gi": "KHONG assert 'phai LIVE' (do la ep KET CUC — vi pham ky luat 4). Assert: (a) nhan hien tai KHOP snapshot da commit — doi nhan la doi hanh vi, phai co UPDATE di kem; (b) tham so nao duoc TAI LIEU goi la 'phanh' / 'chi phi quyet dinh' ma do ra INERT phai co mot dong xin mien tuong minh trong snapshot kem ly do.",
+      "hom_nay": "cash_cost_vnd_per_km -> INERT tren [70, 250] (do: bat bien tung bit). swap_fee_vnd -> LIVE (102 -> 12 SWAP). Ca hai vao snapshot ngay lan chay dau, kem so.",
+      "bat_thanh_vien_moi_the_nao": "Phan COMPLETENESS: test tu quet keys cua shift_dp.DEFAULT_PARAMS va cac khoi `vehicle:` / `costs:` cua configs/pilot_dongda.yaml, lay moi khoa khop /_vnd($|_per_)/ ; khoa nao chua co trong MONEY_PARAMS => FAIL kem thong bao 'them tham so tien moi thi phai khai bao dai gia THUC va chay quet do nhay'. Day la cho khien cong khong con la 'nho moi nguoi can than hon'."
+    },
+    "G3_zero_phai_duoc_KHAI_BAO_tai_diem_tieu_thu": {
+      "lam_gi": "Bo cong opt-in policy_costs_as_of: shift_dp.solve LUON tra terms_active[] (sua L5-07). Them n_swaps vao solution (sua L5-03).",
+      "assert_gi": "(a) moi ket qua solve() co terms_active; (b) so hang nao co value == 0 phai co state thuoc {OFF_BY_POLICY, UNKNOWN} kem reason khac rong — CAM trang thai 'ACTIVE voi gia tri 0' im lang; (c) neu schedule chua SWAP ma expected_swap_cost_vnd == 0 thi solution PHAI co n_swaps > 0 va mot caveat noi phi dang TAT.",
+      "vi_sao_dung_muc_tieu": "Hai doi chung (mockdata est_net=None; cadence docstring) cho thay bien phan biet la KHAI BAO chu khong phai gia tri. G3 bien khai bao tu tuy chon thanh bat buoc."
+    },
+    "chi_phi_uoc_tinh": "G1 ~40 dong + sua 2 script; G2 ~90 dong + 1 snapshot JSON (36 case x 2 muc x 2 tham so = 144 lan solve, do duoc ~20 s); G3 ~30 dong test + bo mot nhanh if trong shift_dp. Khong dung toi sim day du."
+  },
+
+  "cai_chua_kiem": [
+    "CHUA do lai voi shift_plan BAT trong sim day du: hau qua cua L5-01 (8x SWAP) trong sim thuc te la bao nhieu? Kenh dang TAT theo DA-07 (configs/pilot_dongda.yaml:333) nen day la rui ro TIEM AN, khong phai thiet hai dang xay ra.",
+    "L5-08: do lon ~1.500 d cho 2,3 gio o 150 d/km la DERIVED tu cong thuc, CHUA DO tren mock that. Chua chung minh con so nao dang sai — chi chung minh so hang VANG MAT.",
+    "Nguong lat 4.325 d/km do voi DEFAULT_PARAMS (avg_dist=3,0; p_accept=0,9; bucket 60'). Voi avg_dist khac, nguong = ppo(avg_dist)/avg_dist va co the thap hon; CHUA quet theo avg_dist.",
+    "CHUA kiem ui/driver_app (Flutter cua Khanh) — khong doc trong vong nay.",
+    "Con so '31 file / 21 khong caveat' va '20 file net_mean / 13 khong caveat' la dem theo CHUOI, khong phai doc tung cau. No do MAT DO caveat, khong chung minh tung ket luan sai.",
+    "probe_1 chay voi advice.enabled = false (mac dinh config) => no chung minh so chi phi khong co phan hoi hanh vi, NHUNG khong noi gi ve truong hop advisor bat. Da ghi ro o L5-06."
+  ]
+}

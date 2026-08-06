@@ -90,8 +90,39 @@ nhưng bước đầu là **chứng minh**, không sửa.
 | # | Cycle | Root cause | Trạng thái |
 | --- | --- | --- | --- |
 | **C4** | **Lan can `soc_low` mồ côi + cổng aliveness mù** | ✅ **tự kiểm xong** | **READY** |
+| **C4b** | ⭐ **7 khoá gắn nhãn "cổng một chiều canh" mà cổng KHÔNG soi** | ✅ **tự kiểm xong** (3 file) | **READY — tiên quyết cho C7** |
 | **C5** | `A2` ở n=100 + **HHI cung theo ô** | ✅ nợ đo đã biết | **READY** |
 | **C6** | `D-M3-20` (rút RNG trước cổng) · `D-M3-21` | ✅ pb-02 đo `A==B_fix` 60/60 | **chờ Cường duyệt plan** |
+
+**C4b — chi tiết (root cause đã chứng minh, `00-TU-KIEM-cua-toi.md` §6):**
+
+`_ONE_WAY_PREFIXES = ("veto_", "xveto_", "commit_")` (`parallel.py:420`) đẩy 3 họ khoá **ra khỏi** bảng
+significance hai chiều. Nhưng `aggregate_health_guardrail` (`parallel.py:557-564`) có danh sách **chép
+cứng** chỉ gồm `veto_*`, và `health_guardrail_flags` (`sim_metrics.py:535`) chỉ lặp `REST_RAILS`.
+⇒ **Đo được** (probe `c4b-do-vung-mu-tang-5.py`, tiêm *"rail sụp về 0"* cho từng khoá):
+**7 khoá** là **vùng mù của cổng** (3 `xveto_*` lan can + 4 `commit_*` sổ cam kết) và **9 khoá** **vắng
+mặt khỏi `a_mean`** (7 khoá đó + `xveto_calls_n` + `xveto_fired_n`). Artifact vẫn in cạnh chúng
+`"one_way_gate": "sim_metrics.health_guardrail_flags"` — **lời khai quản trị không có thật**.
+
+⚠ `xveto_calls_n` là **MẪU SỐ**; chính `parallel.py:561-564` lập luận *"MẪU SỐ phải hiện trong
+artifact"* ⇒ nó vắng mặt là **vi phạm nguyên tắc file đó tự phát biểu**. Ngược lại `veto_calls_n`/
+`veto_fired_n` cổng cũng không soi nhưng **đúng thiết kế** (mẫu số/tổng, cổng soi từng rail).
+Đếm thô sẽ ra **11** và báo thổi — số đúng: **7 / 9**.
+
+**Đây là lỗi TÁI DIỄN lần thứ ba:** `parallel.py:415-419` tự chép rằng danh sách tường minh *"đã HỞ hai
+lần"* — và bản vá chỉ nối **chiều đi ra**, quên **chiều đi vào**.
+
+- **Việc:** (1) suy danh sách khoá gộp + vòng lặp cổng từ **CÙNG nguồn** với `_ONE_WAY_PREFIXES`;
+  (2) `health_guardrail_flags` lặp cả `EXTEND_RAILS` (đúng tiền tố `xveto_`) và soi sổ cam kết;
+  (3) **test bất biến chặn tái diễn**: *mọi khoá định tuyến một chiều thì HOẶC được cổng soi, HOẶC được
+  khai trơ tường minh có lý do* — theo đúng khuôn `defer_cap` đã có.
+- **Acceptance:** test bất biến **ĐỎ trên `main` hiện tại** (nêu đúng 7 khoá), **XANH** sau fix; thêm một
+  rail giả vào `EXTEND_RAILS` mà không khai ⇒ **ĐỎ**. Sim **fingerprint IDENTICAL 5 seed** (chỉ đụng
+  tầng đo, 0 dynamics).
+- **Hậu quả nếu bỏ qua:** C7 (đo lại `shift_plan`) và mọi nghiên cứu `rest_window` sẽ chạy với tầng 5
+  **mù đúng những lan can của kênh đang đo** ⇒ **phải làm TRƯỚC C7**.
+- **Nói đúng mức:** hôm nay hai kênh đó TẮT ⇒ 7 khoá đều 0 ⇒ **chưa che giấu gì**. Đây là nợ **tiềm ẩn**,
+  bật lên mới cắn.
 
 **C4 — chi tiết (root cause đã chứng minh đầy đủ):**
 
@@ -132,6 +163,9 @@ Chỉ khi có hai số này thì *"biên đánh đổi"* của `UPDATE-176` §3(
 | **C7** | ⭐ **Đo lại `shift_plan` bằng solver đã sửa** | §2 — bản án ĐA-07 dựa trên DP mù thưởng | **cần Cường duyệt: có mở lại ĐA-07 không** |
 | — | `S2-2` sàn điểm còn dư `add_pts % 5` | DERIVED, chưa đo | **đi kèm C7**, không cycle riêng |
 | — | `R-1`, `R-3..R-7`, `D-ADV-06`, `D-E4-01/02/06` | kênh ngủ | **DEFERRED** + điều kiện mở lại |
+
+**C7 — PHỤ THUỘC CỨNG: phải chạy SAU `C4b`.** Đo lại `shift_plan` khi tầng 5 còn mù `xveto_*`/`commit_*`
+là lặp lại đúng sai lầm §2 ở dạng khác: ra một bản án mới bằng một bộ đo còn khuyết.
 
 **C7 — vì sao cần Cường duyệt trước:** mở lại một quyết định **đã duyệt** là việc của Cường, không phải
 của tôi. Tôi chỉ trình bằng chứng rằng **bằng chứng cũ đã hỏng**. Nếu Cường đồng ý, C7 chạy:

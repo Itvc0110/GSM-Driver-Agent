@@ -1,0 +1,213 @@
+{
+  "item": "mm-08-s4.json — SOLVER capacity_alloc (S4), nền của kênh positioning ĐANG SHIP (PASS 9/9 ĐA-08, +6.016đ SIG n=100, UPDATE-087)",
+  "cach_lam": {
+    "tu_kiem_code": "Mở đủ 8 file:line của artifact: capacity_alloc.py (toàn bộ 129 dòng), gsm_core/features/market_state.py (toàn bộ 114 dòng), gsm_core/features/allocation.py (toàn bộ), gsm_sim/world.py:375-517 + 955-1030, gsm_sim/market_state.py (toàn bộ), configs/pilot_dongda.yaml:94-96/120-147/272-275/395/442-450, tests/test_capacity_alloc.py:100-146. Grep phủ: ranked_cells (3 hit), cell_distance_km (12 hit), standby_plan/pending_targets (17 hit), enroute_cell (10 hit).",
+    "do_lai_tren_sim": "4 probe trên arm ĐÚNG cấu hình đã sinh ra +6.016đ (CHANNEL_LADDER['positioning'] = B3w, coverage=all), seeds 3000/3001/3002 (chính dải seed tươi của UPDATE-087). Join chính xác candidate→ô nguồn bằng cách stash World ở __init__ rồi đọc world.actors[aid].cell trong wrapper capacity_alloc.solve (planner KHÔNG yield giữa lúc dựng cands và lúc solve ⇒ trạng thái là đúng lúc gán). Probe ở scratchpad, KHÔNG ghi vào repo.",
+    "gioi_han_do": "n=3 seed — DƯỚI chuẩn repo (5 cho stochastic, 30 cho phân phối). Mọi ĐỘ LỚN dưới đây là cận sơ bộ, 3 seed cùng dấu và cùng bậc. Cấu trúc (code path, dead branch, công thức) thì không phụ thuộc seed.",
+    "so_do_duoc_cot_loi": {
+      "cap_left_cua_zone_nhan_gan": "seed3000 {1:74, 2:2} · seed3001 {1:69, 2:8} · seed3002 {1:58, 2:2} — KHÔNG BAO GIỜ >2",
+      "slots_moi_o_moi_bucket": "seed3000 {0:1275, 1:151, 2:18, 3:1} · seed3001 {0:1193, 1:148, 2:18, 3:1} · seed3002 {0:1117, 1:139, 2:18, 3:1} ⇒ 87,6–88,2% cell-bucket có slots=0; TRẦN TOÀN LƯỚI tối đa 3",
+      "khoi_luong_ngay": "candidates 204–240 · assigned 62–83 · unassigned 140–162 · coin-follow 33–47 · standby_followed thực thi 31–45",
+      "staggered": "49/78=62,8% · 44/83=53,0% · 36/62=58,1%",
+      "km": "km→pref mean 1,417–1,894 · km→assigned mean 2,456–2,838 · thừa khi stagger mean 1,502–1,789 (max 4,363) · tổng thừa 64,4–73,6 km/ngày",
+      "o_nguon_cua_nguoi_DUOC_GAN": "eff>slots (dư cung THẬT) 28–40 · slots==0 (chỉ là cầu thấp) 21–33 · eff==slots (cân bằng đúng) 6–10",
+      "o_nguon_cua_nguoi_BI_TU_CHOI": "slots==0: 110–135 trên tổng 140–162 (78,3–82,9%)",
+      "lag_thi_hanh": "p50 1,269–1,653 phút · max 26,3–54,4 phút · 0/113 lượt vượt 60 phút (biên bucket)",
+      "sensitivity_-20pct": "0/48 lô đổi n_unassigned (0/17, 0/16, 0/15)",
+      "SOC_luc_gan": "assigned mean 69,7–72,0 (min 8,7 / 20,3 / 22,2) vs unassigned mean 48,2–55,0 ⇒ ưu tiên pin cao HOẠT ĐỘNG, nhưng KHÔNG có sàn",
+      "lieu_theo_do_phu": "executed all=37/45/31 → share0,5=28/32/19 → share0,25=21/20/14",
+      "tai_xe_rieng_biet_di_chuyen": "32/90 (35,6%) · 40/90 (44,4%) · 29/90 (32,2%); được gán 57/57/48 (53,3–63,3%); tối đa 2–3 lượt/người"
+    }
+  },
+  "findings": [
+    {
+      "title": "MM-08-A — cost matrix không có vế khoảng cách lẫn giá trị đích ⇒ stagger mù km. TỰ KIỂM ĐÚNG NHƯNG ≈ TRÙNG D-ADV-01 vế (2), KHÔNG PHẢI PHÁT HIỆN MỚI",
+      "severity": "CAO",
+      "confidence": "CAO (cơ chế) / TB (độ lớn, n=3)",
+      "evidence_file_line": "src/gsm_core/solvers/capacity_alloc.py:45-50 (cost[i,j] = pen | pen+10.0, pen=(100−SOC)/100 ∈ [0,1] = 1/10 mức lệch) · capacity_alloc.py:34 (sorted(slot_caps.items()) — alphabet) · src/gsm_sim/world.py:442 (min theo cell_distance_km rồi VỨT). ĐO LẠI 3 seed: staggered 62,8%/53,0%/58,1%; km thừa mean 1,502–1,789/lượt; tổng 64,4–73,6 km/ngày. D-ADV-01 (tracking/DEFERRED.md:126) đã đo 2 vòng độc lập: 56% (3 seed) và 60,6% (5 seed), counterfactual +112,8 km (+22%), root cause 'tie EXACT 1,0+10,0=11,0'",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Trùng D-ADV-01 vế (2) — CHỈ CITE. Đóng góp của vòng này: vòng đo ĐỘC LẬP THỨ BA cùng dấu, cùng bậc (53–63% vs 56% vs 60,6%) ⇒ nhánh stagger-đa-số là VỮNG. Về LỚP: đây KHÔNG phải L1..L6. Hình dạng thật là 'objective tối thiểu một proxy vô đơn vị trong khi world định giá km/phút/cuốc' — chính là lớp station_choice mà artifact tự đặt tên. Đề nghị lớp L7 (xem ghi_chu tổng)."
+    },
+    {
+      "title": "MM-08-B — không có opportunity cost phía NGUỒN. CƠ CHẾ ĐÚNG, NHƯNG QUY SAI NGUYÊN NHÂN: ca 'eff==slots' là ca NHỎ NHẤT (7–12%), ca thống trị là slots==0",
+      "severity": "CAO (cơ chế) — nhưng nên GỘP vào MM-08-D",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/world.py:431-432 (elif cap_left.get(a.cell,0) > 0: continue — điều kiện ứng viên DUY NHẤT) · src/gsm_core/features/market_state.py:82 (capacity_left = max(0, slots − eff) ⇒ eff==slots và eff>slots cùng cho 0) · world.py:419-446 không có ngân sách outflow. ĐO LẠI ô nguồn của người ĐƯỢC GÁN: eff>slots 37/40/28 · slots==0 33/29/21 · eff==slots CHỈ 6/10/8 (7,7%/12,0%/12,9%). Người BỊ TỪ CHỐI: slots==0 chiếm 135/162, 110/140, 114/142 (78,3–82,9%)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "ĐÍNH CHÍNH artifact: 'cap_left==0 gộp cân-bằng với dư-cung' đúng chữ nhưng chỉ giải thích 7–12% lượt gán. Cái thật sự làm ứng viên = 'ô của tôi có λ < 1,5 cuốc/h' (slots=0), tức MM-08-D. Fix E-S4-2 (ngân sách outflow = max(0, eff−slots)) sẽ KHÔNG chạm 34–42% lượt gán từ ô slots==0 vì ở đó eff−slots ≥ eff ⇒ ngân sách không ràng buộc gì. ⚠ E-S4-2 như viết là gần-NO-OP cho đa số lượt — phải nói ra trước khi ai đưa vào plan."
+    },
+    {
+      "title": "MM-08-C — assignment không có TTL. CODE ĐÚNG NHƯNG ĐỘ LỚN ĐÃ BỊ BÁC TỪ 2026-08-07; artifact TÁI PHÁT một claim đã refuted, và E-S4-3 là NO-OP đã bị loại khỏi kế hoạch",
+      "severity": "THẤP (artifact ghi TB — HẠ)",
+      "confidence": "CAO",
+      "evidence_file_line": "CODE ĐÚNG: src/gsm_sim/world.py:423-424 (in standby_plan ⇒ loại khỏi ứng viên, không hạn) · world.py:994-1016 (đường thi hành KHÔNG so now với deadline nào; pop chỉ ở :1003 và :1010) · world.py:485-488 (freshness_deadline chỉ ghi vào checkpoint_trace). ĐỘ LỚN BỊ BÁC: tracking/DEFERRED.md:126 (D-ADV-01 đính chính lần hai 2026-08-07) — '0/179 lượt vượt biên bucket' VÀ 'market_state.py:162-167 cache theo bucket ⇒ re-validate đọc lại Y NGUYÊN ảnh cũ ⇒ bản vá TTL BẤT ĐỘNG ở 100% lượt' ⇒ 'fix (d) là NO-OP, phải bỏ khỏi kế hoạch'. ĐO ĐỘC LẬP vòng này: lag thi hành p50 1,269/1,653/1,497 phút, max 26,3/54,4/36,9 phút, 0/113 lượt > 60 phút",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Đây là dữ liệu quan trọng nhất của vòng đọc-nốt: mm-08 (2026-08-06) ĐI TRƯỚC đính chính D-ADV-01 (2026-08-07), nên nó tái phát nguyên văn cả claim lẫn bản vá đã bị bác. Ai đọc mm-08 rồi lập plan sẽ đưa E-S4-3 vào cycle. Vi phạm kỷ luật #4 (mô hình tĩnh nói về CẤU TRÚC, không nói về KẾT CỤC): câu 'nhận gán lúc 9h thi hành lúc 11h' là đoán KẾT CỤC, đo ra max 54 phút. Ghost pending có thật nhưng đếm được: n_follow − standby_followed = 1/2/2 lượt/ngày."
+    },
+    {
+      "title": "MM-08-D — slots = ⌊λ/1,5⌋ per-cell res-9: ĐO RA ĐÂY MỚI LÀ RÀNG BUỘC CHI PHỐI TOÀN KÊNH (87,6–88,2% cell-bucket có slots=0; trần toàn lưới tối đa 3)",
+      "severity": "CAO (artifact ghi TB — NÂNG)",
+      "confidence": "CAO (artifact ghi TB — NÂNG bằng số đo)",
+      "evidence_file_line": "src/gsm_core/features/market_state.py:81 (slots = int(demand // trips_per_driver_per_bucket)) · src/gsm_sim/market_state.py:112 + configs/pilot_dongda.yaml:395 (trips_per_hour_est: 1.5 HẰNG) · configs/pilot_dongda.yaml:16 (h3_res: 9) vs :120/:142/:147 (candidate_ring_k 4, k_max 6 ≈ 2,22 km, eta_max_min 11) — kernel phục vụ của dispatcher rộng hàng chục ô, còn trần tính trên MỘT ô. ĐO: slots hist {0:1275,1:151,2:18,3:1} / {0:1193,...} / {0:1117,...}; cap_left của ô nhận gán {1:74,2:2} / {1:69,2:8} / {1:58,2:2}",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "L1 rõ: dispatcher SỞ HỮU kernel phục vụ (grid_disk k≤6 ≈2,22km + eta_max 11′, configs:120-147); market_state TỰ TÍNH lại 'ô này nuôi được mấy người' bằng một công thức khác hẳn (⌊λ_ô/1,5⌋ trên ô res-9 ~0,35km) — hai quy ước cho cùng một sự thật vật lý 'ai phục vụ được cầu này'. Đây là ràng buộc chi phối: nó quyết định LIỀU của kênh ship (62–83 lượt gán/ngày cho 90 tài xế), và là nguồn thật của MM-08-B. E-S4-4 (pool theo ring) là đề xuất đúng địa chỉ — nhưng nó SẼ đổi liều mạnh ⇒ regate ĐA-08 n=100 là bắt buộc, và cần lường trước rằng tăng liều có thể ĐẢO DẤU (kênh dương hiện tại đang chạy ở điểm vận hành đói trần)."
+    },
+    {
+      "title": "MM-08-E — coin adherence rút SAU khi gán: ĐO RA 43–51% slot khan bị đốt cho người không đi, mà trần mỗi ô chỉ là 1",
+      "severity": "CAO (artifact ghi TB — NÂNG)",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/world.py:475-501 (vòng for al in sol['allocations']: slot đã tiêu ở :475-477; standby_follow_draw rút coin ở :495; chỉ follower vào standby_plan/pending_targets ở :497-500) · configs/pilot_dongda.yaml:442-450 (p theo archetype 0,30–0,75). ĐO: assigned 78/83/62 vs coin-follow 38/47/33 ⇒ đốt 40/36/29 = 51,3%/43,4%/46,8%. Ghép với cap_left ∈{1,2} (96%+ là 1) ⇒ MỘT lượt đốt = XOÁ TRẮNG ngân sách lời khuyên của ô đó trong bucket đó",
+      "tu_kiem": true,
+      "lop": "L4",
+      "ghi_chu": "L4 chuẩn: cổng ĐÚNG NỘI DUNG (coin adherence) đặt SAU bước gán ⇒ tác dụng phụ im lặng (slot bị tiêu bởi người không bao giờ đi). Cùng khuôn với B2 (cooldown kiểm SAU Hungarian, continue không lui ứng viên — cùng vùng file) và D-M3-20 (rút RNG trước cadence/coin). Artifact nói 'self-correcting sau 60′' — ĐÚNG về pending, nhưng KHÔNG đúng về cơ hội: ô đói cung mất trọn một bucket. ⚠ Ranh giới: đề xuất overbooking 1/p̄ chỉ hợp lệ TRONG SIM để đo trần giá trị; phát lời khuyên phân biệt theo adherence cá nhân cho NGƯỜI THẬT là vấn đề fairness, phải Cường duyệt riêng (artifact đã ghi đúng, giữ nguyên)."
+    },
+    {
+      "title": "MM-08-F — nhánh swap_window (mục đích khai sinh của S4) chưa bao giờ được nối; chiều 'bucket' của slot suy biến",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/world.py:452 (derive_allocation_input(..., cands, [], zones, ...) — stations=[] tại CALL SITE DUY NHẤT) · src/gsm_core/features/allocation.py:30 (bucket = t_now cho MỌI entry ⇒ khoá slot (target,bucket) chỉ có 1 giá trị bucket/lần gọi) · src/gsm_core/solvers/capacity_alloc.py:1-7 (docstring 'chống cả làng cùng đi sạc' · 'swap_window → slots (station,bucket), capacity = throughput') · world.py:977-992 (swap_early đi đường per-driver choose_station + check_swap_early, KHÔNG qua S4)",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "L3 — và charter §L3 ĐÃ liệt kê thực thể này ('S4 swap_window (producer truyền [])') ⇒ CITE, không tính là mới. Đóng góp mới: chiều bucket suy biến (allocation.py:30) ⇒ khả năng stagger THEO THỜI GIAN của S4 là KHÔNG THỂ VỚI TỚI từ bất kỳ caller nào — không chỉ 'chưa dùng' mà 'chưa có đường dùng'. Trả nợ E-07 đúng như artifact nói."
+    },
+    {
+      "title": "MM-08-G — myopic 1 bucket: không định giá vị-trí-tại-thời-điểm-đến",
+      "severity": "TB",
+      "confidence": "CAO (cơ chế) / CHƯA ĐO (độ lớn)",
+      "evidence_file_line": "src/gsm_sim/world.py:389 (view(now) — một bucket) · src/gsm_sim/market_state.py:151-160 (_demand(hour, idx) trả đúng một giờ) · market_state.py:162-167 (cache theo bucket idx) · grep 'demand_field' trong đường planner: không có tham chiếu h+1 nào. Bối cảnh đo: km→assigned mean 2,456–2,838 km ⇒ ở speed_kmh peak 17 (configs:95) là ~8,7–10,0 phút di chuyển trên bucket 60′",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Cùng hình dạng MM-08-A: thiếu MỘT VẾ mà world định giá (giá trị vị trí tại thời điểm đến), lần này trên trục thời gian. KHÔNG thuộc L1..L6. Độ lớn CHƯA ĐO — tôi không đo phân rã theo giờ, và không được suy từ '10 phút / 60 phút' ra tác động (kỷ luật #4). E-S4-5 (nội suy λ theo thời-điểm-đến, arm oracle) hợp lệ về nguồn dữ liệu, nhưng đứng SAU MM-08-D vì trần mới là thứ chặn."
+    },
+    {
+      "title": "MM-08-H — sd_ratio dùng mẫu số max(1,eff); và (MỚI) THỨ TỰ ranked_cells theo sd_ratio KHÔNG CÓ CONSUMER SỐNG NÀO",
+      "severity": "THẤP",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/market_state.py:86 (sd = demand/eff if eff>0 else demand) · market_state.py:99-103 (ranked sorted theo −sd_ratio). GREP TOÀN src/ ui/ scripts/: 'ranked_cells' chỉ 3 hit — market_state.py:110 (sinh), world.py:390 (chỉ truthiness), world.py:393 (gán biến) — rồi world.py:442 dùng làm TẬP cho min-theo-khoảng-cách và world.py:451 dựng zones mà capacity_alloc.py:34 sorted() lại theo alphabet ⇒ thứ tự sd_ratio bị vứt HAI LẦN",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "L3 thuần: một cơ chế xếp hạng (sd_ratio ranking) tồn tại, có docstring giải thích, có test — nhưng ZERO consumer đọc THỨ TỰ của nó. Artifact nói đúng là 'hôm nay moot'; tôi xác nhận bằng grep đầy đủ và chỉ ra nó thành load-bearing NGAY khi ai sửa MM-08-A. Ai sửa A phải sửa :86 sang λ/(eff+1) cùng lúc, nếu không sẽ thừa hưởng biên sai."
+    },
+    {
+      "title": "MỚI N1 — trần zone thực tế LUÔN là 1 (96%+), tối đa 2; ⇒ 'chống dồn cục' bên trong một ô là hệ quả của CON SỐ trần, không phải của Hungarian",
+      "severity": "TB (đọc-sai-kết-luận, không phải bug)",
+      "confidence": "CAO (3 seed nhất quán, và bị chặn trên bởi slots ≤ 3)",
+      "evidence_file_line": "ĐO: cap_left của mọi ô nhận gán = {1:74,2:2} / {1:69,2:8} / {1:58,2:2}; slots toàn lưới tối đa 3 (1 lần/seed). Nguồn cấu trúc: src/gsm_core/features/market_state.py:81-82 · src/gsm_sim/world.py:451 (capacity = cap_left) · src/gsm_core/solvers/capacity_alloc.py:32-35 (expand slot theo capacity)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Hệ quả đọc: docstring capacity_alloc.py:1-7 và mọi diễn ngôn 'S4 chống herding' hàm ý solver ĐIỀU PHỐI nhiều người vào một ô có sức chứa. Ở điểm vận hành thật, một ô KHÔNG THỂ nhận quá 1 người vì capacity_left=1 — chống-dồn-trong-ô do view (market_state.py:82) đảm bảo, phần Hungarian phía trên chỉ còn là bài toán ghép mà 53–63% kết cục là TIE vỡ theo alphabet (D-ADV-01). Không phải lỗi; là điều phải nói ra trước khi ai kết luận 'Hungarian đang làm việc'."
+    },
+    {
+      "title": "MỚI N2 — sensitivity 'capacity −20%' của S4 KHÔNG BAO GIỜ nhúc nhích (0/48 lô); test ghim nó chỉ assert khoá TỒN TẠI và dùng fixture capacity=3 ngoài điểm vận hành",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/capacity_alloc.py:101-109 (sc/zc = {k: max(1, int(round(v*0.8)))}) — với v=1 → max(1,1)=1; v=2 → round(1,6)=2 ⇒ KHÔNG ĐỔI. tests/test_capacity_alloc.py:126-132 (chỉ assert 'phải có sensitivity capacity' + có khoá n_unassigned; fixture capacity=3). ĐO trên arm ship: 0/17, 0/16, 0/15 lô có n_unassigned khác baseline",
+      "tu_kiem": true,
+      "lop": "L2",
+      "ghi_chu": "L2 chuẩn khuôn S2-1: assertion đúng chữ, fixture (capacity=3) làm nó không kiểm được tính chất nào ở điểm vận hành thật (capacity ∈ {1,2}). Kết quả: solver báo ra một 'phân tích độ nhạy' mà theo cấu trúc không thể khác baseline, và cái test bảo vệ nó cũng không thể đỏ. Sửa rẻ: bỏ max(1,·) hoặc dùng floor, + test ở capacity=1 assert sensitivity ≠ baseline."
+    },
+    {
+      "title": "MỚI N3 — chỉ số 'herding_avoided' gồm 76,1–79,8% là `unassigned` = người KHÔNG được khuyên gì",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/capacity_alloc.py:91 (herding_avoided = n_stag + len(unassigned)) · capacity_alloc.py:111-113 (digest 'chống dồn cung {herding_avoided}') · src/gsm_sim/world.py:511 (log ra event). ĐO: unassigned/herding_avoided = 162/211=76,8% · 140/184=76,1% · 142/178=79,8%",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Đề nghị lớp mới L8 'chỉ số không thể báo xấu': đại lượng đo thành tích so với một baseline PHẢN THỰC không tồn tại (một advisor sẽ khuyên tất cả về ô tốt nhất). Người bị unassigned đứng nguyên = y hệt arm đối chứng ⇒ đếm việc-không-làm thành chống-dồn. Không lật kết luận nào (chỉ số này không vào ĐA-08), nhưng nếu ai trích 'chống dồn cung 178–211 lượt/ngày' làm bằng chứng kênh hiệu quả thì đó là vòng tròn."
+    },
+    {
+      "title": "MỚI N4 — nhánh LARGE (bất khả thi) là CODE CHẾT: S4 không có cách biểu đạt 'slot này CẤM với người này'; tham số src_label cũng không được dùng",
+      "severity": "TB",
+      "confidence": "CAO (đọc code + fuzz 200 input)",
+      "evidence_file_line": "src/gsm_core/solvers/capacity_alloc.py:45 (cost = np.full((nC,nS), LARGE)) rồi :46-50 GHI ĐÈ MỌI ô (vòng đôi phủ hết i,j) ⇒ :56 'if cost[r,cc] >= LARGE: continue' KHÔNG BAO GIỜ chạy. capacity_alloc.py:19 (LARGE=1e6) · :25 (src_label xuất hiện ĐÚNG 1 lần = trong signature). Fuzz 200 input ngẫu nhiên: không lần nào nhánh này kích hoạt",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "L3: cơ chế mồ côi — LARGE hiện diện như thể sống (có hằng số, có nhánh xử lý, có comment 'slot không khả dụng') nhưng không producer nào ghi LARGE vào ma trận. Đúng chỗ artifact cần cho ràng buộc pin (variables_missing #6) — artifact chỉ nói 'LARGE không bao giờ được dùng trong construction' mà không nêu nhánh :56 là chết. ⚠ Sửa phải cẩn thận: D-ADV-01 cảnh báo đặt cost lệch-target thành LARGE sẽ đập test_t14_zone_veto_dong_ca_stagger + test_t15 — nhưng dùng LARGE cho ràng buộc PIN (khác vế) thì không chạm hai test đó. Cần kiểm lại trước khi làm."
+    },
+    {
+      "title": "MỚI N5 — có lượt gán cho tài xế SOC 8,7% / 20,3% / 22,2% trong khi ngưỡng đổi pin là 20%: slot khan (=1) bị tiêu cho người gần như chắc chắn đi đổi pin",
+      "severity": "TB",
+      "confidence": "TB (đã đo min theo seed; CHƯA đo bao nhiêu lượt như thế và bao nhiêu thực sự đi swap)",
+      "evidence_file_line": "ĐO soc_assigned min = 8,7 (seed3002) / 20,3 (3000) / 22,2 (3001); mean assigned 69,7–72,0 vs unassigned 48,2–55,0. configs/pilot_dongda.yaml:274 (swap_soc_threshold_pct: 20) · :272 (swap_consume_pct_per_km: 1.6) — km→assigned mean 2,456–2,838 ⇒ ~3,9–4,5% pin. src/gsm_sim/world.py:443-446 (SOC chỉ vào priority_soc = thứ tự giữ/bỏ, KHÔNG phải ràng buộc) · capacity_alloc.py:48 (pen ∈ [0,1] = 1/10 mức lệch +10 ⇒ SOC không bao giờ thắng được mismatch)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Cùng hình dạng thiếu-vế (L7 đề nghị): ưu tiên SOC là XẾP HẠNG MỀM, không có SÀN. Cộng dồn với N1 (trần=1) và MM-08-E (43–51% đốt slot): ba đường đốt cùng một tài nguyên khan. CHƯA TỰ KIỂM phần 'người đó có thực sự đi swap thay vì relocate không' — cổng wait_only (world.py:1006) chỉ đè bản năng WAIT nên nhiều khả năng không thi hành, nhưng slot ĐÃ tiêu và trần đích ĐÃ bị trừ. Không tuyên bố độ lớn."
+    },
+    {
+      "title": "MỚI N6 (trả lời Q4) — LIỀU thật của kênh ship: chỉ 32,2–44,4% đội hình thực sự di chuyển ≥1 lần/ngày; '+6.016đ/người/ngày' là trung bình đội mà ~2/3 số người không nhận can thiệp nào",
+      "severity": "CAO (rủi ro đọc sai kết luận đang ship)",
+      "confidence": "CAO (số đo) / CHƯA ĐO (phân rã payout theo mover)",
+      "evidence_file_line": "ĐO 3 seed arm B3w coverage=all: tài xế RIÊNG BIỆT có standby_followed = 32/90 (35,6%), 40/90 (44,4%), 29/90 (32,2%); được gán ít nhất 1 lần = 57/90, 57/90, 48/90 (53,3–63,3%); tối đa 2–3 lượt/người. Nguồn con số bị đọc: tracking/updates/UPDATE-087-*.md:15 (payout_mean_all +6.016đ SIG) — là trung bình TOÀN ĐỘI, không phải per-treated",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "UPDATE-087:47-49 đã nói lợi ích không chia đều THEO ARCHETYPE (P4 ≈ 0) — nhưng phân rã theo NGƯỜI CÓ DI CHUYỂN vs KHÔNG thì chưa ai làm. Hai cách đọc cho cùng +6.016đ: (a) hiệu ứng tập trung ở ~35% người di chuyển (⇒ ~15–19k/người-di-chuyển, DERIVED, chưa đo); (b) hiệu ứng hệ thống lan toả cho cả đội qua served +1,74đp/đơn chết −23,4 (UPDATE-087:17-18). Hai cách đọc dẫn tới hai quyết định ship KHÁC HẲN NHAU. Đo được rẻ: paired Δpayout tách mover/non-mover, cùng artifact seed 3000-3099."
+    },
+    {
+      "title": "MỚI N7 (trả lời Q4) — liều BÃO HOÀ theo TRẦN chứ không theo ĐỘ PHỦ: giảm phủ 4× chỉ mất ~45–55% liều ⇒ cảnh báo 'adoption 100%' của UPDATE-087 đúng chiều nhưng SAI ĐỘ DỐC",
+      "severity": "TB (đảo chiều một caveat đang được dùng để chiết khấu kết quả)",
+      "confidence": "TB (n=3 seed, và mới đo LIỀU chứ chưa đo PAYOUT theo độ phủ)",
+      "evidence_file_line": "ĐO cùng seed, 3 mức coverage (advice_bridge.py:298-315 'share' — deterministic theo actor_id, không tiêu RNG chung): executed all = 37/45/31 → share0,5 = 28/32/19 → share0,25 = 21/20/14. candidates 240/223/204 → 152/126/123 → 72/67/67. Cơ chế: src/gsm_core/features/market_state.py:81-82 giới hạn slots ≤3 toàn lưới ⇒ ứng viên luôn dư 2,6–3,3× so với trần",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "UPDATE-087:66 tự nêu flaw #3 'Adoption 100% (coverage: all) — đường cong phủ thấp hơn đo ở Cycle Q'. Ngầm hiểu thông thường: hiệu ứng co theo tỷ lệ phủ. ĐO RA: ở 25% phủ vẫn giữ 45–55% số lượt di chuyển, vì thứ chặn là TRẦN chứ không phải người. ⚠ CHƯA ĐO payout theo độ phủ — tôi chỉ đo liều. Không được suy từ liều ra tiền (kỷ luật #4). Nhưng nếu ai chiết khấu +6.016đ tuyến tính theo độ phủ pilot, cơ chế nói họ đang chiết khấu quá tay."
+    }
+  ],
+  "lop_thong_ke": {
+    "tong_finding": 15,
+    "L1": 1,
+    "L2": 1,
+    "L3": 3,
+    "L4": 1,
+    "L5": 0,
+    "L6": 0,
+    "KHONG": 9,
+    "ty_le_giai_thich_duoc_boi_L1_L6": "6/15 = 40%",
+    "chi_tiet": {
+      "L1": ["MM-08-D (μ=1,5/ô res-9 vs kernel dispatcher ring k≤6 — hai quy ước cho 'ai phục vụ được cầu này')"],
+      "L2": ["N2 (sensitivity −20% bất động 0/48 + test chỉ assert khoá tồn tại, fixture ngoài điểm vận hành)"],
+      "L3": ["MM-08-F (swap_window stations=[] — charter ĐÃ liệt kê, cite)", "MM-08-H (thứ tự ranked_cells theo sd_ratio: 0 consumer, grep đầy đủ)", "N4 (nhánh LARGE chết + tham số src_label không dùng)"],
+      "L4": ["MM-08-E (coin adherence rút SAU khi tiêu slot — cùng khuôn B2, D-M3-20)"],
+      "L5": [],
+      "L6": [],
+      "KHONG": ["MM-08-A", "MM-08-B", "MM-08-C", "MM-08-G", "N1", "N3", "N5", "N6", "N7"]
+    },
+    "lop_de_nghi_them": {
+      "L7_objective_thieu_ve": {
+        "mo_ta": "Objective tối thiểu một PROXY VÔ ĐƠN VỊ (đếm mismatch, xếp hạng mềm) trong khi world định giá km/phút/cuốc/pin. Không phải 'tính sai' — là 'tính đúng một thứ khác'.",
+        "thuc_the_trong_vong_nay": ["MM-08-A (không có vế km, không có vế giá trị đích)", "MM-08-B (không có vế mất mát tại nguồn)", "MM-08-G (không có vế thời-điểm-đến)", "N5 (SOC là xếp hạng mềm, không có sàn khả thi)"],
+        "thuc_the_da_biet_cung_lop": ["station_choice (D-E4-06 NO-GO — tiết kiệm phút rồi thả người ở nơi không ai định giá)", "D-ADV-01 vế (2)+(3)"],
+        "vi_sao_dang_mot_lop_rieng": "4/9 finding KHÔNG-thuộc-lớp của vòng này rơi vào đúng hình dạng này, và artifact mm-08 tự đặt tên nó ở trường station_choice_class_answer. Nếu không tách ra thì L1..L6 chỉ giải thích 40% và phần còn lại trông như nhiễu — trong khi thực ra nó là MỘT khuôn, khuôn LỚN NHẤT."
+      },
+      "L8_chi_so_khong_the_bao_xau": {
+        "mo_ta": "Một tự-kiểm/chỉ số được cấu trúc sao cho không thể báo kết quả xấu (perturbation bị triệt tiêu, hoặc baseline phản thực không tồn tại).",
+        "thuc_the": ["N2 (sensitivity −20%, cũng fit L2 vì có test ghim)", "N3 (herding_avoided 76–80% là việc-không-làm)"],
+        "quan_he_voi_L2": "L2 là trường hợp riêng của L8 khi cái không-thể-đỏ là một TEST. N3 cho thấy hình dạng này sống cả ngoài test suite."
+      }
+    },
+    "phan_bien_gia_thuyet_lop": "Giả thuyết lớp ĐÚNG MỘT PHẦN và cách phân lớp hiện tại BẤT ĐỐI XỨNG. L3 (mồ côi) và L2 (ghim vô hiệu) là hai lớp SẠCH, dễ grep, có cổng chặn tái diễn hiển nhiên (grep consumer / bắt test phải đỏ được) — 4/15 finding. L1 và L4 fit được nhưng phải diễn giải (L1 với MM-08-D cần chấp nhận 'dispatcher sở hữu kernel phục vụ'; L4 với MM-08-E cần coi coin là 'cổng'). L5/L6 KHÔNG có thực thể mới nào ở S4 — D-E4-01 zero-cost vẫn là bối cảnh, nhưng là bối cảnh của TOÀN sim, không phải nợ của S4. Rủi ro thật của giả thuyết: 60% finding không vào lớp nào, và trong đó có 4 cái cùng MỘT khuôn khác (L7) — tức bảng lớp hiện tại đang bỏ sót khuôn LỚN NHẤT rồi gọi phần còn lại là 'nợ độc lập'. Đề nghị: thêm L7, giữ L8 như biến thể mở rộng của L2, rồi đo lại tỷ lệ phủ."
+  },
+  "tra_loi_Q4": {
+    "cau_hoi": "Ngoài vế stagger đã biết (D-ADV-01), còn gì trong S4 có thể làm con số +6.016đ bị đọc sai?",
+    "nguon_goc_con_so_da_mo": "tracking/updates/UPDATE-087-xac-nhan-100seed-va-de-xuat-cau-hinh.md:15 — payout_mean_all Δ(B3w − A) = +6.016đ/người SIG, seeds 3000–3099, 300 run, coverage: all, arm = CHANNEL_LADDER['positioning'] (parallel.py:46-47). Tôi đo lại trên ĐÚNG arm đó, seeds 3000–3002.",
+    "sau_duong_doc_sai_xep_theo_do_manh": [
+      "1. LIỀU (N6, ĐO): '+6.016đ/người/ngày' đọc như 'mỗi tài xế giàu thêm 6k'. Thực tế 29–40/90 người (32–44%) di chuyển ≥1 lần/ngày. Hai cách đọc — hiệu ứng tập trung ở người di chuyển, hay hiệu ứng hệ thống lan toả qua served +1,74đp — CHƯA AI TÁCH, và chúng dẫn tới hai quyết định ship khác hẳn.",
+      "2. ĐỘ DỐC THEO ĐỘ PHỦ (N7, ĐO): kênh bị chặn bởi TRẦN chứ không bởi người. Giảm phủ 4× chỉ mất 45–55% liều. Caveat 'adoption 100%' (UPDATE-087:66) nếu dùng để chiết khấu tuyến tính sẽ chiết khấu quá tay.",
+      "3. ĐIỂM VẬN HÀNH ĐÓI TRẦN (MM-08-D, ĐO): 87,6–88,2% cell-bucket có slots=0, trần toàn lưới tối đa 3, 140–162 ứng viên/ngày bị từ chối. +6.016đ là số của MỘT LIỀU CỤ THỂ ở điểm vận hành đói, không phải của 'khái niệm positioning'. Sửa trần (E-S4-4) sẽ đổi liều mạnh và CÓ THỂ đảo dấu — không được ngoại suy.",
+      "4. SLOT BỊ ĐỐT (MM-08-E, ĐO): 43–51% lượt gán đi cho người coin-false, mà trần mỗi ô là 1 ⇒ ô đích thường nhận ZERO cung mới trong bucket dù sổ ghi 'đã phát đủ'. Ai đọc n_assigned (62–83) như 'số can thiệp' đang đọc gấp đôi số can thiệp thật (31–45).",
+      "5. HUNGARIAN KHÔNG PHẢI THỨ ĐANG THẮNG (N1 + station_choice_class_answer của chính artifact): cap=1 ở 96%+ ô ⇒ chống-dồn-trong-ô do CON SỐ trần (market_state.py:82) đảm bảo, không phải do solver; 53–63% kết cục là tie vỡ theo alphabet. '+6.016đ chứng minh S4 hoạt động' là kết luận SAI ĐỊA CHỈ — nó chứng minh BỘ LỌC capacity_left>0 hoạt động.",
+      "6. CHỈ SỐ TỰ CHỨNG MINH (N3, ĐO): 'chống dồn cung 178–211 lượt/ngày' trong log/digest gồm 76–80% là người không được khuyên gì. Không vào ĐA-08 nên không lật số, nhưng là bằng chứng vòng tròn nếu ai trích."
+    ],
+    "phep_thu_quyet_dinh_de_xuat_va_TU_PHAN_BIEN": {
+      "de_xuat": "Arm C = giữ NGUYÊN bộ lọc (candidate rule + capacity_left>0 + trần), nhưng THAY Hungarian bằng gán tham lam theo khoảng cách (hoặc gán ngẫu nhiên tôn trọng trần, CRN-safe). Nếu +6.016đ SỐNG SÓT ở n=100 ⇒ công lao thuộc BỘ LỌC, và mọi cycle sửa cost matrix (E-S4-1, D-ADV-01 vế 2) là tối ưu hoá thứ không mang tiền.",
+      "tu_phan_bien_1": "Kỷ luật #5: đề xuất sửa phải qua phản biện như đề xuất phát hiện. Điểm yếu: 'gán ngẫu nhiên' KHÔNG phải arm sạch — nó rút RNG mới, phá CRN (bài học DET-01 / 'arm đối chứng phải SẠCH'). Phải dùng gán THAM LAM TẤT ĐỊNH (nearest-first, tie theo tên ô) để không đụng random stream.",
+      "tu_phan_bien_2": "Điểm yếu 2: greedy-nearest sẽ CÙNG LÚC sửa vế km của D-ADV-01, nên nếu +6.016đ tăng thì tôi không tách được 'bộ lọc là công lao' với 'thêm vế km có lợi'. Cần BA arm: A(off) · B3w(hiện tại) · C(greedy-nearest). So C−B3w tách được vế km; so B3w−A giữ nguyên.",
+      "tu_phan_bien_3": "Điểm yếu 3: đây là ĐỔI KÊNH ĐANG BẬT ⇒ regate ĐA-08 đủ 9 dòng n=100 là điều kiện bắt buộc (DEFERRED.md:126), không phải tuỳ chọn. Và với cash_cost_vnd_per_km = 0 (D-E4-01), km tiết kiệm KHÔNG có đường quy ra tiền trong arm hiện hành ⇒ phép thử này có thể trả về 'ns' vì world không định giá km, chứ không phải vì cơ chế sai. Phải chạy kèm arm cash_cost>0 hoặc chấp nhận đo bằng km/phút chứ không bằng đồng.",
+      "tu_phan_bien_4": "Điểm yếu 4: N6/N7 đo trên n=3 seed, dưới chuẩn repo. Trước khi ai dùng chúng để chiết khấu hay không chiết khấu +6.016đ, phải lặp ở n≥30. Tôi ghi confidence tương ứng, không nâng."
+    }
+  },
+  "ghi_chu": "TỰ KIỂM: 15/15 finding đều mở file:line ra đọc; 11/15 có số ĐO LẠI trên sim (không suy từ config). CHƯA TỰ KIỂM: (a) độ lớn của MM-08-G (myopic) — tôi không phân rã payout theo giờ, chỉ xác nhận cơ chế bằng grep; (b) trong N5, có bao nhiêu lượt gán SOC thấp và bao nhiêu thực sự chuyển thành GO_SWAP — tôi chỉ đo min SOC theo seed; (c) claim của artifact rằng 'ring dispatcher ~2,2km phủ hộ ô bị rút' (MM-08-B detail) — không kiểm. HAI ĐÍNH CHÍNH PHẢI CHUYỂN LÊN: (1) MM-08-C + E-S4-3 tái phát một claim và một bản vá ĐÃ BỊ BÁC ngày 2026-08-07 (D-ADV-01, DEFERRED.md:126: 0/179 lượt vượt biên bucket, và view() cache theo bucket làm re-validate thành NO-OP) — tôi đo độc lập ra 0/113, xác nhận bác; ai lập plan từ mm-08 sẽ đưa một cycle NO-OP vào hàng đợi. (2) MM-08-B quy sai nguyên nhân: ca 'eff==slots' chỉ 7–12% lượt gán, ca thống trị là slots==0 (34–42%) ⇒ E-S4-2 (ngân sách outflow max(0, eff−slots)) gần-NO-OP cho đa số lượt vì ở ô slots=0 thì eff−slots ≥ eff. MM-08-A trùng D-ADV-01 vế (2) — CITE, không tính mới; đóng góp là vòng đo độc lập THỨ BA cùng dấu cùng bậc. RANH GIỚI: không đề xuất nào chạm sức khoẻ (§1.2b); mọi con số tài chính đều trích từ artifact/UPDATE có sẵn hoặc từ event log của sim, không tự tính; không khuyên nhận/từ chối đơn; mọi số trong file này là MOCK (configs/pilot_dongda.yaml). PROBE: 4 script ở scratchpad (probe_s4.py, s4b, s4c, s4d, s4e), KHÔNG ghi vào repo; s4b bỏ đi vì cách join theo thứ tự lời gọi bị nhiễu bởi process khác — s4c thay bằng join chính xác qua World.actors."
+}

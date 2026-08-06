@@ -1,0 +1,157 @@
+{
+  "lop": "L6 — hiệu chỉnh BÙ cho khuyết tật",
+  "dinh_nghia": "Một tham số world bị điều chỉnh để đạt một mục tiêu ĐO LƯỜNG, trong khi nguyên nhân thật là một defect chưa sửa ⇒ tham số trở thành 'thuốc giảm đau'.",
+  "ngay": "2026-08-07",
+  "mock": true,
+  "cach_do": {
+    "sim": "uv run python, configs/pilot_dongda.yaml nguyên trạng, run_once",
+    "seeds_da_chay": [1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007],
+    "script_tam": "scratchpad/scan_cfg_keys.py (quét khoá chết) · scratchpad/measure_l6.py (payout/cuốc, 3 seed) · scratchpad/measure_tph.py (cuốc/giờ + swap_failed, 8 seed)",
+    "ghi_chu": "Mọi số dưới đây là ĐO trên sim, KHÔNG suy từ config, trừ chỗ ghi rõ DERIVED."
+  },
+
+  "pattern_da_quet": [
+    "ĐỌC TOÀN BỘ configs/pilot_dongda.yaml (512 dòng) — đây là file config DUY NHẤT của repo (find *.yaml: chỉ pilot_dongda.yaml + ui/driver_app/pubspec.yaml)",
+    "grep -i 'hiệu chỉnh|để đạt|sweep|mục tiêu|calibrat|tuning|tune|hạ ngưỡng|nới|magic number' src/  → 60 hit",
+    "grep -i 'ASSUMPTION|PROXY' --include=*.py src/  → 23 hit",
+    "grep 'dung sai|tolerance|_TOL' tests/ src/gsm_sim/sim_metrics.py  → ngưỡng cổng",
+    "grep 'để đạt|đủ để|chọn .* để|nâng .* để|hạ .* để|bù cho|che |làm đẹp' src/ scripts/ ui/backend/app/",
+    "grep '_actor_demand_hint' toàn repo (truy defect đứng sau idle_impatience)",
+    "grep 'wait_cap_min|cancel_after_accept|eta_max_min' src/",
+    "grep 'trips_per_hour_est|max_realized_accept|min_online_min_for_rate' src/ tests/",
+    "grep 'avg_dist_km|completion_prior|hours_budget_remaining' src/",
+    "🔧 QUÉT CƠ HỌC MỚI (script, tái lập được): trích MỌI literal dotted trong cfg.get(\"a.b\") ở src/**/*.py rồi đối chiếu với 248 khoá THẬT của pilot_dongda.yaml ⇒ 3 KHOÁ CHẾT. Chính quét này ra thực thể M1. Lệnh: xem scan_cfg_keys.py; regex `(?:cfg|config|self\\.cfg|_cfg)\\.get\\(\\s*[\"']([\\w.]+\\.[\\w.]+)[\"']`",
+    "Đọc tests/test_config_flags_wired.py (cổng config→code hiện có) để KHÔNG đề xuất trùng, và để chứng minh khoảng trống chiều ngược",
+    "Đọc tests/test_sim_realism.py TOÀN BỘ (7 cổng + 5 dải mục tiêu) — đây là 'mục tiêu đo lường' mà mọi hiệu chỉnh nhắm tới"
+  ],
+
+  "thuc_the": [
+    {
+      "id": "L6-K1",
+      "file_line": "configs/pilot_dongda.yaml:223-228 (actors.n = 90)",
+      "vi_sao_thuoc_lop": "ĐÃ BIẾT — chỉ CITE. Đội 74→90 để kéo served lên 0,797 trong khi shortlist hẹp mới là nguyên nhân.",
+      "hau_qua": "cite UPDATE-176/177 + research/audit/2026-08-06-root-cause-idle/g1-chuoi-hieu-chinh.json (k=8 n=90: expired 204,6→157, served 0,830→0,870, 5 seed).",
+      "moi_hay_da_biet": "DA_BIET"
+    },
+
+    {
+      "id": "L6-M1",
+      "file_line": "src/gsm_sim/advice_bridge.py:202 và :209 (cfg.get(\"orders.trip_km_median\", 3.5) / cfg.get(\"orders.cancel_after_accept_rate\", 0.05))",
+      "vi_sao_thuoc_lop": "Hiệu chỉnh được GHI LÀ ĐÃ ÁP DỤNG nhưng KHÔNG BIND. UPDATE-078 (BUG-S2-PARAMS) chép bảng 'avg_dist_km 3.0 → 3.5 (orders.trip_km_median) — định giá thấp mỗi cuốc ~14%' và comment tại chỗ ghi 'Cùng nguồn với world sinh cuốc'. Nhưng config KHÔNG có mục `orders:` (khoá thật là `demand.trip_km_median` và `behavior.cancel_after_accept_rate`) ⇒ Config.get (src/gsm_sim/config.py:32-40, không alias) trả DEFAULT. Giá trị 3.5 là hằng chép cứng, trùng config chỉ do TÌNH CỜ; sweep `demand.trip_km_median` sẽ cho Δ=0 ở solver.",
+      "hau_qua": "ĐO 3 seed (1000/1001/1002), cuốc ĐÃ HOÀN THÀNH: gross trung vị 24.298/24.361/24.489đ ⇒ payout 18.223/18.271/18.367đ. Solver với avg_dist_km=3.5 ⇒ gross 19.450đ, payout 14.588đ ⇒ **shift_dp định giá mỗi cuốc THẤP HƠN 20,2%**. Lý do cấu trúc: cước tính trên KM LỘ TRÌNH (demand.py:154-155, road.factor), fare-km trung vị ĐO = 4,63–4,67 km, còn 3,5 là trung vị HAVERSINE (đo lại: 3,17–3,20). DP bị lệch có hệ thống về REST/END so với ONLINE. Kênh shift_plan hôm nay TẮT (advice_bridge.py:597 chặn theo ch_shift_plan) ⇒ 0 tác động sản phẩm hiện tại, NHƯNG phán quyết ĐA-07 ('shift_plan không hiệu quả', n=100) đã được đo TRÊN chính solver bị định giá thấp 20% này. `completion_prior` (:209) may mắn vô hại: 1−0.05 trùng config.",
+      "do_tin": "Khoá chết + 20,2%: CHẮC (quét cơ học + đo 3 seed, phương sai gross trung vị < 1%). 'ĐA-07 có thể là artifact': GIẢ THUYẾT — phải chạy lại ĐA-07 với avg_dist_km nối đúng mới phán xử.",
+      "moi_hay_da_biet": "MOI"
+    },
+
+    {
+      "id": "L6-M2",
+      "file_line": "src/gsm_core/solvers/bonus_feasibility.py:18-19 (DEFAULT_TRIPS_PER_HOUR = 1.5) ↔ configs/pilot_dongda.yaml:395 (advice.trips_per_hour_est: 1.5)",
+      "vi_sao_thuoc_lop": "Hiệu chỉnh đi qua RANH GIỚI MẪU SỐ bằng NHÃN, không bằng phép đo lại. AUDIT S1-4 (UPDATE-065) thay 3.0 → 1.5 với lý do 'khớp số ĐO advice.trips_per_hour_est, nhãn ĐO trong config sim'. Nhưng hai chỗ dùng hai mẫu số khác nhau.",
+      "hau_qua": "ĐO 8 seed (1000-1007), hai mẫu số: (a) cuốc/giờ CÓ MẶT (online − rest − charge) trung vị **1,5005** [1,436–1,575]; (b) cuốc/giờ ĐỒNG HỒ online trung vị **1,2711** [1,189–1,309]. ⇒ (1) Với market_state.py:112,183 giá trị 1.5 ĐÚNG — count_supply (market_state.py:37-67) chỉ đếm IDLE + enroute, tức mẫu số (a). Ứng viên 'hằng số đã ôi' của tôi BỊ BÁC ở đây. (2) Với bonus_feasibility, `_walk` đi theo GIỜ ĐỒNG HỒ tới nửa đêm và `hours_budget_remaining = (shift_end − now)/60` (advice_bridge.py:1003) — mẫu số (b), có nghỉ/sạc bên trong ⇒ fallback ƯỚC CAO **+18,0%** số cuốc kiếm được. Fallback này chỉ chạy khi THIẾU lịch sử — tức đầu ca / tân binh, đúng lúc câu hỏi 'còn kịp mốc không' quan trọng nhất; a1_math_findings S1-4 đã chứng minh verdict feasible↔infeasible ĐẢO theo chính tỷ lệ này. Đây là đường SẢN PHẨM (nói với tài xế), không phải sim.",
+      "do_tin": "CAO cho cả hai số (8 seed, dải hẹp) và cho ranh giới mẫu số (đọc trực tiếp 3 call site). Chưa đo: bao nhiêu % lần gọi thật rơi vào nhánh fallback.",
+      "moi_hay_da_biet": "MOI"
+    },
+
+    {
+      "id": "L6-M3",
+      "file_line": "configs/pilot_dongda.yaml:185-207 (idle_impatience_step_min 20 / max_steps 2), defect tại src/gsm_sim/world.py:1146-1175",
+      "vi_sao_thuoc_lop": "LIỀU của thuốc giảm đau được chọn theo một mục tiêu ĐO LƯỜNG CỦA THÍ NGHIỆM, không theo hiện thực. Config tự khai: 'served chỉ +0.023 so với tắt (ngưỡng TỰ ĐẶT: ≤ +0.05) để KHÔNG ĂN MẤT DƯ ĐỊA CỦA ADVISOR'. Defect thật cũng do chính comment đó nêu và tôi đã kiểm trên code: `_actor_demand_hint` là prior cache theo (actor, giờ, cell), ghi một lần vào `_belief_cache` (world.py:1154-1157, 1174) và KHÔNG BAO GIỜ cập nhật từ trải nghiệm — không có đường ghi nào từ kết cục cuốc về cache.",
+      "hau_qua": "Triệu chứng được hạ (bảng trong config: chờ tối đa 269′ → 59′, >90′ 45,3 → 0,0) trong khi niềm tin vẫn không học. Hệ quả CỦA LIỀU: tham số hiện thực của thế giới và biến kết cục của thí nghiệm bị GHÉP — nếu liều cao hơn thì phần giá trị advisor đo được sẽ nhỏ đi, nên con số +6.016đ/người của kênh positioning là một hàm của liều mà chưa ai công bố đạo hàm. (Việc bước nới bán kính là NO-OP thì đã biết — B3: tầm nhìn niềm tin grid_disk(cell,2)=0,74 km < ring 3=1,11 km, cite research/audit/2026-08-06-root-cause-idle/rc-00-VERDICT.md §0. ĐIỂM MỚI ở đây KHÔNG phải no-op mà là QUY TẮC CHỌN LIỀU.)",
+      "do_tin": "Câu trích: nguyên văn trong config (CHẮC). Defect belief không cập nhật: đọc code, CHẮC. 'Giá trị advisor bị thổi lên bao nhiêu': CHƯA ĐO — phép đo đề xuất ở `cai_chua_kiem`.",
+      "moi_hay_da_biet": "MOI (biến thể LIỀU; cơ chế no-op là B3 đã biết)"
+    },
+
+    {
+      "id": "L6-M4",
+      "file_line": "src/gsm_sim/archetypes.py:35 · configs/pilot_dongda.yaml:232-237 · src/gsm_core/mockgen/verify_stats.py:20-22 và :92-94 · tests/test_sim_realism.py:167-172",
+      "vi_sao_thuoc_lop": "L6 ĐẢO CHIỀU, cùng cơ chế nhân quả (một mục tiêu đo lường điều khiển tham số world), ngược dấu: khuyết tật được GIỮ LẠI vì nó sinh ra con số. Bốn chỗ độc lập gọi một sai lệch hiện thực là 'dư địa advisor' thay vì sửa: (1) 'P4 tân binh CỐ Ý lệch khung (giữ làm dư địa advisor)' — P4 chiếm 18% đội, thị phần lớn thứ hai; (2) verify_stats:20-22 dùng 'chính là dư địa advisor' để nới dải peak_share về [0,24–0,55]; (3) verify_stats:92-94 dùng 'supply-demand mismatch là dư địa advisor' để miễn FAIL; (4) test_newbie_accepts_less_than_top KHOÁ khoảng cách mở: 'Đây là dư địa advisor — nếu mất, so sánh A/B ở SIM-4 sẽ vô nghĩa' ⇒ nay có một TEST CẤM thu hẹp khuyết tật.",
+      "hau_qua": "Mọi mức tăng advisor đo trong thế giới này chứa một phần là giá trị của việc sửa một khuyết tật ĐƯỢC TIÊM VÀO CÓ CHỦ Ý ⇒ không đỡ được suy luận ngoại suy sang tài xế GSM thật. Cộng hưởng cùng hướng: `adherence_by_archetype.P4 = 0.75` (cao nhất, gấp 2,5× P3/P5) cũng là ASSUMPTION đặt tay, gắn đúng archetype đang giữ khuyết tật.",
+      "do_tin": "Bốn trích dẫn nguyên văn: CHẮC. Độ lớn cộng hưởng: CHƯA ĐO.",
+      "moi_hay_da_biet": "MOI"
+    },
+
+    {
+      "id": "L6-M5",
+      "file_line": "src/gsm_sim/behavior.py:37-40 (ECON_WEIGHT = 0.7)",
+      "vi_sao_thuoc_lop": "Núm vặn được đặt để MỘT CỔNG TEST xanh, tự khai: 'ASSUMPTION, hiệu chỉnh bằng gate test ≥30 seed'. Nó là hệ số DUY NHẤT quyết định tiền tác động bao nhiêu lên hành vi (behavior.py:97: x = logit(base) + ECON_WEIGHT·z, z kẹp [−2,2]) — tức đúng kênh mà mọi kênh advisor đi qua. Nó là HẰNG MODULE: không nằm trong config ⇒ test_config_flags_wired không thấy, dashboard không có slider, mọi sweep không với tới.",
+      "hau_qua": "Độ nhạy của tài xế với tiền — đại lượng quyết định toàn bộ giá trị advisor — là một số đặt tay được chọn để một cổng hiện thực không đỏ, và không có phép đo nào ràng buộc nó. Sibling đã biết (CITE, không báo lại): default `logit_center_vnd=6000` ở behavior.py:58/105 ôi qua 2 lần recalibration (a1_math_findings BEHAV-1, đã hạ severity vì call site production truyền config đúng).",
+      "do_tin": "Trích dẫn + đường code: CHẮC. Độ lớn hệ quả: CHƯA ĐO (tôi KHÔNG sweep ECON_WEIGHT trong vòng này).",
+      "moi_hay_da_biet": "MOI"
+    },
+
+    {
+      "id": "L6-M6",
+      "file_line": "configs/pilot_dongda.yaml:163 (station.wait_cap_min: 60) ↔ src/gsm_sim/behavior.py:256 (queue_len > 3) ↔ src/gsm_sim/world.py:1256-1284",
+      "vi_sao_thuoc_lop": "KHỚP MỘT PHẦN. Config mô tả tham số như thứ thay cho một HÀNH VI còn thiếu: 'trần chờ …; GIẢM ĐỂ MÔ PHỎNG ĐI TRẠM KHÁC'. Nhưng hành vi đổi trạm thật lại nằm ở một ngưỡng chép cứng `queue_len > 3` (behavior.py:256) không có trong config, không sweep được, không có bản ghi hiệu chỉnh nào.",
+      "hau_qua": "ĐO 8 seed: swap_failed trung vị 4,0 vs swap_done 107,5 ⇒ **3,6%** lượt đi trạm kết thúc bằng chờ đủ 60′ rồi rời đi với SOC nguyên (world.py:1274-1284). Trần đang BIND thật, và liều của nó không thuộc sổ hiệu chỉnh nào. Ảnh hưởng trực tiếp tới trần lợi ích đo được của kênh station_choice (E4/E-01, đã NO-GO).",
+      "do_tin": "Số 3,6%: ĐO, CAO. Phần 'thuộc L6': THẤP — tôi KHÔNG chỉ ra được defect cụ thể nào đứng sau nó; xếp PARTIAL để người sau không trích như thực thể chắc.",
+      "moi_hay_da_biet": "MOI (PARTIAL)"
+    },
+
+    {
+      "id": "L6-M7",
+      "file_line": "src/gsm_core/mockgen/verify_stats.py:87-88 (và :26)",
+      "vi_sao_thuoc_lop": "BIÊN GIỚI LỚP — cùng nước cờ bù trừ nhưng ở TẦNG ĐO chứ không ở tham số world (đúng ra thuộc L2). `if not inb and k not in ('payout_ft_vnd','trips_ft_median'): ok = False` ⇒ 2 trong 4 chỉ số được MIỄN làm đỏ; báo cáo vẫn in 'KẾT LUẬN: PASS'. Dải `dist_km_median` (2.8, 4.0) được viết quanh giá trị đã lệch, ghi thẳng trong chú thích: 'median mục tiêu 3.5, hiện 3.2'.",
+      "hau_qua": "Người đọc ROUND-2-stats-report.md thấy PASS và kết luận mock data đạt hiện thực, trong khi một nửa số chỉ số nằm ngoài dải benchmark. Ghi công bằng: file này TRUNG THỰC ở chỗ khác (in '**GAP** (ghi T-021, không che)' cho từng dòng và có đoạn 'KHÔNG tune generator để che') — lỗi nằm ở BOOLEAN tổng, không ở bảng.",
+      "do_tin": "Đọc code: CHẮC. Xếp lớp: nên về L2, để đây vì cùng cơ chế bù.",
+      "moi_hay_da_biet": "MOI (thuộc L2 nhiều hơn L6)"
+    },
+
+    {
+      "id": "L6-BAC-01",
+      "file_line": "configs/pilot_dongda.yaml:395 (advice.trips_per_hour_est) — ỨNG VIÊN BỊ BÁC, ghi lại để người sau khỏi làm lại",
+      "vi_sao_thuoc_lop": "Giả thuyết của tôi: hằng '1.5 (đo được ~1.4-1.5)' chốt ở UPDATE-048, sau đó thế giới bị hiệu chỉnh lại hai lần (SIM-XANH đường thật factor 1,46; đội 74→90) mà hằng không đo lại ⇒ ôi.",
+      "hau_qua": "BÁC. Đo 8 seed: cuốc/giờ CÓ MẶT = 1,5005 — trùng khít 1.5. Mẫu số đúng của market_state là (a) vì count_supply chỉ đếm IDLE+enroute. Nếu tôi dừng ở phép suy 'trips/driver 10 / ca ~8h ⇒ 1,25 ⇒ config sai 20%' thì đã báo một finding SAI. Đây chính là chỗ kỷ luật 'đo lại, đừng suy từ config' và 'mở nguồn gốc trước khi nói nó sai' phát huy tác dụng.",
+      "moi_hay_da_biet": "BAC"
+    }
+  ],
+
+  "lop_co_that": "MOT_PHAN",
+
+  "ly_do_phan_xu": {
+    "co_che_chung_neu_co": "Hiện thực của sim được ĐỊNH NGHĨA chỉ bằng vài dải TỔNG HỢP (tests/test_sim_realism.py:36-43: served .78–.88 · completion .92–.97 · accept ±5pp · không giờ nào >40% hết hạn), trong khi có hàng chục tham số tự do có đạo hàm lớn lên đúng các dải đó. Không có gì buộc một tham số phải đại diện cho KÊNH NHÂN QUẢ mà nó mang tên. Vì vậy cách sửa rẻ nhất cho bất kỳ khuyết tật nào làm tụt một chỉ số tổng hợp luôn là một tham số nâng chính chỉ số đó.",
+    "vi_sao_KHONG_phai_CO": [
+      "Phần lớn tham số được chỉnh CÓ căn cứ nguồn độc lập ghi ngay cạnh: patience 3→5 (arXiv 2503.13200) · P6 bắt đầu 4:40 (blog official 'ca đêm 4h-6h') · eta_max 10→11 là phép QUY ĐỔI thuần cho factor 1,46 (10×1,46/1,3≈11,2), không phải nới · accept_logit_center = trung vị net là ĐỊNH NGHĨA của tham số theo docstring behavior.py:71-72. Một thay đổi vừa có nguồn vừa nâng chỉ số thì KHÔNG phải thuốc giảm đau. Nếu đếm cả chúng, lớp sẽ nuốt trọn mọi calibration bình thường và mất giá trị chẩn đoán.",
+      "Repo ĐÃ CÓ máy chống-L6 thật, không phải lời nhắc: src/gsm_core/policy_locks.py (hằng chính sách KHÔNG sweep được, lý do ghi thẳng: 'sweep nó sẽ sinh ra bảng hoãn lâu hơn = nhiều tiền hơn') · tests/test_sim_realism.py:201-206 test_demand_not_tuned_down (cấm hạ cầu cho served đẹp) · sim_metrics.py:749 'ĐỪNG NỚI ngưỡng này khi nó bắn'. Tức mẫu đã được nhận diện và bị chặn một phần.",
+      "Hai thực thể MẠNH NHẤT tôi tìm được (M1, M2) thực ra KHÔNG phải 'tham số world chỉnh để đạt mục tiêu' — chúng là 'hiệu chỉnh được ghi là ĐÃ ÁP DỤNG nhưng không bind / bind ở mẫu số khác'. Gọi chúng là L6 sẽ làm nhoè hai cơ chế khác nhau."
+    ],
+    "vi_sao_KHONG_phai_KHONG": "L6 theo đúng chữ có ít nhất 2 thực thể sạch chia chung cơ chế: K1 (đội 74→90, đã biết) và M3 (liều sốt ruột chọn theo trần '≤ +0,05 served để không ăn dư địa advisor'). Cả hai đều: (i) tham số world; (ii) chọn bằng sweep đối chiếu một chỉ số; (iii) defect thật được NÊU TÊN ngay trong cùng comment và vẫn chưa sửa. Đó là một cấu trúc, không phải cách kể chuyện.",
+    "ket_luan": "MỘT PHẦN — và phần chắc chắn nhất mà vòng quét này lôi ra lại là một lớp KHÁC, hẹp hơn và kiểm được bằng máy, đề nghị tách tên: **L6b — hiệu chỉnh KHÔNG TỚI ĐÍCH** (M1: khoá config chết ⇒ hiệu chỉnh không bind; M2: hằng số đi qua ranh giới MẪU SỐ bằng nhãn; và cùng họ là default ôi behavior.py:58 đã biết). L6b có 3 thực thể, một cơ chế chung ('hằng số hiệu chỉnh di chuyển bằng NHÃN giữa hai ngữ cảnh, không có gì kiểm nó còn đúng ở nơi nó rơi xuống'), và nó CHẶN ĐƯỢC bằng test tĩnh — trong khi L6 gốc thì không, vì không test tĩnh nào đọc được ý định."
+  },
+
+  "cong_chan_tai_dien": {
+    "ten": "tests/test_calibration_ledger.py — SỔ HIỆU CHỈNH CÓ HẠN DÙNG",
+    "phan_a_quet_khoa_chet": {
+      "lam_gi": "Trích MỌI literal dotted trong `cfg.get(\"a.b\"…)` / `.get(\"a.b\")` ở src/**, scripts/*, ui/backend/app/** rồi assert khoá đó TỒN TẠI trong configs/pilot_dongda.yaml, hoặc nằm trong `KHOA_NGOAI_CONFIG` kèm lý do.",
+      "vi_sao_kha_thi": "Thuần tĩnh, <1s, ~40 dòng. Tôi ĐÃ chạy đúng phép quét này trong vòng audit: nó bắt được 3 khoá chết thật ngay lần đầu (orders.trip_km_median, orders.cancel_after_accept_rate, dispatcher.offer_cooldown_min).",
+      "khoang_trong_no_lap": "tests/test_config_flags_wired.py chỉ kiểm CHIỀU config→code, và bằng grep TÊN LÁ. Chiều code→config chưa ai canh. Tệ hơn: dòng hỏng `cfg.get(\"orders.trip_km_median\")` tự nó KHỚP grep tên lá `trip_km_median` ⇒ cổng hiện có có thể được thoả mãn BỞI CHÍNH con bug.",
+      "bat_duoc": "M1"
+    },
+    "phan_b_so_hieu_chinh_co_han_dung": {
+      "lam_gi": "Một registry trong file test: {khoá hoặc hằng} → (hàm ĐO LẠI, dung sai, MẪU SỐ viết bằng chữ, artifact gốc). Test chạy 5 seed, tính lại và đỏ khi |config − đo|/đo > dung sai. Hạt giống từ vòng này: advice.trips_per_hour_est → cuốc/giờ CÓ MẶT (idle+enroute), tol 8% · bonus_feasibility.DEFAULT_TRIPS_PER_HOUR → cuốc/giờ ĐỒNG HỒ online, tol 8% · shift_dp avg_dist_km → fare-km trung vị của cuốc hoàn thành, tol 8% · behavior.accept_logit_center_vnd → net trung vị thị trường, tol 10% · advice.max_realized_accept → accept thực đạt khi lift kịch trần, tol 3pp.",
+      "vi_sao_no_la_thuoc_giai": "Nó làm LIỀU CỦA THUỐC GIẢM ĐAU HẾT HẠN: một hằng được đo một lần rồi đóng băng sẽ tự đỏ khi thế giới bị hiệu chỉnh lại (đúng kịch bản SIM-XANH đổi factor 1,3→1,46). Và vì mỗi mục BẮT BUỘC khai MẪU SỐ, việc bê một hằng sang ngữ cảnh có mẫu số khác sẽ đỏ ngay.",
+      "gia": "5 × run_once. Vòng này tôi chạy 8 seed trong một lệnh, thời gian chấp nhận được; đánh dấu slow-marker nếu cần.",
+      "bat_duoc": "M2, và mọi hằng 'đo được' tương lai"
+    },
+    "phan_c_lint_khai_bao": {
+      "lam_gi": "Parse khối comment đứng trước mỗi khoá trong pilot_dongda.yaml; khoá nào có bảng sweep hoặc token {sweep, đo được, đo lại, hiệu chỉnh, chọn …, ASSUMPTION} thì PHẢI có mặt trong registry của (b), hoặc trong `MIEN_TRU` kèm (lý do, điều kiện mở lại).",
+      "thanh_that": "Đây là phần YẾU NHẤT trong ba phần. Nó cơ học được (regex trên comment + vị trí khoá YAML) và nó buộc người thêm liều thuốc kế tiếp phải KHAI, nhưng nó không kiểm được nội dung lời khai."
+    },
+    "gioi_han_thanh_that_cua_cong": "Cổng này bắt hiệu chỉnh TRÔI hoặc RƠI SAI MẪU SỐ (L6b). Nó KHÔNG bắt được 'liều được chọn để bảo vệ con số của advisor' (M3) hay 'giữ khuyết tật vì nó là dư địa' (M4) — không test tĩnh nào đọc được ý định. Thứ duy nhất cơ học cho hai cái đó là một YÊU CẦU BÁO CÁO, không phải một test: mọi thí nghiệm công bố Δ advisor phải công bố kèm Δ ở ±1 bậc của liều world đã hiệu chỉnh (idle_impatience_max_steps, actors.n, drop_demand_alpha). Nếu Δ advisor teo khi liều tăng thì giá trị đo được là một hàm của liều, và bảng đó nói ra điều ấy mà không cần ai đoán ý định. Tôi ghi nó là ĐỀ XUẤT QUY TRÌNH, không giả vờ là test.",
+    "phan_bien_de_xuat_nay": [
+      "(a) có thể bắn oan với `.get()` trên dict thường có khoá chấm — giảm bằng cách chỉ nhận receiver trong {cfg, config, self.cfg, _cfg} (regex tôi đã dùng: 0 dương tính giả trên 248 khoá).",
+      "(b) tạo áp lực ngược nguy hiểm: khi test đỏ, cách sửa rẻ là VẶN CONFIG cho khớp phép đo — đúng chính lớp L6. Chốt chặn: dung sai và hàm đo phải nằm cùng file test và mọi thay đổi hai thứ đó phải có UPDATE viện dẫn; đây là cùng cơ chế mà sim_metrics.py:749 và policy_locks.py đã dùng.",
+      "(b) cũng có thể đỏ vì thế giới đổi HỢP LỆ (đổi scenario, đổi cầu). Phải cố định config baseline trong test (như test_sim_realism đang làm) chứ không đọc config đang chỉnh."
+    ]
+  },
+
+  "cai_chua_kiem": [
+    "ĐA-07 ('shift_plan không hiệu quả', n=100) chưa được chạy lại với avg_dist_km nối đúng vào world. Đây là phép đo quyết định xem M1 chỉ là nợ kỹ thuật hay đã làm SAI một phán quyết đã đóng. Chi phí: một lần chạy ĐA-07 với patch một dòng.",
+    "Giá trị advisor như một HÀM của liều sốt ruột: chưa chạy. Đề xuất: positioning A/B (n≥30 seed) tại idle_impatience_max_steps ∈ {1,2,3}, báo Δpayout_mean_all từng mức. Nếu Δ teo khi liều tăng thì M3 được định lượng.",
+    "ECON_WEIGHT chưa sweep — chưa biết giá trị advisor nhạy thế nào với nó.",
+    "Chưa đo % lần gọi bonus_feasibility thật rơi vào nhánh fallback (không lịch sử) ⇒ chưa quy ra được số tài xế bị ảnh hưởng bởi +18%.",
+    "Chưa quét ui/backend/app và ui/web bằng phép quét khoá chết ở mức sâu như src/ (script hiện chỉ chạy src/).",
+    "Số payout/cuốc đo trên TRUNG VỊ 3 seed; trung bình sẽ cao hơn (phân phối lệch phải) nên 20,2% là CẬN DƯỚI của độ lệch, không phải điểm ước lượng chặt.",
+    "Không kiểm lịch sử git: các khẳng định 'chốt ở UPDATE-nào' đều suy từ nội dung file UPDATE, không từ blame."
+  ]
+}

@@ -1,0 +1,249 @@
+{
+  "lop": "L3 — CƠ CHẾ MỒ CÔI",
+  "dinh_nghia": "Cờ/khoá config, hàm, solver, hằng, trường contract KHÔNG có consumer sống, nhưng vẫn hiện diện như thể sống — làm người đọc/stakeholder (và cả artifact audit trước đó) kết luận sai về năng lực hệ thống.",
+
+  "pattern_da_quet": [
+    {
+      "id": "P1-cfg-forward",
+      "mo_ta": "MỌI leaf key trong configs/pilot_dongda.yaml → grep tên khoá (token-boundary) trong src/, ui/, scripts/, tests/. Phân loại hit: prod / test-only / yaml-only.",
+      "script": "scratchpad/scan2.py + run6.py + run8.py (grep thuần Python vì `rg` không có trên PATH máy này)",
+      "ket_qua": "208 leaf. Chỉ 2 khoá không có getter: newbie_program.combo_value_vnd/combo_min_trips_per_month — CẢ HAI ĐÃ nằm trong allowlist CHUA_DUNG của tests/test_config_flags_wired.py:49-55. ⇒ hướng thuận đã được cổng hiện có phủ."
+    },
+    {
+      "id": "P2-cfg-reverse (HƯỚNG NGƯỢC — chưa ai quét)",
+      "mo_ta": "Regex `\\.get\\(\\s*[\"']([a-z_]+(?:\\.[a-z_0-9]+)+)[\"']` trên mọi .py → với mỗi dotted key ĐỌC TRONG CODE, kiểm nó có TỒN TẠI trong yaml không.",
+      "script": "scratchpad/run9.py",
+      "ket_qua": "4 hit, 3 PROD + 1 TEST. Đây là hướng cổng hiện tại MÙ HOÀN TOÀN. Sinh ra L3-01, L3-02 (+ xác nhận lại D-SIM-K6 đã biết)."
+    },
+    {
+      "id": "P3-unused-params",
+      "mo_ta": "AST walk mọi FunctionDef trong src/, ui/backend/app/, scripts/: tham số (trừ self/cls/_*) không xuất hiện dưới dạng ast.Name trong thân hàm; loại hàm thân rỗng/pass/raise.",
+      "script": "scratchpad/unused_params.py",
+      "ket_qua": "21 hàm. Lọc bỏ __exit__/Protocol/null-object ⇒ 8 ứng viên thật."
+    },
+    {
+      "id": "P4-solver-callers",
+      "mo_ta": "Với mỗi module trong src/gsm_core/solvers/: đếm call site `<mod>.solve(` và `from gsm_core.solvers import <mod>`, phân loại PROD (src/gsm_core, src/gsm_sim, ui/backend/app) / SCRIPT / TEST.",
+      "script": "scratchpad/run4.py + run11.py",
+      "ket_qua": "PROD call sites: S1=7, S2=5, S4=2, S7=4 · S3=0 (đã biết), S9=0 (đã biết), S5=0 (MỚI), S6=0 (MỚI), S8=0 (MỚI)."
+    },
+    {
+      "id": "P5-advisor-stack-consumers",
+      "mo_ta": "Với mỗi module gsm_core/advisor/: đếm import từ ngoài chính package advisor, phân loại PROD/SCRIPT/TEST.",
+      "script": "scratchpad/run11.py",
+      "ket_qua": "pipeline/router/composer/context_pack/templates/observability/episode_store: PROD-ngoài-advisor = 0. Chỉ verifier (ui/backend/app/adapters/advisor.py:16) và llm_client.load_env (ui/backend/app/routers/routing.py:10) có consumer sản phẩm."
+    },
+    {
+      "id": "P6-dead-constants-and-fields",
+      "mo_ta": "Regex `^[A-Z][A-Z0-9_]{3,}\\s*=` cho hằng module + AST cho AnnAssign trong @dataclass; đếm tổng ref toàn repo, giữ cái có ref <= số lần định nghĩa.",
+      "script": "scratchpad/run7.py",
+      "ket_qua": "3 hằng + 5 trường dataclass."
+    },
+    {
+      "id": "P7-contract-enum-no-producer",
+      "mo_ta": "Duyệt mọi `enum` trong ui/contracts/*.json và schemas/**/*.json; với mỗi giá trị chuỗi, đếm literal `\"value\"` trong code sản phẩm vs test.",
+      "script": "scratchpad/run10.py",
+      "ket_qua": "31 giá trị enum không có producer sản phẩm. Đa số là nhãn cố ý dành cho dữ liệu thật (MEASURED, EXTERNAL) ⇒ loại. Còn lại 4 đáng kể ở bề mặt tài xế."
+    },
+    {
+      "id": "P8-dashboard-widgets",
+      "mo_ta": "Liệt kê mọi st.slider/checkbox/selectbox/radio/number_input trong dashboard.py → truy khoá override tương ứng có consumer thật không.",
+      "script": "grep dashboard.py:110-270 + đối chiếu advice_bridge.py:232-249",
+      "ket_qua": "6 checkbox kênh advice ĐỀU có gate sống (advice_bridge.py:597/669/716/749/843/1107) ⇒ KHÔNG có finding ở đó. Slider candidate_ring_k = B5 đã biết. Slider trip_km_median → sinh ra L3-01."
+    },
+    {
+      "id": "P9-argparse",
+      "mo_ta": "Mọi add_argument(\"--x\") → đếm `.x` trong cùng file.",
+      "script": "scratchpad/run7.py mục A",
+      "ket_qua": "0 finding thật (ngưỡng ban đầu sai, mọi flag đều có đúng 1 lần đọc `args.x`)."
+    }
+  ],
+
+  "thuc_the": [
+    {
+      "id": "L3-01",
+      "file_line": "src/gsm_sim/advice_bridge.py:202",
+      "trich": "self.avg_dist_km = float(cfg.get(\"orders.trip_km_median\", 3.5) or 3.5)",
+      "vi_sao_thuoc_lop": "Khoá `orders.trip_km_median` KHÔNG TỒN TẠI trong configs/pilot_dongda.yaml (không có section `orders:` — 21 section top-level, đã liệt kê). Config.get(dotted, default) tại src/gsm_sim/config.py:32-40 trả default IM LẶNG khi thiếu path. Dòng này TRÔNG như một liên kết 'solver dùng số của chính thế giới này' (comment :200-201 nói đúng chữ đó, là nội dung fix BUG-S2-PARAMS/UPDATE-078) nhưng liên kết ĐÃ CHẾT; chỉ có hằng số đổi 3.0 → 3.5. Khoá thật là `demand.trip_km_median` (yaml:~59, đọc đúng ở src/gsm_sim/demand.py:108).",
+      "bang_chung_do": "ĐO, không suy: dựng Config với demand.trip_km_median = 9.0 → AdviceActionBridge.avg_dist_km = 3.5 (không đổi). Baseline 3.5 → 3.5. scratchpad/probe3.py.",
+      "hau_qua": "(a) SỐ TIỀN TỚI TÀI XẾ: avg_dist_km nuôi shift_dp._payout_per_order (shift_dp.py:130-131) và phát ra thành number `vnd_per_order` trong solver report (shift_dp.py:388) — tức một con số tài chính hiển thị được, tính trên một thế giới KHÁC thế giới đang chạy. (b) DASHBOARD LỪA NGƯỜI ĐỌC: dashboard.py:113 có slider 'Quãng đường median (km)' 2.0–6.0; kéo slider đổi cuốc của world (demand.py:108) nhưng KHÔNG đổi kinh tế học của advisor ⇒ mọi A/B kéo slider này đo một advisor đóng băng ở 3,5 km. (c) NHIỄM CHUỖI BẰNG CHỨNG — nặng nhất: BA artifact đã khẳng định liên kết này là sự thật đã quan sát: tracking/updates/UPDATE-078-...:44 ('avg_dist_km 3.0 → 3.5 (orders.trip_km_median)'), research/audit/2026-08-06-math-model-audit/mm-07-s2.json:157 (nhãn OBSERVED-CONFIG, confidence CAO), và mm-07-s2-STAGED.md:112 dùng chính con số 3,5 'do bridge truyền (orders.trip_km_median)' để tính ra kết luận 'chi phí ước NON ~40%'. Hôm nay Δ=0 vì default trùng giá trị config — đúng kiểu bẫy mà docstring của tests/test_config_flags_wired.py mô tả: 'kết luận sai có vẻ được hậu thuẫn bởi dữ liệu'.",
+      "moi_hay_da_biet": "MỚI — và mạnh hơn 'chưa ai báo': ba artifact hiện có khẳng định NGƯỢC LẠI (rằng khoá này được đọc từ config).",
+      "do_tin": "CAO (reproduce được, 1 lệnh)"
+    },
+    {
+      "id": "L3-02",
+      "file_line": "src/gsm_sim/advice_bridge.py:208-209",
+      "trich": "self.completion_prior = round(1.0 - float(cfg.get(\"orders.cancel_after_accept_rate\", 0.05) or 0.05), 4)",
+      "vi_sao_thuoc_lop": "Cùng cơ chế L3-01. Khoá thật là `behavior.cancel_after_accept_rate` (yaml section behavior:, đọc đúng ở src/gsm_sim/world.py:124). `orders.cancel_after_accept_rate` không tồn tại ⇒ luôn dùng default 0.05.",
+      "bang_chung_do": "ĐO: behavior.cancel_after_accept_rate = 0.40 → completion_prior vẫn = 0.95. scratchpad/probe3.py.",
+      "hau_qua": "completion_prior là prior hoàn thành dùng khi actor chưa có lịch sử (advice_bridge.py:561) → vào `_bonus_eligible` của S2 → quyết định advisor có HỨA THƯỞNG hay không. Comment tại chỗ ('của chính thế giới này') sai. mm-07-s2.json:158 gắn nhãn OBSERVED-CONFIG cho liên kết này ⇒ cùng một dòng bằng chứng bị nhiễm như L3-01.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO (reproduce được)"
+    },
+    {
+      "id": "L3-03",
+      "file_line": "src/gsm_core/solvers/weekly_khoan.py:1 · mission_knapsack.py:1 · penalty_explain.py:1",
+      "vi_sao_thuoc_lop": "S5/S6/S8 có 0 call site sản phẩm (đo bằng P4). Consumer DUY NHẤT được khai là src/gsm_core/advisor/router.py:16,20-21 (bảng solver theo F1/F3) và advisor/templates.py:50,94,136 — mà bản thân AdvisorPipeline là mồ côi sản phẩm (ĐÃ BIẾT, tracking/ASSIGNMENTS.md:31 + UPDATE-121:27). Đường sản phẩm chỉ import 4 solver: bonus_feasibility, shift_dp (ui/backend/app/services/advice_checkpoint.py:39), idle_reduction, capacity_alloc (src/gsm_sim/...).",
+      "hau_qua": "Danh sách solver mồ côi ĐÃ BIẾT chỉ ghi S3 f3_patterns và S9 anomaly_alert. Sự thật là 5/9: thêm S5 khoán tuần, S6 mini-task, S8 giải trình phạt. Hệ quả với stakeholder: UPDATE-038/UPDATE-040 ('wire S5 S6 into pipeline') và tracking/TODO.md trình bày khoán tuần + mini-task như năng lực đã có; sản phẩm không có. Ai lập kế hoạch demo dựa trên đó sẽ hụt 3 use case.",
+      "moi_hay_da_biet": "MỘT PHẦN MỚI — thân (AdvisorPipeline mồ côi) đã biết; ba solver S5/S6/S8 dưới nó thì CHƯA có trong danh sách đã biết (danh sách chỉ có S3, S9).",
+      "do_tin": "CAO (đếm call site tự động, đối chiếu tay)"
+    },
+    {
+      "id": "L3-04",
+      "file_line": "src/gsm_core/solvers/weekly_khoan.py:37,116,137 (+ schema schemas/l3/weekly_khoan_input.schema.json:90-96)",
+      "vi_sao_thuoc_lop": "`money_basis` được đọc (:37) nhưng KHÔNG rẽ nhánh một phép tính nào — chỉ đi vào chuỗi provenance (:38-39), câu caveat (:116) và echo ra output (:137). Schema khai enum [gross, driver_payout] như thể solver hiểu hai cơ sở tiền.",
+      "bang_chung_do": "ĐO: solve(view(basis='gross')) vs solve(view(basis='driver_payout')) → solution GIỐNG HỆT sau khi bỏ trường money_basis (revenue/gap/clawback/hours_needed y nguyên); chỉ chuỗi source trong numbers[] đổi. Và caveat[0] render ra câu TỰ MÂU THUẪN: 'Khoán tính trên driver_payout (doanh số) — ASSUMPTION...'. scratchpad/probe5.py.",
+      "hau_qua": "Vi phạm ranh giới CLAUDE §5 ('tiền phải tách gross revenue / driver payout / estimated net; payout là mục tiêu mặc định'): đặt basis = driver_payout cho ra ĐÚNG con số gross nhưng DÁN NHÃN payout. Nếu S5 được nối vào sản phẩm (L3-03) mà không sửa, tài xế thấy số doanh số được gọi là thu nhập của mình. Ba từ vựng cùng tồn tại: schema 'driver_payout' · test 'payout' (tests/test_already_maxed_at_risk.py:113) · code so sánh == 'gross' (không validate giá trị lạ).",
+      "moi_hay_da_biet": "MỚI (money_basis có nhắc trong UPDATE-037/038 như quyết định ASSUMPTION, nhưng chưa ai chỉ ra nó là knob CHỈ-DÁN-NHÃN)",
+      "do_tin": "CAO (reproduce được)"
+    },
+    {
+      "id": "L3-05",
+      "file_line": "src/gsm_core/advisor/checkpoint_templates.py:29 và :31",
+      "trich": "required_fact_ids: tuple[str, ...] = ()   ·   required_caveat_ids: tuple[str, ...] = ()",
+      "vi_sao_thuoc_lop": "Hai trường của TemplateRender — contract render thẻ trên ĐƯỜNG SẢN PHẨM (ui/backend/app/services/advice_checkpoint.py:616 dùng cùng module). Không producer nào gán chúng và không consumer nào đọc: 1 ref duy nhất toàn repo = chính dòng khai báo. Anh em `required_number_ids` thì SỐNG (gán ở :96, có test ghim tests/test_checkpoint_templates.py:28) ⇒ chứng minh đây không phải quy ước 'trường tương lai' của cả nhóm.",
+      "hau_qua": "CLAUDE §5 buộc mọi lời khuyên phải nêu bất định/điều kiện (caveat) và mọi claim chính sách phải có fact/nguồn. Hai trường này chính là chỗ để MỘT CỔNG kiểm 'thẻ có mang đủ caveat/fact của nó chưa' — chúng trơ, nên không cổng nào kiểm được, và người đọc module tin rằng có. Rủi ro: thẻ ra tới tài xế thiếu caveat mà suite vẫn xanh.",
+      "moi_hay_da_biet": "MỚI (không xuất hiện trong tracking/ hay research/)",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-06",
+      "file_line": "src/gsm_core/lifecycle/projections.py:347",
+      "trich": "EXECUTION_KINDS = {\"standby_followed\"}",
+      "vi_sao_thuoc_lop": "0 consumer (ref duy nhất = dòng khai). Chỉ tiêu execution thật được tính ở src/gsm_sim/sim_metrics.py:640 bằng LITERAL trần `e.kind == \"standby_followed\"`. UPDATE-113:49 khẳng định 'Hằng EXECUTION_KINDS khai tường minh' — tức tài liệu bán nó như cơ chế sống.",
+      "hau_qua": "Người đọc projections.py tin rằng module này tách 'kind chứng minh THI HÀNH' khỏi tử số adherence bằng một hằng khai tường minh. Thực tế phép tách nằm ở module khác với literal chép tay. Thêm một execution kind thứ hai (vd 'swap_executed'): sửa EXECUTION_KINDS sẽ KHÔNG có tác dụng gì, và adherence đếm sai im lặng — đúng họ lỗi mà UPDATE-113 vừa mới sửa (adherence lệch ~2,4đp, cổng z treo).",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-07",
+      "file_line": "src/gsm_core/solvers/capacity_alloc.py:77",
+      "trich": "def solve(ai: dict, params: dict | None = None) -> dict:",
+      "vi_sao_thuoc_lop": "`params` không xuất hiện một lần nào trong thân hàm (AST-proved, P3). Caller sản phẩm duy nhất — src/gsm_sim/world.py:454 `report = capacity_alloc.solve(ai)` — cũng không truyền.",
+      "hau_qua": "S4 (kênh VỊ TRÍ — kênh DUY NHẤT Cường đã duyệt bật mặc định, config advice.positioning_overrides: wait_only) trưng ra một cửa tham số hoá mà nó không có. Ai muốn A/B kênh vị trí qua `params` sẽ đo ra Δ = 0 và kết luận 'tham số không ảnh hưởng' — chính cái giá mà docstring tests/test_config_flags_wired.py gọi là 'loại kết luận sai tệ nhất'. Ngưỡng thật đang cứng trong module (STANDBY_SAFETY_FLAGS, sensitivity −20% hardcode ở :103-110).",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-08",
+      "file_line": "src/gsm_core/features/bonus_gap.py:20",
+      "trich": "def derive_bonus_gap_input(driver_id, t_now, l1, policy, shift_window, history: list[dict]) -> dict:",
+      "vi_sao_thuoc_lop": "`history` không được đọc một lần nào trong thân hàm (AST-proved). Docstring :26-27 lại HỨA hành vi: 'history: list ngày lịch sử ... nếu rỗng, tự tính từ l1 các ngày trước today' — tức hứa có hai nhánh; chỉ nhánh 'tự tính' tồn tại (:48-55).",
+      "hau_qua": "Caller đưa lịch sử ĐÃ CHUẨN HOÁ (vd từ ledger thật) bị bỏ im lặng, hàm âm thầm suy lại từ l1. Đây là feature builder của S1 — solver duy nhất chạy trên CẢ sim lẫn sản phẩm — và mẫu số bucket của nó vừa là chỗ D-ADV-04 sập. Rủi ro: một fix tương lai 'truyền history đúng vào' sẽ không có tác dụng và trông như đã fix.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-09",
+      "file_line": "ui/contracts/driver_state.json:18",
+      "vi_sao_thuoc_lop": "enum shift_status khai [ON_SHIFT, OFF_SHIFT, BREAK]; `BREAK` có 0 producer trong toàn repo (0 hit code sản phẩm, 0 hit test, 0 hit ui/driver_app/lib). Producer thật: ui/backend/app/adapters/mockdata.py:203 (ternary ON_SHIFT/OFF_SHIFT) và ui/backend/app/simulator.py:178 (cứng 'ON_SHIFT').",
+      "hau_qua": "Trạng thái mà kênh `rest_window` tồn tại để tạo ra thì contract khai nhưng hệ thống không bao giờ phát. Tài xế nghe lời khuyên nghỉ và tài xế kết ca hiện ra GIỐNG NHAU với client ⇒ không thể hiển thị đúng, và không thể phân biệt 'đã theo lời khuyên nghỉ' với 'nghỉ hẳn' ở bề mặt sản phẩm.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO (grep hết .py/.dart/.ts/.tsx/.html)"
+    },
+    {
+      "id": "L3-10",
+      "file_line": "ui/contracts/advice.json:37 (kind) và :25 (silent.reason_code)",
+      "vi_sao_thuoc_lop": "kind enum [bonus_gap, rest_window, charge_now, demand_shift, info]: sản phẩm chỉ phát `info` và `bonus_gap` (ui/backend/app/adapters/advisor.py:269,305,330,380). `charge_now`, `demand_shift` có 0 producer. reason_code `insufficient_history` cũng 0 producer (0 hit cả prod lẫn test).",
+      "hau_qua": "Contract tài xế quảng cáo hai loại thẻ (gợi ý đổi pin, gợi ý dịch chuyển theo cầu) mà đường sản phẩm không có khả năng phát — client của Khánh có thể code nhánh cho chúng và nhánh đó chết. Và `insufficient_history` là lý do im lặng PHỔ BIẾN NHẤT mà tài xế mới sẽ gặp; nó không có đường phát ⇒ tài xế thiếu lịch sử nhận một lý do khác hoặc không lý do. Lưu ý: chính contract này (:25) đã ghi bài học 'giữ một mã không đường phát chính là mẫu khai-mà-không-có-đường-chạy mà cycle này đi bịt' — rồi vẫn còn ba mã như vậy.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-11",
+      "file_line": "ui/backend/app/simulator.py:28",
+      "trich": "# Geo-fence bounding box for Hanoi\\nHANOI_BOUNDS = {...}",
+      "vi_sao_thuoc_lop": "Hằng có 1 ref toàn repo = dòng khai. Comment tự gọi mình là geo-fence.",
+      "hau_qua": "Không có geo-fence nào trên đường simulator sản phẩm. Toạ độ ngoài Hà Nội không bị chặn, và người đọc module tin ngược lại. Mức độ: thấp hôm nay (HANOI_TRIPS là fixture cứng), nhưng nhãn sai sẽ được tin khi nối nguồn toạ độ động.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-12",
+      "file_line": "src/gsm_core/advisor/context_pack.py:46 · src/gsm_core/advisor/llm_client.py:106 · src/gsm_core/advisor/templates.py:198 · ui/backend/app/routers/advice.py:129",
+      "trich": "build_context_pack(..., driver_id) — driver_id không dùng · LLMComposerClient.create(..., feature='') — feature không dùng dù composer.py:82 CỐ Ý truyền · _gap_sentence(..., reg) — reg không dùng · _cadence_memory(..., phase) — phase không dùng",
+      "vi_sao_thuoc_lop": "Tham số nhận vào, không đọc (AST-proved). `feature` đáng chú ý nhất: composer.py:78-83 truyền feature xuống client như thể có định tuyến theo feature (model/nhiệt độ/prompt khác nhau cho F0..F3); client bỏ qua hoàn toàn — mọi feature dùng cùng primary/fallback model.",
+      "hau_qua": "Ba cái đầu nằm trong stack advisor vốn đã mồ côi (L3-03) ⇒ severity thấp hôm nay. Cái thứ tư (`_cadence_memory(phase)`) ở ĐƯỜNG SẢN PHẨM: chữ ký nói ký ức nhịp có phạm vi theo PHA, thân hàm dựng ký ức cho CẢ NGÀY. Docstring _phase_of ngay trên (:112-121) vừa mới sửa đúng họ lỗi này (F4/hai lưới thời gian) — tham số phase là mảnh còn sót của lần sửa đó.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO cho sự kiện 'không đọc'; TRUNG BÌNH cho suy đoán ý định thiết kế"
+    },
+    {
+      "id": "L3-13",
+      "file_line": "src/gsm_sim/dashboard_theme.py:21",
+      "trich": "SURFACE = \"#12181c\"          # nền trang",
+      "vi_sao_thuoc_lop": "0 consumer. Giá trị thật đang có hiệu lực nằm ở .streamlit/config.toml:6 `backgroundColor = \"#12181c\"`.",
+      "hau_qua": "Giao với L1 hơn L3 thuần: module tự nhận là hệ token khoá toàn trang, nhưng token nền là bản SAO chết của một giá trị sống ở file khác. Đổi SURFACE không đổi gì; hai chỗ sẽ lệch dần — đúng cơ chế đã làm trajectory.py mang bảng màu thứ hai xung đột (UPDATE-117). Mức độ: thấp (thẩm mỹ), nhưng cùng một khuôn.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO"
+    },
+    {
+      "id": "L3-14",
+      "file_line": "src/gsm_sim/advice_bridge.py:130",
+      "trich": "plan_next_bucket: str | None",
+      "vi_sao_thuoc_lop": "Trường BridgedAdvice được GHI (:634) nhưng không consumer nào đọc. Thiết kế ở research/audit/2026-08-03-advice-checkpoint/findings.md:232 khai nó 'chỉ để GIẢI THÍCH' ⇒ consumer là có chủ đích nhưng chưa tồn tại.",
+      "hau_qua": "Thấp. Ghi vào để không ai tưởng phần giải thích 'bước kế tiếp' đã có đường ra UI.",
+      "moi_hay_da_biet": "MỚI (mức thấp)",
+      "do_tin": "CAO"
+    }
+  ],
+
+  "da_biet_chi_cite_khong_bao_lai": [
+    "B5 slider dashboard → candidate_ring_k (dispatcher chỉ đọc _max)",
+    "sp_end_only / advice.shift_plan_end_only (configs/pilot_dongda.yaml:~382) — code chết, END bất khả",
+    "S3 f3_patterns, S9 anomaly_alert — 0 caller (P4 xác nhận lại: 0/0)",
+    "S4 nhánh swap_window — producer truyền []",
+    "D-SIM-K6 — dispatcher.offer_cooldown_min đọc ở world.py:172 nhưng KHÔNG có trong yaml (DEFERRED.md:128). P2 tìm lại đúng nó ⇒ đây là bằng chứng độc lập rằng cơ chế (a) tái diễn, không phải một tai nạn đơn lẻ.",
+    "AdvisorPipeline mồ côi 0 caller sản phẩm — tracking/ASSIGNMENTS.md:31, UPDATE-121:27",
+    "newbie_program.combo_value_vnd / combo_min_trips_per_month — đã nằm trong allowlist CHUA_DUNG, tests/test_config_flags_wired.py:49-55",
+    "UPDATE-117 / D-M3-15 — đợt quét mồ côi trước (5 cờ config + 14 hàm + trajectory.py module chết)"
+  ],
+
+  "lop_co_that": "MOT_PHAN",
+
+  "ly_do_phan_xu": {
+    "ket_luan_ngan": "‘Cơ chế mồ côi’ như đang kể là một CÁI XÔ, không phải một cấu trúc. Nhưng bên trong nó có ĐÚNG MỘT cấu trúc thật, định vị được xuống một dòng code, và cấu trúc đó đang sinh lỗi lặp lại.",
+    "bang_chung_no_KHONG_phai_mot_cau_truc": [
+      "14 thực thể chia thành BA cơ chế không liên quan nhau về runtime: (a) default im lặng khi thiếu khoá — L3-01, L3-02, + D-SIM-K6 đã biết; (b) ký hiệu khai-mà-không-ai-dùng (hằng/trường/tham số) — L3-05..L3-08, L3-11..L3-14; (c) hệ thống con bị bỏ rơi do trôi kiến trúc — L3-03 và AdvisorPipeline/S3/S9 đã biết.",
+      "Chúng chỉ chung nhau một TÍNH CHẤT quan sát được ('grep ra một lần'), không chung một nguyên nhân. (b) không có cơ chế runtime nào cả — nó là sự vắng mặt. (c) không phải lỗi code mà là một QUYẾT ĐỊNH chưa ai đóng (repo có hai stack advisor; sản phẩm chọn stack checkpoint_presenter, stack pipeline không ai khai tử).",
+      "PHÉP THỬ QUYẾT ĐỊNH: repo ĐÃ có một cổng dựng riêng cho lớp này — tests/test_config_flags_wired.py (UPDATE-117/D-M3-15). Nếu lớp là một cấu trúc thì một cổng hình dạng đó phải bắt được các thành viên của nó. Nó bắt 0/14: nó quét hướng yaml→code, còn L3-01/L3-02 là hướng code→yaml. Tệ hơn: nó khớp CHỈ ĐOẠN CUỐI của khoá như token, nên chuỗi 'orders.trip_km_median' trong code lại VOUCH cho khoá yaml 'demand.trip_km_median' — tức chính cái mis-key làm cổng tin rằng khoá đúng đã có người đọc. Một cổng bị chính lỗi nó đi bắt qua mặt là bằng chứng mạnh rằng 'lớp' không đồng nhất."
+    ],
+    "bang_chung_no_CO_mot_phan_that": [
+      "Cơ chế (a) là cấu trúc THẬT và định vị được: src/gsm_sim/config.py:32-40 — `Config.get(dotted, default)` trả default mà không phát tiếng khi path vắng. Ba thể hiện xác nhận (L3-01, L3-02, D-SIM-K6), tất cả trong cùng lớp truy cập, tất cả có default TRÙNG giá trị thật hôm nay (3.5, 0.05, 10′) nên Δ=0 và không ai thấy.",
+      "Cơ chế (a) là cơ chế duy nhất đã gây thiệt hại vượt ra ngoài code: nó làm HỎNG CHUỖI BẰNG CHỨNG — ba artifact (UPDATE-078:44, mm-07-s2.json:157, mm-07-s2-STAGED.md:112) gắn nhãn OBSERVED-CONFIG confidence CAO cho một liên kết không tồn tại, và một trong ba dùng con số đó để tính ra kết luận định lượng ('chi phí ước NON ~40%').",
+      "⇒ Đề xuất: đừng mở một cycle 'sửa lớp L3'. Mở một cycle hẹp cho cơ chế (a) — nó đo được, chặn được, và đã tái diễn 3 lần. (b) xử lý bằng dọn dẹp rời (không cần cycle). (c) là MỘT câu hỏi cho Cường (khai tử hay nối stack advisor), không phải một lớp lỗi."
+    ]
+  },
+
+  "cong_chan_tai_dien": {
+    "ten": "Mở rộng tests/test_config_flags_wired.py — bịt HƯỚNG NGƯỢC + khớp ĐƯỜNG DẪN ĐẦY ĐỦ",
+    "vi_sao_khong_phai_'nho_moi_nguoi_can_than_hon'": "Đây là hai assert tĩnh chạy trong suite, đã có sẵn harness (_leaves, _src_blob, allowlist CHUA_DUNG) trong chính file đó; tôi đã chạy cả hai phép quét trong audit này (scratchpad/run9.py = test A nguyên văn) nên biết chúng chạy được và ra kết quả gì.",
+    "test_A_huong_nguoc": {
+      "noi_dung": "Quét mọi `<x>.get(\"a.b.c\", default)` với dotted literal >= 2 đoạn trong src/**, scripts/*, ui/backend/app/** → assert đường dẫn TỒN TẠI trong configs/pilot_dongda.yaml, trừ khi có trong allowlist KHONG_TRONG_CONFIG kèm lý do (giống khuôn CHUA_DUNG hiện có).",
+      "ket_qua_hom_nay_neu_bat": "ĐỎ với đúng 3 hit sản phẩm — advice_bridge.py:202, advice_bridge.py:209, world.py:172 (D-SIM-K6, sẽ vào allowlist kèm link DEFERRED) — cộng 1 hit test (tests/test_m0_integrity.py:213 đọc CÙNG khoá ma với CÙNG default; tức test đang ghim hằng số cứng chứ không ghim config, một thành viên L2 đi kèm).",
+      "false_positive": "0 trên repo hiện tại (đo được: quét trả đúng 4 dòng, cả 4 đều là khoá không tồn tại thật). Tín hiệu nhị phân — khoá có trong yaml hay không, không có vùng xám."
+    },
+    "test_B_khop_duong_dan_day_du": {
+      "noi_dung": "Sửa test_moi_co_config_deu_co_nguoi_doc: thay vì khớp ĐOẠN CUỐI như token trên blob, yêu cầu khớp CHUỖI DOTTED ĐẦY ĐỦ (\"demand.trip_km_median\") hoặc — với khoá đọc qua sub-dict (adv.get(\"channels\"), bcfg.get(\"accept_logit_scale_vnd\")) — khớp đoạn cuối CỘNG chứng cứ section (tên section xuất hiện trong cùng file).",
+      "vi_sao_can": "Không có nó, một mis-key kiểu L3-01 vẫn làm khoá đúng trông như có người đọc. Đây chính xác là lý do cổng hiện tại bỏ lọt L3-01."
+    },
+    "test_C_chan_khoa_dong": {
+      "noi_dung": "Assert 0 call site dạng `cfg.get(<biến>)` (đối số không phải literal) trong src/**, ui/backend/app/**. Nếu ai thêm, phải khai vào allowlist.",
+      "vi_sao": "UPDATE-117:97 đã tự nhận đây là điểm mù của cách quét ('cfg.get(name) với name là biến sẽ bị báo mồ côi oan'). Ghim nó ở 0 để điểm mù không âm thầm lớn lên."
+    },
+    "phan_bien_cong_nay_ky_luat_5": [
+      "Cổng này KHÔNG phủ (b) và (c). Cố ý. Một test tổng quát kiểu 'mọi ký hiệu khai báo phải có consumer' sẽ đẻ hàng chục false positive hợp lệ — nhãn MEASURED/EXTERNAL trong schemas/l2/* là dành cho dữ liệu thật CHƯA có, không phải rác — và allowlist của nó sẽ phình tới mức trở thành chính thứ nó canh. Tôi chọn tín hiệu chính xác thay vì phủ rộng.",
+      "Cổng chỉ chặn TÁI DIỄN, không sửa 3 thực thể đang có. Vá thật cho L3-01/L3-02 là đổi khoá về `demand.trip_km_median` / `behavior.cancel_after_accept_rate` — nhưng đó là ĐỔI HÀNH VI ở mọi run có override và phải re-baseline (default hôm nay trùng giá trị config nên run mặc định bit-identical; PHẢI đo fingerprint để chứng minh chứ không được lập luận). Việc đó thuộc plan, không thuộc cổng.",
+      "Rủi ro của test B: có thể ĐỎ giả với khoá đọc qua sub-dict lồng nhiều tầng. Giảm bằng nhánh 'đoạn cuối + section' đã mô tả; nếu vẫn ồn, hạ test B thành cảnh báo và giữ test A là cổng cứng — test A một mình đã bắt cả 3 thực thể của cơ chế (a)."
+    ]
+  },
+
+  "cai_chua_kiem": [
+    "CHƯA đo tác động số học của L3-01/L3-02 trên một run sim đầy đủ. Tôi mới chứng minh liên kết CHẾT tại thời điểm dựng bridge (probe3.py). Vì default trùng giá trị config hiện hành, run mặc định Δ = 0; thiệt hại nằm ở (i) mọi run có override/slider và (ii) chuỗi bằng chứng. Muốn số thì phải chạy 5 seed với demand.trip_km_median khác mặc định và so payout — CHƯA LÀM.",
+    "L3-04: chưa kiểm S5 có bao giờ được gọi với basis != 'gross' trên bất kỳ đường nào (hôm nay S5 mồ côi nên câu trả lời thực dụng là 'không'). Câu caveat tự mâu thuẫn hiện chưa tới mắt tài xế nào.",
+    "L3-09/L3-10: đã grep hết .py/.dart/.ts/.tsx/.html cho BREAK/charge_now/demand_shift/insufficient_history và ra 0. CHƯA đọc tay toàn bộ ui/driver_app của Khánh để loại khả năng chuỗi được dựng động (nối chuỗi, const ở nơi khác).",
+    "CHƯA quét ui/web (JS) và ui/driver_app (Dart) bằng AST như đã làm với Python — mục P3/P6/P7 chỉ phủ Python + JSON. Có thể còn thực thể lớp (b) bên đó.",
+    "L3-03: 'không có call site sản phẩm' đo bằng grep call site + import. Nếu có đường gọi động (getattr/entry point/registry theo tên chuỗi) thì kết luận yếu đi. Tôi đã kiểm advisor/router.py là registry theo tên nhưng chính router mồ côi; chưa loại trừ registry khác.",
+    "Chưa chạy suite để xác nhận cổng đề xuất không làm đỏ test hiện có (mới chỉ chạy phép quét độc lập trong scratchpad).",
+    "L3-12 phần suy đoán Ý ĐỊNH thiết kế (feature routing, phase-scoped cadence) là suy luận từ chữ ký + comment, không phải từ spec — confidence TRUNG BÌNH. Sự kiện 'tham số không được đọc' thì CAO."
+  ]
+}

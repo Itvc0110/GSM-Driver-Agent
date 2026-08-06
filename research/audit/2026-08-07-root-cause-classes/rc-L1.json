@@ -1,0 +1,151 @@
+{
+  "lop": "L1 — NHIỀU QUY ƯỚC CHO MỘT SỰ THẬT",
+  "dinh_nghia": "Một tầng (UI / producer / solver / script / test) TỰ TÍNH một đại lượng mà một module khác đã SỞ HỮU, bằng công thức hoặc hằng số KHÁC ⇒ hai con số cho một khái niệm. Đặc trưng chẩn đoán: hai bên BẰNG NHAU vào ngày viết code (nên mọi test đều xanh), chỉ lệch khi một bên đổi — hoặc lệch ngay nhưng không ai so hai bên.",
+
+  "pattern_da_quet": [
+    "P1  grep 'consume_pct_per_km|pct_per_km' — hệ số tiêu hao pin viết lại (src, ui, scripts, tests, configs)",
+    "P2  grep 'trips_per_hour|trip_per_hour' — năng suất cuốc/giờ",
+    "P3  grep 'service_min|min_per_trip|MIN_PER_TRIP|avg_trip_min' — nghịch đảo của P2",
+    "P4  grep 'base_fare|per_km_vnd|driver_share' — công thức cước/payout viết lại",
+    "P5  grep 'detour|1\\.46|route_factor|road_factor' — hệ số đường",
+    "P6  grep 'speed_kmh|peak_hours|night_hours' — tốc độ",
+    "P7  grep -i 'tính lại|tự tính|recompute|tái tính|tự suy' — tự khai nhận (bắt được cả chỗ ĐÃ sửa lẫn chỗ chưa)",
+    "P8  grep số học trên tiền/%/km trong ui/web/js/*.js + mo-phong.js",
+    "P9  grep 'DECISION_BUCKET_MIN|decision_bucket|_decision_id' — lưới quyết định",
+    "P10 grep 'adherence' trong gsm_core + ui/backend/app — mẫu số hai tên",
+    "P11 grep 'soc_range_km|range_km' — tầm pin",
+    "P12 grep 'swap_soc_threshold_pct|soc_low' — ngưỡng pin thấp",
+    "P13 grep 'cap_left|capacity|trips_per_driver_per_bucket' — trần ô",
+    "P14 grep -E '^[A-Z_]{3,} *[:=]' trong src/gsm_core — mọi hằng module-level (bảng ứng viên 'nguồn sự thật thứ hai')",
+    "P15 grep 'shift_start_min|shift_end_min|shiftStartMin|now_min|shift_phase|DEFAULT_SHIFT' — neo thời gian ca",
+    "P16 AST-scan CƠ HỌC (scan2.py, kèm trong artifact này): mọi `<cfg-like>.get(\"<dotted>\")` có literal — khoá nào KHÔNG tồn tại trong configs/pilot_dongda.yaml ⇒ 'khoá MA' rơi về default viết cứng. Đây là chiều NGƯỢC của tests/test_config_flags_wired.py (cổng đó chỉ quét config→code, và chỉ theo TÊN LÁ, nên khoá đọc SAI NAMESPACE lọt 100%).",
+    "P17 grep callers: 'derive_bonus_gap_input', 'quote_distance', 'evaluate_checkpoint', 'from gsm_core.rates' — kiểm module hợp nhất CÓ THẬT SỰ được mọi consumer gọi không"
+  ],
+
+  "do_luong_da_chay": {
+    "m1_phase": "uv run python m1_phase.py — so `_phase_of` với đường đọc của get_advice trên 3 ca",
+    "m2_m3_fare": "run_once(cfg, seed) × 5 seed (1..5), n≈1.180 cuốc/seed — median haversine 3,127 km · median km-tính-cước 4,568 km (factor 1,461) · payout/cuốc median ĐO 18.030đ vs S2 tin 14.588đ",
+    "m4_route": "gọi thật `demo_session._fallback_route` + `routing.straight_line_fallback` + `sim_pricing.quote_distance` trên một cặp toạ độ Đống Đa (~5,3 km chim bay)",
+    "m5_tph": "build_journey per-actor × 5 seed × 90 tài xế — median cuốc/giờ-online = 1,205",
+    "m6_cadence": "gọi thật `cadence.evaluate` và `checkpoint.evaluate_checkpoint` trên CÙNG tình huống, quét Δt = 19..31′"
+  },
+
+  "thuc_the": [
+    {
+      "file_line": "ui/backend/app/routers/advice.py:126 (_phase_of dùng hằng SHIFT_START_MIN=360) vs ui/backend/app/routers/advice.py:195 (get_advice dùng shift_start_min từ query)",
+      "vi_sao_thuoc_lop": "PHA CA của một mốc thời gian là MỘT đại lượng, ở đây có HAI công thức trong CÙNG một request: đường đọc lấy neo bắt đầu ca từ query, còn `_phase_of` (dùng để dựng `dismissed_in_phase` trong `_cadence_memory`, advice.py:161) neo cứng 06:00. `_norm_shift_end(shift_end_min)` bên trong `_phase_of` cũng bỏ qua neo query. Chính docstring của `_phase_of` tuyên bố 'MỘT công thức duy nhất, dùng ở cả đường ghi lẫn đọc' — nhãn SAI: F4 đã bỏ được neo KẾT ca cứng nhưng để nguyên neo MỞ ca cứng.",
+      "hau_qua": "ĐO (m1): ca đêm 22:00→02:00 lệch 4/4 mốc thử (at_min=1320: đọc `early` / ghi `late`; at_min=90: đọc `late` / ghi `early`); ca chiều 14:00→23:00 lệch 1/3. Hệ quả với TÀI XẾ: `evaluate()` so `memory.dismissed_in_phase[topic]` (tính bằng neo 360) với `phase` hiện tại (tính bằng neo query) ⇒ với mọi tài xế không mở ca đúng 06:00, nút 'Bỏ qua' hoặc KHÔNG có tác dụng (bị nhắc lại ngay trong pha vừa tắt) hoặc làm advisor IM ở pha tài xế chưa hề tắt. Đây đúng thứ ĐA-04 sinh ra để xoá.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO — reproduce bằng code thật, không suy từ đọc"
+    },
+    {
+      "file_line": "src/gsm_core/lifecycle/checkpoint.py:346 (`>= 6` viết cứng) và :350 (`20 * 60` viết cứng) trong `evaluate_checkpoint`; canonical là src/gsm_core/lifecycle/cadence.py:147 `evaluate` + cadence.py:104 `CadenceConfig.effective_gap_min`",
+      "vi_sao_thuoc_lop": "VERDICT NHỊP NÓI là một luật đã có chủ sở hữu (`cadence.evaluate`, ĐA-04, 'MỘT LUẬT ... dùng chung sim và app'). Đường sản phẩm v2 (`ui/backend/app/services/advice_checkpoint.py:348`) KHÔNG gọi nó mà chép lại luật với hằng riêng. Canonical cooldown là số DẪN XUẤT `max(min_gap_min_per_topic=20, decision_bucket_min=30) = 30′`; bản chép dùng 20′ — tức tái tạo đúng lỗi L4-03 mà docstring `effective_gap_min` nói là đã sửa. Ngân sách 6 cũng bị chép rời khỏi `CadenceConfig`.",
+      "hau_qua": "ĐO (m6): cùng tình huống 'đã nói về bonus lúc 14:00, hỏi lại 14:25' → `cadence.evaluate` = SUPPRESS(topic_cooldown), `evaluate_checkpoint` = ready. Cửa sổ lệch = phút +20..+29 sau lần nói trước = 33% của bucket quyết định 30′. Theo chính docstring effective_gap_min: trong cửa sổ đó card ĐẾN TAY tài xế nhưng `event_id` trùng khoá bucket ⇒ store dedupe ⇒ KHÔNG có event ⇒ (a) trần 6 thẻ/ca mất hiệu lực, (b) mẫu số event-adherence hụt. Tức một con số adherence của đường sản phẩm v2 bị thổi/hụt bởi cơ chế, không bởi hành vi tài xế.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO — reproduce bằng code thật"
+    },
+    {
+      "file_line": "ui/backend/app/services/advice_checkpoint.py:569-584 (`_cadence_memory`) + src/gsm_core/lifecycle/checkpoint_store.py:302-309 (`checkpoints()` SELECT toàn bảng, chỉ lọc driver_id)",
+      "vi_sao_thuoc_lop": "Cùng thực thể với mục trên, vế KÝ ỨC: `CadenceMemory` canonical được nuôi theo CA (sim: RAM per-shift; UI v1: lọc `payload['date'] == date`, advice.py:143). Bản v2 dựng ký ức từ TOÀN BỘ checkpoint của tài xế, KHÔNG lọc ngày/ca ⇒ quy ước thứ hai cho 'ngân sách MỘT CA' và 'đã bỏ qua trong PHA này'.",
+      "hau_qua": "Cấu trúc (chưa reproduce end-to-end): `proactive_count = len(offered_ids)` cộng dồn trọn đời ⇒ sau 6 thẻ ĐẦU TIÊN trong lịch sử tài khoản, v2 im vĩnh viễn với `shift_budget_exhausted`. `dismissed_topics` là SET không gắn pha/ngày ⇒ một lần bấm Ẩn tắt topic đó vĩnh viễn (canonical: chỉ hết PHA). Không test nào trong `tests/` hay `ui/backend/tests/` chạm `_cadence_memory` của v2 (grep `dismissed_topics` chỉ ra 0 test).",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "TRUNG BÌNH-CAO — bằng chứng cấu trúc (SQL + code) chắc; hậu quả CHƯA đo end-to-end"
+    },
+    {
+      "file_line": "src/gsm_sim/advice_bridge.py:202 — `cfg.get(\"orders.trip_km_median\", 3.5)`; config KHÔNG có namespace `orders` (khoá thật là `demand.trip_km_median`)",
+      "vi_sao_thuoc_lop": "Khoá MA: đường đọc config chết, `default=3.5` nuốt im lặng ⇒ `avg_dist_km` là HẰNG SỐ VIẾT CỨNG chứ không phải giá trị của thế giới. Docstring ngay trên (:200-201) tuyên bố 'quãng đường TB của CHÍNH thế giới này ... Cùng nguồn với world sinh cuốc' — nhãn SAI. Đây là dư chấn của chính BUG-S2-PARAMS mà đoạn code đó nói là đã sửa.",
+      "hau_qua": "ĐO (m2+m3, 5 seed): (a) LATENT — đổi `demand.trip_km_median` 3.5→5.0, world sinh cuốc 5.0 km còn bridge vẫn truyền 3.5 (payout/cuốc lệch 33,2%); (b) LIVE NGAY HÔM NAY — `_payout_per_order` dùng `avg_dist_km` trong công thức CƯỚC, mà cước của world tính trên KM LỘ TRÌNH (demand.py:154 `fare_km = dist_km × road.factor`, median ĐO = 4,568 km, factor 1,461), nên S2 tin payout/cuốc = 14.588đ trong khi ĐO trên sim = 18.030đ ⇒ **S2 ước NON 19,1%**. S2 lấy đó cân ONLINE vs REST/END ⇒ thiên lệch có hệ thống về nghỉ/kết ca sớm. Phạm vi: kênh `shift_plan` mặc định TẮT (ĐA-07) ⇒ hôm nay chỉ đập vào các arm nghiên cứu E-series bật nó (kể cả `shift_plan_end_only`), không đập vào baseline.",
+      "moi_hay_da_biet": "MỚI (khác D-ADV-06 = sổ PIN của solver; đây là sổ TIỀN)",
+      "do_tin": "CAO — 5 seed, đo trên sim"
+    },
+    {
+      "file_line": "src/gsm_sim/advice_bridge.py:209 — `cfg.get(\"orders.cancel_after_accept_rate\", 0.05)`; khoá thật là `behavior.cancel_after_accept_rate`",
+      "vi_sao_thuoc_lop": "Cùng cơ chế khoá MA. `completion_prior` (fallback tỷ lệ hoàn thành khi tài xế chưa nhận cuốc nào) là hằng 0,05 viết cứng, không phải 'prior quần thể của chính thế giới này' như docstring :550-552 nói.",
+      "hau_qua": "Hôm nay VÔ HẠI vì hai số trùng nhau (0,05 = 0,05) — đúng dấu hiệu chẩn đoán của lớp này. Sweep `behavior.cancel_after_accept_rate` để đo độ nhạy sẽ cho Δ=0 ở nhánh prior và người đo sẽ kết luận SAI rằng prior không ảnh hưởng.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO — quét cơ học + đọc config"
+    },
+    {
+      "file_line": "src/gsm_sim/world.py:172 — `cfg.get(\"dispatcher.offer_cooldown_min\", 10.0)`; khoá KHÔNG có trong configs/pilot_dongda.yaml. Bản sao thứ hai: tests/test_m0_integrity.py:213 cùng khoá MA, cùng default 10.0",
+      "vi_sao_thuoc_lop": "Cooldown chào lại đơn là tham số hành vi của dispatcher nhưng KHÔNG tồn tại trong nguồn sự thật cấu hình ⇒ hằng ẩn. Nặng hơn: test canh bất biến M0-2 đọc CÙNG khoá MA với CÙNG default, tức nó so hành vi engine với BẢN SAO hằng của chính nó, không với cấu hình.",
+      "hau_qua": "(1) Ai muốn đo ảnh hưởng của cooldown sẽ thêm khoá vào yaml, chạy sweep, thấy Δ=0 và kết luận sai. (2) Nếu ai đó đổi 10.0 ở world.py mà quên test, test vẫn XANH vì nó tự mang default 10.0 — cổng M0-2 không còn ràng buộc engine với bất cứ thứ gì bên ngoài nó.",
+      "moi_hay_da_biet": "MỚI (cùng họ nhưng khác thực thể với D-M3-15 — D-M3-15 là cờ config KHÔNG ai đọc; đây là code đọc khoá KHÔNG tồn tại)",
+      "do_tin": "CAO — quét cơ học"
+    },
+    {
+      "file_line": "ui/backend/app/services/demo_session.py:487 (`haversine / 20.0 * 60`) vs ui/backend/app/routers/routing.py:216 (`total_dist_km * 2.5`) vs configs/pilot_dongda.yaml speed_kmh (17/25/30)",
+      "vi_sao_thuoc_lop": "THỜI GIAN ĐI HẾT MỘT ĐOẠN ĐƯỜNG THẲNG có BA quy ước trong repo, hai trong số đó nằm cạnh nhau trên cùng đường sản phẩm demo và không đồng ý với nhau, cái thứ ba (engine) không được cả hai tham chiếu. Ngoài ra cả hai fallback lấy distance = haversine THÔ, bỏ hệ số đường mà engine luôn áp (`world._dfac`: OSRM factor ĐO 1,461, fallback `demand.detour_factor` 1,3).",
+      "hau_qua": "ĐO (m4) trên cặp toạ độ Đống Đa 5,3 km chim bay: demo_session cho 16′ (19,9 km/h), routing cho 13′ (24,5 km/h) — CÙNG đoạn, lệch 23%. Và vì `routing.build_route_response:46` bơm distance đó thẳng vào `quote_distance`, cước hiển thị cho tài xế tính trên 5,3 km thay vì ~7,7 km lộ trình ⇒ **payout báo THIẾU 27,5%** (20.392đ vs 28.132đ). Có nhãn `route_is_real_road: false` cho ĐƯỜNG, nhưng con SỐ TIỀN không mang nhãn 'ước non'.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO cho phép so (chạy code thật); con số 27,5% chỉ đúng cho độ dài đoạn này — cấu trúc base_fare/base_km làm % đổi theo km"
+    },
+    {
+      "file_line": "configs/pilot_dongda.yaml:395 (`advice.trips_per_hour_est: 1.5`) · src/gsm_core/solvers/bonus_feasibility.py:20 (`DEFAULT_TRIPS_PER_HOUR = 1.5`, chép cứng) · src/gsm_core/features/from_l1r.py:311 (fallback `2.0`) · src/gsm_core/solvers/shift_dp.py:37 (`service_min_per_trip = 25.0` ⇒ trần 2,4 cuốc/giờ)",
+      "vi_sao_thuoc_lop": "BỐN quy ước cho 'một tài xế làm được bao nhiêu cuốc một giờ'. `bonus_feasibility.py:20` tự khai trong comment rằng nó là bản sao của khoá config — tức một hằng số dẫn xuất được chép vào code, đúng mẫu `vehicle.*_range_km` mà D-M3-15 đã phải xoá, chỉ đảo chiều (code chép config thay vì config chép code).",
+      "hau_qua": "ĐO (m5, 5 seed × 90 tài xế): cuốc/giờ-online median THỰC = **1,205**. Vậy: config 1,5 cao hơn thực đo 24% (nhãn của nó ghi 'đo được ~1,4-1,5' — số đó có TRƯỚC SIM-XANH, mà chính config thừa nhận SIM-XANH kéo trips/driver từ ~12,3 xuống ~10); from_l1r 2,0 cao hơn 66%; trần shift_dp 2,4 cao hơn 99%. Hậu quả cụ thể trên đường SẢN PHẨM: `bonus_feasibility._hour_rate` dùng 1,5 làm rate lý thuyết khi tài xế thiếu lịch sử bucket ⇒ S1 nói với tân binh 'còn kịp mốc' lạc quan hơn thực tế ~24%. Hậu quả trên `market_state` (slots = demand // tphe) là DERIVED, chưa đo.",
+      "moi_hay_da_biet": "MỚI (khác D-ADV-04: D-ADV-04 là MẪU SỐ giờ-trong-bucket; đây là hằng TỬ SỐ cuốc/giờ)",
+      "do_tin": "CAO cho 1,205 (đo, 5 seed); TRUNG BÌNH cho hậu quả S1 (suy từ đường code, chưa chạy card thật)"
+    },
+    {
+      "file_line": "src/gsm_core/features/bonus_gap.py:38-39 (`acceptance = acc/(acc+dec) if ... else 1.0`, `completion = comp/acc if acc else 1.0`)",
+      "vi_sao_thuoc_lop": "`src/gsm_core/rates.py` được lập ra với đúng một mục đích: xoá 'ba quy ước cho một sự thật' về tỷ lệ nhận, và docstring của nó ghi rõ 'n=0 ⇒ KHÔNG BAO GIỜ trả 1.0'. `bonus_gap.py` import `rates` cho phần điểm/giờ nhưng vẫn tự đếm accept/decline và vẫn rơi về 1.0 ⇒ quy ước thứ TƯ, nằm trong chính module hợp nhất. Song song đó `src/gsm_sim/entities.py:122` (0/0→1.0) và `src/gsm_sim/journey.py:235` (0/0→None) vẫn tồn tại như hai quy ước — rates.py mô tả chúng ở thì quá khứ nhưng code chưa đổi.",
+      "hau_qua": "`derive_bonus_gap_input` sinh `acceptance_rate=1.0` khi chưa có app_event ⇒ `_bonus_eligible` của S1/S2 qua cổng thưởng ⇒ hứa thưởng cho người chính sách sẽ không trả (đúng lỗi mà S2-3 đã phải vá ở solver). Giảm nhẹ: hàm này hôm nay chỉ có caller trong `tests/` (grep `derive_bonus_gap_input` — 0 call site sản phẩm) ⇒ là BẪY nạp sẵn, chưa nổ.",
+      "moi_hay_da_biet": "MỚI (rates.py có nêu HAI trong bốn nơi; nơi thứ tư trong bonus_gap.py và việc entities/journey chưa đổi thì chưa ai ghi)",
+      "do_tin": "TRUNG BÌNH-CAO — cấu trúc rõ; chưa chạy để chứng minh hứa thưởng sai"
+    },
+    {
+      "file_line": "scripts/measure_e10.py:226 (`underfed ⇔ n_idle ≥ 2 ∧ λ < n_idle × tphe`) vs src/gsm_core/features/market_state.py:81-82 (`slots = int(demand // tpdb); capacity_left = max(0, slots - eff)`)",
+      "vi_sao_thuoc_lop": "'Ô này có thừa người so với cầu không' đã có chủ (`build_market_state`, mà `gsm_sim/market_state.py:5` nói thẳng 'Cố ý không tính lại trần/tỷ lệ ở đây — hai chỗ cùng tính một luật chính là mẫu lỗi T-046'). Script đo E10 lại định nghĩa riêng: bỏ `int(... // ...)` (floor), bỏ `supply_incoming` khỏi mẫu, đổi ngưỡng.",
+      "hau_qua": "precision/recall của trigger `wait` (T=30, n=2) — con số dùng để chọn `positioning_trigger` — được đo so với một ĐỊNH NGHĨA THỨ BA về 'ô thiếu cầu', không phải định nghĩa mà engine thi hành. Nghĩa là chỉ số đó nói về mức đồng ý với một thước riêng của script, không phải với luật sản phẩm. Chưa lượng hoá được độ lệch.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "TRUNG BÌNH — cấu trúc rõ, tác động CHƯA đo (phải chạy lại measure_e10 với cả hai định nghĩa)"
+    },
+    {
+      "file_line": "ui/backend/app/adapters/advisor.py:105 (`RATE_WINDOW_DAYS = 7`) vs ui/backend/app/adapters/advisor.py:84 (`[-7:]` viết thẳng trong `_hist_rate`)",
+      "vi_sao_thuoc_lop": "Comment ngay tại :105 tuyên bố hằng này 'đồng bộ với `_hist_rate` cùng file, không tạo quy ước thứ hai' — nhưng `_hist_rate` không đọc hằng, nó chép literal. Quy ước thứ hai tồn tại, chỉ đang trùng giá trị.",
+      "hau_qua": "Nhỏ nhưng đúng khuôn: đổi `RATE_WINDOW_DAYS` sẽ làm cửa sổ TỶ LỆ và cửa sổ ĐIỂM/GIỜ lệch nhau trong cùng một thẻ advice, im lặng.",
+      "moi_hay_da_biet": "MỚI",
+      "do_tin": "CAO — đọc trực tiếp, hậu quả latent"
+    },
+    {
+      "file_line": "src/gsm_core/features/allocation.py:9 (`BUCKET_MIN = 30`) — bản sao THỨ BA bên cạnh src/gsm_core/features/shift_plan.py:17 và shift_dp.DEFAULT_PARAMS['bucket_min']=30, trong khi configs/pilot_dongda.yaml:403 `advice.bucket_min: 60`",
+      "vi_sao_thuoc_lop": "Cùng thực thể với S2-6 / T-046 (đã biết) — ghi ở đây CHỈ để bổ sung bản sao thứ ba mà config comment (:397-402) chưa liệt kê.",
+      "hau_qua": "Như S2-6 đã ghi: producer nào nối đường l1r/allocation vào sẽ thừa hưởng lệch 30 vs 60 (DP tin pin bền gấp đôi, nghỉ bắt buộc còn một nửa).",
+      "moi_hay_da_biet": "ĐÃ BIẾT (S2-6) — chỉ mở rộng danh sách bản sao",
+      "do_tin": "CAO"
+    }
+  ],
+
+  "lop_co_that": "CO",
+
+  "ly_do_phan_xu": "CÓ, nhưng phải nói rõ nó là MỘT CƠ CHẾ chứ không phải MỘT VẾT SỬA. Bằng chứng cơ chế chung: mọi thực thể ở trên đều là 'consumer cần một đại lượng — chủ sở hữu có tồn tại và gọi được — nhưng consumer tự dẫn xuất lại, và KHÔNG có test nào ràng buộc hai bên'. Điều làm nó thành cấu trúc chứ không phải trùng hợp là ĐIỀU KIỆN CHO PHÉP luôn giống nhau: một `default=` hoặc một literal khiến quy ước thứ hai BẰNG quy ước thứ nhất vào ngày viết ⇒ 1.356 test xanh, mỗi bên đúng theo tiêu chuẩn của riêng nó (đúng câu mở đầu của test_range_matches_engine.py). Ba dấu vân tay xác nhận cấu trúc: (1) repo đã phải dựng HAI module hợp nhất riêng cho lớp này — `gsm_core/rates.py` ('ba quy ước cho một sự thật') và `gsm_core/lifecycle/cadence.py` ('ba semantics khác nhau') — mà CẢ HAI vẫn còn consumer không gọi chúng (bonus_gap.py, evaluate_checkpoint); (2) nhiều thực thể có DOCSTRING tuyên bố đã hợp nhất trong khi code thì không (advice_bridge:200-201, _phase_of:112-118, advisor.py:105) — nhãn sai là triệu chứng riêng của lớp này, không phải của lớp khác; (3) hai lỗi đã trả giá (D-M3-17, D-ADV-04) khớp cùng khuôn.\n\nNHƯNG lớp KHÔNG đồng nhất — nó tách làm hai cơ chế con cần hai cách chặn khác nhau: (a) ĐỌC HỤT NGUỒN — code ĐỊNH đọc canonical nhưng đường dẫn sai/không có và `default=` nuốt im lặng (advice_bridge:202/209, world.py:172). Cơ chế này phát hiện được 100% bằng máy. (b) CHÉP LUẬT — code cố ý viết lại luật/hằng của module khác (evaluate_checkpoint, _phase_of, hai fallback route, bốn hằng cuốc/giờ). Cơ chế này KHÔNG có một phép quét đủ. Vì vậy 'một fix cho cả lớp' là SAI kỳ vọng: cơ chế (a) cần một cổng quét, cơ chế (b) cần gỡ call-site + một quyết định về số nào đúng (ví dụ 1,5 hay 1,205 là câu hỏi hiệu chỉnh, không phải câu hỏi refactor).",
+
+  "cong_chan_tai_dien": {
+    "cong_A_bat_het_co_che_(a)_KHOA_MA": {
+      "ten": "tests/test_config_key_ton_tai.py",
+      "co_che": "AST-scan `src/**/*.py`, `scripts/*.py`, `ui/backend/app/**/*.py`, `tests/**/*.py`: mọi `<recv>.get(\"<dotted>\")` với receiver ∈ {cfg, config, _cfg, conf} (hoặc segment đầu trùng một khoá top-level của yaml) ⇒ assert dotted path RESOLVE được trong `configs/pilot_dongda.yaml`. Kèm self-test bắt buộc (repo đã có tiền lệ `test_scanner_nay_THUC_SU_bat_duoc`): một fixture chứa khoá ma phải làm scanner đỏ.",
+      "vi_sao_kha_thi": "ĐÃ VIẾT VÀ CHẠY trong vòng audit này (scan2.py) — chạy < 1s, ra ĐÚNG 4 kết quả, 3 là khuyết tật thật (advice_bridge:202/209, world.py:172) + 1 bản sao trong test. Không có false positive nào phải bỏ qua.",
+      "vi_sao_KHONG_trung_cong_cu": "`tests/test_config_flags_wired.py` quét chiều config→code và chỉ khớp theo TÊN LÁ. `trip_km_median` có mặt trong blob (qua `demand.trip_km_median`) nên cổng đó XANH trong khi bridge đọc `orders.trip_km_median`. Cổng A là chiều ngược lại và khớp theo ĐƯỜNG DẪN ĐẦY ĐỦ.",
+      "gioi_han_thua_nhan": "Không bắt được đọc qua biến (`k = 'a.b'; cfg.get(k)`); không bắt được cơ chế (b). Nếu cho phép allowlist thì allowlist sẽ bị lạm dụng — đề xuất KHÔNG có allowlist: khoá phải tồn tại, chấm hết."
+    },
+    "cong_B_bat_mot_phan_co_che_(b)_CHEP_LUAT": {
+      "ten": "src/gsm_core/canon.py + tests/test_hang_canon_khong_bi_chep.py",
+      "co_che": "Bước 1: gom các hằng đã có CHỦ vào một module `gsm_core/canon.py` (cooldown nhịp, ngân sách/ca, DECISION_BUCKET_MIN, hệ số tiêu hao pin, ngưỡng SOC thấp, trips_per_hour_est, service_min_per_trip, speed_kmh, detour_factor, neo pha ca) — mỗi hằng ghi rõ MODULE SỞ HỮU. Bước 2: AST-gate quét toàn repo, ĐỎ khi một numeric literal bằng bất kỳ hằng canon nào xuất hiện trong module KHÔNG phải chủ sở hữu (kể cả dạng tổ hợp hay gặp: `20 * 60`, `6 * 60`, `22 * 60`). Escape duy nhất: comment `# CANON-EXEMPT: <lý do>` ngay trên dòng, và test in ra danh sách exempt để nó không im lặng phình.",
+      "vi_sao_khong_phai_'nho_moi_nguoi_can_than_hon'": "Cổng đỏ NGAY LÚC GÕ SỐ, không phụ thuộc ai nhớ cập nhật registry. Nó sẽ bắt được: `evaluate_checkpoint` gõ `20 * 60` và `6`; `_phase_of` gõ `6 * 60`; `demo_session` gõ `20.0`; `bonus_feasibility` gõ `1.5`.",
+      "cong_B2_bo_sung_hieu_so": "Với các đại lượng có HÀM chủ (không chỉ hằng): một test vi phân chạy CẢ HAI đường trên lưới input và assert bằng nhau — mẫu đã có sẵn và đã chứng minh giá trị: `ui/backend/tests/test_range_matches_engine.py`. Seed ngay 3 cặp đo được trong vòng này: (phase: `_phase_of` vs `shift_phase(now-shift_start,...)` trên lưới {ca ngày, ca chiều, ca đêm} × {early/mid/late}), (nhịp: `evaluate_checkpoint` vs `cadence.evaluate` trên lưới Δt = 0..60′), (ETA đường thẳng: `demo_session._fallback_route` vs `routing.straight_line_fallback` trên 5 cặp toạ độ).",
+      "gioi_han_thua_nhan": "Cổng B bắt HẰNG bị chép, KHÔNG bắt CÔNG THỨC bị chép với hằng khác (ví dụ `haversine / 20.0` — số 20 không phải hằng canon nào). Phần đó chỉ cổng B2 (test vi phân) xử lý được, và B2 vẫn có yếu tố 'phải nhớ thêm cặp mới'. Tôi KHÔNG tuyên bố B đóng kín cơ chế (b) — nó thu hẹp, không đóng."
+    },
+    "phan_bien_de_xuat_sua_(ky_luat_5)": "Ba phản biện tôi tự đặt cho chính đề xuất này: (1) 'Gộp evaluate_checkpoint vào cadence.evaluate là đổi HÀNH VI sản phẩm v2' — ĐÚNG: cooldown 20′→30′ và dismiss cả-ngày→hết-pha sẽ đổi số thẻ hiển thị. Vậy đây là cycle có gate đo, không phải refactor; phải chạy trước/sau và báo Δ số thẻ. (2) 'Sửa avg_dist_km 3.5→km lộ trình sẽ dịch mọi baseline E-series đã đo' — ĐÚNG, và vì `channels.shift_plan=false` nên phải quyết định trước: sửa rồi ĐO LẠI các arm E, hay ghi nợ có nhãn. Không được lặng lẽ sửa. (3) 'Cổng B có thể bắt oan số trùng ngẫu nhiên (6, 20, 1.5 rất phổ biến)' — ĐÚNG; giảm nhẹ bằng cách chỉ đưa vào canon những hằng có ĐƠN VỊ và có chủ rõ, và bắt buộc `# CANON-EXEMPT` phải nêu lý do; nếu tỷ lệ exempt vượt ~10% số hit thì cổng đã hỏng và phải thu hẹp danh sách canon."
+  },
+
+  "cai_chua_kiem": [
+    "CHƯA chạy full suite (`uv run pytest -q` + `uv run pytest -q ui/backend/tests`) — mọi kết luận ở đây từ đo có mục tiêu, không từ suite.",
+    "Hậu quả cross-day của `_cadence_memory` v2 (ngân sách trọn đời, dismiss vĩnh viễn) mới là bằng chứng CẤU TRÚC (SQL + code), CHƯA reproduce end-to-end qua API.",
+    "1,205 cuốc/giờ đo trên config mặc định (advice TẮT) và là 'cuốc HOÀN THÀNH / giờ online', KHÔNG hoàn toàn cùng đại lượng với `trips_per_driver_per_bucket` (năng lực phục vụ) mà market_state cần. Hướng tác động lên `capacity_left` là DERIVED, chưa đo.",
+    "27,5% lệch payout của fallback route đo trên MỘT cặp toạ độ 5,3 km; % này đổi theo độ dài cuốc vì có base_fare/base_km. Cấu trúc (bỏ hệ số đường) thì chắc, độ lớn thì phụ thuộc đoạn.",
+    "Hậu quả của E10 `underfed` khác `capacity_left` CHƯA lượng hoá — cần chạy lại measure_e10 với cả hai định nghĩa.",
+    "CHƯA quét mã Dart (`ui/driver_app/lib/**`) ở mức AST — chỉ liệt kê file. `cards.js:9 KIND_HOURS` và `cards.js:127 shiftStartMin/shiftEndMin` là ứng viên mạnh (client tự đặt neo ca trong khi cadence anchor theo PHA CA) nhưng tôi chỉ đọc, chưa đo, nên KHÔNG đưa vào danh sách thực thể.",
+    "CHƯA kiểm liệu `advice_bridge.avg_dist_km` có nên là km lộ trình hay km chim bay theo Ý ĐỊNH đặc tả — tôi chứng minh nó KHỚP công thức cước (nên phải là km lộ trình), nhưng đó là suy từ code, chưa có spec xác nhận."
+  ]
+}

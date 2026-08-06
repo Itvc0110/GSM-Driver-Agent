@@ -113,15 +113,6 @@ làm tròn một lần: kỳ vọng mất `(PBS−1)/2 = 2` điểm/bucket.
 
 ---
 
-## Cái tôi **chưa** kiểm (nói trước để không ai tưởng đã kiểm)
-
-- `R-1` (kênh nghỉ **không có hàm mục tiêu**; 3/15 lượt hoãn đẩy nghỉ vào giờ **đông** hơn) — mới đọc
-  `should_defer_rest`, **chưa** đo phân phối giờ đích.
-- `D-ADV-06` (sổ pin solver ước cao 24%) — số 16,15 pp/giờ của tôi là **blended** cả hai đội
-  (swap 1,6 và charge 0,85 pp/km), mà `soc_cost_per_bucket` lại **không phân biệt đội**. Phải tách đội
-  rồi đo lại mới trích được.
-- `A2` (hạ đội) vẫn **n=5** ⇒ biên đánh đổi của `UPDATE-176` §3(c) là **hướng**, không phải số chốt.
-- **HHI cung theo ô** chưa đo lần nào (mới chỉ Gini payout) ⇒ **không được** nói *"equity tốt lên toàn diện"*.
 ## 5. `B3` — **đã kiểm xong, và phải nói CHÍNH XÁC HƠN hồ sơ cũ**
 
 Sốt ruột có **bốn** hiệu ứng, không phải một (`behavior.py:200-227`). Tôi kiểm từng cái:
@@ -140,6 +131,61 @@ cùng nhau, đó mới là root cause.
 
 ⚠ Kèm theo: `D-SIM-K8` (`idle_streak_min` reset mỗi lần relocate) làm `give_up` chỉ đi **một bước** rồi
 về lại chế độ kén. Tức khám phá bền vững **không** xảy ra. Chưa đo, mới đọc code.
+
+---
+
+## 6. ⭐ LỖI MỚI — 7 khoá gắn nhãn *"cổng một chiều canh"* mà **cổng đó không hề soi chúng**
+
+Tìm ra khi tôi **phản biện chính đề xuất sửa của mình** ở mục 2 (*cổng mới có ồn không?*). Ba tầng:
+
+| tầng | code | khoá |
+| --- | --- | --- |
+| **định tuyến** `parallel.py:420` | `_ONE_WAY_PREFIXES = ("veto_", "xveto_", "commit_")` — đẩy các khoá này **RA KHỎI** bảng significance hai chiều | `veto_*` · `xveto_*` · `commit_*` |
+| **gộp** `parallel.py:557-564` | `keys = (...)` **chép cứng** — chỉ `veto_*` | ❌ **thiếu** `xveto_*`, `commit_*` |
+| **cổng** `sim_metrics.py:535` | `for r in REST_RAILS` | ❌ **không lặp** `EXTEND_RAILS`, không đụng `commit_*` |
+
+**ĐO THẬT** (không dừng ở đọc code — tiêm *"rail SỤP VỀ 0"* vào `health_guardrail_flags` cho **từng**
+khoá, và đọc `keys` của `aggregate_health_guardrail` bằng `inspect`):
+
+```
+=> KHÔNG vào a_mean : 9 khoá  [commit_broken_n, commit_cleared_n, commit_kept_n, commit_made_n,
+                               xveto_calls_n, xveto_fatigued_n, xveto_fired_n, xveto_soc_low_n,
+                               xveto_would_exceed_fatigue_n]
+=> CỔNG KHÔNG soi   : 11 khoá  (9 khoá trên + veto_calls_n + veto_fired_n)
+```
+
+⇒ **Hai con số, hai thứ khác nhau — phải nói tách ra:**
+
+| đại lượng | số | khoá |
+| --- | --- | --- |
+| **vùng mù của CỔNG** (lan can + sổ cam kết mà cổng không soi) | **7** | `xveto_soc_low_n` · `xveto_fatigued_n` · `xveto_would_exceed_fatigue_n` · `commit_made_n` · `commit_kept_n` · `commit_broken_n` · `commit_cleared_n` |
+| **vắng mặt khỏi `a_mean`** (bảng tổng tầng 5 không in ra) | **9** | 7 khoá trên **+** `xveto_calls_n` · `xveto_fired_n` |
+
+Artifact vẫn in cạnh chúng `"one_way_gate": "sim_metrics.health_guardrail_flags (D-M3-05)"` — **một lời
+khai quản trị KHÔNG có thật**.
+
+⚠ **Hai khoá phụ có ý nghĩa riêng:** `xveto_calls_n` là **MẪU SỐ** của kênh kéo ca. Chính
+`parallel.py:561-564` lập luận rằng *"MẪU SỐ phải hiện trong artifact"* — vì cùng một verdict OK có
+nghĩa khác hẳn khi chấm trên 90/90 so với 9/90. ⇒ Việc `xveto_calls_n` vắng mặt **vi phạm đúng nguyên
+tắc mà file đó tự phát biểu**, dù nó không thuộc vùng mù của cổng.
+
+⚠ **Vì sao phải ĐO chứ không chỉ ĐỌC:** cổng cũng không soi `veto_calls_n`/`veto_fired_n` — nhưng đó là
+**mẫu số** và **tổng**, cổng soi từng rail riêng, nên **không soi là ĐÚNG THIẾT KẾ**. Nếu chỉ đếm thô
+"khoá cổng không soi" thì ra **11** và tôi đã báo thổi lên. Probe tái tạo được:
+`c4b-do-vung-mu-tang-5.py` (+ `.json`).
+
+**Đây là lỗi TÁI DIỄN.** `parallel.py:415-419` tự chép rằng danh sách tường minh *"đã HỞ hai lần"* —
+đúng `xveto_*` và `commit_*` — và `_ONE_WAY_PREFIXES` sinh ra để chặn. Bản vá chặn đúng **chiều đi ra**
+(khỏi bảng hai chiều) nhưng **không nối chiều đi vào** (tới cổng). Sửa xong nửa đường, nửa còn lại im lặng.
+
+**Hậu quả — nói đúng mức:** `shift_extend` và `rest_window` đang **TẮT** (mục 3) ⇒ hôm nay 9 khoá đó đều
+0 và **chưa che giấu gì**. Nó cắn **đúng lúc** ai đó bật hai kênh này lên để đo — tức **đúng việc đo lại
+ở mục 1 sắp làm**. ⇒ Đây là **điều kiện tiên quyết** của mọi cycle đo kênh ngủ.
+
+**Cách sửa (và vì sao không phải "nhớ cẩn thận hơn"):** danh sách khoá của `aggregate_health_guardrail`
+và vòng lặp của `health_guardrail_flags` phải **suy ra từ CÙNG nguồn** với `_ONE_WAY_PREFIXES`, cộng một
+test bất biến: *"mọi khoá định tuyến một chiều thì HOẶC được cổng soi, HOẶC được khai trơ tường minh có
+lý do"*. Có test đó thì rail/ledger tương lai **không thể** lọt lần thứ ba.
 
 ---
 

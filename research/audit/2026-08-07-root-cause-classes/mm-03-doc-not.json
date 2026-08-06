@@ -1,0 +1,127 @@
+{
+  "item": "Đọc nốt mm-03-accept-lift.json (kênh ACCEPT_LIFT + cliff card UI) — tự kiểm lại trên code, gán lớp L1..L6, và trả lời câu hỏi 'có bug nào đập thẳng vào card tài xế thật như D-ADV-04 không?'. 8 finding MI-1..MI-8 của artifact + 2 finding mới của vòng này.",
+  "cach_tu_kiem": "Mở từng file:line; chạy S1 thật (bonus_feasibility.solve) trên input tổng hợp cho 4 kịch bản; chạy advisor.advice() ĐẦY ĐỦ (qua guardrail/verifier) trên mock-realdata; quét toàn bộ dataset mock (150 tài xế × 90 ngày) để ĐO tần suất thay vì suy. Bẫy đã sập và đã sửa trong chính vòng này: lần quét đầu đếm cả tài xế `ce-*` mà endpoint KHÔNG phục vụ (advisor.py:227 chỉ nhận `d-`/`r-`) ⇒ con số 1.079 phóng đại; số đúng là 549.",
+
+  "findings": [
+    {
+      "title": "NEW-1 (MỚI, ĐƯỜNG SẢN PHẨM): adapter UI VỨT `infeasible_reason` của S1 và dựng lại thông điệp bằng FIRST-MATCH ⇒ khi hụt giờ VÀ tỷ lệ nhận dưới ngưỡng cùng lúc, card chỉ nói 'thiếu giờ' và khuyên tài xế THÔI CỐ, trong khi 30–60k thưởng ĐÃ KIẾM ĐƯỢC đang bị mất vì đúng cái vế bị giấu",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "ui/backend/app/adapters/advisor.py:321-327 (reason_code first-match: enough_hours kiểm TRƯỚC ok_acceptance) + advisor.py:389-399 (_infeasible_text return sớm, chỉ 1 lý do) — trong khi src/gsm_core/solvers/bonus_feasibility.py:111-116,180-190 GHÉP ĐỦ mọi lý do vào `infeasible_reason`. Tái lập thật: advisor.advice('d-1','2026-07-05',1200) trả card `reason_code=insufficient_budget_hours`, message='Quỹ giờ còn lại của ca không đủ để kiếm thêm số điểm còn thiếu. Đừng cố quá — giữ tỷ lệ hoàn thành tốt cho ngày mai.', KHÔNG một chữ về tỷ lệ nhận; cùng input S1 trả infeasible_reason='…; tỷ lệ nhận 0.84 < ngưỡng 0.85 → mất toàn bộ thưởng dù đủ điểm'; constraints={enough_hours:False, ok_acceptance:False, ok_completion:True}; points_now=60 ⇒ policy.bonus_at(60)=30.000đ đang bị mất (gsm_sim/policy.py:96 day_bonus trả 0). ĐO trên mock-realdata, CHỈ tài xế endpoint phục vụ (d-/r-), t=20:00: 549 (tài xế,ngày) · 32 tài xế · 17.580.000đ thưởng đã-kiếm-được nằm trong nhóm này. _cliff_item cũng None (acc 0.838 nằm ngoài band [0.85,0.88)) ⇒ KHÔNG có bất kỳ cảnh báo tỷ lệ nào.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "ĐÂY là câu trả lời cho câu hỏi 4: CÓ, và nó cùng khuôn D-ADV-04 — solver tính đúng, tầng sản phẩm dựng lại đại lượng bằng công thức khác (mất thông tin) rồi đập thẳng vào card. Khác D-ADV-04 ở chỗ không sai ĐƠN VỊ mà sai ĐỘ PHỦ. Hại kép: card vừa giấu vế cứu được, vừa hiện `thuong_moc_ke=60.000đ` (mốc KHÔNG với tới) mà không bao giờ gọi tên 30.000đ đang mất. mm-03 KHÔNG bắt được cái này: MI-1 chỉ soi nhánh SIM (kênh accept_lift TẮT, configs/pilot_dongda.yaml:337) và bỏ qua nhánh UI đang CHẠY THẬT."
+    },
+    {
+      "title": "MI-4 (artifact ghi TB — tôi ĐO được và ĐỀ NGHỊ NÂNG lên CAO): hai thước cho một khái niệm 'acceptance_rate' — gate policy áp tỷ lệ NGÀY, UI nuôi S1 bằng shrunk 7-ngày ĐỨNG IM cả ngày",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "ui/backend/app/adapters/advisor.py:116 (SHRINK_PSEUDO_COUNTS=20.0), :120 (RATE_WINDOW_DAYS=7), :145-159 (_rate_asof lọc `local_date < date` ⇒ hằng số suốt ngày), :182 (build_gi nạp vào bonus_gap_input) vs src/gsm_sim/entities.py:121-123 (sim = luỹ kế NGÀY) vs src/gsm_sim/policy.py:96 (gate áp tỷ lệ của CHÍNH ngày đó). Công thức shrink: src/gsm_core/rates.py:183-184 `(k+m·p0)/(n+m)` ⇒ w=20/125=0,16 — số học của artifact ĐÚNG. ĐO trên toàn mock: 12.373 (tài xế,ngày) có cả hai thước; verdict qua/không-qua vách 0,85 LẬT ở 2.413 trường hợp = 19,5%; trong đó 1.430 lệch theo chiều NGUY HIỂM (UI nói 'đã trên ngưỡng' ⇒ im lặng, nhưng tỷ lệ THẬT của ngày đó nằm dưới ⇒ thưởng mất).",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "Artifact chỉ có ước lượng SUY (displacement ~0,02) và xếp TB. Con số 19,5% là ĐO. Lưu ý trung thực về giới hạn: leak-free as-of là ĐÚNG (ĐA-01) và không estimator nào biết trước kết cục ngày ⇒ một phần lật là tất yếu, không phải bug. Cái SAI là card nói câu INTRADAY ('vài lần từ chối nữa…') trên một con số KHÔNG nhúc nhích trong ngày. 'Tỷ lệ thật của ngày' ở đây lấy từ driver_statistic_daily của chính mock ⇒ vẫn là mock, không phải số GSM thật."
+    },
+    {
+      "title": "MI-2: cliff biến mất đúng nơi giá trị treo LỚN NHẤT — nhánh already_maxed trả sensitivity=[] ⇒ người treo 170k sát vách nhận 'không có gì cần chỉnh'",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/bonus_feasibility.py:130-145 (nhánh `not gi['next_tiers']` return sớm, dòng 141 `\"sensitivity\": []`) — khối cliff nằm MÃI dòng 213-218, sau return ⇒ không đời nào chạy trên nhánh maxed. ui/backend/app/adapters/advisor.py:246,252-256 (already_maxed ∧ feasible ⇒ silent `already_on_track`, 'không có gì cần chỉnh. Giữ nhịp hiện tại'). TÁI LẬP: solve(points=200, acc=0.86, comp=0.95) ⇒ {'already_maxed':True,'feasible':True}, sensitivity=[] và advisor._cliff_item(report)=None. ⚠ Line-ref của artifact cho _cliff_item (advisor.py:326-345) ĐÃ STALE — vị trí thật là advisor.py:367-386.",
+      "tu_kiem": true,
+      "lop": "L4",
+      "ghi_chu": "PHẢN BIỆN QUAN TRỌNG artifact không có: PHƠI NHIỄM THẬT = 0. Quét toàn mock ở 20:00 chỉ có 39 ca already_maxed, acceptance của chúng nằm trong dải 0,923–0,975 — KHÔNG ca nào rơi vào band [0,85; 0,88). Vậy MI-2 là lỗ hổng CẤU TRÚC có thật (đã tái lập bằng input tổng hợp) nhưng hôm nay chưa bắn phát nào trên mock ⇒ khi xếp ưu tiên phải đứng SAU NEW-1 (549 ca thật). Bằng chứng lớp mạnh nhất nằm ở chỗ khác: cùng cái return sớm này ĐÃ TỪNG đánh rơi `constraints` và phải vá bằng C2/UPDATE-076 (comment tự thú ở bonus_feasibility.py:134-136) — nay nó đánh rơi tiếp `sensitivity`. Một hàm, hai lần, cùng một cơ chế."
+    },
+    {
+      "title": "MI-1: gate 'blocked_elsewhere' dùng khả thi của mốc KẾ để phủ quyết lời khuyên bảo vệ mốc ĐÃ ĐẠT (dải hở 60 ≤ points < 200 ở đuôi ca)",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/advice_bridge.py:1042-1047 (`blocked_elsewhere = not enough_hours or not ok_completion` ⇒ return im lặng) + src/gsm_core/solvers/bonus_feasibility.py:177-178 (`enough_hours` tính cho `next_tiers[0]`, tức mốc KẾ) + gsm_core/policy.py:104-110 `bonus_at(points)` (giá trị ĐÃ đạt, có sẵn, gate không đọc). Nhánh already_maxed quả thật là nhánh DUY NHẤT được vá: advice_bridge.py:1030-1031 + bonus_feasibility.py:137-139 trả `enough_hours: True` nên acceptance vẫn là blocker hợp lệ ⇒ lọt xuống `_acceptance_recoverable`. Cơ chế đúng như artifact mô tả.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu": "HẠ severity từ CAO xuống TB, có lý do: đường này CHỈ tồn tại trong sim, mà `channels.accept_lift: false` (configs/pilot_dongda.yaml:337) ⇒ hôm nay không tài xế nào chạm. Giá trị thật của MI-1 là ROOT CAUSE, không phải impact: cùng gốc 'lấy mốc KẾ đứng thay cho tiền ĐANG TREO' đã sinh ra NEW-1 trên đường UI đang chạy — và artifact bỏ lỡ đúng instance đó. VỀ LỚP: không khớp L1..L6. Không phải L1 (không có tầng nào TỰ TÍNH lại — nó THAY THẾ một đại lượng bằng đại lượng khác), không phải L4 (cổng đặt đúng chỗ trong chuỗi, chỉ hỏi sai câu). Đây là ứng viên rõ nhất cho một lớp mới: 'PROXY SAI ĐẠI LƯỢNG — cổng định giá thứ khác với thứ đang rủi ro'. NEW-1 cũng dùng chung gốc này."
+    },
+    {
+      "title": "MI-7: sim TÍNH cliff rồi VỨT — `sensitivity` không có consumer nào trong src/gsm_sim ⇒ cảnh báo phòng ngừa chỉ tồn tại trên đường UI",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "grep 'sensitivity' toàn src/gsm_sim: đúng 1 hit và là ĐƯỜNG DẪN file, không phải trường solver (src/gsm_sim/dashboard.py:749 `research/experiments/sensitivity/dsim06_sweep.json`) ⇒ 0 consumer thật. src/gsm_sim/advice_bridge.py:1025 gọi bonus_feasibility.solve (cliff được tính mỗi lần) nhưng :1026 chỉ đọc `rep['solution']`. src/gsm_sim/advice_bridge.py:773 `if acc >= thr or actor.accept_lift >= self.lift_max: return None`. src/gsm_sim/archetypes.py:37 P1 accept_base=0.85 = ĐÚNG ngưỡng policy (configs/pilot_dongda.yaml:261).",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "Vế 'cliff mồ côi trong sim' XÁC NHẬN (L3 chuẩn). Vế P1 XÁC NHẬN CÓ ĐIỀU KIỆN: `acc >= thr` với acc==thr==0,85 quả thật câm, nhưng chỉ khi `_acc_estimate` rơi về `accept_base` — advice_bridge.py:540-543 ưu tiên `mem.acceptance_avg` khi có ⇒ từ ngày 2 trở đi P1 dùng lịch sử thật, không cắm cứng 0,85. Artifact nói quá ở chỗ này. Vế 'nửa số ngày binomial của P1 kết dưới 0,85' là SUY, CHƯA ĐO, và behavior.py:94-96 điều biến quanh base nên phân phối không thuần binomial — xếp là KẾT CỤC, vi phạm kỷ luật 4, không dùng."
+    },
+    {
+      "title": "MI-3: CLIFF_MARGIN=0.03 là band trên RATE, không có mẫu số ⇒ cùng một band nghĩa là 'còn 0 lần' hay 'còn 4 lần từ chối' tuỳ o; ĐUÔI CA không biến nào nhìn thấy",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/bonus_feasibility.py:21 (CLIFF_MARGIN=0.03), :213-218 (điều kiện + note 'vài lần từ chối nữa'); input schema KHÔNG có counts: src/gsm_sim/advice_bridge.py:1004 và ui/backend/app/adapters/advisor.py:182 đều chỉ truyền một scalar `acceptance_rate` ⇒ S1 về nguyên tắc không tính được d_max = a + R − thr·(o+R). Số học của artifact KIỂM LẠI ĐÚNG: một lần từ chối dịch rate đi acc/(o+1) ⇒ o=10: 0,88/11=0,080 (2,7× band); o=30: 0,0284 (≈band); o=100: 0,0087 (band≈3,4 lần). TÁI LẬP note thật: solve(points=100, acc=0.86) ⇒ 'tỷ lệ nhận 0.86 sát ngưỡng 0.85 — vài lần từ chối nữa có thể mất TOÀN BỘ thưởng dù đủ điểm'.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu": "HẠ từ CAO xuống TB: hại là ở NGỮ NGHĨA câu chữ, không tạo ra số sai nào hiển thị. Nhưng đúng là chạm ranh giới §5 — 'vài lần' là khẳng định định lượng không có mẫu số đứng sau, do agent/solver tự đặt. Cộng hưởng với MI-4: trên đường UI con số ấy còn KHÔNG nhúc nhích trong ngày, nên câu 'vài lần từ chối nữa' vừa không có đơn vị vừa không có đường thành sự thật hôm nay. Không thuộc L1..L6 — đây là 'hằng số không mang đúng đơn vị của câu hỏi'."
+    },
+    {
+      "title": "MI-6: ràng buộc AND hai vế (acceptance ∧ completion, cùng vách 0.85) nhưng chỉ canh MỘT — completion không có cliff/sensitivity/card nào",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/policy.py:96 (gate AND: `acceptance < min_acc or completion < min_comp` ⇒ 0đ) + src/gsm_core/solvers/bonus_feasibility.py:213-218 (chỉ acceptance) + ui/backend/app/adapters/advisor.py:367-386 (_cliff_item chỉ đọc param 'acceptance_cliff'; ⚠ artifact ghi 326-345 — STALE). Bổ sung: src/gsm_core/solvers/f3_patterns.py:71-92 cũng chỉ có acceptance_cliff. TÁI LẬP: solve(points=100, acc=0.97, comp=0.86) ⇒ sensitivity=['rate_-20%','rate_-40%','next_higher_tier'] — KHÔNG có cliff nào.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu": "XÁC NHẬN bằng thực thi. Về lớp: KHÔNG phải L3 (cơ chế completion-cliff không hề tồn tại để mà mồ côi) và KHÔNG phải L4 (không đặt sai chỗ — không có cổng nào cả). Đây là 'phủ thiếu một nhánh của ràng buộc đối xứng'. Nếu cố nhét vào L4 cho gọn thì đúng là 'kể chuyện gọn' mà charter §3 cảnh báo — tôi không nhét."
+    },
+    {
+      "title": "MI-5: `_acceptance_recoverable` là ngưỡng cứng trên KỲ VỌNG với p = best-case 0.93, không phương sai ⇒ gate lạc quan một phía, nặng nhất ở đuôi ca (R nhỏ)",
+      "severity": "TB",
+      "confidence": "TB",
+      "evidence_file_line": "src/gsm_sim/advice_bridge.py:962-971 (`return (a + p*R)/(o + R) >= thr`, p = self.max_realized_accept) + configs/pilot_dongda.yaml:393 (`max_realized_accept: 0.93` — nhãn 'tỷ lệ nhận CAO NHẤT ĐẠT ĐƯỢC khi lift kịch trần'). Vế phụ về `elapsed` XÁC NHẬN: advice_bridge.py:966 `elapsed = max(1.0, actor.online_min)` và src/gsm_sim/world.py:842,852 ghi rõ online_min 'gộp toàn bộ thời gian đã trôi (chờ + serve + charge)' ⇒ đúng họ D-M3-19 (đã biết).",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu": "Cấu trúc XÁC NHẬN bằng đọc code. CHƯA TỰ KIỂM phần KẾT CỤC: artifact suy 'P(đạt thật) có thể <50%' — chưa ai đo, và kênh đang TẮT nên tôi không đo được mà không đổi config. Giữ confidence TB đúng như artifact. Ghi thêm một ràng buộc đã có hồ sơ: D-SIM-07 (tracking/DEFERRED.md:38) đã ghi `max_realized_accept` và `accept_lift_max` là hai tham số ĐỘC LẬP phải nhất quán — MI-5 là hệ quả của cùng nợ đó, không phải phát hiện độc lập hoàn toàn."
+    },
+    {
+      "title": "NEW-2 (MỚI, về QUY TRÌNH BẰNG CHỨNG): con số −34k ĐÃ BỊ ĐÍNH CHÍNH năm 2026-07-26 vẫn sống trong config + comment code như căn cứ cho cổng D-SIM-05 — và nó vừa lan tiếp vào chính artifact mm-03",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "configs/pilot_dongda.yaml:391-392 ('SIM-4 chứng minh hiệu ứng VÁCH ĐÁ: nâng tỷ lệ mà KHÔNG chạm ngưỡng ⇒ tài xế ôm cuốc rẻ, mất 34k, chẳng có thưởng bù') và src/gsm_sim/advice_bridge.py:766-768 (chép y nguyên). NGUỒN GỐC: tracking/updates/UPDATE-048-dsim05-feasibility-gate-and-correction.md:11-32 — §2 tên là 'ĐÍNH CHÍNH — kết luận vách đá của UPDATE-047 KHÔNG ĐỨNG VỮNG': đo lại 30 seed, nhóm KHÔNG chạm ngưỡng có Δpayout **+18.207đ (DƯƠNG)**, và câu chốt dòng 27: 'Con số −34k là **một seed cá biệt**'. Thêm nữa UPDATE-048:56-60 đo chính cổng được dựng lên từ đó là **INERT** ('điều kiện không chặn lần nào').",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu": "Chính file config này, cách đó ~130 dòng (mục `vehicle`), đã tự ghi bài học D-M3-15: 'giữ một giá trị dẫn xuất trong config là mời gọi nó lệch lần nữa' — và ngay dưới lại nuôi một khẳng định ĐÃ BỊ BÁC. Bằng chứng lan truyền là ĐO ĐƯỢC trong vòng này: mm-03 MI-8 đọc đúng configs/pilot_dongda.yaml:391-392 rồi dựng cả một finding lên nó. Ứng viên MẠNH NHẤT cho lớp thứ 7: 'BẰNG CHỨNG ĐÃ ĐÍNH CHÍNH vẫn nằm trong nguồn sự thật và tiếp tục biện minh cho code' — nó khác L1..L6 ở chỗ hỏng không nằm trong code mà trong ĐƯỜNG DẪN BẰNG CHỨNG, nên mọi audit sau đều tái nhiễm."
+    },
+    {
+      "title": "MI-8: 'kênh đo ns vì bind hiếm (~32%) + thiếu vế chi phí mix ≈ −34k' — TIỀN ĐỀ KHÔNG ĐỨNG, CƠ CHẾ BỊ ĐO NGƯỢC",
+      "severity": "THẤP",
+      "confidence": "THẤP",
+      "evidence_file_line": "Ba đối chứng. (1) TIỀN ĐỀ 'ns': không tìm thấy phép đo ns nào cho accept_lift. tracking/TODO.md:373 ghi `+accept_lift` **+32.276đ CI[+8.255,+58.480]** (30 seed, tức DƯƠNG-SIG, không ns); tracking/updates/UPDATE-074-mut10-blocker-and-advice-loss.md:45 ghi ablation 3 seed **−104.895đ** ('thủ phạm duy nhất'). Hai số trái dấu, không số nào là ns. (2) CƠ CHẾ: UPDATE-074:37-39 nói thẳng ngược lại giả thuyết của MI-8 — 'advisor KHÔNG làm tài xế nhận cuốc xấu… B nhận cuốc **gần hơn, đắt hơn**'; thủ phạm đo được là **bị chào ít đơn hơn (18→12)** và **đổi pin gấp 2,3 lần (62→144 phút)** ⇒ vòng phản hồi SOC/vị thế, KHÔNG phải mix cuốc rẻ/xa. (3) SỐ NEO −34k: đã bị chính repo rút (xem NEW-2). Riêng vế CẤU TRÚC thì đúng: archetypes.py:37,40 (P1 0.85, P4 0.80) + archetypes.py:104 (accept_base gán thẳng, KHÔNG jitter) + configs/pilot_dongda.yaml:234,237 (P1 0.14 + P4 0.18) ⇒ 32% — nhưng đây là số **DERIVED từ config, CHƯA đo lại trên sim**.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu": "Đây là finding DUY NHẤT của mm-03 tôi đề nghị LOẠI khỏi mọi kết luận. Nó vi phạm đúng ba kỷ luật của charter: trích một con số có sẵn mà không mở nguồn gốc (−34k đã bị rút), suy KẾT CỤC từ mô hình tĩnh ('E[Δpayout] ≈ 0 ⇒ ns là kết cục kỳ vọng'), và dựng cơ chế trái với cơ chế đã ĐO. CHƯA TỰ KIỂM: tôi cũng không đo lại accept_lift n=100 (kênh TẮT, bật lên là đổi config + cần regate ≥5 seed theo D-ADV-04b) — nên tôi KHÔNG khẳng định kênh dương hay âm, chỉ khẳng định lập luận của MI-8 không đứng."
+    }
+  ],
+
+  "lop_thong_ke": {
+    "L1": 2,
+    "L2": 0,
+    "L3": 1,
+    "L4": 1,
+    "L5": 0,
+    "L6": 0,
+    "KHONG": 6,
+    "tong": 10,
+    "ty_le_giai_thich_duoc": "4/10 = 40%",
+    "L1_thuc_the": ["NEW-1 (_infeasible_text dựng lại infeasible_reason, mất thông tin — đường sản phẩm)", "MI-4 (acceptance_rate: 3 quy ước — sim luỹ kế ngày · UI shrunk 7 ngày · policy áp tỷ lệ ngày)"],
+    "L3_thuc_the": ["MI-7 (sensitivity/cliff tính trong sim, 0 consumer — grep xác nhận)"],
+    "L4_thuc_the": ["MI-2 (khối cliff bonus_feasibility.py:213-218 nằm SAU return sớm ở :130-145 ⇒ nhánh already_maxed câm)"],
+    "khong_thuoc_lop_nao": ["MI-1", "MI-3", "MI-5", "MI-6", "MI-8", "NEW-2"],
+    "phan_bien_gia_thuyet_lop": "Trên artifact này giả thuyết lớp giải thích ĐƯỢC 40%, và chỉ bằng 3/6 lớp. L2 (test ghim vô hiệu), L5 (world zero-cost), L6 (hiệu chỉnh bù) có ĐÚNG 0 thực thể ở đây — mm-03 chạm một kênh có tiền thật (bonus) nên L5 không áp được, đúng như chính artifact tự nhận. Sáu finding không thuộc lớp nào KHÔNG rời rạc mà gom thành hai khuôn mới, và hai khuôn này giá trị hơn phần khớp lớp: (a) **PROXY SAI ĐẠI LƯỢNG** — cổng/thông điệp định giá đại lượng KHÁC với đại lượng đang rủi ro (MI-1 mốc-kế thay tiền-đang-treo · NEW-1 lý-do-đầu-tiên thay lý-do-tốn-tiền-nhất · MI-3 band-trên-rate thay số-lần-từ-chối · MI-5 kỳ-vọng-best-case thay xác-suất); (b) **BẰNG CHỨNG ĐÃ ĐÍNH CHÍNH còn sống trong nguồn sự thật** (NEW-2, và MI-8 là nạn nhân đo được của nó). Khuôn (a) một mình phủ 4/6 phần 'KHÔNG' — nếu nâng nó thành L7 thì tỷ lệ giải thích lên 8/10 = 80%. Khuyến nghị: KHÔNG nong định nghĩa L1/L4 để nuốt nhóm này (L1 hỏng vì tầng dưới TỰ TÍNH LẠI, nhóm (a) hỏng vì THAY THẾ đại lượng — hai cách sửa và hai cổng chặn khác hẳn nhau: L1 cần 'một nguồn duy nhất', (a) cần 'nêu tên đại lượng đang rủi ro và kiểm nó khớp objective')."
+  },
+
+  "tra_loi_cau_hoi_4": {
+    "cau_hoi": "accept_lift là kênh DUY NHẤT tác động tới tỷ lệ nhận, S1 là solver DUY NHẤT đường sản phẩm chạy (B6-PARITY) — có bug nào ở đây đập thẳng vào card tài xế thật như D-ADV-04 không?",
+    "tra_loi": "CÓ — hai cái, và cái nặng nhất KHÔNG nằm trong mm-03.",
+    "chi_tiet": [
+      "NEW-1 (nặng nhất, ĐÃ TÁI LẬP qua advisor.advice() đầy đủ): 549 (tài xế,ngày) trên nhóm endpoint thật sự phục vụ, 32 tài xế, 17.580.000đ thưởng ĐÃ KIẾM ĐƯỢC bị mất im lặng trong khi card nói 'thiếu giờ, đừng cố quá'. Cùng khuôn D-ADV-04: S1 tính đúng, tầng adapter dựng lại và làm rơi.",
+      "MI-4 (ĐO 19,5% verdict lật, 1.430/12.373 lệch chiều nguy hiểm): thước acceptance mà card dùng KHÔNG phải thước policy dùng để trả tiền.",
+      "MI-2 XÁC NHẬN cấu trúc nhưng PHƠI NHIỄM 0 trên mock hiện tại (39 ca already_maxed, acceptance 0,923–0,975, không ca nào vào band) — thật, nhưng chưa bắn.",
+      "MI-1 KHÔNG đập vào card thật: nó nằm trên đường sim với channels.accept_lift=false (configs/pilot_dongda.yaml:337). Giá trị của nó là chỉ ra ROOT CAUSE dùng chung với NEW-1."
+    ]
+  },
+
+  "ghi_chu": "TỰ KIỂM: 10/10 finding đã mở file:line (đường dẫn tuyệt đối dưới repo root). 6 finding tái lập bằng THỰC THI (S1 solve 4 kịch bản tổng hợp + advisor.advice() thật + 2 lượt quét toàn mock 150 tài xế × 90 ngày). CHƯA TỰ KIỂM: (1) phần KẾT CỤC của MI-5 và MI-7 (P(đạt) thật, phân phối ngày của P1) — kênh TẮT, đo được thì phải bật config + regate ≥5 seed; (2) tôi KHÔNG đo lại Δpayout của accept_lift, nên không kết luận kênh dương/âm — chỉ kết luận lập luận 'ns' của MI-8 không có phép đo nào chống lưng. SỐ DERIVED có nhãn: '32% quần thể bind' (từ archetype_mix config, chưa đo trên sim); displacement shrinkage ~0,02 (số học đúng nhưng prior 0,92/raw 0,80 là ví dụ minh hoạ, không phải phân phối đo). BẪY ĐÃ SẬP TRONG CHÍNH VÒNG NÀY, ghi lại để không ai lặp: lượt quét đầu đếm cả `ce-*` (car/premium) mà advisor.py:227 chặn ngay từ cửa ⇒ 1.079 ca / 36,3 triệu đ; số ĐÚNG sau khi lọc theo cửa thật là 549 ca / 17,58 triệu đ. LINE-REF STALE của mm-03 cần sửa khi trích lại: `_cliff_item` là advisor.py:367-386 (artifact ghi 326-345); MI-4 vùng thật là advisor.py:116-120 + 145-159 (artifact ghi 117-131,151). RANH GIỚI: không finding nào đề xuất đưa sức khoẻ vào objective, không đề xuất khuyên nhận/từ chối đơn cụ thể; mọi số ở đây là MOCK (dataset mock-realdata seed_base=7000) và đã gắn nhãn."
+}
