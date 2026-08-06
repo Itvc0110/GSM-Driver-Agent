@@ -68,11 +68,20 @@ không-được-chào** (cận dưới; ước thực ~2.300′) · **+821 đi�
 `station_choice` chỉ thêm **+98,9** empty-min/ngày **và đã FAIL** ⇒ kênh này bơm **13–23× nhiều hơn**,
 trong khi "cầu nhìn thấy" chỉ tăng **+8,2–10,9%**. **Đóng vĩnh viễn** là quyết định đúng.
 
-## 3. ⚠ ĐÍNH CHÍNH một con số CỦA TÔI đã dùng nhiều nơi
+## 3. 🔴 ~~ĐÍNH CHÍNH~~ → **RÚT LẠI ĐÍNH CHÍNH NÀY** (chi tiết ở `UPDATE-173`)
 
-Tôi viết **"65,3% cuốc trả ngoài lõi"** (trong `D-ADV-03`, `mm-12`, UPDATE-163/166). Đo lại:
-**56,1–56,5%** lượt **TRẢ KHÁCH** ra ngoài lõi. **65,3%** (chính xác 64,65%) là mức **ĐƠN SINH** ngoài
-lõi — **hai đại lượng khác nhau**. Nguồn sai: tôi lấy số từ comment config mà không kiểm nó đo cái gì.
+> **Bản gốc (SAI, giữ để đối chiếu):** *"Tôi viết **65,3% cuốc trả ngoài lõi**… Đo lại: **56,1–56,5%**
+> lượt TRẢ KHÁCH ra ngoài lõi. 65,3% (chính xác 64,65%) là mức ĐƠN SINH — hai đại lượng khác nhau."*
+>
+> **🔴 RÚT LẠI 2026-08-07.** Tôi đã **tin số 56,1–56,5% của agent** rồi đi "sửa" một con số **ĐÚNG** của
+> repo. **Tôi tự đo (5 seed, arm A):** đơn sinh drop ngoài lõi **64,4%** (3.883/6.029) · cuốc hoàn thành
+> (`trip_rated`, log tại `order.drop_cell`) **64,6%** (2.329/3.608). **Cả hai khớp** `UPDATE-083`
+> (**65,3%**, α=0,4 — `drop_demand_alpha` hiện vẫn 0,4) ⇒ **65,3% KHÔNG SAI**. Số **56,1–56,5%** của
+> `pb-07` là số tôi **KHÔNG tái tạo được** ⇒ **không được trích** cho tới khi ai đó tái tạo.
+> Đây đúng bài học `verify-favourable-claims-hardest`: **"tác tử báo" ≠ "tôi đo"**.
+>
+> ⚠ Việc rút lại này **KHÔNG lay chuyển** kết luận BÁC `D-ADV-03` — refutation đó đứng trên **giá của
+> deadhead** (+512,6 km/ngày = +95% nền), không đứng trên con số 65,3%.
 
 ## Kiểm chứng
 
