@@ -128,10 +128,10 @@ def test_driving_queues_not_suppresses():
 
 
 def test_safety_topic_presents_even_while_driving():
-    """priority safety > policy/bonus > demand: cảnh báo an toàn không bị hoãn."""
+    """Card chữ không phải emergency modality: đang lái thì phải hoãn an toàn."""
     v = evaluate("safety", now_min=600.0, phase="mid", memory=_mem(),
                  cfg=CFG, is_driving=True)
-    assert v.verdict == PRESENT
+    assert v.verdict == QUEUE and v.reason == "unsafe_while_moving"
 
 
 def test_budget_does_not_block_safety():
