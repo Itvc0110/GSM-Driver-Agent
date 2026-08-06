@@ -1,0 +1,37 @@
+{
+  "what": "F3 — lưu vực theo home_cell: vị trí khởi đầu có giải thích được ô hút xa không?",
+  "mock": true,
+  "arm": "A",
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004
+  ],
+  "hour": 18,
+  "n_actor_run": 450,
+  "share_home_cell_la_o_hut": 0.0311,
+  "top5_home_cell": [
+    [
+      "89415cb4d43ffff",
+      10
+    ],
+    [
+      "89415cb4953ffff",
+      10
+    ],
+    [
+      "89415cb4c33ffff",
+      9
+    ],
+    [
+      "89415cb4c13ffff",
+      8
+    ],
+    [
+      "89415cb4847ffff",
+      8
+    ]
+  ]
+}
