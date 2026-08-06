@@ -1,0 +1,160 @@
+{
+ "ma_no": "D-ADV-02",
+ "goc_soi": "TẦN SUẤT / CÓ BAO GIỜ BIND KHÔNG",
+ "ngay": "2026-08-06",
+ "vai": "phản biện độc lập (mặc định REFUTED nếu không chứng minh được)",
+ "mock": true,
+ "verdict": "CONFIRMED",
+ "verdict_ngan": "Cơ chế ĐÚNG và nó CÓ BIND: 16/77 (20,8%) lượt kéo ca đã áp nằm HOÀN TOÀN trong vùng chết điểm, điểm kiếm được ở đó = 0 (đo, không suy). Nhưng CLAIM sai hai chi tiết (ranh giới lệch 1 giờ; điểm tính theo giờ ĐẶT) và độ lớn nhỏ hơn nhiều so với cách CLAIM diễn đạt ⇒ severity hạ.",
+
+ "claim_goc": "shift_extend dùng rate = points/online_h trung bình ngày, không đọc point_window_hours [6..21]; policy.trip_points trả 0 ngoài khung ⇒ kéo ca sau 21h thì E[Δthưởng]=0 ⇒ lời khuyên vô ích.",
+
+ "phan_da_xac_nhan_bang_doc_code": [
+  {
+   "diem": "rate phẳng theo ngày, KHÔNG đọc khung điểm",
+   "file_line": "src/gsm_sim/advice_bridge.py:1064-1224 (check_shift_extend)",
+   "trich": "online_h = max(0.5, actor.online_min / 60.0); rate = actor.points / online_h; need_min = gap_points / rate * 60.0",
+   "kiem": "grep trong CẢ hàm: không có point_window_hours / trip_points / is_peak. Token `is_peak` chỉ xuất hiện ở advice_bridge.py:996 — hàm KHÁC (đường shift_dp/rest), không phải kênh này."
+  },
+  {
+   "diem": "trip_points trả 0 ngoài khung",
+   "file_line": "src/gsm_sim/policy.py:86-92",
+   "trich": "if order_hour not in self.point_window_hours: return 0"
+  },
+  {
+   "diem": "KHÔNG có test ghim coi rate-phẳng là THIẾT KẾ",
+   "file_line": "tests/test_e1b_cong_thuc_kenh.py:111-156",
+   "trich": "ba test ghim: reachable_in_shift · would_exceed_fatigue (dự phóng cuối ca) · need_extra×1.15. KHÔNG test nào ghim việc bỏ qua khung điểm.",
+   "y_nghia": "khác hẳn tiền lệ ADV-09 (bug hai sổ hoá ra thiết kế có test ghim) — ở đây không có lá chắn thiết kế nào."
+  },
+  {
+   "diem": "repo ĐÃ CHỐT quy ước ngược lại ở tầng core (mâu thuẫn hai sổ THẬT)",
+   "file_line": "src/gsm_core/rates.py:52-84 (bucket_of_hour)",
+   "trich": "if policy.trip_points(hour) <= 0: return None  — docstring module: \"Giờ ngoài khung tính điểm bị loại khỏi CẢ tử số lẫn mẫu số ... phút online lúc 23h KHÔNG được làm loãng mẫu số offpeak\"",
+   "y_nghia": "cùng đợt audit 2026-08-06 đã chốt quy ước points-per-hour phải loại giờ 0-điểm khỏi cả tử VÀ mẫu; check_shift_extend vi phạm đúng câu đó."
+  }
+ ],
+
+ "cai_da_bac_hoac_sua_trong_claim": [
+  {
+   "loai": "SAI RANH GIỚI (lệch 1 giờ)",
+   "chi_tiet": "point_window_hours = [6..21] là INCLUSIVE giờ 21 (configs/pilot_dongda.yaml:254). Giờ 21 = 21:00-21:59 VẪN có điểm. Vùng chết bắt đầu 22:00, KHÔNG phải 'sau 21h'. Nếu ai đó fix theo đúng chữ của claim ('chặn sau 21h') thì cắt mất 1 giờ có điểm thật."
+  },
+  {
+   "loai": "ĐỘ LỚN NHỎ HƠN CLAIM — điểm tính theo giờ KHÁCH ĐẶT",
+   "chi_tiet": "src/gsm_sim/world.py:752 `actor.points += self.policy.trip_points(int(order.t_min // 60) % 24)` — order.t_min là giờ ĐẶT, không phải giờ hoàn thành. Cuốc nhận 21:50 xong 22:20 VẪN có điểm. Docstring policy.py:87 nói đúng: 'Điểm cho một cuốc theo GIỜ KHÁCH ĐẶT'. ⇒ phút kéo sau 22:00 mất điểm vì không còn ĐƠN MỚI trong khung, chứ không vì cuốc bị cắt giữa dòng."
+  },
+  {
+   "loai": "'lời khuyên vô ích' chỉ đúng cho 20,8% lượt, không phải toàn kênh",
+   "chi_tiet": "59/77 lượt áp có cửa sổ kéo HOÀN TOÀN trong khung điểm (0 phút chết); 2 lượt chết một phần; 16 lượt chết hoàn toàn."
+  },
+  {
+   "loai": "MỘT LAN CAN CÓ chặn — nhưng tình cờ, và không đủ",
+   "chi_tiet": "clamp world_end (advice_bridge.py:1198 `add = min(add, max(0.0, self.world_end_min - actor.shift_end_min))`) triệt tiêu mọi lần kéo của tài xế có shift_end đã = 24:00 — 83/370 actor-day (5 seed) ⇒ 249 lần gọi / 62 event `infeasible_world_end`. Đó là cohort tối-đêm ĐÔNG NHẤT. Chỗ lọt còn lại đúng bằng nhóm kết ca 23:0x-23:5x (27+2/370 actor-day) — và 16/16 lượt chết-hoàn-toàn đều có old_end ở GIỜ 23."
+  }
+ ],
+
+ "probe": {
+  "script": "scratchpad/xb_dadv02_freq.py (+ xb_dadv02_recalc.py) — monkeypatch chỉ trong process, KHÔNG sửa file repo",
+  "cach_chay": "arm B duy nhất, channels={shift_extend:True, còn lại False, positioning_overrides:off}, coverage=all, configs/pilot_dongda.yaml, seed 1000-1004",
+  "kiem_chung_probe": "applied=77 TRÙNG KHỚP một probe độc lập trước đó (scratchpad/probe_dadv02.py, cùng 5 seed) ⇒ instrument là behavior-neutral. Vòng đầu của tôi báo fully_dead=8 do BUG LÀM TRÒN của chính probe (so z với round(added,2)); tính lại trên số chưa làm tròn ⇒ 16, khớp probe kia.",
+  "ranh_gioi_do": "reason-code đếm theo LẦN GỌI (mỗi tick/actor), không phải theo QUYẾT ĐỊNH. Đơn vị quyết định: applied 77 + not_followed 175 event + infeasible_world_end 62 event = 314 lượt NÓI / 5 seed ≈ 63/seed."
+ },
+
+ "so_do_duoc": {
+  "seeds": [1000, 1001, 1002, 1003, 1004],
+  "vung_chet_bat_dau": "22:00",
+  "luot_noi_tong_5seed": 314,
+  "luot_ap_tong_5seed": 77,
+  "ap_theo_seed": {"1000": 14, "1001": 16, "1002": 11, "1003": 18, "1004": 18},
+  "chet_hoan_toan_n": 16,
+  "chet_hoan_toan_theo_seed": {"1000": 4, "1001": 2, "1002": 2, "1003": 6, "1004": 2},
+  "chet_mot_phan_n": 2,
+  "trong_khung_hoan_toan_n": 59,
+  "ty_le_luot_chet_hoan_toan": 0.2078,
+  "phut_keo_tong": 1392.3,
+  "phut_keo_trong_vung_chet": 146.7,
+  "ty_le_phut_chet": 0.1054,
+  "phut_chet_nam_trong_16_luot_chet_hoan_toan": 128.1,
+  "diem_thuc_kiem_duoc_trong_16_cua_so_chet": 0,
+  "cuoc_duoc_gan_trong_16_cua_so_chet": 4,
+  "diem_thuc_kiem_duoc_trong_tat_ca_cua_so_keo": 185,
+  "tan_so_reason_code_theo_LAN_GOI_5seed": {
+   "reachable_in_shift": 21752,
+   "would_exceed_fatigue": 16782,
+   "no_rate": 3375,
+   "fatigued": 1131,
+   "soc_low": 604,
+   "not_followed": 571,
+   "infeasible_world_end": 249,
+   "cap_unreachable": 148,
+   "claimed": 137,
+   "extend_cap": 93,
+   "APPLIED": 77
+  },
+  "archetype_cua_16_luot_chet": {"P7": 12, "P5": 4},
+  "archetype_cua_77_luot_ap": {"P1": 50, "P7": 12, "P3": 11, "P5": 4},
+  "gio_old_end_cua_16_luot_chet": {"23": 16},
+  "hist_gio_ket_ca_370_actorday": {"12": 29, "13": 39, "14": 38, "15": 31, "16": 23, "17": 25, "18": 43, "19": 24, "20": 42, "21": 44, "22": 2, "23": 27, "24": 83},
+  "gap_vnd_bi_treo_truoc_16_luot": {"30000": 15, "60000": 1, "tong_vnd": 510000},
+  "trong_16_luot_dat_moc_muc_tieu_cuoi_ca": 5,
+  "trong_16_luot_co_day_bonus_duong": 1,
+  "trong_16_luot_khong_kip_end_shift_truoc_24h": 8
+ },
+
+ "kiem_chieu_va_do_lon": {
+  "chieu_sai_so": "CÙNG MỘT CHIỀU, khuếch đại chứ không triệt tiêu. (1) Mẫu số online_min gộp cả giờ 0-điểm ⇒ rate ƯỚC NON ⇒ need_min ƯỚC CAO ⇒ dễ vượt remaining_min ⇒ DỄ khuyên kéo hơn. (2) Áp rate phẳng cho phút sau 22:00 ⇒ giả định điểm chảy ở chỗ không có điểm. Cả hai đẩy về phía KHUYÊN KÉO NHIỀU HƠN mức đúng.",
+  "phep_tinh_lai_mot_ca_cu_the": {
+   "ca": "seed 1000, actor 61, P5",
+   "input_do_duoc": {"now": "17:56", "points": 20, "rate_pts_per_h": 7.14, "shift_end": "23:29", "remaining_min": 332.5, "need_min_engine": 336.1, "need_extra_min": 3.6, "added_min": 4.2},
+   "tinh_dung": "thời gian CÒN CÓ ĐIỂM = 22:00 − 17:56 = 244′ = 4,07h; ở rate 7,14đ/h ⇒ tối đa ~29 điểm < gap 40 điểm ⇒ mốc KHÔNG với tới trong ngày, kéo bao lâu cũng vậy.",
+   "ket_luan": "output ĐÚNG phải là 'không có gì để nói' (họ no_tier/unreachable); output THẬT là 'kéo thêm 4,2′'. Sai KIỂU (khuyên ở chỗ đáng im), không chỉ sai độ lớn."
+  },
+  "do_lon_that_su_nho": "16 lượt chết cộng lại 128,1′/5 seed ≈ 25,6′/ngày trên thế giới 74 tài xế. Phân bố lệch: 12/16 lượt < 8′ (0,1 · 0,3 · 0,5 · 0,9 · 1,1 · 1,9 · 2,3 · 2,6 · 3,5 · 4,2 · 5,9 · 7,6), chỉ 4 lượt ≥ 14′ (14,6 · 20,1 · 30,5 · 32,1). Lý do: bản sửa E1b ADV-02 chỉ cấp PHẦN THIẾU ngoài ca (need_extra×1.15), nên khi need_min chỉ hơn remaining chút thì phần kéo là vài phút."
+ },
+
+ "lan_can_da_kiem": {
+  "reachable_in_shift": "lan can ĐÔNG NHẤT (21752 lần gọi) nhưng lọc theo THỜI GIAN CÒN LẠI, không theo khung điểm ⇒ không chặn hướng này.",
+  "cap_unreachable": "148 lần — chỉ chặn khi phần cần THÊM vượt trần 60′; 16 ca chết đều cần thêm rất ít nên lọt.",
+  "ba_rail_suc_khoe": "soc_low 604 · fatigued 1131 · would_exceed_fatigue 16782. Chặn RẤT nhiều, nhưng theo pin/mệt — mù hoàn toàn về khung điểm. P5/P7 có shift_len 8-9h vs ngưỡng mệt 9h ⇒ khe slack ~0-60′ vẫn đủ cho các lần kéo vài phút.",
+  "extend_max_min": "60′ (advice.shift_extend_max_min) — chỉ chặn ĐỘ LỚN, không chặn VỊ TRÍ trong ngày.",
+  "clamp_world_end": "lan can duy nhất có tác dụng THẬT ở đây, nhưng tình cờ: chỉ cứu tài xế đã ở 24:00 (83/370 actor-day)."
+ },
+
+ "archetype_ket_ca_sau_22h": {
+  "nguon": "src/gsm_sim/archetypes.py:36-53 + shift_end = min(24h, start + len)",
+  "P5": "start 15:00-17:00, len 8-9h ⇒ end 23:00-24:00 (clamp) — CÓ, và 4/16 lượt chết là P5",
+  "P7": "start 15:00-16:00, len 8-9h ⇒ end 23:00-25:00 → clamp 24:00 — CÓ, 12/16 lượt chết là P7",
+  "P1": "start 16:30-18:00, len 3-4h ⇒ end 19:30-22:00 — chỉ CHẠM biên; đúng 2 lượt chết-một-phần là P1 (old_end 21:07 và 21:12, chết 6,4′ và 12,2′ trong 60′)",
+  "P3": "end 20:00-22:00 — 11 lượt áp, 0 lượt chết",
+  "con_lai": "P2 end 17-20h · P4 end 14-17h · P6 end 11:40-14:50 — không liên quan"
+ },
+
+ "severity": {
+  "de_xuat": "MEDIUM-LOW về TÁC ĐỘNG, HIGH về ĐÚNG-LÝ-DO",
+  "ly_do_ha": [
+   "kênh TẮT theo mặc định (configs/pilot_dongda.yaml:338 `shift_extend: false`); chỉ bật ở CHANNEL_LADDER['all'] (src/gsm_sim/parallel.py:48). Không số nào đang công bố sai vì lỗi này.",
+   "KHÔNG nằm trên đường thẻ tài xế: ui/backend chỉ dùng 'shift_extend' như TÊN TOPIC trong registry (ui/backend/app/routers/advice.py:77), không có producer nào tính lại phép này.",
+   "độ lớn nhỏ: 25,6 phút kéo vô ích/ngày/74 tài xế; 12/16 lượt dưới 8 phút."
+  ],
+  "ly_do_khong_the_bo": [
+   "đây là lỗi KIỂU: kênh khuyên ở đúng những ca lẽ ra phải im (mốc bất khả thi trong ngày), và 16 lượt đó vào CẢ tử số lẫn mẫu số shift_extend_adherence ⇒ mọi Δ A/B của arm 'all' gán 10,5% phút can thiệp cho cửa sổ có upside thưởng bằng 0 theo cấu trúc.",
+   "vi phạm đúng quy ước vừa CHỐT ở src/gsm_core/rates.py (loại giờ 0-điểm khỏi cả tử và mẫu) ⇒ nếu không sửa thì repo giữ hai sổ points-per-hour, đúng họ lỗi D-M3-17.",
+   "cohort bị ảnh hưởng là P5/P7 — chính hai archetype được thêm vào để phủ khung tối-đêm; lỗi tập trung 100% vào họ, không rải đều."
+  ]
+ },
+
+ "de_xuat_sua_toi_thieu": [
+  "tính need_min trên THỜI GIAN CÒN CÓ ĐIỂM, không trên phút wall-clock: mẫu số rate loại giờ trip_points==0 (dùng lại gsm_core.rates.bucket_of_hour / split_minutes_by_bucket thay vì viết công thức thứ hai), và remaining/need đo trên phần giao với khung điểm.",
+  "thêm reason mới (vd `no_point_time_left`) đứng cùng họ R-08 với reachable_in_shift/no_tier để lan can NHÌN THẤY ĐƯỢC trong bảng veto — không được trả 0.0 trắng (bài học D-QD4-03 / N5).",
+  "test ghim: actor P7 kết ca 23:20, gap còn 10 điểm, rate 7đ/h ⇒ phải trả (0.0, 'no_point_time_left'), KHÔNG phải kéo. Và test biên NGƯỢC: kết ca 21:40 (giờ 21 CÒN điểm) ⇒ vẫn được kéo — chốt lại chi tiết lệch-1-giờ của claim."
+ ],
+
+ "chua_kiem_chung": [
+  "n=5 seed — chỉ đọc HƯỚNG và bậc độ lớn, không claim CI. Tỷ lệ 20,8% có thể trôi 10-35% ở n=30.",
+  "chưa đo Δ payout/Δ day_bonus A-vs-B cho riêng 16 lượt chết (cần arm A ghép cặp + attribution theo actor); con số 'diem_thuc_kiem_duoc = 0' là ĐO TRỰC TIẾP điểm của đơn gán trong cửa sổ, không phải Δ A/B.",
+  "8/16 tài xế không kịp phát end_shift trước 24:00 ⇒ day_bonus của họ chưa quyết toán trong run 1 ngày; 'trong_16_luot_co_day_bonus_duong = 1' vì thế là CẬN DƯỚI, không phải sự thật đầy đủ.",
+  "chỉ đo trên configs/pilot_dongda.yaml (window kết ở giờ 21). Config có window rộng hơn/hẹp hơn sẽ đổi tần suất; kết luận không được mang sang config khác mà không đo lại.",
+  "world chỉ log hai event cuốc: `pickup` (world.py:735) và `dropoff` (:760) — không có event assign/accept. Probe đếm cuốc theo THỜI ĐIỂM PICKUP nằm trong [old_end,new_end] ⇒ có thể HỤT cuốc NHẬN trong cửa sổ mà đón sau new_end. Với 16 cửa sổ chết thì không đổi kết luận (đơn ĐẶT sau 22:00 = 0 điểm bất kể đón/kết lúc nào), nhưng 185 điểm của nhóm còn lại là CẬN DƯỚI."
+ ]
+}

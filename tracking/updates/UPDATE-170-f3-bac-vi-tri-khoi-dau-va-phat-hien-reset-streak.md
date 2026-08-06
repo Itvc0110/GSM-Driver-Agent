@@ -29,10 +29,24 @@ Và chỉ **3,1%** actor có `home_cell` **là chính** hai ô hút.
 đầu"*). Nghĩa là bậc sốt-ruột **reset về 0 mỗi khi tài xế nhích một ô**.
 
 Hệ quả: để lên bậc n=2 (ring 3) tài xế phải rỗi **40 phút LIÊN TỤC mà KHÔNG relocate**. Nhưng ở bậc n=0,
-mỗi tick WAIT 2′ đã có `p_move = 0,5` để nhích nếu có ô ring-1 tốt hơn. Quy đổi từ hai số **đã đo**:
-`15.310` phút idle đội/ngày ÷ `892` lượt `demand_seek`/ngày (rc-03) ≈ **17,2 phút idle mỗi lần relocate**
-⇒ streak trung bình **~17′**, dưới cả ngưỡng bậc n=1 (20′) và **rất xa** 40′. `[DERIVED — từ hai số đo
-của rc-03, không phải phép đo trực tiếp phân bố streak]`
+mỗi tick WAIT 2′ đã có `p_move = 0,5` để nhích nếu có ô ring-1 tốt hơn.
+
+### ✅ F4 — ĐO THẬT phân bố streak (nâng số DERIVED lên ĐO; `f4-streak-distribution.json`)
+
+Instrument đúng điểm quyết định (`behavior.consider_relocate`), **cổng nhiễu-loạn XANH** (fingerprint
+có/không instrument **IDENTICAL**), arm A, 5 seed ⇒ **42.826 lượt quyết định** (8.565/ngày):
+
+| | |
+| --- | --- |
+| phân vị streak | p50 **8,0′** · p75 20,0′ · p90 32,0′ · p95 36,0′ · p99 40,0′ · **max 44,0′** |
+| trung bình | **12,1′** |
+| **bậc n=0** (ring 1, ~0,37 km) | **73,10%** |
+| bậc n=1 (ring 2) | 24,77% |
+| **bậc n=2 (ring 3) — bậc mà "đi xa hơn" MỚI bật** | **2,13%** |
+
+⇒ **`D-SIM-K8` XÁC NHẬN bằng số đo, và mạnh hơn bản DERIVED**: streak trung bình đo được **12,1′** (tôi
+suy ra ~17,2′), và chỉ **2,13%** lượt tới bậc n=2. Bản DERIVED cũ giữ lại để đối chiếu, nhưng **số dùng
+chính thức là số ĐO**.
 
 ⇒ **Cơ chế *"rỗi lâu thì đi xa hơn"* CHẾT vì HAI lý do độc lập:**
 1. **`B3`** — ring 3 = 1,11 km vượt ngoài tầm nhìn niềm tin 0,74 km ⇒ ô ring-3 luôn `hint = 0.0` (đã ghi).

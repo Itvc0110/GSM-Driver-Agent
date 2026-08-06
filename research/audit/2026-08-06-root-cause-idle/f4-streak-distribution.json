@@ -1,0 +1,33 @@
+{
+  "what": "F4 — phân bố idle_streak tại điểm quyết định đứng-chỗ (ĐO, không derived)",
+  "mock": true,
+  "arm": "A",
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004
+  ],
+  "cong_nhieu_loan": "XANH (fingerprint có/không instrument IDENTICAL)",
+  "n_luot": 42826,
+  "luot_moi_ngay": 8565.2,
+  "nguong_bac": [
+    20.0,
+    40.0
+  ],
+  "phan_vi": {
+    "p50": 8.0,
+    "p75": 20.0,
+    "p90": 32.0,
+    "p95": 36.0,
+    "p99": 40.0
+  },
+  "trung_binh": 12.13,
+  "max": 44.0,
+  "ty_le_theo_bac": {
+    "n=0": 0.73096,
+    "n=1": 0.24775,
+    "n=2": 0.0213
+  }
+}
