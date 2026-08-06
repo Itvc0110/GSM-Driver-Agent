@@ -89,6 +89,15 @@ MEASURED_TOPICS: frozenset[str] = frozenset({
     # REPOSITION_SIM_ONLY(non-S4). Đo được: `S2 EXTEND -> shift_boundary`, không lần nào ra đây.
     "shift_timing",
     "positioning_sim_only",  # S4 vị trí — chỉ sim (`ProductSolverOrchestrator` không gọi S4).
+    # E4/E-03 (UPDATE-156, 2026-08-06): kênh ĐỔI PIN SỚM lúc rảnh + trạm vắng — dồn một lần đổi
+    # pin ĐẰNG NÀO CŨNG PHẢI LÀM vào lúc rẻ (idle dài, queue ngắn) thay vì lúc cạn kiệt giữa việc.
+    # KINH TẾ vì cùng lý do `energy`: tác hại pin có kênh mô hình hoá (`battery_stranded`,
+    # hàng đợi trạm) — đo mức nghe lời không tạo tỷ giá sức-khoẻ↔tiền.
+    "swap_early",
+    # E4/E-01 (UPDATE-157): gợi TRẠM đổi pin theo trạng thái SỐNG toàn cục (queue + pin sẵn +
+    # đường đi) thay vì bản năng "gần nhất, né queue>3 một lần". Họ VỊ TRÍ — nơi giá trị advisor
+    # tập trung (meta-finding UPDATE-156). Kinh tế thuần: thời gian chờ/di chuyển.
+    "station_choice",
     # ⚠ `policy_info` KHÔNG có producer nào: grep toàn repo cho đúng 2 hit — dòng khai này và bảng
     # ghim trong test. Nó tới từ enum contract chứ không từ code sinh ra thẻ. Giữ để enum v2 và
     # registry không lệch, nhưng đừng đọc nó như bằng chứng rằng kênh này tồn tại.

@@ -337,6 +337,8 @@ advice:
     accept_lift: false             # cảnh báo tỷ lệ nhận dưới ngưỡng ĐỦ ĐIỀU KIỆN thưởng
     shift_extend: false            # hoãn kết ca khi SÁT mốc điểm
     rest_window: false             # D-SIM-03: dồn nghỉ/đổi pin vào khung vắng khách (solver S7)
+    swap_early: false              # E4/E-03 (UPDATE-156): đổi pin SỚM lúc rảnh + trạm vắng
+    station_choice: false          # E4/E-01 (UPDATE-157): gợi TRẠM theo queue+pin+đường (họ vị trí)
   # ✅ Kênh VỊ TRÍ — Cường DUYỆT bật mặc định 2026-07-28 (UPDATE-087). PASS 9/9 ĐA-08 trên
   # n=100 seed tươi (payout_mean_all +6.016đ/người SIG · served +1,74đp · đơn chết −23,4 ·
   # Gini & HHI GIẢM · đội +541k · veto 8(b)/9(b) PASS). `wait_only` = chỉ ghi đè khi bản năng
@@ -372,6 +374,18 @@ advice:
   # sweep/override sẽ NỔ PolicyLockViolation ngay khi dựng world. Cả khoá dưới cũng vậy.
   rest_defer_max_min: 120
   shift_extend_max_min: 60         # trần hoãn kết ca (không "chạy vô hạn")
+  # E4/E-05 (UPDATE-155): kênh CON của shift_plan — chỉ nói khi lịch DP bảo KẾT CA sớm
+  # (phần ca còn lại kỳ vọng ~0; DP sau ADV-01 đã cân mốc thưởng). Mặc định TẮT; bật khi đo
+  # riêng giá trị lời khuyên kết-ca mà không kéo theo full shift_plan (ĐA-07 đã bác).
+  shift_plan_end_only: false
+  # E4/E-03 (UPDATE-156): kênh ĐỔI PIN SỚM lúc rảnh + trạm vắng (channels.swap_early bật/tắt).
+  # band: chỉ khuyên khi SOC ∈ (ngưỡng, ngưỡng+band] — lần đổi kế là TẤT YẾU, chỉ đổi thời điểm.
+  # idle: chỉ khuyên khi đã rảnh liên tục ≥ X phút — cơ hội mất gần 0.
+  swap_early_band_pct: 15
+  swap_early_idle_min: 10
+  # E4/E-01: chỉ NÓI khi trạm khác tiết kiệm ≥ X phút tổng (đường + chờ) so với bản năng —
+  # chênh vặt là "không có gì để nói" (R-08).
+  station_choice_min_gain_min: 3
   # D-SIM-05 — CHỈ khuyên khi lời khuyên thực sự có ích. SIM-4 chứng minh hiệu ứng VÁCH ĐÁ:
   # nâng tỷ lệ mà KHÔNG chạm ngưỡng ⇒ tài xế ôm cuốc rẻ, mất 34k, chẳng có thưởng bù.
   max_realized_accept: 0.93        # tỷ lệ nhận cao nhất ĐẠT ĐƯỢC khi lift kịch trần (ĐO, không bịa)
