@@ -1,0 +1,42 @@
+{
+  "what": "G1 — bơm đội có phải điều trị triệu chứng của khuyết tật dispatcher?",
+  "mock": true,
+  "advisor": "TẮT ở cả ba arm",
+  "seeds": [
+    1000,
+    1001,
+    1002,
+    1003,
+    1004
+  ],
+  "arms": {
+    "A0 k=6 n=90 (nguyên trạng)": {
+      "expired": 204.6,
+      "orders": 1205.8,
+      "served_rate": 0.830381519308989,
+      "trips_per_driver": 10.571111111111112,
+      "idle_share": 0.335656063543559,
+      "payout_per_driver": 250551.60666666666,
+      "n_actors": 90
+    },
+    "A1 k=8 n=90 (chỉ nới shortlist)": {
+      "expired": 157,
+      "orders": 1205.8,
+      "served_rate": 0.8700445413764186,
+      "trips_per_driver": 10.971111111111112,
+      "idle_share": 0.3147883801436495,
+      "payout_per_driver": 258417.7111111111,
+      "n_actors": 90
+    },
+    "A2 k=8 n=74 (nới + hạ đội)": {
+      "expired": 237.2,
+      "orders": 1205.8,
+      "served_rate": 0.8036237761701084,
+      "trips_per_driver": 12.42972972972973,
+      "idle_share": 0.2640667139699484,
+      "payout_per_driver": 290943.55945945944,
+      "n_actors": 74
+    }
+  },
+  "canh_bao": "PROBE, không phải đề xuất đổi config. Nới k bị Q-07 chặn (accept_base P7 lệch 5pp)."
+}

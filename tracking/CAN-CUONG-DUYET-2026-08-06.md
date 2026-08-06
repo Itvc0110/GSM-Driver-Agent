@@ -57,7 +57,23 @@ tiền"* — cho tới khi world có **cầu co giãn** hoặc **đội xe đư�
 **Nếu KHÔNG duyệt:** giữ nguyên ĐA-08 ⇒ `station_choice` và họ kênh thời-gian **đóng vĩnh viễn**; phải
 nói thẳng điều đó thay vì cứ đo lại rồi lại ns.
 
-### 3.2 **Q-07** — ghép đơn ĐÚNG vs trung thành ARCHETYPE
+### 3.2 **Q-07** — ghép đơn ĐÚNG vs trung thành ARCHETYPE ⭐ **NAY LÀ QUYẾT ĐỊNH ĐÒN BẨY CAO NHẤT**
+
+> ✅ **Cập nhật 2026-08-07 (UPDATE-176, tôi tự đo 3 arm, advisor TẮT):** nới shortlist k=6→8 là **cải
+> thiện KHÔNG ĐÁNH ĐỔI** — trội hơn nguyên trạng trên **mọi** chỉ số tôi đo: `served` **+3,97đp** · hết
+> hạn **−47,6 đơn/ngày** · idle −2,1đp · trips/tài xế +0,40 · payout **+7.866đ/tài xế**. Không một chỉ số
+> nào xấu đi. ⇒ **~48 đơn/ngày đang chết vì một vòng lọc hình học**, và **Q-07 là thứ duy nhất chặn nó**.
+>
+> Chi tiết đáng biết: ở **k=6 hiện tại, P7 ĐÃ lệch −4,2đp** so `accept_base` — tức đang **sát mép** dung
+> sai 5đp; k=8 đẩy lên −5,7đp. Nên dung sai này **không** đang bảo vệ nhiều dư địa, và câu hỏi thật có thể
+> là *`accept_base` của P7 có được hiệu chỉnh đúng không*. ⚠ **Không nới dung sai test để đi tiếp** —
+> chính comment config gọi đó là **che khuyết tật**, và tôi đồng ý.
+>
+> ⭐ **Phương án THỨ HAI cho §3.1 (thay vì nới cổng ĐA-08): ĐỔI ĐIỂM HIỆU CHỈNH.** Đo được: (k=8, n=74)
+> đổi **−2,68đp served** lấy **+16,1% payout/tài xế · +17,6% trips/tài xế · idle 33,6%→26,4%** — tức một
+> thế giới nơi realism cá nhân tốt hơn **và** phút rỗi đủ khan để kênh tiết-kiệm-thời-gian có chỗ tạo tiền
+> (đúng thế giới Cường mô tả: *"chờ ghép đơn thực tế không cao như sim"*). ⚠ Tôi **chưa** kiểm equity
+> (Gini/HHI) và veto sức khoẻ ở điểm đó ⇒ **trình bày như một điểm trên biên, KHÔNG đề xuất**.
 Vòng lọc ứng viên hiện hẹp hơn ràng buộc thật: hex **2,22 km** vs bán kính ETA-khả-thi **3,14 km** ⇒
 **14,4% (≤29,4 đơn/ngày)** chết **thuần** vì lọc hình học; sweep 12-seed sẵn có trong config **hội tụ**:
 k=6→233, k=7→211, k=8→196, k=12→195 đơn hết hạn ⇒ **−37 đơn/ngày, bão hoà ở k≈8**.
