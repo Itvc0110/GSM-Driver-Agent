@@ -59,10 +59,24 @@ nói thẳng điều đó thay vì cứ đo lại rồi lại ns.
 
 ### 3.2 **Q-07** — ghép đơn ĐÚNG vs trung thành ARCHETYPE ⭐ **NAY LÀ QUYẾT ĐỊNH ĐÒN BẨY CAO NHẤT**
 
-> ✅ **Cập nhật 2026-08-07 (UPDATE-176, tôi tự đo 3 arm, advisor TẮT):** nới shortlist k=6→8 là **cải
-> thiện KHÔNG ĐÁNH ĐỔI** — trội hơn nguyên trạng trên **mọi** chỉ số tôi đo: `served` **+3,97đp** · hết
-> hạn **−47,6 đơn/ngày** · idle −2,1đp · trips/tài xế +0,40 · payout **+7.866đ/tài xế**. Không một chỉ số
-> nào xấu đi. ⇒ **~48 đơn/ngày đang chết vì một vòng lọc hình học**, và **Q-07 là thứ duy nhất chặn nó**.
+> ✅✅ **NÂNG LÊN n=100 CÓ CI 2026-08-07 (UPDATE-177) — nay là số QUYẾT ĐỊNH ĐƯỢC.** k=6 vs k=8, 100 seed
+> ghép cặp CRN, advisor TẮT, bootstrap 2.000. **k=8 trội trên CẢ 7 chỉ số, tất cả SIG:**
+> `served` **+2,71đp** [+2,41; +3,00] · hết hạn **−32,6/ngày** [−36,2; −29,4] · idle −1,95đp ·
+> trips/tài xế +0,32 · payout **+6.755đ** [+5.582; +7.959] · **Gini payout −0,0046** (bất bình đẳng
+> **GIẢM**) · **veto sức khoẻ −2,5** (chạm lan can **ÍT hơn**). ⇒ Bao gồm **đúng hai thứ tôi từng ghi là
+> chưa đo**, và **cả hai đều tốt lên** — không phải đánh đổi.
+>
+> **Đánh đổi thật, đo được:** vượt dung sai trung-thành-hồ-sơ **0,14đp** (P7 lệch −5,14đp vs dung sai
+> 5,00đp; ở k=6 P7 đã ở **−4,02đp** = 80% đường tới ngưỡng) ⇐⇒ **32,6 đơn chết/ngày + 6.755đ mỗi tài xế +
+> Gini & sức khoẻ tốt lên**. Số của tôi **xác nhận** bảng 12-seed trong config (−4,2 → −5,7).
+>
+> ⭐ **PHƯƠNG ÁN THỨ BA chưa ai nêu:** `accept_base` của P7 = **0,94** có được hiệu chỉnh đúng không? Nếu
+> realized ≈ **0,889** mới là số trung thực của tài xế ca tối-đêm thì *"drift"* là **hiện vật của một
+> prior cũ**, không phải suy thoái realism ⇒ lựa chọn là **hiệu chỉnh lại `accept_base` P7 từ dữ liệu**.
+> ⚠ Đây **KHÔNG** phải nới dung sai test (điều config gọi là che khuyết tật) — mà là sửa **giá trị tham
+> chiếu** nếu nó sai. Cần Cường quyết vì nó chạm **định nghĩa realism**. (Đề xuất của tôi, **chưa phản biện**.)
+>
+> *(Bản n=5 trước đó ghi +3,97đp — n nhỏ **thổi lên ~1,3đp**; giữ dòng này làm bằng chứng cấm quyết trên n nhỏ.)*
 >
 > Chi tiết đáng biết: ở **k=6 hiện tại, P7 ĐÃ lệch −4,2đp** so `accept_base` — tức đang **sát mép** dung
 > sai 5đp; k=8 đẩy lên −5,7đp. Nên dung sai này **không** đang bảo vệ nhiều dư địa, và câu hỏi thật có thể
