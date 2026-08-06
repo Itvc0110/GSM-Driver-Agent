@@ -18,8 +18,15 @@ DEFAULT_PARAMS = {
     "p_accept": 0.9,               # xác suất nhận đơn — CALLER NÊN TRUYỀN số thật (AUDIT S2-4)
     "avg_dist_km": 3.0,            # quãng đường TB — CALLER NÊN TRUYỀN từ data (AUDIT S2-5)
     "soc_bands": 10,               # rời rạc hóa SOC
-    "points_bands": 16,            # rời rạc hóa điểm cho terminal
-    "points_band_size": 15,        # mỗi band = 15 điểm (0..240)
+    # E1b ADV-01 (UPDATE-151 r10, sửa 2026-08-06): band 15 điểm làm tiến trình điểm bị FLOOR
+    # về 0 mỗi bucket ở giờ thường (`add_pts // PBS` với add ≈ 5-11 < 15) ⇒ band ĐÓNG BĂNG suốt
+    # DP ⇒ mốc thưởng ngày (60/100/160/200) KHÔNG BAO GIỜ vào giá trị Bellman — lịch S2 tối ưu
+    # như thể không có thưởng (đây là nghi phạm chính của Δ=0 tuyệt đối ở s2_only, UPDATE-152).
+    # F-098-01 từng sửa GATE để "bonus trả cho lỗ nhỏ" nhưng bonus chưa từng vào được V.
+    # Band 5 điểm khớp point_normal=5 ⇒ mỗi cuốc giờ thường tiến ≥1 band. Giá: NB 16→49,
+    # DP state ×3 (~70k ô với B=36) — vẫn thuần vòng lặp, đo lại runtime ở ladder SAU.
+    "points_bands": 49,            # rời rạc hóa điểm cho terminal (0..240, band 5)
+    "points_band_size": 5,         # mỗi band = 5 điểm — khớp điểm/cuốc giờ thường
     "soc_cost_per_bucket": 1,      # SOC band tiêu hao/bucket online 30' (scale theo bucket_min)
     "rest_min_per_4h": 1,          # số bucket nghỉ TỐI THIỂU mỗi 4h ca (nhu cầu sinh lý)
     # AUDIT S2-6 (UPDATE-069): bucket KHÔNG còn ngầm định 30' — producer sim/l1r dùng 60'.
@@ -285,7 +292,10 @@ def _baseline_naive_rest(spi: dict, policy: PolicyBundle, params: dict,
     if B <= 0:
         return 0.0, 0
     eligible, _hr = _bonus_eligible(params, policy)
-    R = _required_rest(B, params)
+    # E1b ADV-04: baseline phải nhận TÍN DỤNG nghỉ y như nhánh DP (spi đã mang state) — bản cũ
+    # không truyền ⇒ tài xế đã nghỉ vẫn bị baseline ép nghỉ thêm ⇒ baseline thấp giả ⇒ delta
+    # (DP − baseline) thổi phồng một cách HỆ THỐNG mỗi khi tài xế có nghỉ trước consult.
+    R = _required_rest(B, params, spi.get("rest_taken_min"), spi.get("shift_elapsed_min"))
     ppo = _payout_per_order(policy, params["avg_dist_km"])
     pts, payout, n_swaps = spi["points_now"], 0.0, 0
     soc = params["soc_bands"] - 1 if spi.get("soc_pct") is None else \

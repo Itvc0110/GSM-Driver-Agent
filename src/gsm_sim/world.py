@@ -35,6 +35,8 @@ from .sim_metrics import EXTEND_RAILS
 _SPOKEN_OUTCOME_KIND = {
     "shift_extend": "advice_shift_extend",
     "rest_window": "advice_rest_window",
+    "swap_early": "advice_swap_early",   # E4/E-03 (UPDATE-156)
+    "station_choice": "advice_station_choice",   # E4/E-01 (UPDATE-157)
 }
 
 
@@ -958,6 +960,27 @@ class World:
                         action = adv.mapped_action
                     target = None      # advice không chỉ định cell (product boundary D-004)
 
+            # --- E4/E-03 (UPDATE-156): kênh ĐỔI PIN SỚM — chỉ đè WAIT (không cướp REST/
+            # RELOCATE), đặt TRƯỚC positioning để pin thắng vị trí khi cả hai muốn nói.
+            # ⚠ Gate cờ đứng TRƯỚC choose_station: choose_station RÚT RNG (p=0.7 trạm quen) —
+            # kênh TẮT phải 0 draw để config mặc định bit-identical (kỷ luật CRN như SIM-3).
+            if action == IdleAction.WAIT and self.advice.ch_swap_early:
+                # `self.stations` (Station SỐNG, có queue/pin) — KHÔNG phải `grid.stations`
+                # (bản geo tĩnh); _do_charge dùng đúng danh sách này (`world.py:1196`).
+                st_n = choose_station(actor, self.grid, self.stations, now, self.rng)
+                if st_n is not None:
+                    ok_swap, why_swap = self.advice.check_swap_early(
+                        actor, now, int(st_n.queue_len),
+                        st_n.available_full(now) > 0,
+                        float(self.veh["swap_soc_threshold_pct"]))
+                    if ok_swap:
+                        self.log(actor.actor_id, "advice_swap_early", actor.cell,
+                                 station=st_n.node_id, soc=round(actor.soc_pct, 1),
+                                 queue_len=int(st_n.queue_len), followed=True,
+                                 decision_id=self._decision_id(actor.actor_id, "swap_early", now),
+                                 channel="swap_early")
+                        action, target = IdleAction.GO_SWAP, None
+
             # --- T-045a b3: kênh VỊ TRÍ — vòng idle chỉ ĐỌC `standby_plan` do planner gán ---
             # D-004 cấm reposition ở SẢN PHẨM; trong SIM được mở (2026-07-21) để nghiên cứu
             # rủi ro hệ thống. Adherence đã rút MỘT LẦN lúc gán — ở đây không rút lại.
@@ -1174,6 +1197,26 @@ class World:
             return
         # đổi pin tại trạm
         station = choose_station(actor, self.grid, self.stations, self.env.now, self.rng)
+        # --- E4/E-01 (UPDATE-157): advisor gợi trạm theo trạng thái SỐNG toàn cục. Đặt SAU
+        # bản năng (kỷ luật CRN như SIM-3 — bản năng luôn rút RNG y World A, advisor chỉ GHI ĐÈ);
+        # pick_station deterministic + coin hash ⇒ kênh tắt = 0 draw thêm.
+        if station is not None and self.advice.ch_station_choice:
+            _h = int(self.env.now // 60) % 24
+
+            def _tmin(s):
+                _d = cell_distance_km(self.grid, actor.cell, s.cell)
+                return self._travel_min(_d, _h, actor.cell, fac=self._dfac(actor.cell, s.cell))
+
+            better, why_st = self.advice.pick_station(actor, self.stations, self.env.now,
+                                                      _tmin, station)
+            if better is not None:
+                self.log(actor.actor_id, "advice_station_choice", actor.cell,
+                         station=better.node_id, instinct_station=station.node_id,
+                         followed=True,
+                         decision_id=self._decision_id(actor.actor_id, "station_choice",
+                                                       self.env.now),
+                         channel="station_choice")
+                station = better
         if station is None:
             # không có trạm nào trong world (config degenerate) — fallback có nhãn, không im lặng
             actor.soc_pct = 100.0

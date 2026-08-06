@@ -44,7 +44,11 @@ def _hour_rate(policy: PolicyBundle, hist: dict, hour: int,
     if ppt <= 0:
         return 0.0, 0.0, None
     bucket = "peak" if policy.is_peak(hour) else "offpeak"
-    if bucket in hist and hist[bucket] > 0:
+    # E1b ADV-05 (khớp REVIEW-C9 ở bridge): lịch sử 0.0 điểm/giờ là DỮ LIỆU HỢP LỆ — tài xế
+    # từng online khung này mà không có cuốc. Bản cũ `> 0` rơi 0.0 về ước lượng lý thuyết DƯƠNG
+    # ⇒ "còn kịp" lạc quan đúng ở những khung tài xế biết rõ là chết. Thiếu khoá / None mới là
+    # thiếu dữ liệu.
+    if hist.get(bucket) is not None:
         return float(hist[bucket]) * scale, float(ppt), "historical:self"
     return float(ppt) * DEFAULT_TRIPS_PER_HOUR * scale, float(ppt), "dp:policy_theoretical"
 

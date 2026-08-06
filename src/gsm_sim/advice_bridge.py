@@ -234,6 +234,20 @@ class AdviceActionBridge:
         self.ch_accept_lift = bool(ch.get("accept_lift", False))
         self.ch_shift_extend = bool(ch.get("shift_extend", False))
         self.ch_rest_window = bool(ch.get("rest_window", False))
+        # E4/E-05 (UPDATE-151 r05): chế độ KÊNH CON của shift_plan — chỉ nói khi lịch DP bảo
+        # KẾT CA (phần còn lại của ca kỳ vọng ~0; DP sau ADV-01 đã biết mốc thưởng nên END của
+        # nó là quyết định ĐÃ cân mốc). Tách được "giá trị của riêng lời khuyên kết ca sớm"
+        # khỏi full shift_plan (ĐA-07 đã bác vì hại) — mặc định TẮT, chỉ bật khi đo.
+        self.sp_end_only = bool(adv.get("shift_plan_end_only", False))
+        # E4/E-03 (UPDATE-156): kênh ĐỔI PIN SỚM — dồn lần đổi pin ĐẰNG NÀO CŨNG PHẢI LÀM vào
+        # lúc RẺ (đang rảnh dài + trạm vắng) thay vì lúc cạn giữa việc. Kênh THỜI GIAN — sống
+        # được trong sim zero-cost (bài học UPDATE-155: kênh chi-phí đều trơ).
+        self.ch_swap_early = bool(ch.get("swap_early", False))
+        self.swap_early_band_pct = float(adv.get("swap_early_band_pct", 15.0))
+        self.swap_early_idle_min = float(adv.get("swap_early_idle_min", 10.0))
+        # E4/E-01 (UPDATE-157): gợi TRẠM đổi pin theo trạng thái sống toàn cục — họ VỊ TRÍ.
+        self.ch_station_choice = bool(ch.get("station_choice", False))
+        self.station_choice_min_gain_min = float(adv.get("station_choice_min_gain_min", 3.0))
         self.rest_defer_max_min = float(adv.get("rest_defer_max_min", 120))
         self.lift_step = float(adv.get("accept_lift_step", 0.10))
         self.lift_max = float(adv.get("accept_lift_max", 0.15))
@@ -600,6 +614,11 @@ class AdviceActionBridge:
         solver_action = str(schedule[0].get("action") or "ONLINE").upper()
         na = sol.get("next_action") or {}
 
+        # E4/E-05: chế độ end-only — lịch DP không bảo KẾT CA thì "không có gì để nói"
+        # (họ R-08: đứng TRƯỚC coin/note_spoken — không rút coin, không tiêu suất cho một
+        # lời khuyên không tồn tại; cadence_allows ở đầu hàm chỉ là cổng HỎI, chưa tiêu gì).
+        if self.sp_end_only and str(solver_action).upper() != "END":
+            return None
         mapped = _map_action(solver_action, actor)
         # material_revision = NỘI DUNG lời khuyên: đổi hành động khuyên ⇒ coin mới
         followed = self.coin_follows(actor, "shift_plan", now_min, solver_action)
@@ -627,6 +646,93 @@ class AdviceActionBridge:
         nhiên của actor (giữ CRN). (Đính chính 2026-07-31: câu cũ "cùng dòng RNG seed^0xADD1CE"
         là chữ từ đời trước keyed coin — stream đó nay chỉ còn cho `covers` share.)"""
         return self.coin_follows(actor, "positioning", now_min, f"cell{target_cell}")
+
+    # ---------- E4/E-03: đổi pin SỚM lúc rảnh + trạm vắng ----------
+
+    def check_swap_early(self, actor: Actor, now_min: float, nearest_queue_len: int,
+                         nearest_has_ready: bool, soc_threshold: float) -> tuple[bool, str]:
+        """Có nên khuyên đổi pin NGAY BÂY GIỜ không? Trả `(nên, lý do)`.
+
+        Nguyên tắc (r03 SWAP-06): đây là lời khuyên ĐỔI THỜI ĐIỂM của một việc tất yếu —
+        SOC trong dải (ngưỡng, ngưỡng+band] nghĩa là lần đổi pin sắp tới là chắc chắn; làm nó
+        lúc đang RẢNH DÀI (idle_streak ≥ X — cơ hội mất gần 0) và trạm VẮNG (queue ≤ 1, có pin
+        sẵn — không tự tạo hàng đợi) là rẻ hơn làm lúc cạn kiệt giữa việc + rủi ro
+        `battery_stranded`/`swap_failed`. KHÔNG dự báo gì — mọi điều kiện đọc từ trạng thái
+        HIỆN TẠI quan sát được (không rò tương lai).
+
+        Mọi nhánh trả `(False, reason)` để world đếm được mẫu số nếu cần (khuôn shift_extend).
+        """
+        if not (self.ch_swap_early and self.covers(actor)):
+            return False, "channel_off"
+        if actor.fleet != FleetType.SWAP:
+            return False, "not_swap_fleet"    # phần cứng không đổi được (r03 SWAP-01)
+        if actor.soc_pct <= soc_threshold:
+            return False, "below_threshold"   # bản năng bước 1 tự đi — không cần khuyên
+        if actor.soc_pct > soc_threshold + self.swap_early_band_pct:
+            return False, "soc_high"          # chưa tất yếu — khuyên là đổi pin thừa
+        if actor.idle_streak_min < self.swap_early_idle_min:
+            return False, "not_idle_long"     # đang có việc/mới rảnh — cơ hội chưa rẻ
+        if nearest_queue_len > 1 or not nearest_has_ready:
+            return False, "station_busy"      # trạm không rẻ — khuyên là TỰ TẠO hàng đợi
+        if not self.cadence_allows(actor, "swap_early", now_min):
+            return False, "cadence"
+        self.cadence_note_spoken(actor, "swap_early", now_min)
+        rev = "swap_now"
+        if not self.coin_follows(actor, "swap_early", now_min, rev):
+            self.note_spoken_outcome(actor, "swap_early", now_min, rev,
+                                     followed=False, reason="not_followed")
+            return False, "not_followed"
+        return True, rev
+
+    # ---------- E4/E-01: gợi TRẠM đổi pin theo trạng thái SỐNG toàn cục ----------
+
+    @staticmethod
+    def station_eta_min(station, now_min: float, travel_min: float,
+                        avg_swap_min: float = 1.5) -> float:
+        """Ước TỔNG thời gian tới-lúc-cầm-pin-đầy cho MỘT trạm — chỉ từ trạng thái quan sát được.
+
+        = đường đi + (mỗi người xếp trước ~1 lượt swap) + (nếu CHƯA có pin ready: chờ viên
+        sớm nhất chín). Không dự báo — mọi số đọc từ `queue_len`/`batteries` hiện tại."""
+        wait = station.queue_len * avg_swap_min
+        if station.available_full(now_min) <= 0:
+            readies = [b.ready_at_min for b in station.batteries]
+            if not readies:
+                return float("inf")           # trạm không có pin nào — coi như không dùng được
+            wait += max(0.0, min(readies) - now_min)
+        return travel_min + wait
+
+    def pick_station(self, actor: Actor, stations, now_min: float, travel_min_fn,
+                     instinct_station) -> tuple[object | None, str]:
+        """Trả `(trạm nên tới, lý do)` — `(None, reason)` = không nói/không đổi.
+
+        Bản năng (`behavior.choose_station`): trạm quen/gần nhất, né queue>3 đúng MỘT lần —
+        mù với pin-sẵn và đường đi thật. Advisor quét TẤT CẢ trạm bằng `station_eta_min` và chỉ
+        NÓI khi tiết kiệm ≥ `station_choice_min_gain_min` (R-08: chênh vặt là không có gì để
+        nói). Deterministic (argmin, tie theo node_id) — 0 draw RNG; coin quyết định nghe."""
+        if not (self.ch_station_choice and self.covers(actor)):
+            return None, "channel_off"
+        if instinct_station is None or not stations:
+            return None, "no_station"
+        best, best_eta = None, float("inf")
+        for s in sorted(stations, key=lambda x: x.node_id):
+            eta = self.station_eta_min(s, now_min, travel_min_fn(s))
+            if eta < best_eta:
+                best, best_eta = s, eta
+        eta_instinct = self.station_eta_min(instinct_station, now_min,
+                                            travel_min_fn(instinct_station))
+        if best is None or best.node_id == instinct_station.node_id:
+            return None, "instinct_optimal"
+        if eta_instinct - best_eta < self.station_choice_min_gain_min:
+            return None, "not_material"
+        if not self.cadence_allows(actor, "station_choice", now_min):
+            return None, "cadence"
+        self.cadence_note_spoken(actor, "station_choice", now_min)
+        rev = f"st{best.node_id}"
+        if not self.coin_follows(actor, "station_choice", now_min, rev):
+            self.note_spoken_outcome(actor, "station_choice", now_min, rev,
+                                     followed=False, reason="not_followed")
+            return None, "not_followed"
+        return best, rev
 
     # ---------- SIM-4 kênh 2: cảnh báo tỷ lệ nhận dưới ngưỡng thưởng ----------
 
@@ -824,7 +930,10 @@ class AdviceActionBridge:
         # CAM KẾT: book một lần, đúng đại lượng. `(now - now%60) + minutes_to` = ĐẦU giờ X
         # tính bằng phút tuyệt đối trong ngày (minutes_to đo giữa hai ĐẦU giờ).
         actor.rest_commit_due_min = (now_min - now_min % 60.0) + minutes_to
-        actor.rest_deferred_min += float(minutes_to)
+        # E1b ADV-08 (UPDATE-151 r10): quota cộng KHOẢNG HOÃN THẬT = due − now, tức
+        # `minutes_to − now%60` — bản trước cộng nguyên `minutes_to` (đo giữa hai ĐẦU giờ)
+        # phóng đại tới 59′/lần ⇒ trần 120′ (`POLICY_LOCKED`) cạn sớm oan.
+        actor.rest_deferred_min += float(max(0.0, minutes_to - now_min % 60.0))
         return True, rev, alt
 
     # ---------- D-SIM-05: điều kiện KHẢ THI của lời khuyên nâng tỷ lệ ----------
@@ -914,14 +1023,20 @@ class AdviceActionBridge:
         if sol.get("already_maxed") and sol.get("feasible"):
             return False, "already_maxed"        # kịch mốc VÀ an toàn ⇒ khuyên thêm là thừa
 
-        reason = (rep.get("infeasible_reason") or "")
         if not sol.get("feasible"):
             # S1 nói KHÔNG khả thi. Kênh này CHỈ sửa được tỷ lệ NHẬN, nên chỉ đáng khuyên khi
             # nghẽn **DUY NHẤT** ở đó. Nếu còn nghẽn ở quỹ GIỜ hoặc ở tỷ lệ HOÀN THÀNH thì
             # nâng tỷ lệ nhận là **sai địa chỉ** — tài xế ôm thêm cuốc rẻ mà vẫn không có
             # thưởng. (Bản trước bỏ sót hoàn toàn ràng buộc completion.)
-            blocked_elsewhere = ("quỹ" in reason) or ("hoàn thành" in reason)
-            if blocked_elsewhere or "tỷ lệ nhận" not in reason:
+            # E1b ADV-07 (UPDATE-151 r10): đọc booleans TYPED `solution["constraints"]` thay vì
+            # parse chuỗi tiếng Việt của `infeasible_reason` — S1 đổi wording là gate câm/loạn
+            # IM LẶNG (họ lỗi "hai nguồn sự thật" mà chính docstring hàm này cảnh báo).
+            # Fail-closed: thiếu khoá ⇒ coi như nghẽn nơi khác ⇒ không khuyên.
+            cons = sol.get("constraints") or {}
+            blocked_elsewhere = (not cons.get("enough_hours", False)
+                                 or not cons.get("ok_completion", False))
+            acceptance_is_blocker = not cons.get("ok_acceptance", True)
+            if blocked_elsewhere or not acceptance_is_blocker:
                 return False, "blocked_elsewhere"
         # BUG-DSIM13-02 (lộ ra khi viết test cho REVIEW-C19): trước đây so
         # `actor.acceptance_rate >= thr` — property này TRẢ 1.0 khi CHƯA có offer nào
@@ -1002,19 +1117,37 @@ class AdviceActionBridge:
         if rate <= 0:
             return 0.0, "no_rate"
         need_min = gap_points / rate * 60.0
-        # --- lan can 3: đứng TRƯỚC `cap_unreachable` có chủ ý. Khi một lời khuyên vừa vượt trần
-        # kinh tế vừa đẩy tài xế qua ngưỡng mệt, lý do được báo phải là lý do SỨC KHOẺ — nếu không
-        # thì bảng veto sẽ nói "hết trần" cho đúng những ca mà lan can sức khoẻ mới là thứ chặn.
-        if actor.online_min + need_min > actor.fatigue_threshold_min:
+        # --- E1b ADV-02 (UPDATE-151 r10): so với thời gian ca CÒN LẠI. Bản cũ không so ⇒
+        # (a) kéo ca cả khi mốc đạt được NGAY TRONG CA (kéo vô ích, tăng work span không thêm
+        # thưởng); (b) khi chỉ cần kéo MỘT PHẦN vẫn cấp trọn gói need×1.15. Mốc trong tầm ca ⇒
+        # "không có gì để nói" (họ R-08 — đứng trước cadence/coin).
+        remaining_min = max(0.0, actor.shift_end_min - now_min)
+        if need_min <= remaining_min:
+            return 0.0, "reachable_in_shift"
+        need_extra_min = need_min - remaining_min
+        # --- lan can 3 (E1b ADV-03 — đo lại đại lượng): mệt phải xét ở DỰ PHÓNG CUỐI CA MỞ RỘNG
+        # `online + ca-còn-lại + phần-kéo-dự-kiến`, vì online_min tích theo wall-clock nên tới lúc
+        # extension CÓ HIỆU LỰC nó đã cộng thêm cả phần ca còn lại. Bản cũ so `online + need_min`
+        # tại-lúc-khuyên — vừa thiếu phần ca sẽ trôi, vừa dùng need thay vì phần kéo thật.
+        # Đứng TRƯỚC `cap_unreachable` có chủ ý: khi một lời khuyên vừa vượt trần kinh tế vừa đẩy
+        # tài xế qua ngưỡng mệt, lý do được báo phải là lý do SỨC KHOẺ — nếu không thì bảng veto
+        # nói "hết trần" cho đúng những ca mà lan can sức khoẻ mới là thứ chặn (bài học UPDATE-138:
+        # lan can đứng trước hút công của trần; ở đây là chiều ngược — trần che mất lan can).
+        # Dùng phần kéo TRƯỚC trần (need_extra×1.15): trần chỉ thu nhỏ, và ca vượt trần đã có
+        # `cap_unreachable` chặn ngay dưới.
+        if (actor.online_min + remaining_min + need_extra_min * 1.15
+                > actor.fatigue_threshold_min):
             return 0.0, "would_exceed_fatigue"
-        if need_min > self.extend_max_min - actor.shift_extended_min:
-            return 0.0, "cap_unreachable"     # không với tới trong trần cho phép
+        if need_extra_min > self.extend_max_min - actor.shift_extended_min:
+            return 0.0, "cap_unreachable"     # phần cần THÊM không với tới trong trần cho phép
         if not self.cadence_allows(actor, "shift_extend", now_min):
             return 0.0, "cadence"             # ĐA-04: hết cooldown/ngân sách ⇒ im
         rule_input = {
             "driver_id": f"d-{actor.actor_id}", "t_now": _iso(now_min),
             "points_now": int(actor.points), "gap_points": gap_points,
             "points_per_hour": rate, "need_min": need_min,
+            # E1b ADV-02: hai trường mới — phần ca còn lại và phần cần THÊM ngoài ca
+            "shift_remaining_min": remaining_min, "need_extra_min": need_extra_min,
             "extend_remaining_min": self.extend_max_min - actor.shift_extended_min,
         }
         rule_report = {
@@ -1025,7 +1158,7 @@ class AdviceActionBridge:
                 "action_window": {
                     "start": _iso(now_min),
                     "end": _iso(min(self.world_end_min,
-                                    actor.shift_end_min + need_min * 1.15)),
+                                    actor.shift_end_min + need_extra_min * 1.15)),
                 },
             },
         }
@@ -1046,7 +1179,9 @@ class AdviceActionBridge:
             self.note_spoken_outcome(actor, "shift_extend", now_min, "extend",
                                      followed=False, reason="not_followed")
             return 0.0, "not_followed"
-        add = min(need_min * 1.15, self.extend_max_min - actor.shift_extended_min)
+        # E1b ADV-02: cấp PHẦN CẦN THÊM ngoài ca (need_extra), không phải trọn need — phần
+        # trong ca đằng nào cũng trôi qua; cấp trọn gói là kéo dài work span vô ích.
+        add = min(need_extra_min * 1.15, self.extend_max_min - actor.shift_extended_min)
         # b0-A: KHÔNG hoãn quá lúc thế giới dừng. Kéo ca tới 25:00 khi `time.end_min = 24:00` là
         # lời khuyên **không thể thực hiện được**: không sinh thêm cuốc nào, nhưng vẫn tiêu ngân
         # sách `shift_extended_min` và vẫn ghi event `advice_shift_extend` ⇒ A/B đọc thành "có

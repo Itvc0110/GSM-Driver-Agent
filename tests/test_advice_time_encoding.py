@@ -180,10 +180,15 @@ def test_shift_extend_cannot_push_past_world_end(bridge, cfg):
     #  test XANH mà chưa hề chạm code path — đúng mẫu "test có mà không bắt" ở T-046.)
     a.points, a.online_min = 95, 300.0
     # `D-QD4-03`: hàm nay nhận `soc_threshold` và trả `(phút, lý do)`. Fixture cố ý ĐỨNG NGOÀI ba
-    # lan can mới (soc 100% > ngưỡng; `online_min` 300 + `need_min` ~16 = 316 < `fatigue_threshold`
-    # 480) ⇒ test này vẫn kiểm ĐÚNG thứ nó sinh ra để kiểm (`b0-A`), không bị lan can chặn hộ.
-    for _ in range(20):                        # nhiều lần rút RNG để chắc chắn có lần "follow"
-        bridge.check_shift_extend(a, 1200.0, _SOC_THRESHOLD)
+    # lan can (soc 100% > ngưỡng; dự phóng 300 + 10 + ~7 ≈ 317 < `fatigue_threshold` 480)
+    # ⇒ test này vẫn kiểm ĐÚNG thứ nó sinh ra để kiểm (`b0-A`), không bị lan can chặn hộ.
+    # E1b ADV-02 (sửa CÓ CHỦ Ý 2026-08-06): hỏi ở 1420 (ca còn 10′ < need ~16′) — bản cũ hỏi ở
+    # 1200 khi ca còn 230′, nay hợp lệ là `reachable_in_shift` (mốc trong tầm ca, không kéo).
+    # Coin là hash TẤT ĐỊNH theo (bucket, revision) — bucket mới có thể ra False vĩnh viễn;
+    # coin không phải chủ thể của test này ⇒ ép True để cô lập đúng cơ chế b0-A.
+    bridge.coin_follows = lambda *args, **kw: True
+    for _ in range(20):
+        bridge.check_shift_extend(a, 1420.0, _SOC_THRESHOLD)
     assert a.shift_extended_min > 0.0, (
         "test KHÔNG chạm được nhánh hoãn ca ⇒ nó không kiểm gì cả; sửa fixture, đừng để xanh giả")
     assert a.shift_end_min <= WORLD_END_MIN, (
@@ -228,9 +233,11 @@ def test_infeasible_extend_does_not_burn_claim(cfg):
     a = _actor(1430.0)                   # ca kết thúc 23:50 — cách world_end đúng 10′
     a.points, a.online_min = 95, 300.0   # sát mốc ⇒ vào nhánh hoãn (bài học T-046 ở test trên)
 
-    now = 1200.0
-    # Lần 1: need_min ≈ 16′ nhưng trần thế giới chỉ còn 10′... vẫn KHẢ THI một phần (add>0).
-    # Muốn BẤT KHẢ THI hẳn phải hết chỗ: đặt shift_end = world_end.
+    # E1b ADV-02 (sửa CÓ CHỦ Ý 2026-08-06): now dời 1200 → 1430 — ca phải còn ÍT hơn need
+    # (~16′) thì mới cần kéo; ở 1200 (còn 240′) nay hợp lệ là `reachable_in_shift`.
+    now = 1430.0
+    b.coin_follows = lambda *args, **kw: True   # coin tất định theo bucket — không phải chủ thể
+    # Muốn BẤT KHẢ THI hẳn phải hết chỗ: đặt shift_end = world_end (không còn phút nào để kéo).
     a.shift_end_min = WORLD_END_MIN      # 24:00 — không còn một phút nào để kéo
     got1 = 0.0
     for _ in range(20):                  # đủ lần để chắc chắn coin có lần True
@@ -264,7 +271,10 @@ def test_applied_decision_does_not_spawn_ghost_infeasible_event(cfg):
     a = _actor(1430.0)                   # còn 10′ tới world_end
     a.points, a.online_min = 95, 300.0
 
-    now = 1200.0
+    # E1b ADV-02 (sửa CÓ CHỦ Ý 2026-08-06): 1200 → 1425 — ca còn 5′ < need ~16′ ⇒ cần kéo thật;
+    # phần kéo ~12′ bị trần thế giới cắt còn 10′ ⇒ vẫn áp được và chạm trần như kịch bản cần.
+    now = 1425.0
+    b.coin_follows = lambda *args, **kw: True   # coin tất định theo bucket — không phải chủ thể
     applied = 0.0
     for _ in range(20):                  # lần đầu coin=True sẽ áp ~10′ ⇒ shift_end chạm 1440
         applied += b.check_shift_extend(a, now, _SOC_THRESHOLD)[0]

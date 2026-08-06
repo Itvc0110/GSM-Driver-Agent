@@ -82,7 +82,9 @@ def test_commit_ghi_deadline_va_cong_dung_khoang_hoan(base_cfg, run_a):
     assert defer and why == "defer_to_11h"
     assert alt == (IdleAction.RELOCATE, "8ffffffffffffff")
     assert a.rest_commit_due_min == 11 * 60.0        # đầu giờ X, phút tuyệt đối trong ngày
-    assert a.rest_deferred_min == pytest.approx(((11 - 9) % 24) * 60)   # khoảng hoãn THẬT
+    # E1b ADV-08 (sửa CÓ CHỦ Ý 2026-08-06): khoảng hoãn THẬT = due − now = 120 − 10 = 110
+    # (bản đầu của test này ghim nguyên minutes_to=120 — phóng đại phần now%60).
+    assert a.rest_deferred_min == pytest.approx(110.0)
 
 
 def test_doi_chung_coin_khong_nghe_thi_khong_cam_ket(base_cfg, run_a):

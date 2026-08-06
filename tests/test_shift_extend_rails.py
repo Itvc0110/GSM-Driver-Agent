@@ -94,12 +94,16 @@ def test_da_MET_thi_KHONG_khuyen_keo_ca(bridge):
 def test_loi_khuyen_DAY_QUA_nguong_thi_KHONG_khuyen(bridge):
     """🔴 Lan can mà **chỉ có bản 'đã mệt' sẽ để lọt** — và là ca đáng chặn nhất.
 
-    Tài xế còn DƯỚI ngưỡng (470 < 480) nên `fatigued` không bắn; nhưng `need_min` ~16′ sẽ đưa họ
-    lên ~486 ⇒ **chính lời khuyên này** đẩy họ qua ngưỡng.
+    ⚠ SỬA CÓ CHỦ Ý 2026-08-06 (E1b ADV-02/03, UPDATE-153): kịch bản cũ (ca còn 400′) nay hợp lệ
+    là `reachable_in_shift` — mốc đạt được KHÔNG cần kéo ca thì không có gì để khuyên. Dựng lại:
+    ca chỉ còn 10′ (900→910), tài xế 470′ < ngưỡng 480 nên `fatigued` không bắn; cần ~24,7′ ⇒
+    phần kéo ~14,7×1,15 ≈ 16,9′; DỰ PHÓNG CUỐI CA MỞ RỘNG = 470+10+16,9 ≈ 497 > 480 ⇒ **chính
+    lời khuyên này** đẩy họ qua ngưỡng — đo ở dự phóng, không phải tại-lúc-khuyên.
 
     Vì sao kênh kéo ca cần lan can này mà kênh nghỉ thì không: hoãn nghỉ chỉ **ĐỔI THỜI ĐIỂM**
     nghỉ; kéo ca **THÊM GIỜ LÀM**. Cái hại nằm ở phần thêm vào, không chỉ ở trạng thái sẵn có."""
-    added, why = bridge.check_shift_extend(_actor(online_min=470.0), 900.0, SOC_THRESHOLD)
+    added, why = bridge.check_shift_extend(
+        _actor(online_min=470.0, shift_end_min=910.0), 900.0, SOC_THRESHOLD)
     assert (added, why) == (0.0, "would_exceed_fatigue")
 
 
@@ -108,7 +112,10 @@ def test_loi_khuyen_DAY_QUA_nguong_thi_KHONG_khuyen(bridge):
 def test_DOI_CHUNG_tai_xe_khoe_van_duoc_khuyen(bridge):
     """Bắt buộc — không có bước này thì một `return 0.0, "fatigued"` vô điều kiện cũng làm ba test
     trên XANH. Cổng phải phân biệt *"ranh giới chạy đúng"* với *"kênh chết"*."""
-    got = [bridge.check_shift_extend(_actor(), 900.0 + i, SOC_THRESHOLD)
+    # E1b ADV-02 (sửa CÓ CHỦ Ý 2026-08-06): actor mặc định có ca còn 400′ ⇒ mốc trong tầm ca
+    # ⇒ `reachable_in_shift` là ĐÚNG. Muốn thấy kênh khuyên thì ca phải sắp kết: còn 5′,
+    # cần ~15,8′ ⇒ phần kéo ~12,4′; dự phóng 300+5+12,4 = 317 ≪ 480 ⇒ phải được khuyên.
+    got = [bridge.check_shift_extend(_actor(shift_end_min=905.0 + i), 900.0 + i, SOC_THRESHOLD)
            for i in range(0, 200, 31)]         # nhiều bucket ⇒ vượt cadence/coin
     assert any(added > 0.0 for added, _ in got), (
         f"kênh không còn khuyên được lần nào cho tài xế KHOẺ ⇒ lan can đang chặn oan: {got}")
@@ -127,7 +134,9 @@ def test_DOI_CHUNG_lan_can_SUC_KHOE_uu_tien_hon_tran_kinh_te(bridge):
     """Khi một lời khuyên vừa vượt trần kinh tế VỪA đẩy qua ngưỡng mệt, lý do báo ra phải là lý do
     **SỨC KHOẺ**. Nếu không, bảng veto sẽ nói *"hết trần"* cho đúng những ca mà lan can sức khoẻ
     mới là thứ chặn — và người đọc kết luận sai rằng lan can chưa bao giờ cần tới."""
-    a = _actor(online_min=475.0, points=61)     # gap lớn ⇒ need_min vượt trần 60′
+    # E1b ADV-02/03 (sửa CÓ CHỦ Ý 2026-08-06): thêm `shift_end_min=920` để cần kéo THẬT
+    # (need ~304′ > còn 20′ ⇒ phần kéo ~284′ vượt trần 60′) VÀ dự phóng 475+20+326 ≈ 821 ≫ 480.
+    a = _actor(online_min=475.0, points=61, shift_end_min=920.0)
     added, why = bridge.check_shift_extend(a, 900.0, SOC_THRESHOLD)
     assert (added, why) == (0.0, "would_exceed_fatigue"), (
         f"lan can sức khoẻ bị trần kinh tế che: {why}")

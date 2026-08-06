@@ -40,9 +40,17 @@ def count_supply(actors, pending_targets: dict[int, str] | None = None
 
     `pending_targets`: `{actor_id: cell}` — lời khuyên vị trí **đã phát mà tài xế chưa đi**.
 
-    Quy tắc chống đếm đôi: một actor đóng góp **tối đa một** đơn vị cung. Nếu đang di chuyển thì
-    tin `enroute_cell` (chuyển động thật) và **bỏ qua** lệnh trong sổ — sổ có thể là lệnh cũ chưa
-    dọn, còn vị trí thì không nói dối.
+    Quy tắc chống đếm đôi: một actor đóng góp **tối đa một** đơn vị cung **trong mỗi sổ**. Nếu
+    đang di chuyển thì tin `enroute_cell` (chuyển động thật) và **bỏ qua** lệnh trong sổ — sổ có
+    thể là lệnh cũ chưa dọn, còn vị trí thì không nói dối.
+
+    ⚠ E1b/ADV-09 (2026-08-06) — ĐỌC CHO ĐÚNG trước khi "sửa": actor IDLE có lệnh chờ xuất hiện
+    ở **CẢ HAI sổ CÓ CHỦ Ý** — họ là cung tại chỗ THẬT (dispatcher vẫn match được họ ở ô đang
+    đứng cho tới khi họ đi) *và* là cung sắp tới của ô đích (⭐ chống dồn cục). `now` và `inc` là
+    hai sổ ngữ nghĩa KHÁC NHAU, không phải một tổng; consumer cộng gộp hai sổ sẽ bảo thủ (trần
+    capacity trừ kép) — đó là đánh đổi đã chọn. Review r10/ADV-09 từng đọc câu "tối đa một đơn
+    vị" thành bất biến TRÊN TỔNG và đề xuất bỏ actor khỏi `now` — làm `now` NÓI DỐI về cung
+    match-được. Test ghim: `test_market_state_sim_producer.py` (cả hai sổ + bảo toàn từng sổ).
     """
     pending = pending_targets or {}
     now: dict[str, int] = {}
