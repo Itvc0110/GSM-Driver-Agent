@@ -40,4 +40,4 @@ packages = ["src/gsm_sim", "src/gsm_core"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = [".", "src"]
