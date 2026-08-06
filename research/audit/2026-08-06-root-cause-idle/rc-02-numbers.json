@@ -1,0 +1,264 @@
+{
+  "what": "RC-02 — SỐ NỀN cho nghịch lý 'thời gian thừa không chảy vào đơn' (kênh station_choice). Rút TỪ ARTIFACT CÓ SẴN, KHÔNG chạy sim mới.",
+  "ngay": "2026-08-06",
+  "mock": true,
+  "phan_loai_cuoi": "UNRESOLVED — rc-02 chỉ cung cấp THƯỚC ĐO SCALE; nó KHÔNG phân xử được H1/H2/H3/H4. Việc phân xử là rc-03 (probe chồng lấn idle × đơn chết theo cell/giờ).",
+
+  "canh_bao_doc_truoc": [
+    "⚠ SỐ 698 / 520 / 235 TRONG CÂU HỎI TRỘN HAI CỬA SỔ SEED KHÁC NHAU. −698′ charge, +520,3′ idle, +98,9′ empty, +5,5 trips đều là n=30 CỬA SỔ SEED 7000–7029 (nguồn: tracking/updates/UPDATE-159-de403-root-cause-ui-labels.md:16-21). Còn +235,165′ rest là n=100 CỬA SỔ 1000–1099 (research/audit/2026-08-06-e2/e01-station-100.json → compare.system.rest_min_total). CÙNG kênh, cửa sổ 7000s cho rest chỉ +19,6′ ns. KHÔNG được cộng chúng vào một sổ thời gian.",
+    "⚠ KHÔNG CÓ artifact JSON nào chứa sổ thời gian ĐỘI (idle_min/charge_min/empty_min tổng đội). Bộ metric A/B (src/gsm_sim/parallel.py:194-215) KHÔNG xuất chúng. Số −698/+520/+98,9 chỉ tồn tại trong BẢNG của UPDATE-159, sinh bởi probe scratchpad probe_e01_ledger.py (còn trên đĩa ở scratchpad session, output KHÔNG được ghi ra artifact). ⇒ đây là bằng chứng cấp docs, KHÔNG phải cấp artifact; muốn cấp artifact phải chạy lại probe.",
+    "⚠ Khối `compare.driver` trong mọi file e2 là MỘT tài xế tiêu điểm (được advise), KHÔNG phải trung bình đội (src/gsm_sim/parallel.py:167-173, _driver_metrics(result, actor_id)). Đừng nhân nó lên 90 rồi gọi là số đội — chỗ nào tôi làm thế đều dán nhãn ESTIMATE.",
+    "⚠ orders_total KHÔNG có trong bộ metric A/B ⇒ tổng đơn/ngày là số SUY (completed ÷ served_rate), và served_rate bị làm tròn 3 chữ số MỖI SEED trước khi lấy trung bình (src/gsm_sim/metrics.py:46) ⇒ sai số ±~1 đơn."
+  ],
+
+  "nguon_file": {
+    "e01_100": "research/audit/2026-08-06-e2/e01-station-100.json — E-01 station_choice A/B, n=100, channels: chỉ station_choice=True, positioning_overrides='off'. (khoá `seeds` KHÔNG có trong file ⇒ THIẾU; arm A trùng KHỚP TỪNG SỐ với oracle-100.json (seeds 1000–1099) ⇒ suy ra cùng cửa sổ 1000s)",
+    "e01_30": "research/audit/2026-08-06-e2/e01-station-30.json — cùng kênh, n=30 (cửa sổ 1000s; file tự cảnh báo 'n=30 CHỈ đọc hướng, không claim')",
+    "oracle_100": "research/audit/2026-08-06-e2/oracle-100.json — kênh POSITIONING (positioning_overrides='wait_only'), n=100 seeds 1000–1099, có compare_real (adherence thật 50,22%) và compare_oracle (adherence 100%). ARM A GIỐNG HỆT arm A của e01-station-100 ⇒ dùng làm THƯỚC QUY ĐỔI trên cùng nền.",
+    "u159": "tracking/updates/UPDATE-159-de403-root-cause-ui-labels.md:12-21 — bảng sổ thời gian n=30 cửa sổ 7000-7029 (nguồn DUY NHẤT của −698/+520/+98,9/+5,5)",
+    "u087": "tracking/updates/UPDATE-087-*.md:15-21 — thước quy đổi positioning B3w n=100 seeds 3000–3099 (payout +6.016đ ↔ đơn chết −23,4)",
+    "config": "configs/pilot_dongda.yaml",
+    "code": {
+      "served_rate_def": "src/gsm_sim/metrics.py:46 — served_rate = orders_completed / len(result.orders), round 3dp",
+      "expired_n_def": "src/gsm_sim/sim_metrics.py:280-292 — expired_n = số event 'order_expired'; orders_total = len(result.orders); unserved_breakdown còn có 'censored' và 'cancelled_after_accept' — HAI khoản này KHÔNG được xuất ra A/B",
+      "driver_utilization_def": "src/gsm_sim/journey.py:217,227 — utilization = occupied_min/online_min (occupied = bucket 'on_trip')",
+      "time_buckets_def": "src/gsm_sim/entities.py:70-75 — online / empty (pickup+relocate+deadhead) / occupied (có khách) / idle ('chờ đơn TẠI CHỖ') / charge ('đổi pin/sạc GỒM CHỜ')",
+      "eligibility_def": "src/gsm_sim/world.py:628,639 — dispatcher CHỈ xét actor.state == ActorState.IDLE, và kiểm lại IDLE lần hai khi gán",
+      "fleet_size": "configs/pilot_dongda.yaml:228 — actors.n = 90",
+      "demand_total": "configs/pilot_dongda.yaml:32 — demand.orders_per_day = 1200 (kỳ vọng trong window 05:00–24:00)"
+    }
+  },
+
+  "1_so_nen_arm_A": {
+    "ghi_chu": "arm A = MỌI kênh tắt. Cả e01-station-100 và oracle-100 cho ĐÚNG các số này ⇒ nền chung, so sánh chéo hợp lệ.",
+    "n_seeds": 100,
+    "served_rate_mean_a": 0.7975,
+    "orders_completed_mean_a": 960.4,
+    "expired_n_mean_a": 188.31,
+    "total_payout_vnd_mean_a": 22710015.16,
+    "payout_mean_all_mean_a": 252333.502,
+    "trips_mean_all_mean_a": 10.6711,
+    "others_trips_mean_a": 947.13,
+    "rest_min_total_mean_a": 3774.152,
+    "swap_wait_mean_mean_a": 5.5886,
+    "wait_median_min_mean_a": 0.0669,
+    "starved_hours_n_mean_a": 0.4,
+    "station_hhi_mean_a": 0.1583,
+    "supply_cell_hhi_mean_a": 0.0129,
+    "n_actors_scope_mean_a": 75.53,
+    "n_actors_scope_la_gi": "MẪU SỐ chấm tầng 5 (số tài xế trong phạm vi), KHÔNG phải cỡ đội — file tự ghi role như vậy",
+    "co_doi_N": 90,
+    "co_doi_kiem_chung_3_duong": {
+      "config": "configs/pilot_dongda.yaml:228 → 90",
+      "total_payout/payout_mean_all": 89.99999992,
+      "orders_completed/trips_mean_all": 90.00009371
+    },
+    "tong_don_ngay_SUY": {
+      "gia_tri": 1204.26,
+      "cach_tinh": "orders_completed 960.4 ÷ served_rate 0.7975",
+      "doi_chieu_config": "demand.orders_per_day = 1200 ⇒ lệch +0,36% — khớp",
+      "nhan": "DERIVED (orders_total THIẾU trong artifact)"
+    },
+    "don_chet_la_bao_nhieu_phan_tram_tong_don": {
+      "expired_tren_tong_suy": "188.31 / 1204.26 = 15,64%",
+      "expired_tren_config_1200": "15,69%",
+      "khong_duoc_phuc_vu_TONG": "1 − 0,7975 = 20,25% ⇒ trong đó 15,64đp là HẾT HẠN (expired), còn ~4,61đp (55,55 đơn/ngày) là censored + cancelled_after_accept — HAI khoản này THIẾU trong artifack A/B, chỉ suy ra bằng phép trừ"
+    }
+  },
+
+  "2_delta_cua_station_choice": {
+    "n100_tu_e01_station_100_json": {
+      "he_thong": {
+        "payout_mean_all": {"delta": -32.6121, "ci95": [-1042.7641, 975.1925], "sig": false, "ghi_chu": "ĐÂY là 'payout −33đ ns' trong câu hỏi"},
+        "orders_completed": {"delta": 1.69, "ci95": [-1.3102, 4.69], "sig": false},
+        "expired_n": {"delta": -1.86, "ci95": [-4.8, 1.1502], "sig": false},
+        "served_rate": {"delta": 0.0014, "ci95": [-0.0011, 0.0039], "sig": false},
+        "trips_mean_all": {"delta": 0.0188, "ci95": [-0.0146, 0.0521], "sig": false},
+        "others_trips": {"delta": 4.83, "ci95": [1.7398, 7.88], "sig": true, "ghi_chu": "TÍN HIỆU DUY NHẤT về sản xuất ở n=100: đội TRỪ tài xế tiêu điểm chạy thêm 4,83 cuốc/ngày SIG — nhưng orders_completed (+1,69) lại ns; hai cái chênh nhau vì tài xế tiêu điểm MẤT 3,14 cuốc (4,83 − 3,14 = 1,69). NHẤT QUÁN, không mâu thuẫn."},
+        "total_payout_vnd": {"delta": -2935.11, "ci95": [-93848.779, 87767.3452], "sig": false},
+        "rest_min_total": {"delta": 235.165, "ci95": [191.7631, 279.2928], "sig": "one_way_gate", "ghi_chu": "phút-đội/ngày. ĐÂY là '+235 SIG'. Cửa sổ 1000s."},
+        "swap_wait_mean": {"delta": -3.5991, "ci95": [-3.9464, -3.2645], "sig": true, "ghi_chu": "phút CHỜ mỗi lượt đổi pin — hiệu ứng trực tiếp của kênh"},
+        "charge_min_p50_F_swap": {"delta": -2.639, "sig": true},
+        "charge_min_p90_F_swap": {"delta": -39.16, "sig": true},
+        "charge_min_p50_F_charge": {"delta": -13.65, "sig": true},
+        "station_hhi": {"delta": -0.0564, "ci95": [-0.0624, -0.0504], "sig": true, "ghi_chu": "dàn trạm ra RẤT mạnh — kênh làm đúng việc của nó"},
+        "supply_cell_hhi": {"delta": -0.0014, "ci95": [-0.0017, -0.0011], "sig": true},
+        "starved_hours_n": {"delta": 0.05, "ci95": [-0.03, 0.13], "sig": false},
+        "drive_min_p50": {"delta": 5.618, "ci95": [4.233, 7.0362]},
+        "work_span_p50": {"delta": 7.99, "ci95": [5.9759, 10.0281]},
+        "work_span_p90": {"delta": 16.476, "ci95": [9.9915, 22.9972]},
+        "payout_mean_P1": {"delta": -3862.5243, "ci95": [-6278.1038, -1563.8063], "sig": true, "ghi_chu": "FAIL 1b ĐA-08 — hồ sơ yếu nhất bị HẠI SIG"},
+        "payout_mean_P2": {"delta": 4516.081, "ci95": [780.2971, 8346.0921], "sig": true}
+      },
+      "tai_xe_tieu_diem_MOT_nguoi": {
+        "idle_min": {"delta": 45.45, "ci95": [35.03, 55.84], "sig": true},
+        "offers": {"delta": -5.14, "ci95": [-6.12, -4.17], "sig": true},
+        "trips_completed": {"delta": -3.14, "ci95": [-3.8, -2.49], "sig": true},
+        "payout_vnd": {"delta": -21353.66, "ci95": [-27415.06, -15181.53], "sig": true},
+        "trip_payout_vnd": {"delta": -49965.87, "sig": true},
+        "online_min": {"delta": -2.03, "ci95": [-4.82, 0.81], "sig": false},
+        "utilization": {"delta": -0.06, "sig": true},
+        "acceptance_rate": {"delta": 0.03, "sig": true},
+        "declined": {"delta": -1.52, "sig": true},
+        "points": {"delta": -16.0, "sig": true},
+        "arm_A": {"idle_min": 142.94, "online_min": 526.65, "utilization": 0.34, "trips_completed": 13.27, "offers": 19.21, "payout_vnd": 310028.68}
+      }
+    },
+    "n30_cua_so_1000s_tu_e01_station_30_json": {
+      "driver_idle_min": {"delta": 38.62, "ci95": [20.87, 56.18], "sig": true},
+      "driver_trips_completed": {"delta": -3.3, "ci95": [-4.43, -2.17], "sig": true},
+      "driver_payout_vnd": {"delta": -26090.5, "sig": true},
+      "ghi_chu": "cùng chiều n=100 — tài xế tiêu điểm luôn LỖ trong kênh này"
+    },
+    "n30_cua_so_7000s_tu_UPDATE_159": {
+      "nhan": "DOCS-LEVEL (không có artifact JSON) — UPDATE-159:16-21",
+      "charge_min": {"delta": -698.0, "ci95": [-842, -554], "don_vi": "phút-đội/ngày"},
+      "idle_min": {"delta": 520.3, "ci95": [319, 706], "don_vi": "phút-đội/ngày"},
+      "empty_min": {"delta": 98.9, "ci95": [46, 151], "don_vi": "phút-đội/ngày"},
+      "rest_min": {"delta": 19.6, "ci95": [-45, 86], "sig": false},
+      "trips_done": {"delta": 5.5, "ci95": [1.3, 9.4], "don_vi": "cuốc/đội/ngày"},
+      "points": {"delta": 31.0, "ci95": [7.8, 53.3]},
+      "occupied_min_delta": "THIẾU — không có trong bảng UPDATE-159 dù probe có đo (FIELDS ở probe_e01_ledger.py:32-35). Xem §3.3."
+    }
+  },
+
+  "3_tinh_toan": {
+    "3_1_698_phut_doi_thanh_bao_nhieu_phut_moi_tai_xe": {
+      "phut_doi_ngay": 698.0,
+      "co_doi": 90,
+      "phut_moi_tai_xe_ngay": 7.756,
+      "so_voi_idle_nen": "7,76′ thêm vào một kho idle SẴN CÓ ~142,94′/tài xế/ngày (tài xế tiêu điểm arm A) ⇒ +5,43% kho idle. NHÃN: ESTIMATE (142,94 là MỘT tài xế, không phải trung bình đội; idle đội THIẾU)",
+      "so_voi_online": {
+        "gia_tri": "1,47%–2,63% tổng thời gian online của đội",
+        "cach_tinh": "698 ÷ (90 × online). Dải vì online đội THIẾU: cận dưới lấy online tài xế tiêu điểm 526,65′ (→47.398′, 1,47%), cận trên lấy work_span_p50 294,38′ (→26.494′, 2,64%)",
+        "nhan": "ESTIMATE"
+      },
+      "kiem_tra_mach_lac_698": {
+        "cach": "698 ÷ 3,5991 phút-chờ-giảm-mỗi-lượt = 193,9 lượt đổi pin/ngày ngụ ý; 90 tài xế × ~2,2 lượt/ngày ≈ 194 — RẤT khớp ⇒ −698′ về bản chất là GIẢM XẾP HÀNG ở trạm, không phải giảm thời gian đổi pin thật",
+        "canh_bao": "hai số ở HAI cửa sổ seed khác nhau (698 @7000s n=30 · 3,5991 @1000s n=100) ⇒ đây là KIỂM TRA MẠCH LẠC, KHÔNG phải chứng minh. Số lượt swap/ngày THIẾU trong artifact."
+      }
+    },
+    "3_2_mot_don_ton_bao_nhieu_phut": {
+      "nhan_chung": "KHÔNG có trường 'phút mỗi đơn' trong bất kỳ artifact nào ⇒ mọi số dưới đây là DERIVED, ghi rõ đường suy",
+      "A_occupied_only_tu_artifact": {
+        "gia_tri_phut": 13.49,
+        "cach_tinh": "arm A tài xế tiêu điểm: occupied = utilization 0,34 × online 526,65′ = 179,06′; ÷ 13,27 cuốc = 13,49′/cuốc (định nghĩa utilization: src/gsm_sim/journey.py:227)",
+        "doi_chieu_arm_B": "0,28 × 524,62 ÷ 10,13 = 14,50′/cuốc",
+        "canh_bao": "utilization làm tròn 2 chữ số trong artifact (0,34) ⇒ ±1,5% ⇒ 13,49 ± 0,6′. CHỈ tính thời gian CÓ KHÁCH, chưa tính đi rước (empty)."
+      },
+      "B_bien_te_occupied_cong_empty_tu_so_thoi_gian_7000s": {
+        "occupied_delta_suy": 59.2,
+        "cach_tinh_occupied": "GIẢ ĐỊNH sổ kín và Δonline ≈ 0: Δoccupied = 698 − 520,3(idle) − 98,9(empty) − 19,6(rest) = 59,2′",
+        "phut_occupied_moi_cuoc_bien_te": 10.76,
+        "phut_occupied_cong_empty_moi_cuoc_bien_te": 28.75,
+        "nhan": "UNVERIFIED — Δonline_min KHÔNG được ghi trong UPDATE-159 dù probe đo nó; ở n=100 work_span_p50 lại +7,99′ ⇒ Δonline có thể KHÁC 0 ⇒ phần dư 59,2′ có thể không phải occupied. empty_min còn gồm relocate/deadhead (entities.py:71), không chỉ đi rước."
+      },
+      "dai_dung_de_quy_doi": "13,5′/đơn (chỉ có-khách) ÷ 28,7′/đơn (có-khách + xe rỗng, biên tế) — dùng CẢ HAI làm cận trên/cận dưới, đừng chọn một"
+    },
+    "3_3_neu_chuyen_doi_HOAN_HAO_thi_vot_duoc_bao_nhieu_don": {
+      "cao_nhat_13_49_phut_moi_don": 51.7,
+      "thap_nhat_28_75_phut_moi_don": 24.3,
+      "dai": "24–52 đơn/ngày toàn đội",
+      "moi_tai_xe": "0,27–0,57 cuốc/tài xế/ngày",
+      "so_voi_kho_don_chet_188_31": "24–52 đơn chỉ là 12,9%–27,5% của 188,31 đơn chết/ngày ⇒ KHO ĐƠN CHẾT KHÔNG CẠN. Thời gian rảnh thêm KHÔNG bị chặn bởi thiếu đơn chết để vớt. (Đây là số nền BÁC giả thuyết 'bão hoà', khớp tiền đề của Cường.)"
+    },
+    "3_4_thuoc_quy_doi_don_sang_tien": {
+      "Y1_UPDATE_087_positioning_B3w_seeds_3000s_n100": {
+        "payout_mean_all_delta": 6016,
+        "expired_delta": -23.4,
+        "tong_payout_doi_delta": 541000,
+        "dong_moi_tai_xe_moi_don_chet_tranh_duoc": 257.1,
+        "dong_doi_moi_don": 23120
+      },
+      "Y2_oracle_100_compare_real_positioning_adherence_50_2pct_CUNG_NEN": {
+        "payout_mean_all_delta": 4456.9413,
+        "expired_delta": -17.65,
+        "orders_completed_delta": 16.92,
+        "tong_payout_doi_delta": 401124.75,
+        "dong_moi_tai_xe_moi_don_chet": 252.5,
+        "dong_moi_tai_xe_moi_don_hoan_thanh_them": 263.4,
+        "dong_doi_moi_don": 23707
+      },
+      "Y3_oracle_100_compare_oracle_adherence_100pct_CUNG_NEN": {
+        "payout_mean_all_delta": 7997.863,
+        "expired_delta": -30.15,
+        "orders_completed_delta": 28.16,
+        "tong_payout_doi_delta": 719807.65,
+        "dong_moi_tai_xe_moi_don_chet": 265.3,
+        "dong_moi_tai_xe_moi_don_hoan_thanh_them": 284.0,
+        "dong_doi_moi_don": 25561
+      },
+      "thuoc_chot": "252–284 đ/tài xế cho MỖI +1 đơn toàn đội (tương đương 23.100–25.600 đ payout đội/đơn). BA nguồn độc lập (2 cửa sổ seed, 2 mức adherence) cho cùng dải ⇒ thước ĐÁNG TIN.",
+      "ti_le_vot_cua_positioning": "orders_completed +16,92 so với expired −17,65 ⇒ 0,96 đơn hoàn thành cho mỗi đơn chết tránh được (gần 1:1). Ở oracle: 28,16/30,15 = 0,93. ⇒ khi đơn chết giảm thật, nó BIẾN THÀNH cuốc gần trọn vẹn — cơ chế 'vớt đơn chết → tiền' HOẠT ĐỘNG trong sim này."
+    },
+    "3_5_so_scale_ky_vong_vs_do_duoc": {
+      "ky_vong_neu_100pct_chuyen_doi": {
+        "don_ngay": "24,3 – 51,7",
+        "payout_moi_tai_xe_ngay_vnd": "+6.100 đến +14.700 (24,3×252,5 … 51,7×284,0)",
+        "so_voi_toan_bo_kenh_positioning": "+6.016đ ⇒ chuyển đổi hoàn hảo 698′ đáng giá BẰNG hoặc GẤP 2,4 LẦN toàn bộ kênh vị trí. Đây KHÔNG phải hiệu ứng nhỏ — nếu có, n=100 phải thấy."
+      },
+      "do_duoc": {
+        "payout_mean_all_n100": {"delta": -32.6121, "ci95": [-1042.7641, 975.1925], "phan_tram_ky_vong_thap": "−0,51%", "phan_tram_ky_vong_cao": "−0,24%", "tran_95pct_theo_ky_vong_thap": "15,2%", "tran_95pct_theo_ky_vong_cao": "7,2%"},
+        "orders_completed_n100": {"delta": 1.69, "hieu_suat_chuyen_doi": "3,3% – 7,0%", "tran_CI": "9,1% – 19,3%"},
+        "expired_n_n100": {"delta": -1.86, "hieu_suat_chuyen_doi": "3,6% – 7,7%", "tran_CI": "9,3% – 19,8%"},
+        "trips_done_n30_7000s": {"delta": 5.5, "hieu_suat_chuyen_doi": "10,6% – 22,7%", "dai_theo_CI": "2,5% – 38,7%"}
+      },
+      "do_phan_giai_cua_phep_do_tien": {
+        "nua_do_rong_CI_payout": 1008.98,
+        "quy_ra_don": "±3,55 – 4,00 đơn/ngày",
+        "ket_luan_ve_POWER": "Phép đo tiền ở n=100 KHÔNG thấy được thay đổi nhỏ hơn ~4 đơn/ngày. Nhưng chuyển đổi HOÀN HẢO là 24–52 đơn = 6–13× độ phân giải đó ⇒ n=100 CÓ ĐỦ POWER để thấy chuyển đổi hoàn hảo, và nó KHÔNG thấy. ⇒ 'thời gian thừa không thành tiền' là HIỆN TƯỢNG THẬT, không phải thiếu power. NGƯỢC LẠI: mức chuyển đổi ĐO ĐƯỢC (+1,69 đơn ≈ 3–7%) NẰM DƯỚI độ phân giải của phép đo tiền ⇒ 'payout ns' KHÔNG loại trừ một chuyển đổi nhỏ thật sự có."
+      },
+      "phat_bieu_scale_chot": "Kênh giải phóng 7,76 phút/tài xế/ngày vào một kho idle sẵn có ~143 phút/tài xế/ngày (+5,4%), trong một thế giới đã có 188,31 đơn chết/ngày. Tức mỗi đơn chết ĐÃ có ~68 phút-đội idle sẵn nằm cạnh nó mà vẫn không gặp nhau (12.865 phút-đội idle ÷ 188,31 đơn chết — ESTIMATE vì idle đội suy từ 1 tài xế). Thêm 5,4% vào một kho đã dư 68 lần thì năng suất biên của phút idle ở nền ≈ 0. Nghịch lý KHÔNG nằm ở lượng thời gian, nó nằm ở chỗ idle và đơn chết KHÔNG GẶP NHAU."
+    }
+  },
+
+  "4_bang_chung_rc02_dong_gop_cho_4_gia_thuyet": {
+    "ghi_chu_bat_buoc": "rc-02 KHÔNG phân xử. Dưới đây là bằng chứng ĐỊNH HƯỚNG + số nền để rc-03 nhắm đúng chỗ. Phân loại cuối vẫn UNRESOLVED.",
+    "bac_gia_thuyet_BAO_HOA": {
+      "trang_thai": "BÁC (số nền)",
+      "bang_chung": "chuyển đổi hoàn hảo cần 24–52 đơn nhưng kho đơn chết là 188,31/ngày ⇒ chỉ dùng 13–27% kho. Không có chuyện 'hết đơn để vớt'. Củng cố tiền đề của Cường (positioning đã vớt −23,4 đơn thật)."
+    },
+    "H1_calibration_lech_pha_gio": {
+      "trang_thai": "CHƯA LOẠI TRỪ — cần bản đồ (cell × giờ) của rc-03",
+      "so_lien_quan_tu_artifact": "starved_hours_n arm A = 0,4 giờ/ngày (đói CUNG) và Δ = +0,05 ns ⇒ ở nền, giờ 'mọi tài xế đều bận' gần như KHÔNG tồn tại (0,4 giờ trong 19 giờ window). Điều này ĐẨY LÙI H1 ở dạng mạnh ('đơn chết vì mọi người bận'), nhưng KHÔNG bác H1 ở dạng yếu ('thời gian rảnh thêm rơi vào giờ ÍT đơn'). Cần histogram theo giờ.",
+      "canh_bao": "starved_hours_n định nghĩa nội bộ chưa được tôi đọc code trong rc-02 ⇒ đừng dùng con số này làm kết luận trước khi rc-03 xác nhận định nghĩa."
+    },
+    "H2_position_mismatch": {
+      "trang_thai": "CHƯA LOẠI TRỪ — bằng chứng ĐỊNH HƯỚNG mạnh nhất hiện có",
+      "bang_chung_manh_nhat": "Tài xế tiêu điểm: idle +45,45′ SIG NHƯNG offers −5,14 SIG (n=100; n=30 cùng chiều). RẢNH THÊM mà được CHÀO ÍT HƠN. Vì điều kiện được chào = state IDLE (world.py:628) + trong shortlist bán kính, mà anh ta IDLE nhiều hơn, phần hụt phải đến từ VỊ TRÍ (hoặc cooldown/shortlist). Khớp rc-01 finding 7 (sau đổi pin IDLE NGAY nhưng đứng ở CELL TRẠM) và giả thuyết D-E4-06(b).",
+      "bang_chung_NGUOC_can_phan_bien": "supply_cell_hhi −0,0014 SIG (dàn cung ra ĐỀU HƠN, mạnh BẰNG positioning-oracle −0,0014) và station_hhi −0,0564 SIG. Dàn đều mà không thêm đơn ⇒ HHI thấp hơn ≠ vị trí BÁM CẦU hơn. rc-03 phải đo chồng lấn với CẦU, không đo độ đều.",
+      "so_can_do_o_rc03": "với mỗi đơn CHẾT: số tài xế IDLE eligible trong 2,22 km / ETA 11′ tại thời điểm hết hạn, arm A vs B"
+    },
+    "H3_dispatcher_gap": {
+      "trang_thai": "MỘT PHẦN ĐÃ BÁC bởi rc-01 (đơn KHÔNG phải offer-một-lần: thử lại mỗi tick 5s tới hết patience; match là Hungarian không phải euclid-greedy). CÒN LẠI: shortlist hex 2,22 km < bán kính ETA-khả-thi 3,14 km (BUG-DISPATCH-SHORTLIST, configs/pilot_dongda.yaml:121-142) và offer_cooldown 10′ ≥ patience_max 10′.",
+      "so_nen_lien_quan": "config: candidate_ring_k_max 6 (~2,22 km) · eta_max_min 11 · patience_median 5,0 / max 10,0 · dispatch_tick_s 5 (configs/pilot_dongda.yaml:142,147,153-155,25)",
+      "phan_bien_ghi_san": "BUG này tồn tại ở CẢ HAI arm ⇒ muốn quy Δ cho nó, rc-03 phải chứng minh arm B đẩy tài xế rảnh vào dải mù 2,2–3,1 km NHIỀU HƠN arm A."
+    },
+    "H4_visibility": {
+      "trang_thai": "PHẦN LỚN ĐÃ LOẠI TRỪ theo định nghĩa, phần nhỏ còn treo",
+      "bang_chung_loai_tru": "idle_min = 'chờ đơn TẠI CHỖ' (entities.py:73) và eligibility = state IDLE (world.py:628); thời gian DI CHUYỂN khi rảnh được ghi vào empty_min (entities.py:71) chứ KHÔNG vào idle ⇒ sổ idle KHÔNG gộp trạng thái di-chuyển-không-nhận-được-đơn. Δempty +98,9′ được ghi RIÊNG trong sổ 7000s ⇒ hai khoản không lẫn.",
+      "phan_con_treo": "(i) thời gian IDLE nhưng bị offer_cooldown chặn với đơn đang chờ VẪN được đếm là idle ⇒ 'idle eligible' danh nghĩa > 'idle thực sự ghép được'; (ii) sổ thời gian ĐỘI không có trong artifact nên không ai kiểm được sổ có KÍN không (online ≈ occupied+empty+idle+rest+charge) — probe có in kiểm tra này nhưng OUTPUT KHÔNG ĐƯỢC LƯU. ⇒ có một VISIBILITY GAP THẬT ở tầng ARTIFACT (không phải ở tầng metric): bộ metric A/B không xuất sổ thời gian đội."
+    }
+  },
+
+  "5_thieu_lien_ke": [
+    "orders_total (tổng đơn/ngày) — không có trong bộ metric A/B (src/gsm_sim/parallel.py:194-215)",
+    "sổ thời gian ĐỘI: idle_min / charge_min / empty_min / occupied_min / online_min tổng đội — KHÔNG có trong bất kỳ file e2 nào (chỉ rest_min_total có)",
+    "unserved_breakdown (censored, cancelled_after_accept) — có trong sim_metrics.customer_impact:288-292 nhưng KHÔNG xuất ra A/B; 55,55 đơn/ngày là số SUY bằng phép trừ",
+    "số lượt đổi pin/ngày (swap_events) — không có ⇒ không kiểm chứng được 698′ = 194 lượt × 3,6′",
+    "Δoccupied_min và Δonline_min của cửa sổ 7000s — probe đo nhưng UPDATE-159 không in ⇒ 59,2′ chỉ là phần dư",
+    "khoá `seeds` trong e01-station-30/100.json — thiếu; cửa sổ seed suy từ việc arm A trùng khớp oracle-100 (1000–1099)",
+    "phân phối idle theo GIỜ và theo CELL — không có ở bất kỳ đâu; đây chính là phép đo rc-03",
+    "e01-station-100.json không có `min_seeds_variant`, và `canh_bao_doc` vẫn ghi 'n=30' (chuỗi cảnh báo bị copy nguyên từ bản n=30) — LỖI NHÃN nhỏ trong artifact, không ảnh hưởng số"
+  ],
+
+  "6_ket_luan_rc02": {
+    "phan_loai": "UNRESOLVED (đúng protocol) — rc-02 là bước 'compare baseline', không phải 'prove root cause'",
+    "ba_ket_luan_so_hoc_dung_duoc": [
+      "(1) BÁC bão hoà: 24–52 đơn chuyển đổi hoàn hảo chỉ bằng 13–27% của 188,31 đơn chết/ngày ⇒ thiếu-đơn-để-vớt KHÔNG phải nguyên nhân.",
+      "(2) CÓ ĐỦ POWER: chuyển đổi hoàn hảo đáng +6.100…+14.700đ/tài xế = 1,0–2,4 lần TOÀN BỘ kênh vị trí, gấp 6–13 lần độ phân giải ±4 đơn của phép đo tiền n=100 ⇒ việc KHÔNG thấy tiền là hiện tượng thật, không phải nhiễu. Nhưng mức chuyển đổi đo được (3–7%) lại NẰM DƯỚI độ phân giải đó ⇒ không được đọc 'payout ns' thành 'chuyển đổi = 0'.",
+      "(3) LƯỢNG THỜI GIAN KHÔNG PHẢI BIẾN QUYẾT ĐỊNH: +7,76′/tài xế/ngày rót vào kho idle sẵn có ~143′/tài xế; ở nền đã có ~68 phút-đội idle cho mỗi đơn chết mà chúng vẫn không gặp nhau ⇒ năng suất biên của phút idle ở nền ≈ 0. Câu hỏi đúng KHÔNG phải 'thời gian chảy đi đâu' mà là 'vì sao idle và đơn chết không gặp nhau' ⇒ chuyển toàn bộ trọng lượng sang rc-03."
+    ],
+    "tra_loi_so_bo_cau_thiet_ke_sim_co_kem_khong": "CHƯA TRẢ LỜI ĐƯỢC bằng rc-02. Nhưng số nền đã đủ để nói: hệ có MỘT khuyết tật đã ghi hồ sơ ở cả hai arm (shortlist 2,22 km < 3,14 km khả thi ETA) + MỘT lựa chọn mô hình có chủ đích (nghỉ/di chuyển không nhận đơn) + MỘT VISIBILITY GAP cấp artifact (không xuất sổ thời gian đội). Ba thứ này KHÁC LOẠI nhau và phải được phán riêng ở rc-04; gộp chúng thành 'sim kém' là sai."
+  }
+}
