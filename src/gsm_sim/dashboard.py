@@ -92,7 +92,7 @@ base, grid, busy_cell = load_base()
 # ---------- Sidebar: tham số cơ bản ----------
 
 st.sidebar.title("GSM Sim control")
-st.sidebar.caption("Pilot Đống Đa · H3 res 9 · arm B · **DỮ LIỆU MÔ PHỎNG**")
+st.sidebar.caption("Pilot Đống Đa · lưới H3 · **DỮ LIỆU MÔ PHỎNG**")  # (nội bộ: đây là arm B)
 
 seed = st.sidebar.number_input("Seed", 0, 9999, 1)
 
@@ -148,20 +148,33 @@ with st.sidebar.expander("🤝 Hành vi nhận đơn (behavior)"):
 # V-28 (2026-08-05, Cường: "chạy riêng đi bật kênh đi"): trước đây Journey tab đọc run chính
 # mà run chính KHÔNG có đường bật advisor ⇒ vạch advice trên timeline không bao giờ hiện.
 # Mặc định GIỮ NGUYÊN hành vi cũ (advisor TẮT — đúng ĐA-07); mọi checkbox chỉ áp khi tự tay bật.
-with st.sidebar.expander("🤖 Advisor (SIM-3/4 — nghiên cứu)"):
-    adv_on = st.checkbox("Bật advisor (arm B)", value=False,
-                         help="MẶC ĐỊNH TẮT theo ĐA-07. Bật để xem vạch advice trên tab Hành trình.")
+with st.sidebar.expander("🤖 Trợ lý tài xế (nghiên cứu)"):
+    # E-program (Cường 2026-08-06): nhãn tiếng Việt dễ hiểu cho stakeholder — MỘT nguồn ở
+    # `channel_labels.py`; ID nội bộ giữ nguyên (contract/registry/event log không đổi).
+    from gsm_sim.channel_labels import help_text as _ch_help, label as _ch_lbl
+    # (nội bộ: mặc định TẮT theo ĐA-07; rest_window chỉ sống ở multiday — D-M3-04)
+    adv_on = st.checkbox("Bật trợ lý ảo cho tài xế", value=False,
+                         help="Chạy mô phỏng có trợ lý và xem các mốc lời khuyên trên tab Hành trình.")
     if adv_on:
-        st.caption("⚠ Cấu hình NGHIÊN CỨU — số liệu chạy ra KHÔNG phải baseline đã duyệt.")
-        _ch_ext = st.checkbox("Kênh shift_extend (kéo ca — V-28)", value=True)
-        _ch_rest = st.checkbox("Kênh rest_window (hoãn nghỉ = cam kết)", value=False,
-                               help="Chỉ sống thật ở multiday (D-M3-04); single-day gần như im.")
-        _ch_lift = st.checkbox("Kênh accept_lift", value=False)
-        _ch_plan = st.checkbox("Kênh shift_plan (⚠ ĐA-07 đã bác — CÓ HẠI)", value=False)
+        st.caption("Chế độ thử nghiệm — số liệu dùng để khám phá, không phải cấu hình chuẩn.")
+        _ch_ext = st.checkbox(_ch_lbl("shift_extend"), value=True,
+                              help=_ch_help("shift_extend"))
+        _ch_rest = st.checkbox(_ch_lbl("rest_window"), value=False,
+                               help=_ch_help("rest_window") +
+                               " Có tác dụng rõ nhất khi mô phỏng nhiều ngày liên tiếp.")
+        _ch_lift = st.checkbox(_ch_lbl("accept_lift"), value=False,
+                               help=_ch_help("accept_lift"))
+        _ch_plan = st.checkbox(_ch_lbl("shift_plan"), value=False,
+                               help=_ch_help("shift_plan"))
+        _ch_swp = st.checkbox(_ch_lbl("swap_early"), value=False,
+                              help=_ch_help("swap_early"))
+        _ch_stc = st.checkbox(_ch_lbl("station_choice"), value=False,
+                              help=_ch_help("station_choice"))
         overrides["advice"] = {
             "enabled": True, "coverage": "all",
             "channels": {"shift_plan": _ch_plan, "accept_lift": _ch_lift,
-                         "shift_extend": _ch_ext, "rest_window": _ch_rest},
+                         "shift_extend": _ch_ext, "rest_window": _ch_rest,
+                         "swap_early": _ch_swp, "station_choice": _ch_stc},
         }
 
 # ---------- Sidebar: kịch bản MÔI TRƯỜNG ----------
@@ -552,7 +565,7 @@ with tab_journey:
         figj.add_vrect(x0=_t(r0), x1=_t(r1), fillcolor="#D9534F", opacity=0.10,
                        line_width=0, layer="below")
         figj.add_vline(x=_t(r0), line_width=2, line_dash="dash", line_color="#D9534F",
-                       annotation_text=f"lan can sức khoẻ chặn ×{len(rail_events)}",
+                       annotation_text=f"chặn vì sức khoẻ ×{len(rail_events)}",
                        annotation_position="top left")
     if _budget:
         t0 = min(e.t_min for e in _budget)
@@ -575,7 +588,7 @@ with tab_journey:
         if _budget:
             _cap += (f" · VÙNG XÁM = từ lúc hết ngân sách 6 lời khuyên/ca, advisor im"
                      f" ({len(_budget)} lần muốn nói mà không được)")
-        st.caption(_cap + " — ĐA-04.")
+        st.caption(_cap + ".")   # (nội bộ: cơ chế nhịp nói = ĐA-04)
 
     # Bảng nhịp per-driver: nói bao nhiêu, nén bao nhiêu và VÌ SAO — đọc thẳng event,
     # không tự tính lại (một nguồn sự thật).
@@ -588,7 +601,7 @@ with tab_journey:
                 for k, v in sorted(spoken.items())]
         rows += [{"chủ đề": ch or "?", "advisor NÓI": "", "bị NÉN": n, "lý do nén": rs or "?"}
                  for (ch, rs), n in sorted(blocked.items(), key=lambda x: str(x[0]))]
-        st.markdown("**Nhịp nói của advisor (ĐA-04)** — cooldown 20′/chủ đề, ngân sách 6/ca")
+        st.markdown("**Nhịp nói của trợ lý** — nghỉ 20′ giữa hai lần nhắc cùng chủ đề, tối đa 6 lời nhắc/ca")  # ĐA-04
         st.dataframe(pd.DataFrame(rows), width='stretch', hide_index=True)
 
     cA, cB = st.columns(2)
@@ -673,9 +686,10 @@ with tab_ab:
     ab1, ab2 = st.columns([1, 2])
     with ab1:
         ab_seed = st.number_input("Seed cặp A/B", 1, 99999, int(seed), step=1)
-        ch_lift = st.checkbox("Kênh accept_lift", value=True)
-        ch_ext = st.checkbox("Kênh shift_extend", value=False)
-        ch_rest = st.checkbox("Kênh rest_window", value=False)
+        from gsm_sim.channel_labels import help_text as _hh, label as _ll
+        ch_lift = st.checkbox(_ll("accept_lift"), value=True, help=_hh("accept_lift"))
+        ch_ext = st.checkbox(_ll("shift_extend"), value=False, help=_hh("shift_extend"))
+        ch_rest = st.checkbox(_ll("rest_window"), value=False, help=_hh("rest_window"))
         run_ab = st.button("Chạy cặp A/B", type="primary")
 
     @st.cache_resource(show_spinner="Đang chạy 2 thế giới (A + B)...")
