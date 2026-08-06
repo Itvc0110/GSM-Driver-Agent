@@ -1,0 +1,145 @@
+{
+  "lop": "L2 — TEST GHIM VÔ HIỆU",
+  "dinh_nghia": "Assertion đúng chữ, nhưng đại lượng bị kiểm KHÔNG phân biệt được cài đặt đúng với cài đặt sai — vì fixture làm nó ≡ hằng số trên chính trục mà test khai là đang kiểm, hoặc vì vị ngữ nhận trọn dải giá trị đạt tới được, hoặc vì chủ ngữ của phép so sánh không phải đại lượng tác giả tưởng (lệch đơn vị).",
+
+  "phuong_phap": {
+    "mo_ta": "Không dừng ở đọc mã. Mỗi thực thể dưới đây (trừ nơi ghi rõ) được CHỨNG MINH bằng ĐỘT BIẾN CHỦ ĐỘNG: thay giá trị sản xuất bằng một số bịa (sentinel) qua pytest plugin đặt ở scratchpad, KHÔNG sửa file nào trong tests/ hay src/, rồi chạy lại đúng bộ test được cho là đang canh nó. Test còn xanh ⇒ nó không ghim gì.",
+    "doi_chung_cua_bo_do": "scratchpad/mutant_ctrl.py — đặt solution.delta_payout := -999999.0 ⇒ tests/test_shift_dp.py::test_delta_nonnegative_vs_baseline ĐỎ (1 failed, 18 passed). Chứng minh bộ đột biến thật sự tới được mã sản xuất, nên các kết quả 'vẫn xanh' bên dưới không phải do plugin không chạy.",
+    "file_do_da_chay": [
+      "scratchpad/p1_sens.py — in giá trị sensitivity của shift_dp",
+      "scratchpad/p2_grid.py — quét 120 cấu hình fixture _spi(), đo delta_payout và _required_rest(B)",
+      "scratchpad/p5_live.py + p6_diff.py — sys.setprofile truy vết hàm nào THỰC SỰ chạy trong run_once(arm all, coverage all, seed 5100)",
+      "scratchpad/p7_range.py — đo tham số hoá soc của cổng D-M3-17 + 110 tài xế bike",
+      "scratchpad/p8_measure.py — đo customer_impact/concentration seed 1000",
+      "scratchpad/p9_terminal.py — quét points_now 0..210 cho test_terminal_bonus_drives_online",
+      "scratchpad/mutant_range.py, mutant_sens.py, mutant_sens2.py, mutant_sens_all.py, mutant_expired.py, mutant_rest.py, mutant_ctrl.py"
+    ]
+  },
+
+  "pattern_da_quet": [
+    "P1 vị ngữ tautology theo KIỂU: rg \"assert [^=]*>= *0\\b\" tests/ ui/backend/tests/ (12 hit)",
+    "P2 vị ngữ MỘT CHIỀU: rg \"assert .* != \" tests/ ui/backend/tests/ (48 hit)",
+    "P3 chỉ kiểm tồn tại: rg \"assert .*is not None\" (21 hit)",
+    "P4 chỉ kiểm không rỗng: rg \"assert len\\(.*\\) *(> 0|>= 1)\" (4 hit)",
+    "P5 kiểm DẢI (bị clip nên luôn đúng): rg \"assert 0(\\.0)? <= .* <= 1\" (15 hit)",
+    "P6 fixture suy biến số 0 / chia hết: rg \"\\[0\\.0\\] \\* |\\[0\\] \\* \" tests/ ; rg \"exp_trips\"",
+    "P7 tập phủ trọn miền: rg \"assert .* in \\(\\\"|assert .* in \\{\\\"|assert .* in \\[\\\"\" (11 hit)",
+    "P8 dung sai quá rộng: rg \"approx\\(.*rel=0\\.[2-9]|approx\\(.*abs=[1-9][0-9]\" (0 hit — repo SẠCH ở pattern này)",
+    "P9 oracle tự quy chiếu (test tính lại kỳ vọng bằng CHÍNH công thức sản xuất): đọc chéo assert ↔ thân hàm cho sim_metrics/customer_impact",
+    "P10 tham số hoá TRANG TRÍ: AST — mọi @pytest.mark.parametrize, kiểm tên tham số có xuất hiện trong assert nào không",
+    "P11 lệch ĐƠN VỊ trong ngưỡng: đối chiếu literal trong assert với `unit` mà solver khai ở _num(value, unit, source)",
+    "P12 chỉ kiểm TỒN TẠI của sensitivity: rg \"sensitivity\" tests/ ui/backend/tests/ rồi đọc từng assert",
+    "P13 ghim ngữ nghĩa hàm nhưng KHÔNG có đường chạy: truy vết sys.setprofile trên run_once thật, đối chiếu với danh sách hàm gsm_sim mà tests/ gọi trực tiếp (275 hàm định nghĩa, 147 không chạy trong run_once, 94 trong số đó có test gọi thẳng)",
+    "P14 quét cờ config mồ côi CHỈ khớp trong comment/docstring (kiểm ngược cổng test_config_flags_wired): AST bỏ docstring + comment rồi so — KẾT QUẢ 0/144 khoá ⇒ cổng đó hiện KHÔNG rỗng, không phải thực thể L2",
+    "Phạm vi quét: tests/ (110 file), ui/backend/tests/ (26 file), src/gsm_core, src/gsm_sim, scripts/, configs/pilot_dongda.yaml. CHƯA quét: ui/web (JS), ui/driver_app (Flutter)."
+  ],
+
+  "thuc_the": [
+    {
+      "file_line": "tests/test_shift_dp.py:126-133 (test_sensitivity_demand)",
+      "vi_sao_thuoc_lop": "Comment ngay trên assert khai tính chất ĐƠN ĐIỆU: 'demand giảm → delta_payout không tăng'. Assert thật sự viết ra chỉ là `all(v is not None for v in vals.values())`. Và fixture còn suy biến thêm một tầng: `_spi(buckets=6)` ⇒ `_required_rest(6, DEFAULT_PARAMS) = 0` (đo ở src/gsm_core/solvers/shift_dp.py:61, forward = min(B, (B*30//240)*1) = 0 với B=6) ⇒ KHÔNG có bucket nghỉ nào để DP đặt khác baseline ⇒ `delta_payout ≡ 0.0`. Quét 120 cấu hình (points ∈ {0,10,50,140,190} × soc ∈ {8,40,80,100} × forecast ∈ {0,1,3,4,5,8}): tập giá trị delta = {0.0}, 0/120 khác 0. Cả hàng base lẫn hai hàng demand_-20%/-40% đều = 0,0.",
+      "bang_chung_dot_bien": "scratchpad/mutant_sens2.py thay MỌI trường số của sensitivity shift_dp bằng -999999.0 (giữ nguyên signature qua functools.wraps) ⇒ `pytest tests/test_shift_dp.py` = 19 passed. Đối chứng mutant_ctrl.py cho 1 failed ⇒ bộ đo có tác dụng.",
+      "hau_qua": "Với TÀI XẾ: sensitivity là dòng 'nếu cầu giảm 20% thì kế hoạch còn lời bao nhiêu' — một số tài chính hiển thị. Nó có thể sai dấu và sai độ lớn tuỳ ý mà suite vẫn xanh. Với ĐỘI: `S2-3` đã ghi rằng hai dòng sensitivity của S2 là 'ROBUST GIẢ' (cap service_min bind 96,0% bucket ⇒ −20% và −40% bằng đúng base về số học) và claim thuận lợi 'Δ bền với cầu −40%' đang được relay ra output — đây chính là test lẽ ra phải chặn claim đó.",
+      "moi_hay_da_biet": "MỚI"
+    },
+    {
+      "file_line": "tests/test_shift_dp.py:75-81 (test_terminal_bonus_drives_online, assert n_online >= 3)",
+      "vi_sao_thuoc_lop": "Docstring khai đúng một cơ chế: 'Gần mốc (140đ, mốc kế 160 thiếu 20đ = 2 cuốc peak) + forecast tốt → DP ưu tiên ONLINE'. Trục mà test khai là đang kiểm là `points_now`. Đo trên đúng trục đó với forecast=[5.0]*6: n_online = 6 (TOÀN BỘ 6 bucket ONLINE) ở points_now = 0, 10, 40, 60, 100, 140, 190, 200, 210 — kể cả khi mốc 160 BẤT KHẢ (points=0) và khi tài xế ĐÃ MAX (points=210). Đại lượng bị kiểm ≡ 6 trên toàn trục ⇒ `>= 3` không phân biệt được gì. Nguyên nhân gốc: world zero-cost (DEFAULT_PARAMS cash_cost_vnd_per_km = 0,0 ở shift_dp.py, xem tests/test_c1_cost_term.py:65) ⇒ ONLINE trội tuyệt đối mọi bucket bất kể thưởng; cộng R=0 nên không có REST cạnh tranh.",
+      "bang_chung_dot_bien": "scratchpad/p9_terminal.py — bảng 9 mức points_now, cột n_online hằng 6.",
+      "hau_qua": "Cơ chế 'mốc thưởng lái được lịch DP' — đúng cơ chế mà ADV-01/S2-2 nói là ĐANG HỎNG (floor add_pts//PBS bốc hơi 37,5% tiến trình điểm mỗi bucket) — có một test mang tên nó nhưng không canh nó. Ai gỡ hẳn phần bonus khỏi Bellman thì test này vẫn xanh. Đây là lý do một nợ CAO sống được qua nhiều vòng.",
+      "moi_hay_da_biet": "MỚI"
+    },
+    {
+      "file_line": "tests/test_shift_dp.py:81 (assert r['solution']['projected_bonus_tier'] >= 160)",
+      "vi_sao_thuoc_lop": "LỆCH ĐƠN VỊ ⇒ vị ngữ nói về một đại lượng khác. `proj_tier = policy.bonus_at(proj_points)` (src/gsm_core/solvers/shift_dp.py:380) và được khai đơn vị `\"vnd\"` ngay tại shift_dp.py:387 `_num(proj_tier, \"vnd\", pv)`. Tác giả so nó với 160 — là NGƯỠNG ĐIỂM của mốc, không phải tiền. Giá trị thật đo được: points=40 → 30000, 60 → 60000, 140 → 115000, 190 → 170000. Mọi tài xế chạm BẤT KỲ mốc nào đều cho ≥ 30.000 ≥ 160 ⇒ assert đúng với cả mốc 60 điểm (30.000đ), tức nó KHÔNG kiểm được 'đạt mốc 160'.",
+      "bang_chung_dot_bien": "scratchpad/p9_terminal.py cột tier; nguồn ngữ nghĩa: shift_dp.py:380 và :387.",
+      "hau_qua": "Test duy nhất khai kiểm 'DP có với tới mốc thưởng cao hơn không' thật ra chỉ kiểm 'có chạm mốc nào đó không'. Kết hợp với thực thể trên, KHÔNG assert nào trong tests/test_shift_dp.py phân biệt được DP-có-nhìn-mốc với DP-mù-mốc.",
+      "moi_hay_da_biet": "MỚI"
+    },
+    {
+      "file_line": "ui/backend/tests/test_range_matches_engine.py:168-175 (test_cong_thuc_dung_tren_nhieu_muc_soc)",
+      "vi_sao_thuoc_lop": "Docstring: 'Kiểm quan hệ tuyến tính đúng ở nhiều mức SOC, không chỉ ở một điểm'. Thân test tham số hoá soc ∈ {30,55,95} nhưng: (a) KHÔNG gọi mockdata một lần nào — đại lượng của UI (`vehicle_range_km`) không hề xuất hiện; (b) assert 1 là `round(soc/max(1.6,0.85),1) < round(soc/min(...),1)` — số học thuần trên hằng config, đúng với MỌI soc>0; (c) assert 2 là `40 <= round(100/max(swap,charge),1) <= 130` = `40 <= 62.5 <= 130` — biểu thức KHÔNG chứa soc, nên ba ca tham số hoá cho ba assert BYTE-GIỐNG NHAU. Toàn bộ file kiểm UI ở ĐÚNG MỘT điểm: `bikes[0]` = d-0, soc=60 (đo: catalog có 110 tài xế bike).",
+      "bang_chung_dot_bien": "scratchpad/mutant_range.py kẹp `vehicle_range_km <= 40.0` cho MỌI tài xế trừ soc==60 (tức bịa số cho 109/110 tài xế bike) ⇒ `pytest ui/backend/tests/test_range_matches_engine.py` = 14 passed, và `pytest ui/backend/tests` = 205 passed. Không một test nào trong toàn bộ suite đường sản phẩm bắt được.",
+      "hau_qua": "Đây là CỔNG của D-M3-17 — nợ sinh ra vì UI báo tầm pin lệch engine tới 1,76×, và đội đổi pin bị thổi tầm. Cổng chỉ neo một điểm dữ liệu; mọi méo mó phi tuyến (trần, sàn, kẹp, bậc thang) ở 109/110 tài xế lọt im lặng. Rủi ro cho tài xế là loại mà chính file khai là nghiêm trọng nhất: 'báo dài hơn thực tế có thể làm họ hết pin giữa đường'.",
+      "moi_hay_da_biet": "MỚI"
+    },
+    {
+      "file_line": "HỌ — sensitivity của 9 solver: tests/test_capacity_alloc.py:126-132 · tests/test_bonus_feasibility.py:153-158 · tests/test_shift_dp.py:126-133 · tests/test_weekly_khoan.py:140-144 · tests/test_solver_properties.py:127",
+      "vi_sao_thuoc_lop": "Không test nào ghim GIÁ TRỊ SỐ của sensitivity; chỉ ghim (i) TỒN TẠI của hàng (`assert cs`, `assert rate_sens`, `assert cliff`), (ii) hình dạng (`isinstance(..., list)`, `'unassigned' in s`), (iii) hai cờ BOOL `flips_feasible`. Đại lượng số vì thế tự do hoàn toàn.",
+      "bang_chung_dot_bien": "scratchpad/mutant_sens_all.py thay MỌI trường số (bỏ qua bool) trong sensitivity của shift_dp, bonus_feasibility, capacity_alloc, weekly_khoan, mission_knapsack, idle_reduction, penalty_explain, anomaly_alert, f3_patterns bằng -999999.0 ⇒ chạy 11 file test solver: **208 passed, 1 failed** — và ca đỏ duy nhất là `test_no_future_leak` vỡ vì WRAPPER của tôi đổi signature thành (*a,**k), KHÔNG phải vì phát hiện giá trị sai. Chạy lại bản giữ signature (mutant_sens2, chỉ shift_dp): 19/19 xanh.",
+      "hau_qua": "Sensitivity là phần 'nêu bất định' mà ranh giới sản phẩm BẮT BUỘC phải có (CLAUDE.md §5: 'không hứa chắc mức thu nhập; luôn nêu bất định'). Toàn bộ vế SỐ của lời cam kết đó hiện không có test nào canh. Cụ thể ở đường sản phẩm: ui/backend/tests/test_dadv04_hist_rate.py:107 dùng `flips_feasible` để quyết định có hiện cảnh báo cliff cho tài xế hay không — cờ bool thì có test, còn số đi kèm cảnh báo thì không.",
+      "moi_hay_da_biet": "MỚI"
+    },
+    {
+      "file_line": "tests/test_fairness_metrics.py:79-85 (test_customer_impact_includes_expired)",
+      "vi_sao_thuoc_lop": "Ba vị ngữ, không cái nào ràng buộc được gì. (a) `assert ci['expired_n'] >= 0` — tautology theo KIỂU (đếm). (b) `assert ci['expired_rate'] == approx(ci['expired_n'] / max(1, ci['orders_total']))` — ORACLE TỰ QUY CHIẾU: sản xuất tính `round(expired/total,4)` (src/gsm_sim/sim_metrics.py:285) và test tính lại ĐÚNG công thức đó trên ĐÚNG output đó ⇒ đúng với mọi giá trị của `expired`. (c) `assert ci['wait_median_min'] >= 0` — tautology theo kiểu (thời lượng). Chỉ `assert 'unserved_breakdown' in ci` là kiểm được một thứ, và nó là kiểm KHOÁ, không phải kiểm số.",
+      "bang_chung_dot_bien": "scratchpad/mutant_expired.py đặt expired_n := 0, expired_rate := 0.0, breakdown.expired := 0 ⇒ `pytest tests/test_fairness_metrics.py tests/test_sim_metrics.py` = 16 passed. Giá trị THẬT bị xoá là lớn: seed 1000 có expired_n = 206 / orders_total = 1210 = 17,0% (scratchpad/p8_measure.py; sự kiện `order_expired` đếm 206 lần trong log).",
+      "hau_qua": "`expired_n` là TẦNG KHÁCH HÀNG của bộ guardrail 5 tầng (`system_guardrail`, sim_metrics.py:296-308) dùng cho mọi phép A/B. Nếu bộ đếm chết (ví dụ ai đổi tên kind `order_expired` — ĐÚNG kiểu hỏng đã xảy ra thật với `supply_cell_hhi`, xem regression `test_supply_cell_hhi_is_not_silently_zero` ở dòng 55-66 CÙNG FILE), thì mọi arm B sẽ đọc 'không hại khách' và mọi kết luận A/B mất tầng khách hàng mà không ai biết. File này đã có lan can 'không được im lặng bằng 0' cho hhi nhưng KHÔNG có lan can tương đương cho expired.",
+      "moi_hay_da_biet": "MỚI"
+    },
+    {
+      "file_line": "ui/backend/tests/test_advice_v2_service.py:186 · ui/backend/tests/test_product_adherence_leaks.py:78-82 · tests/test_features_from_l1r.py:89,142 · tests/test_run_smoke.py:45-46 · tests/test_dadv04_bucket_rate.py:149 · ui/backend/tests/test_dadv04_hist_rate.py:37",
+      "vi_sao_thuoc_lop": "Chùm tautology-theo-KIỂU cấp thấp: `latency_ms >= 0`, `event_followed <= event_decided` trên fixture 1-displayed-1-followed (bất đẳng thức chỉ có thể đúng), `points_now >= 0`, `expected_orders >= 0`, `payout_vnd >= 0`, `points >= 0`, `all(v >= 0 ...)` trên tỷ lệ/giờ. Mọi đại lượng đều không âm theo cách xây dựng.",
+      "bang_chung_dot_bien": "CHƯA đột biến từng cái (chi phí/lợi ích thấp). Xếp confidence TRUNG BÌNH, dựa trên đọc mã: mỗi đại lượng là tổng/đếm/tỷ lệ không âm theo cấu trúc.",
+      "hau_qua": "Thấp mỗi cái, nhưng chúng là nguồn LẠM PHÁT SỐ TEST: 1.356 test nghe như phủ dày, trong khi một phần là dòng không ràng buộc. Đúng bẫy 'suite xanh ⇒ yên tâm' mà CLAUDE.md §4b cấm.",
+      "moi_hay_da_biet": "MỚI (chùm, mức thấp)"
+    },
+    {
+      "file_line": "src/gsm_core/solvers/shift_dp.py:68-71 → tests/test_shift_dp.py:68-71 (test_delta_nonnegative_vs_baseline)",
+      "vi_sao_thuoc_lop": "S2-1 đã ghi và tôi TỰ KIỂM LẠI xong: `_required_rest(6, DEFAULT_PARAMS) = 0` ⇒ Δ ≡ 0. Tôi bổ sung phép đo diện rộng: 0/120 cấu hình fixture cho Δ ≠ 0 (scratchpad/p2_grid.py), và R chỉ > 0 từ B=8 trở lên (B=4,6 → 0; B=8..14 → 1; B=16 → 2) ⇒ mặc định `buckets=6` của `_spi` là NGUỒN CHUNG làm vô hiệu cả họ test trong file.",
+      "hau_qua": "Đã ghi trong 00-SUMMARY §3 (S2-1). Bổ sung của tôi: cùng một hằng số fixture (buckets=6) vô hiệu hoá ÍT NHẤT 3 test trong file, không phải 1.",
+      "moi_hay_da_biet": "ĐÃ BIẾT (S2-1) — bổ sung phép đo diện rộng"
+    },
+    {
+      "file_line": "tests/test_f098_defects.py:64,77-78 (fixture exp_trips = 1,000)",
+      "vi_sao_thuoc_lop": "S2-2/ADV-01 đã ghi: fixture cho exp_trips chằn ⇒ add_pts chia hết cho points_band_size ⇒ phép floor per-bucket không mất gì ⇒ khuyết tật vô hình.",
+      "hau_qua": "Đã ghi trong 00-SUMMARY §3 (S2-2).",
+      "moi_hay_da_biet": "ĐÃ BIẾT (S2-2 / test ADV-01)"
+    },
+    {
+      "file_line": "tests/test_shift_dp.py:84-87 (test_rest_when_zero_demand)",
+      "vi_sao_thuoc_lop": "S2-4 đã ghi: chỉ assert `!= 'ONLINE'` nên PASS trên đúng kế hoạch phi lý 9 SWAP / 12 bucket khi pin đầy. LƯU Ý PHÂN LOẠI: cơ chế ở đây KHÔNG phải fixture suy biến (đại lượng có biến thiên) mà là VỊ NGỮ YẾU HƠN TÍNH CHẤT — xem §ly_do_phan_xu.",
+      "hau_qua": "Đã ghi trong 00-SUMMARY §3 (S2-4).",
+      "moi_hay_da_biet": "ĐÃ BIẾT (S2-4)"
+    },
+    {
+      "file_line": "REST_RAILS soc_low — R-2 (rail chết nhưng vẫn tính 1/3 lan can)",
+      "vi_sao_thuoc_lop": "R-2 đã ghi: test gọi hàm TRỰC TIẾP ⇒ ghim ngữ nghĩa hàm, không chứng minh có đường chạy. LƯU Ý PHÂN LOẠI: đây là L3 (cơ chế mồ côi) mặc áo L2 — test hoàn toàn đúng, cái thiếu là ĐƯỜNG CHẠY. Tôi đã chạy quét độc lập cho họ này (P13, sys.setprofile trên run_once thật) và KHÔNG dùng kết quả để khai thực thể L2 mới, vì 147/275 hàm gsm_sim không chạy trong run_once phần lớn là hàm phân tích SAU run — dùng nó làm bằng chứng sẽ là báo động giả hàng loạt.",
+      "hau_qua": "Đã ghi trong 00-SUMMARY §3 (R-2).",
+      "moi_hay_da_biet": "ĐÃ BIẾT (R-2) — và thuộc L3 hơn L2"
+    }
+  ],
+
+  "lop_co_that": "MOT_PHAN",
+
+  "ly_do_phan_xu": "CÓ một cấu trúc thật, nhưng nhãn 'L2' như charter đang viết đang GỘP ít nhất ba cơ chế khác nhau, và một trong bốn thực thể mẫu của charter thực ra thuộc lớp khác. Cụ thể: (M1) FIXTURE SUY BIẾN — đại lượng ≡ hằng số trên trục test khai là đang kiểm. Đây là lõi thật của lớp, và nó CÓ nguyên nhân chung đo được: hai hằng số fixture/thế giới sinh ra gần như toàn bộ thực thể M1 tôi tìm được — `_spi(buckets=6)` ⇒ `_required_rest = 0` (vô hiệu ≥3 test trong một file), và world zero-cost `cash_cost_vnd_per_km = 0` ⇒ ONLINE trội tuyệt đối (làm n_online ≡ 6 trên toàn trục points_now). Nghĩa là M1 không phải 'nhiều lỗi rời': nó là MỘT tham số suy biến nhân bản ra nhiều test vô hiệu — và đó chính là giao với L5. Thuộc M1: S2-1, S2-2, ba thực thể mới ở test_shift_dp.py. (M2) VỊ NGỮ YẾU HƠN TÍNH CHẤT — fixture bình thường, đại lượng biến thiên bình thường, nhưng assert nhận trọn dải đạt tới được: `!= ONLINE`, `>= 0` trên một số đếm, `is not None`, `assert cs` (chỉ tồn tại), oracle tự quy chiếu. Thuộc M2: test_rest_when_zero_demand (S2-4), họ sensitivity 9 solver, expired_n, chùm tautology-theo-kiểu. M2 là THÓI QUEN VIẾT, không phải cấu trúc — không có tham số chung nào sinh ra nó, và sửa nó không sửa được M1. (M3) LỆCH ĐƠN VỊ / SAI CHỦ NGỮ — `projected_bonus_tier(vnd) >= 160(điểm)`; và tham số hoá trang trí ở cổng D-M3-17 (đại lượng của UI không xuất hiện trong assert nào). M3 hiếm nhưng nguy hiểm nhất vì đọc qua thì assert trông rất cụ thể. (M4) R-2 KHÔNG thuộc lớp này: test đúng, đường chạy thiếu ⇒ đó là L3. Giữ nó trong L2 sẽ làm cả hai lớp đếm trùng và làm cổng của L2 đi tìm sai thứ. KẾT LUẬN: 'CÓ' là quá rộng (gộp 3 cơ chế + 1 lớp khác); 'KHÔNG' là sai (M1 có nguyên nhân chung đo được và một cổng bắt được cả M1 lẫn M3). Nên: MỘT PHẦN — tách M1+M3 thành lớp L2 thật (có cổng chung, có nguyên nhân chung với L5), chuyển M2 thành một quy tắc viết test có cổng riêng rẻ hơn, trả R-2 về L3.",
+
+  "cong_chan_tai_dien": {
+    "ten": "CỔNG ĐỘT BIẾN SENTINEL + hai luật AST — bắt M1 và M3 tự động, không nhờ ai cẩn thận",
+    "phan_A_runtime": {
+      "file": "scripts/l2_dot_bien.py (bộ chạy) + tests/test_l2_cong_dot_bien.py (cổng) + scripts/l2_mutant_plugin.py (pytest plugin)",
+      "co_che": "Một SỔ ĐĂNG KÝ khai bộ ba (đường-dẫn-trường-output, sentinel bịa, danh sách test PHẢI đỏ). Cổng chạy từng ca trong SUBPROCESS: `pytest <targets> -p l2_mutant --l2-case=<id>` với plugin thay đúng trường đó bằng sentinel, rồi assert exit code KHÁC 0. Ca nào vẫn xanh ⇒ cổng ĐỎ kèm thông điệp 'trường X không có test nào ghim giá trị'. Đây chính là bộ máy tôi đã dựng và chạy trong vòng audit này — không phải đề xuất trên giấy: 7 plugin ở scratchpad, 4 phát hiện thật, 1 đối chứng dương tính (mutant_ctrl ⇒ 1 failed).",
+      "khoa_vong_lap_them_moi": "Kèm một luật TĨNH: mọi khoá của `solution` và mọi trường số của `sensitivity` mà 9 solver trả về phải có mặt trong sổ đăng ký HOẶC trong `MIEN_TRU: dict[str,str]` kèm lý do. Thêm output mới mà không đăng ký ⇒ đỏ. Mẫu này đã được chứng minh dùng được trong repo: `tests/test_config_flags_wired.py::CHUA_DUNG` làm đúng vậy cho cờ config.",
+      "chi_phi_do_that": "4 ca tôi đã chạy tốn 0,3s (shift_dp) – 1,6s (ui range) – 7,5s (fairness) – 202s (11 file solver). Sổ ~20 ca chạy theo NHÓM (một mutant, một lần gọi pytest trên tập test liên quan) ước 3–6 phút ⇒ hợp với gate trước merge / nightly, KHÔNG đặt trong suite nhanh mặc định."
+    },
+    "phan_B_tinh_AST": {
+      "file": "tests/test_l2_assert_co_phan_biet.py",
+      "luat_1_tham_so_trang_tri": "Với mọi test có @pytest.mark.parametrize(names, ...): mỗi tên tham số phải xuất hiện trong ÍT NHẤT MỘT biểu thức `assert` (truy theo phép gán cục bộ). Bắt đúng `test_cong_thuc_dung_tren_nhieu_muc_soc` — nơi ba ca cho ba assert giống hệt nhau. Quyết định được hoàn toàn bằng AST, không có heuristic.",
+      "luat_2_lech_don_vi": "Với mọi `assert <sub>[...][\"<field>\"] <op> <literal>` mà `<field>` được solver khai đơn vị qua `_num(value, \"<unit>\")`: nếu unit là 'vnd' thì literal < 1000 phải bị chặn (và ngược lại, unit 'points' với literal > 1000). Bắt đúng `projected_bonus_tier(vnd) >= 160`. Cần một bảng unit rút tự động từ các lời gọi `_num(...)` trong src/gsm_core/solvers/ — đã có sẵn, không phải viết tay.",
+      "mien_tru": "MIEN_TRU dict phải kèm lý do từng dòng; và một test đối chứng hai chiều (như test_CHUA_DUNG_khong_duoc_chua_co_DA_noi) kiểm mục miễn trừ nào đã hết lý do."
+    },
+    "phan_C_tu_chung_minh": "Bắt buộc theo tiền lệ đã có trong repo (test_future_leak_gate.py::test_cong_nay_THUC_SU_bat_duoc_ro_ri, test_range_matches_engine.py::test_scanner_nay_THUC_SU_bat_duoc): cổng phải có ca sever-restore dựng lại đúng bốn thực thể MỚI ở trên và đòi cổng bắn. Cổng không tự chứng minh đỏ được thì là cổng trang trí — và trớ trêu là chính nó sẽ trở thành một thực thể L2.",
+    "cai_KHONG_de_xuat": "Không đề xuất 'cấm assert >= 0' hay 'review kỹ hơn'. Luật cấm theo pattern sẽ bắt oan hàng loạt (nhiều `>= 0` là kiểm biên hợp lệ trong một test có assert mạnh khác), và tôi đã KHÔNG chứng minh được M2 có nguyên nhân chung — nên đưa M2 vào cổng tự động là dựng một cổng sẽ bị người sau tắt."
+  },
+
+  "cai_chua_kiem": [
+    "Đột biến sensitivity toàn suite: `pytest tests/` với mutant_sens_all TIMEOUT ở 10 phút. Kết quả 208-passed chỉ đo trên 11 FILE test solver, không phải toàn bộ 1.155 test. Có thể có test ở file khác bắt được — claim 'không test nào ghim giá trị sensitivity' vì thế là CHẶN TRÊN của 11 file đó, confidence TRUNG BÌNH-CAO chứ không phải CAO.",
+    "Đột biến tầm pin: tôi chỉ thử MỘT dạng méo (kẹp trần 40 km). Chưa thử sàn, bậc thang, hay đảo dấu — nên không được đọc thành 'mọi méo mó đều lọt', chỉ 'dạng trần lọt qua cả 205 test'.",
+    "Chùm tautology-theo-kiểu (thực thể thứ 7) CHƯA đột biến từng cái ⇒ confidence THẤP-TRUNG BÌNH, dựa trên đọc mã.",
+    "Chưa quét ui/web (JS) và ui/driver_app (Flutter) — nếu có test ở đó thì bức tranh L2 của đường sản phẩm còn thiếu một mảng.",
+    "Chưa chứng minh `mockdata.driver_state(...)['vehicle_range_km']` thực sự tới màn hình tài xế trong bản đang ship; hậu quả tôi mô tả là hậu quả của CỔNG bị vô hiệu, không phải bằng chứng tài xế đang thấy số sai.",
+    "P13 (truy vết hàm sống) chạy MỘT seed (5100), MỘT arm (all/coverage all), MỘT ngày. Danh sách 147 hàm 'không chạy' KHÔNG được dùng làm bằng chứng cho thực thể nào — nó chứa quá nhiều hàm phân tích sau-run. Cần chạy multiday + nhiều arm trước khi ai đó dùng lại nó.",
+    "`ui/backend/tests` đếm được 205 test trong lần chạy này, trong khi CLAUDE.md ghi 201 — số trong CLAUDE.md đã stale lần nữa; tôi KHÔNG điều tra chênh lệch 4 test này.",
+    "Phán xử MOT_PHAN dựa trên phân loại cơ chế của riêng tôi. Nó CHƯA qua refuter độc lập — và theo memory `gsm-independent-review-before-reporting-numbers`, 3/3 lần tự soi trước đây đều bị soi độc lập bắt lỗi giả định. Điểm dễ bị bác nhất: tôi khai M1 và M3 chung một cổng, nhưng chỉ M1 có bằng chứng nguyên nhân chung (buckets=6 + zero-cost); M3 mới có 2 thực thể, có thể là ngẫu nhiên."
+  ]
+}

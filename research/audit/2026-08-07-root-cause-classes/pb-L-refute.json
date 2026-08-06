@@ -1,0 +1,202 @@
+{
+  "vai_tro": "PHẢN BIỆN VIÊN — nhiệm vụ là CỐ BÁC giả thuyết lớp, không phải xác nhận",
+  "ngay": "2026-08-07",
+  "cach_lam": "Đọc 5 artifact rc-L*.json + 00-TU-KIEM. Với mỗi lớp: (a) kiểm các thực thể có chung CƠ CHẾ không; (b) dựng bản đồ trùng lặp giữa lớp; (c) MỞ file:line của một MẪU thực thể MỚI để loại nguỵ tạo; (d) ĐO khả thi của cổng bằng script thay vì đọc nhãn. Hai phép đo mới chạy trong vòng này: canon_scan.py (đếm số lần bắn của cổng B do L1 đề xuất) và l2_gate_feas.py (đếm số lần bắn của cổng AST luật 1 do L2 đề xuất).",
+
+  "thuc_the_toi_da_TU_MO_RA_KIEM": [
+    "ui/backend/app/routers/advice.py:62-63,99,126,185 — XÁC NHẬN: `SHIFT_START_MIN = DEFAULT_SHIFT_START_MIN = 6*60`, `_phase_of` (:126) dùng hằng đó, `get_advice` (:185) lấy `shift_start_min` từ query, `_norm_shift_end` gọi trong `_phase_of` KHÔNG truyền `start_min`. L1 thực thể #1 ĐÚNG.",
+    "src/gsm_core/lifecycle/checkpoint.py:346,351 — XÁC NHẬN `>= 6` và `20 * 60` viết cứng; canonical `cadence.effective_gap_min = max(20, DECISION_BUCKET_MIN=30) = 30` (cadence.py:61,105). L1 thực thể #2 ĐÚNG. `evaluate_checkpoint` CÓ call site sản phẩm (ui/backend/app/services/advice_checkpoint.py:347) và router v2 CÓ được mount (ui/backend/app/main.py:44) ⇒ đúng là đường sản phẩm.",
+    "ui/backend/app/services/advice_checkpoint.py:569-584 — XÁC NHẬN `_cadence_memory(self, driver_id)` duyệt TOÀN BỘ `store.checkpoints(driver_id)`, không lọc ngày/ca; `proactive_count = len(offered_ids)`, `dismissed_topics` là set không gắn pha. L1 #3 ĐÚNG (nhưng xem trùng lặp).",
+    "ui/backend/app/services/demo_session.py:487 (`haversine / 20.0 * 60.0`) và ui/backend/app/routers/routing.py:216 (`total_dist_km * 2.5`) + routing.py:46 `quote_distance(total_dist_km)` — XÁC NHẬN ba quy ước tốc độ và cước tính trên km chim bay. L1 #7 ĐÚNG.",
+    "tests/test_m0_integrity.py:212 — XÁC NHẬN `result.config.get(\"dispatcher.offer_cooldown_min\", 10.0)` (test tự mang default). Đây là nửa MỚI thật của L1 #6.",
+    "tests/test_shift_dp.py:75-81, 84-87, 126-133 — XÁC NHẬN nguyên văn: `assert n_online >= 3` + `projected_bonus_tier >= 160`; `all(action != 'ONLINE')`; `all(v is not None ...)` dưới comment khai đơn điệu. Fixture POLICY_REC (tests/test_shift_dp.py:24) `day_bonus_tiers = [[60,30000],[100,60000],[160,115000],[200,170000]]` ⇒ `proj_tier` (vnd) ≥ 160 thoả ngay ở mốc thấp nhất 30.000 ⇒ L2 thực thể LỆCH ĐƠN VỊ ĐÚNG, và ĐO ĐƯỢC trên chính fixture.",
+    "src/gsm_core/solvers/shift_dp.py:193-203, 239-249, 415-432 — XÁC NHẬN `cash_km` chỉ vào `online_net`; SWAP `-swap_fee + V[b+1, NS-1, ...]` xét TRƯỚC REST `0.0 + V[b+1, soc, ...]` với so sánh CHẶT; `solution` có `expected_swap_cost_vnd` nhưng KHÔNG có `n_swaps`. L5-02, L5-01, L5-03 ĐÚNG.",
+    "scripts/measure_e10.py:468 `mean([a.payout_vnd ...])` vs src/gsm_sim/parallel.py:132,141 `net = payout_vnd - cost_vnd` — XÁC NHẬN hai công thức cho cùng khoá `net_mean_all`. L5-04 ĐÚNG.",
+    "src/gsm_core/advisor/checkpoint_templates.py:29,31 — XÁC NHẬN `required_fact_ids`/`required_caveat_ids` có ĐÚNG 1 ref (dòng khai), trong khi `required_number_ids` có producer (:96) + test (tests/test_checkpoint_templates.py:28). L3-05 ĐÚNG.",
+    "src/gsm_core/lifecycle/projections.py:347 `EXECUTION_KINDS` — XÁC NHẬN 1 ref; src/gsm_sim/sim_metrics.py:640 dùng literal `\"standby_followed\"`. L3-06 ĐÚNG.",
+    "src/gsm_core/solvers/capacity_alloc.py:77-115 — XÁC NHẬN `params` không xuất hiện trong thân; sensitivity −20% viết cứng. L3-07 ĐÚNG.",
+    "src/gsm_core/features/bonus_gap.py:20-55 — XÁC NHẬN `history` không được đọc, docstring hứa hai nhánh. L3-08 ĐÚNG.",
+    "grep `charge_now|demand_shift|insufficient_history|\"BREAK\"` trên src/ ui/ scripts/ tests/ (.py/.dart/.js) = 0 hit — L3-09/L3-10 ĐÚNG.",
+    "src/gsm_sim/market_state.py:37-67 (`count_supply` chỉ đếm IDLE + enroute) và :112 (`trips_per_hour_est` default 1.5), :183 (`trips_per_driver_per_bucket = tphe * bucket/60`) — XÁC NHẬN mẫu số của market_state KHÔNG phải giờ đồng hồ online. Đây là cơ sở để BÁC một hệ quả của L1 (xem dưới).",
+    "src/gsm_sim/behavior.py:37-40 `ECON_WEIGHT = 0.7` (hằng module, tự khai ASSUMPTION 'hiệu chỉnh bằng gate test ≥30 seed'), dùng ở :97 — L6-M5 ĐÚNG.",
+    "configs/pilot_dongda.yaml:185-207, 232-237 · src/gsm_sim/archetypes.py:35 · src/gsm_core/mockgen/verify_stats.py:21,87-88,94 · tests/test_sim_realism.py:169 — XÁC NHẬN nguyên văn mọi câu trích của L6-M3, M4, M7 (kể cả `if not inb and k not in ('payout_ft_vnd','trips_ft_median'): ok = False`).",
+    "tracking/DEFERRED.md (dòng D-SIM-K6) — XÁC NHẬN `offer_cooldown_min = 10′` ở `world.py:171-172`, `pilot_dongda.yaml` KHÔNG có key, đã ghi DEFERRED sev TB từ 2026-08-06. ⇒ nhãn 'MỚI' của L1 thực thể #6 SAI.",
+    "ui/backend/tests/test_range_matches_engine.py:168-175 — MỞ RA ĐỌC: assert thứ nhất LÀ `round(soc / max(swap, charge), 1) < round(soc / min(swap, charge), 1)` — CÓ chứa `soc`. Đây là cơ sở BÁC cổng của L2 (xem dưới)."
+  ],
+
+  "do_moi_chay_trong_vong_nay": {
+    "canon_scan": {
+      "script": "scratchpad/canon_scan.py (AST, chạy < 3s)",
+      "cau_hoi": "Cổng B do rc-L1 đề xuất (ĐỎ khi numeric literal bằng một hằng canon xuất hiện ngoài module chủ sở hữu, kể cả tổ hợp `20*60`) sẽ bắn bao nhiêu lần trên repo HÔM NAY?",
+      "ket_qua": "165 lần bắn / 50 file (quét src/, ui/backend/app/, scripts/, ui/web; đã MIỄN 4 file chủ sở hữu). Phân bố: 30 → 43 · 6 → 41 · 20 → 26 · tổ hợp phút → 12 · 25.0 → 11 · 0.85 → 10 · 1.5 → 8 · 17.0 → 7 · 1.3 → 3 · 360 → 2 · 1320 → 1 · 1.6 → 1.",
+      "y_nghia": "Khuyết tật đầu bảng của chính L1 (`checkpoint.py:346` gõ `6`, `:351` gõ `20*60`) nằm lẫn giữa 40 chỗ khác cũng gõ `6` và 25 chỗ khác cũng gõ `20`. Tỷ lệ tín hiệu ≈ 4/165 = 2,4% ⇒ tỷ lệ phải MIỄN TRỪ ≈ 97,6%. rc-L1 tự đặt tiêu chí huỷ: *'nếu tỷ lệ exempt vượt ~10% số hit thì cổng đã hỏng'* ⇒ cổng B hỏng theo chính tiêu chí của nó, hỏng gấp ~10 lần ngưỡng. Và không thu hẹp được: bỏ 6/20/30 khỏi canon thì mất luôn khả năng bắt khuyết tật đầu bảng."
+    },
+    "l2_gate_feas": {
+      "script": "scratchpad/l2_gate_feas.py (AST, có truy alias 3 tầng)",
+      "cau_hoi": "Cổng AST 'luật 1 — tham số hoá TRANG TRÍ' của rc-L2 (mọi tên tham số parametrize phải xuất hiện trong ít nhất một assert) có bắt được thực thể mà L2 nói nó bắt không?",
+      "ket_qua": "38 test có parametrize; 6 bị bắn: tests/test_dadv04_bucket_rate.py:139 (`span`) · tests/test_e4_e03_swap_early.py:62 (`kw`) · tests/test_schema_matches_gsm_spec.py:35 (`full_path`) · tests/test_solver_properties.py:123 (`name`) · ui/backend/tests/test_v2_soft_advice_no_trace.py:102,110. ⇒ `test_cong_thuc_dung_tren_nhieu_muc_soc` KHÔNG nằm trong danh sách.",
+      "y_nghia": "rc-L2 khẳng định cổng này *'Bắt đúng test_cong_thuc_dung_tren_nhieu_muc_soc'* — SAI. Mở file ra: assert dòng 172 CÓ dùng `soc`. Cái sai của test đó không phải 'tham số không xuất hiện' mà là 'tham số xuất hiện trong một bất đẳng thức ĐÚNG với mọi soc>0' — một tính chất mà AST thuần không quyết định được. Kéo theo, mô tả '(c) biểu thức KHÔNG chứa soc ⇒ ba ca cho ba assert BYTE-GIỐNG NHAU' chỉ đúng cho assert THỨ HAI, không đúng cho test. Tỷ lệ bắn 6/38 thì chấp nhận được; vấn đề là cổng bắn TRẬT mục tiêu."
+    }
+  },
+
+  "verdicts": [
+    {
+      "lop": "L1 — NHIỀU QUY ƯỚC CHO MỘT SỰ THẬT",
+      "verdict": "MOT_PHAN",
+      "phan_xu_cua_agent": "CO (12 thực thể)",
+      "ly_do": "Nội dung LÕI đúng và tôi tự mở code xác nhận 4 thực thể nặng nhất (#1 _phase_of, #2 evaluate_checkpoint, #3 ký ức v2, #7 ba quy ước tốc độ) — tất cả nằm trên ĐƯỜNG SẢN PHẨM và tất cả có docstring tuyên bố đã hợp nhất trong khi code thì không. Đó là cấu trúc thật. NHƯNG mức 'CO' không đứng được vì bốn lý do đo được: (1) TRÙNG LẶP LỚP — chính agent L1 tách lớp làm hai cơ chế con (a) đọc-hụt-nguồn và (b) chép-luật; cơ chế (a) KHÔNG thuộc riêng L1: L3 gọi nó là 'cơ chế (a)' và coi là phần THẬT duy nhất của L3, L6 gọi nó là 'L6b'. Ba lớp, một cơ chế, và ba đề xuất cổng giống hệt nhau (L1 cổng A = L3 test_A = L6 phần a). Một lớp mà cơ chế mạnh nhất của nó bị hai lớp khác cùng sở hữu thì nó chưa phải một PHÂN HOẠCH. (2) THỰC THỂ KHÔNG MỚI — #6 (world.py:172) gắn nhãn 'MỚI' nhưng đó chính là D-SIM-K6, đã nằm trong tracking/DEFERRED.md với mô tả trùng khít (`offer_cooldown_min = 10′` default trong code, yaml không có key); chỉ nửa test (test_m0_integrity.py:212) là mới. #12 tự nhận ĐÃ BIẾT (S2-6). #3 tự nhận 'Cùng thực thể với mục trên'. ⇒ 12 → ~9 thực thể mới-phân-biệt. (3) MỘT HỆ QUẢ SAI MẪU SỐ — #8 kết luận 'config 1,5 cao hơn thực đo 24%' bằng cách so `advice.trips_per_hour_est` với cuốc/giờ-ĐỒNG-HỒ-online (1,205). Tôi mở nguồn gốc con số ra đọc (src/gsm_sim/market_state.py:37-67, :183): mẫu số mà market_state thi hành là sổ CUNG = IDLE + enroute, không phải giờ online. rc-L6 đã đo đúng mẫu số đó và ra 1,5005 rồi TỰ BÁC giả thuyết 'hằng ôi' của mình (L6-BAC-01). L1 tự thú trong `cai_chua_kiem` rằng 1,205 'KHÔNG hoàn toàn cùng đại lượng', nhưng trường `hau_qua` vẫn phát biểu như một kết luận. Vế bonus_feasibility (+18% ở mẫu số đồng hồ) thì SỐNG. (4) CỔNG CHÍNH KHÔNG KHẢ THI — đo được 165 lần bắn/50 file, exempt ~97,6% vs ngưỡng huỷ 10% do chính L1 đặt.",
+      "thuc_the_bi_bac": [
+        "#6 world.py:172 — nhãn 'MỚI' SAI: là D-SIM-K6 đã ghi DEFERRED (chỉ nửa test_m0_integrity.py:212 là mới)",
+        "#8 hệ quả 'config advice.trips_per_hour_est 1,5 cao hơn thực đo 24%' — BÁC: so sai mẫu số; mẫu số thi hành của market_state là IDLE+enroute (market_state.py:37-67), đo trên mẫu số đó = 1,5005 (rc-L6). Vế `bonus_feasibility.DEFAULT_TRIPS_PER_HOUR` GIỮ.",
+        "#12 allocation.py:9 — tự nhận ĐÃ BIẾT (S2-6), không tính là thực thể mới",
+        "#3 — tự nhận cùng thực thể với #2 (tách vế), không tính là thực thể thứ hai",
+        "#4, #5 — ĐÚNG nhưng bị đếm ba lần (cũng là L3-01/L3-02 và L6-M1)"
+      ],
+      "cong_kha_thi": false,
+      "cong_chi_tiet": "Cổng A (khoá config phải TỒN TẠI, khớp đường dẫn đầy đủ): KHẢ THI — 4 hit, 0 dương tính giả, tôi xác nhận cả 3 hit sản phẩm là thật. NHƯNG đây cũng chính là cổng L3 và L6 đề xuất ⇒ chỉ nên viết MỘT LẦN, và nó không thuộc riêng lớp nào. Cổng B (CANON literal): BỊ BÁC BẰNG ĐO — 165 bắn/50 file. Cổng B2 (test vi phân hai đường trên lưới input): KHẢ THI và là phần đáng giữ nhất của L1 — mẫu đã có (test_range_matches_engine.py), và 3 cặp seed L1 nêu (phase, nhịp, ETA đường thẳng) đều đối chiếu được hai hàm cụ thể, không phụ thuộc trùng literal."
+    },
+    {
+      "lop": "L2 — TEST GHIM VÔ HIỆU",
+      "verdict": "MOT_PHAN",
+      "phan_xu_cua_agent": "MOT_PHAN (11 thực thể)",
+      "ly_do": "Giữ nguyên mức MỘT PHẦN, và tôi ghi nhận đây là artifact có PHƯƠNG PHÁP mạnh nhất vòng này: nó là bản duy nhất chạy ĐỘT BIẾN CHỦ ĐỘNG kèm ĐỐI CHỨNG DƯƠNG TÍNH (mutant_ctrl ⇒ 1 failed), tức nó tự chứng minh bộ đo của mình có tác dụng trước khi tuyên bố 'vẫn xanh'. Tôi mở tests/test_shift_dp.py ra đọc và xác nhận nguyên văn cả bốn thực thể mới; riêng thực thể LỆCH ĐƠN VỊ tôi kiểm được bằng chính fixture (`day_bonus_tiers` mốc thấp nhất = 30.000đ ⇒ `proj_tier >= 160` thoả ở MỌI mốc) ⇒ đây là thực thể chắc nhất của cả năm artifact. Việc L2 tự tách M1/M2/M3 và tự TRẢ R-2 về L3 là hành vi phân loại đúng, không phải kể chuyện. NHƯNG ba trừ điểm: (1) nội dung ĐÃ BIẾT chiếm 4/11 (S2-1, S2-2, S2-4, R-2) và một trong bốn cái đó tự nhận thuộc lớp khác ⇒ 11 → 7 mới. (2) M1 (fixture suy biến) KHÔNG phải cơ chế riêng của L2: nguyên nhân chung mà L2 tìm ra — `_spi(buckets=6)` ⇒ `_required_rest = 0` và `cash_cost = 0` — là ĐÚNG CÁI làm nhánh SWAP của L5-01 thắng mọi thế hoà (khi rl≡0 thì REST mất giá trị 'trả nợ nghỉ', SWAP với SOC đầy luôn ≥ REST). Tức M1 và L5-01 là hai mặt của MỘT suy biến tham số, đang được đếm ở hai lớp. (3) M3 chỉ có 2 thực thể và L2 tự nhận 'có thể là ngẫu nhiên' — tôi đồng ý, không đủ để gọi là cơ chế.",
+      "thuc_the_bi_bac": [
+        "#11 R-2 REST_RAILS soc_low — L2 tự nhận thuộc L3; tôi xác nhận cách xếp đó và loại khỏi L2",
+        "#8, #9, #10 (S2-1, S2-2, S2-4) — ĐÃ BIẾT, chỉ mở rộng phép đo, không tính là thực thể mới",
+        "#7 chùm tautology-theo-kiểu — L2 tự xếp confidence THẤP-TRUNG BÌNH, chưa đột biến; giữ ở mức quan sát, KHÔNG được trích như thực thể",
+        "M1 với tư cách cơ chế RIÊNG của L2 — bị bác: nguyên nhân chung của nó (`buckets=6` ⇒ R=0; `cash_cost=0`) là cùng một suy biến với L5-01, đang đếm hai lần"
+      ],
+      "cong_kha_thi": true,
+      "cong_chi_tiet": "Phần A (cổng đột biến sentinel, sổ đăng ký + luật completeness + chạy subprocess): KHẢ THI — đã có bằng chứng vận hành thật trong vòng audit (7 plugin, 4 phát hiện, 1 đối chứng dương tính), chi phí đo được 0,3s–202s, phù hợp gate trước merge/nightly. Đây là cổng ĐÁNG LÀM NHẤT của cả vòng vì nó không dựa vào 'nhớ cẩn thận' và nó tự chứng minh đỏ được. Phần B luật 1 (parametrize trang trí): BỊ BÁC BẰNG ĐO — cổng chạy được (6/38 bắn, chấp nhận được) nhưng KHÔNG bắt được thực thể mà L2 nói nó bắt; cái sai của `test_cong_thuc_dung_tren_nhieu_muc_soc` là 'vị ngữ đúng với mọi giá trị tham số', không phải 'tham số không xuất hiện'. Phần B luật 2 (lệch đơn vị theo bảng `_num`): KHẢ THI và rẻ, nhưng bắt được đúng 1 thực thể ⇒ nên gộp vào phần A chứ đừng dựng thành một cổng riêng. Phần C (cổng tự chứng minh đỏ): BẮT BUỘC GIỮ — repo đã có tiền lệ."
+    },
+    {
+      "lop": "L3 — CƠ CHẾ MỒ CÔI",
+      "verdict": "MOT_PHAN",
+      "phan_xu_cua_agent": "MOT_PHAN (14 thực thể)",
+      "ly_do": "Đây là artifact TỰ PHẢN BIỆN đúng nhất: nó tự gọi lớp mình là 'một CÁI XÔ, không phải một cấu trúc', tự nêu PHÉP THỬ QUYẾT ĐỊNH (cổng có sẵn test_config_flags_wired bắt 0/14) và tự đề nghị KHÔNG mở cycle cho lớp. Tôi tán thành phán xử đó và xác nhận bằng cách mở 6 thực thể ra đọc (L3-05/06/07/08/09/10) — tất cả đều đúng như mô tả, không có thực thể nguỵ tạo. NHƯNG phải nói thẳng ba điều mà L3 chưa nói: (1) Phần THẬT của L3 — cơ chế (a) 'Config.get trả default im lặng' — KHÔNG phải phát hiện riêng của L3. Cùng ba dòng code đó (advice_bridge.py:202, :209, world.py:172) được L1 khai là thực thể #4/#5/#6 và L6 khai là L6-M1. Ba lớp cùng chỉ vào MỘT cơ chế ba-điểm-code, và cùng đề xuất MỘT cổng. Nếu 'lớp' là một phân hoạch thì đây là bằng chứng mạnh nhất vòng này rằng nó KHÔNG phải phân hoạch. (2) Phần (b) 'ký hiệu khai-mà-không-ai-dùng' là phần ĐÔNG NHẤT (9/14 thực thể) nhưng L3 tự nói nó 'không có cơ chế runtime nào cả — nó là sự vắng mặt' và KHÔNG đề xuất cổng cho nó. Một tập 9 thực thể không cơ chế, không cổng thì không phải một lớp, là một danh sách việc dọn dẹp. (3) Phần (c) (S5/S6/S8 + AdvisorPipeline mồ côi) L3 xếp đúng: đó là một CÂU HỎI CHO CƯỜNG (khai tử hay nối stack advisor), không phải một lớp lỗi. ⇒ Lớp giữ ở MỘT PHẦN nhưng phần giữ lại trùng với phần giữ lại của L1.",
+      "thuc_the_bi_bac": [
+        "L3-01, L3-02 — ĐÚNG về sự kiện nhưng bị đếm ba lần (= L1 #4/#5 = L6-M1); chỉ được tính MỘT lần trong tổng nợ",
+        "L3-13 dashboard_theme.SURFACE — L3 tự nhận 'Giao với L1 hơn L3 thuần'; xếp về L1, và mức độ thẩm mỹ ⇒ không nuôi lớp",
+        "L3-03 (S5/S6/S8) với tư cách THỰC THỂ CỦA LỚP — bác: đây là hệ quả của một quyết định kiến trúc chưa đóng (hai stack advisor), không phải một cơ chế lỗi; xếp thành câu hỏi cho Cường như chính L3 đề nghị",
+        "Nhóm (b) 9 thực thể (L3-05..L3-08, L3-11..L3-14) với tư cách MỘT LỚP — bác: L3 tự thừa nhận không có cơ chế runtime và không đề xuất cổng ⇒ là backlog dọn dẹp, không phải cycle"
+      ],
+      "cong_kha_thi": true,
+      "cong_chi_tiet": "test_A (hướng ngược code→config, khớp đường dẫn đầy đủ): KHẢ THI — 4 hit, 0 dương tính giả, tôi xác nhận 3 hit sản phẩm là thật và hit thứ tư (test_m0_integrity.py:212) cũng thật. test_B (khớp đường dẫn đầy đủ thay vì tên lá) CẦN THIẾT: không có nó thì chính dòng hỏng `cfg.get(\"orders.trip_km_median\")` lại làm cổng cũ tin rằng khoá đúng `demand.trip_km_median` đã có người đọc — tôi coi đây là lập luận mạnh nhất trong cả năm artifact về 'cổng bị chính lỗi nó đi bắt qua mặt'. test_C (cấm `cfg.get(<biến>)`) hợp lý, chi phí ~0. ⚠ ĐIỀU KIỆN: cổng này PHẢI được viết MỘT LẦN chung cho L1/L3/L6, không phải ba file test. L3 tự nhận cổng KHÔNG phủ (b) và (c) — tôi tán thành và coi đó là lý do (b)/(c) không được thành cycle."
+    },
+    {
+      "lop": "L5 — world zero-cost làm cả HỌ kênh trơ",
+      "verdict": "MOT_PHAN",
+      "phan_xu_cua_agent": "MOT_PHAN (10 thực thể)",
+      "ly_do": "Giữ MỘT PHẦN, và tôi xác nhận phần LÕI bằng cách mở shift_dp.py:193-260, 415-432 ra đọc: `cash_km` chỉ nhân vào nhánh ONLINE, REST reward ≡ 0.0, SWAP = −fee, so sánh CHẶT `v > best_v` với SWAP xét TRƯỚC REST — đúng cấu trúc 'một bên có tiền' mà L5 mô tả. Điểm mạnh nhất của artifact này là nó TỰ SỬA TÊN LỚP (từ 'zero-cost' sang 'phép so sánh MỘT-BÊN-CÓ-TIỀN + zero không khai báo') và tự BÁC một thành viên do charter chỉ định (E-05 im lặng ở cả 9 tổ hợp cash × fee) — đó là hành vi phản biện thật, không phải xác nhận. NHƯNG bốn trừ điểm: (1) BẰNG CHỨNG MẠNH NHẤT CỦA L5 KHÔNG THUỘC L5. L5-04 (hai công thức cho khoá `net_mean_all`, tôi xác nhận measure_e10.py:468 vs parallel.py:132,141) là chính xác định nghĩa của L1 — 'một tầng tự tính đại lượng mà module khác đã sở hữu, bằng công thức khác'. L5 tự nói câu quyết định: *'zero-cost không tạo ra lỗi — nó CHE một lỗi đã có sẵn'*. Cái CHE không phải cái GÂY; vậy L5-04 là thực thể L1 mà L5 mượn để chứng minh mình. Bỏ nó ra, phần định lượng còn lại của L5 nhẹ hẳn. (2) Sau khi trừ ĐÃ BIẾT (L5-01 = S2-4, L5-10 = D-E4-06) và tự nhận giao lớp (L5-07 → L3, L5-09 → L2, L5-04 → L1), thực thể mới-độc-quyền còn L5-02, L5-03, L5-08 = 3/10. (3) L5-01 phụ thuộc điều kiện `rl ≡ 0` — mà `rl ≡ 0` chính là suy biến `_required_rest(6)=0` mà L2 khai là nguyên nhân chung của M1. Cùng một tham số suy biến nuôi flagship của hai lớp. (4) Mệnh đề trung tâm của charter ('bật giá thật thì phanh sống lại') bị chính L5 BÁC bằng đo với cash_cost (bất biến từng bit trên [70, 250], ngưỡng lật 4.325đ/km = 17–62× giá thật) ⇒ charter mô tả lớp SAI, chỉ swap_fee mới là phanh. Đó là lý do lớp không thể lên 'CO'.",
+      "thuc_the_bi_bac": [
+        "L5-04 net_mean_all — ĐÚNG về sự kiện (tôi kiểm code), nhưng XẾP SAI LỚP: cơ chế là 'hai quy ước cho một sự thật' (L1); zero-cost chỉ là chất CHE, theo chính lời L5",
+        "L5-01 — tự nhận ĐÃ BIẾT (S2-4); phần mới là định lượng 8×, không phải thực thể mới. Thêm: điều kiện kích hoạt của nó (`rl≡0`) trùng nguyên nhân chung của L2-M1",
+        "L5-10 station_choice — tự nhận ĐÃ BIẾT (D-E4-06), chỉ CITE",
+        "L5-07 policy_costs_as_of — tự nhận 'giao L3/L5'; cơ chế là mồ côi (L3), zero-cost chỉ là lý do mồ côi",
+        "L5-09 test_c1_cost_term — tự nhận 'giao L2/L5'",
+        "Thành viên charter 'E-05 / sp_end_only' — BÁC bằng đo của chính L5 (END = 0/36 ở cả 9 tổ hợp cash × fee). Charter README.md:17 xếp sai; ai sửa L5 rồi tưởng E-05 được sửa theo là sai."
+      ],
+      "cong_kha_thi": true,
+      "cong_chi_tiet": "G1 (một tên một công thức, stub RunResult với cost>0, kèm phần COMPLETENESS tự grep producer mới): KHẢ THI và bắt được lỗi thật ngay hôm nay — nhưng lưu ý nó là cổng của L1, không phải của L5. G2 (sổ MONEY_PARAMS + quét độ nhạy trên DẢI GIÁ THỰC, dán nhãn LIVE/INERT vào snapshot commit): ĐÂY LÀ CỔNG THIẾT KẾ TỐT NHẤT VÒNG NÀY, vì nó KHÔNG assert kết cục ('phải LIVE') mà assert 'nhãn khớp snapshot đã commit' — tức nó tuân đúng kỷ luật 4 (mô hình tĩnh nói về CẤU TRÚC, không nói về KẾT CỤC) và không tạo áp lực vặn tham số. Phần COMPLETENESS (quét khoá khớp /_vnd($|_per_)/ trong DEFAULT_PARAMS + config) làm nó không phải 'nhớ cẩn thận hơn'. G3 (zero phải được KHAI BÁO tại điểm tiêu thụ; cấm trạng thái 'ACTIVE với giá trị 0' im lặng; thêm `n_swaps` vào solution): KHẢ THI, rẻ, và được hai ĐỐI CHỨNG của chính L5 biện minh (mockdata est_net=None và cadence.enabled=false đều vô hại VÌ được khai báo). ⚠ Rủi ro chưa ai nêu: G3 buộc `solve()` LUÔN trả `terms_active` ⇒ đổi shape output của solver ⇒ phải kiểm schemas/ và test_solver_report_schema trước, đây là đổi contract chứ không phải thêm test."
+    },
+    {
+      "lop": "L6 — hiệu chỉnh BÙ cho khuyết tật",
+      "verdict": "KHONG",
+      "phan_xu_cua_agent": "MOT_PHAN (7 thực thể)",
+      "ly_do": "Tôi BÁC L6 với tư cách MỘT LỚP ĐÁNG SỬA — không bác các phát hiện bên trong nó. Mọi câu trích của L6 tôi đều mở file ra kiểm và ĐỀU ĐÚNG NGUYÊN VĂN (archetypes.py:35, verify_stats.py:21/87-88/94, test_sim_realism.py:169, pilot_dongda.yaml:232-237 và 185-207, behavior.py:37-40). L6-BAC-01 là mục kỷ luật tốt nhất trong cả năm artifact (tự bác một giả thuyết bằng đo, kèm câu 'nếu tôi dừng ở phép suy thì đã báo một finding SAI'). Nhưng bốn đường phản biện đều gãy cho L6: (a) KHÔNG CHUNG CƠ CHẾ — sau khi trừ trùng lặp, thực thể độc quyền còn M3, M4, M5. M3 = liều tham số world chọn theo trần một chỉ số thí nghiệm. M4 = khuyết tật được CỐ Ý GIỮ LẠI vì nó sinh ra dư địa đo được — L6 tự gọi là 'L6 ĐẢO CHIỀU'. M5 = một hằng module ngoài config, tự khai ASSUMPTION. 'Bù cho khuyết tật', 'giữ khuyết tật' và 'hằng không có neo đo' là ba việc khác nhau ở runtime; 'sửa lớp' cho ba cái đó không có nghĩa gì. (b) TRÙNG LẶP NẶNG NHẤT VÒNG — 4/7 thực thể không thuộc L6: K1 tự nhận ĐÃ BIẾT (UPDATE-176/177); M1 là advice_bridge.py:202/209, đã bị L1 và L3 khai (đếm lần thứ BA); M2 là bonus_feasibility 1.5, đã bị L1 khai (#8, và hai bên phán xử NGƯỢC NHAU về cùng con số); M7 tự nhận 'thuộc L2 nhiều hơn L6'. M6 tự xếp 'Phần thuộc L6: THẤP — tôi KHÔNG chỉ ra được defect cụ thể nào đứng sau nó'. (c) THỰC THỂ MẠNH NHẤT TỰ NHẬN THUỘC LỚP KHÁC — L6 viết thẳng: *'Hai thực thể MẠNH NHẤT tôi tìm được (M1, M2) thực ra KHÔNG phải tham số world chỉnh để đạt mục tiêu'* và đề nghị tách thành 'L6b'. L6b chính là cơ chế (a) của L3 và cơ chế (a) của L1. Một lớp mà hai thực thể mạnh nhất của nó thuộc lớp khác thì phần còn lại phải tự đứng — và phần còn lại là 3 thực thể không chung cơ chế. (d) KHÔNG CÓ CỔNG KHẢ THI CHO CHÍNH ĐIỀU NÓ MÔ TẢ — xem trường cong_kha_thi. ⇒ Đề nghị: KHÔNG mở cycle 'sửa lớp L6'. Đưa M3, M4, M5 vào TODO/DEFERRED như ba nợ ĐƠN LẺ có severity riêng (M4 đáng chú ý nhất vì nó chạm khả năng ngoại suy sang tài xế thật, và vì nó có một TEST đang CẤM thu hẹp khuyết tật — tests/test_sim_realism.py:169). Chuyển M1/M2 về cycle cổng khoá-config chung.",
+      "thuc_the_bi_bac": [
+        "L6-K1 (actors.n 74→90) — tự nhận ĐÃ BIẾT, chỉ CITE ⇒ không nuôi lớp",
+        "L6-M1 (advice_bridge.py:202/209) — ĐÚNG nhưng là lần đếm THỨ BA của cùng hai dòng code (L1 #4/#5, L3-01/L3-02); và L6 tự nói nó không phải 'tham số world chỉnh để đạt mục tiêu'",
+        "L6-M2 (bonus_feasibility 1.5) — trùng L1 #8; và hai artifact phán xử NGƯỢC NHAU trên cùng con số (L1: config sai 24% — BÁC; L6: config đúng ở mẫu số market_state, chỉ bonus_feasibility lệch +18% — GIỮ)",
+        "L6-M7 (verify_stats boolean tổng) — tự nhận thuộc L2",
+        "L6-M6 (wait_cap_min) — tự xếp độ tin 'THẤP' cho việc thuộc lớp; số 3,6% thì giữ như một quan sát, không phải thực thể lớp",
+        "Bản thân LỚP L6 — bác: 3 thực thể độc quyền còn lại (M3, M4, M5) không chung cơ chế runtime và không có cổng chung"
+      ],
+      "cong_kha_thi": false,
+      "cong_chi_tiet": "Phần (a) quét khoá chết: KHẢ THI nhưng là cổng của L1/L3, đã bị đề xuất hai lần trước đó — không tính là cổng của L6. Phần (b) 'sổ hiệu chỉnh có hạn dùng' (chạy 5 seed, đo lại hằng, đỏ khi |config − đo|/đo > 8%): CHỈ MỘT PHẦN KHẢ THI và có phản-tác-dụng mà chính L6 nêu — 'khi test đỏ, cách sửa rẻ là VẶN CONFIG cho khớp phép đo — đúng chính lớp L6'. Cộng thêm: nó biến 5 lần run_once thành phụ thuộc của suite, và nó sẽ đỏ khi thế giới đổi HỢP LỆ ⇒ đúng mẫu cổng sẽ bị người sau nới dung sai hoặc mark skip. Phần (c) lint khai báo: L6 tự gọi là 'phần YẾU NHẤT', chỉ regex trên comment, không kiểm được nội dung lời khai. QUAN TRỌNG NHẤT: với M3 và M4 — hai thực thể DUY NHẤT mà L6 nói là 'sạch' và 'chia chung cơ chế' — L6 thừa nhận 'không test tĩnh nào đọc được ý định' và hạ xuống 'ĐỀ XUẤT QUY TRÌNH, không phải test' (mọi thí nghiệm công bố Δ advisor phải công bố kèm Δ ở ±1 bậc của liều). Đề xuất quy trình đó ĐÁNG LÀM và tôi tán thành — nhưng một lớp mà cổng của nó là 'yêu cầu báo cáo' thì không thoả tiêu chí (d): nó phụ thuộc người nhớ, và nó sẽ bị bỏ đúng lúc bận nhất."
+    }
+  ],
+
+  "trung_lap": [
+    {
+      "thuc_the": "src/gsm_sim/advice_bridge.py:202 (`cfg.get(\"orders.trip_km_median\", 3.5)`)",
+      "bi_dem_o": ["L1 thực thể #4", "L3-01", "L6-M1"],
+      "so_lan_dem": 3,
+      "co_che_dung": "Config.get trả default IM LẶNG khi dotted path vắng (src/gsm_sim/config.py:32-40). Một cơ chế, một cổng.",
+      "he_qua_cua_trung_lap": "Ba lớp cùng dùng dòng này làm bằng chứng 'lớp của tôi có thật', và ba lớp cùng đề xuất một cổng giống hệt nhau (L1 cổng A / L3 test_A / L6 phần a). Nếu kế hoạch xếp theo 'số thực thể mỗi lớp' thì dòng này được tính ba suất."
+    },
+    {
+      "thuc_the": "src/gsm_sim/advice_bridge.py:209 (`cfg.get(\"orders.cancel_after_accept_rate\", 0.05)`)",
+      "bi_dem_o": ["L1 thực thể #5", "L3-02", "L6-M1 (gộp chung với :202)"],
+      "so_lan_dem": 3,
+      "co_che_dung": "Cùng cơ chế trên. Hôm nay Δ=0 vì default trùng giá trị config."
+    },
+    {
+      "thuc_the": "src/gsm_sim/world.py:172 (`cfg.get(\"dispatcher.offer_cooldown_min\", 10.0)`)",
+      "bi_dem_o": ["L1 thực thể #6 (gắn nhãn MỚI — SAI)", "L3 danh sách đã biết (đúng: D-SIM-K6)", "L6 phần cổng"],
+      "so_lan_dem": 2,
+      "ghi_chu": "Đã nằm trong tracking/DEFERRED.md từ 2026-08-06 với mô tả trùng khít. Chỉ nửa test (tests/test_m0_integrity.py:212 mang cùng khoá ma + cùng default) là MỚI thật — và nửa đó thuộc L2 (test ghim vào bản sao hằng của chính nó) chứ không thuộc L1."
+    },
+    {
+      "thuc_the": "src/gsm_core/solvers/bonus_feasibility.py:20 (`DEFAULT_TRIPS_PER_HOUR = 1.5`) ↔ configs/pilot_dongda.yaml:395",
+      "bi_dem_o": ["L1 thực thể #8", "L6-M2"],
+      "so_lan_dem": 2,
+      "xung_dot": "⚠ HAI ARTIFACT PHÁN XỬ NGƯỢC NHAU TRÊN CÙNG CON SỐ. L1: 'config 1,5 cao hơn thực đo 24%' (mẫu số: giờ đồng hồ online, đo 1,205). L6: đo 1,5005 trên mẫu số CÓ MẶT và TỰ BÁC giả thuyết 'hằng ôi'. Tôi mở nguồn gốc: src/gsm_sim/market_state.py:37-67 `count_supply` đếm IDLE + enroute, :183 `trips_per_driver_per_bucket = tphe × bucket/60` ⇒ mẫu số thi hành KHÔNG phải giờ online ⇒ phán xử của L6 gần đúng hơn và phần 'config sai 24%' của L1 phải BỎ. Vế còn sống ở CẢ HAI: `bonus_feasibility._hour_rate` đi theo giờ ĐỒNG HỒ (`hours_budget_remaining = (shift_end − now)/60`) nên fallback ước CAO ~18% — đây mới là nợ đường sản phẩm. ⚠ Cả hai mẫu số vẫn chưa phải mẫu số CHÍNH XÁC của count_supply (IDLE+enroute loại cả thời gian ON_TRIP) ⇒ con số 1,5005 nên đọc là 'không mâu thuẫn', không phải 'đã xác nhận'."
+    },
+    {
+      "thuc_the": "`_spi(buckets=6)` ⇒ `_required_rest = 0` (tests/test_shift_dp.py + src/gsm_core/solvers/shift_dp.py:61)",
+      "bi_dem_o": ["L2 cơ chế M1 (nguyên nhân chung của ≥3 test vô hiệu)", "L5-01 (điều kiện làm SWAP thắng mọi thế hoà)"],
+      "so_lan_dem": 2,
+      "co_che_dung": "Khi rl ≡ 0, REST mất giá trị 'trả nợ nghỉ' ⇒ SWAP (SOC đầy, fee=0) luôn ≥ REST và được tie-break vì xét trước. Cùng MỘT tham số suy biến sinh ra flagship của hai lớp — L2 tự nhận 'đó chính là giao với L5' nhưng L5 không nhận lại."
+    },
+    {
+      "thuc_the": "scripts/measure_e10.py:468 vs src/gsm_sim/parallel.py:141 (`net_mean_all`)",
+      "bi_dem_o": ["L5-04 (bằng chứng MẠNH NHẤT của L5)"],
+      "so_lan_dem": 1,
+      "ghi_chu": "Không bị đếm hai lần, nhưng XẾP SAI LỚP: cơ chế là 'hai quy ước cho một sự thật' = L1. L5 tự viết 'zero-cost không tạo ra lỗi — nó CHE một lỗi đã có sẵn'. Nếu chuyển nó về L1 thì L1 mạnh lên và L5 yếu đi — đây là chỗ ranh giới lớp thay đổi kết luận."
+    },
+    {
+      "thuc_the": "REST_RAILS soc_low (R-2)",
+      "bi_dem_o": ["L2 thực thể #11 (tự nhận 'thuộc L3 hơn L2')"],
+      "so_lan_dem": 1,
+      "ghi_chu": "L2 xử lý đúng: giữ trong danh sách nhưng dán nhãn thuộc lớp khác và KHÔNG dùng để nuôi phán xử. Đây là cách xử lý mẫu mà bốn artifact kia nên theo."
+    },
+    {
+      "thuc_the": "src/gsm_core/mockgen/verify_stats.py:87-88 (boolean tổng miễn 2/4 chỉ số)",
+      "bi_dem_o": ["L6-M7 (tự nhận 'thuộc L2 nhiều hơn L6')"],
+      "so_lan_dem": 1
+    },
+    {
+      "thuc_the": "src/gsm_core/solvers/shift_dp.py:332 `policy_costs_as_of` (0 call site production)",
+      "bi_dem_o": ["L5-07 (tự nhận 'giao L3/L5')"],
+      "so_lan_dem": 1,
+      "ghi_chu": "Cơ chế = mồ côi (L3); zero-cost chỉ là LÝ DO không ai truyền as_of."
+    },
+    {
+      "thuc_the": "src/gsm_sim/dashboard_theme.py:21 SURFACE",
+      "bi_dem_o": ["L3-13 (tự nhận 'Giao với L1 hơn L3 thuần')"],
+      "so_lan_dem": 1
+    },
+    {
+      "thuc_the": "src/gsm_core/features/allocation.py:9 `BUCKET_MIN = 30`",
+      "bi_dem_o": ["L1 thực thể #12 (tự nhận ĐÃ BIẾT = S2-6)"],
+      "so_lan_dem": 1
+    },
+    {
+      "tong_ket_so": "54 suất thực thể được khai (L1 12 + L2 11 + L3 14 + L5 10 + L6 7). Trừ: 3 dòng code bị đếm 2–3 lần (advice_bridge:202 ×3, :209 ×3, world.py:172 ×2, bonus_feasibility:20 ×2 ⇒ 6 suất thừa) · 9 suất tự nhận ĐÃ BIẾT hoặc chỉ CITE (L1 #12, L2 #8/#9/#10/#11, L5-01/L5-10, L6-K1, L1 #6) · 5 suất tự nhận thuộc lớp khác (L2 #11, L5-07, L5-09, L6-M7, L3-13 — có chồng với mục trên) ⇒ thực thể MỚI-PHÂN-BIỆT ước ~36, không phải 54. Con số này là ƯỚC LƯỢNG của tôi từ bản đồ trên, KHÔNG phải phép đếm cơ học — ai dùng phải đếm lại."
+    }
+  ],
+
+  "ket_luan_chung": "Bốn đường phản biện cho ra một kết quả nhất quán: LỚP LÀ MỘT CÁCH KỂ CHUYỆN GỌN CHO BA CƠ CHẾ THẬT, không phải sáu cấu trúc. Ba cơ chế đó — và chỉ ba — vượt qua cả bốn phép thử (chung cơ chế runtime · không trùng lớp khác · thực thể mở file:line ra kiểm được · có cổng chặn tái diễn khả thi và tự chứng minh được): (1) KHOÁ CONFIG MA + default im lặng — 3 điểm code (advice_bridge.py:202, :209, world.py:172), một cổng tĩnh, 0 dương tính giả; cơ chế này đang bị BA lớp cùng nhận là của mình (L1(a), L3(a), L6b) và sinh ra BA đề xuất cổng trùng nhau ⇒ đây là bằng chứng mạnh nhất rằng phân lớp hiện tại không phải một phân hoạch. (2) CHÉP LUẬT / HAI CÔNG THỨC CHO MỘT KHÁI NIỆM trên đường sản phẩm — `_phase_of` vs `get_advice`, `evaluate_checkpoint` vs `cadence.evaluate`, `_cadence_memory` v2 vs canonical, ba quy ước ETA, hai công thức `net_mean_all`; chặn được bằng TEST VI PHÂN hai đường trên lưới input (mẫu đã có: test_range_matches_engine.py), KHÔNG chặn được bằng quét literal — tôi ĐO: cổng CANON của L1 bắn 165 lần/50 file, exempt ~97,6% so với ngưỡng huỷ 10% do chính L1 đặt. (3) TEST KHÔNG PHÂN BIỆT ĐƯỢC ĐÚNG VỚI SAI — chặn được bằng CỔNG ĐỘT BIẾN SENTINEL, là cổng duy nhất trong vòng này đã chạy thật kèm đối chứng dương tính; nhưng cổng AST đi kèm của nó BẮN TRẬT mục tiêu (tôi đo: `test_cong_thuc_dung_tren_nhieu_muc_soc` không nằm trong 6/38 test bị bắn, vì `soc` CÓ trong assert dòng 172 — cái sai là 'vị ngữ đúng với mọi soc', AST không quyết định được). Ba lớp còn lại thì: L5 giữ được một lõi hẹp và ĐÃ TỰ ĐỔI TÊN cho đúng ('phép so sánh MỘT-BÊN-CÓ-TIỀN + zero không khai báo'), nhưng bằng chứng mạnh nhất của nó (L5-04) thuộc cơ chế (2) và mệnh đề trung tâm của charter ('bật giá thật thì phanh sống lại') đã bị chính nó bác bằng đo với cash_cost; L3 tự gọi mình là 'một cái xô' và tự đề nghị không mở cycle — tôi tán thành; L6 thì BỊ BÁC như một lớp: 4/7 thực thể trùng hoặc tự nhận thuộc lớp khác, 3 cái còn lại (M3 liều, M4 giữ-khuyết-tật, M5 ECON_WEIGHT) không chung cơ chế runtime nào, và cổng cho chính chúng bị chính L6 hạ xuống 'đề xuất quy trình, không phải test'. ⇒ KHUYẾN NGHỊ CHO PLAN: đừng lập 6 cycle theo 6 lớp, và đừng xếp ưu tiên theo SỐ THỰC THỂ mỗi lớp (con số đó bị thổi ~50%: 54 suất khai → ~36 thực thể phân biệt). Lập 3 cycle theo 3 cơ chế trên, mỗi cycle MỘT cổng viết MỘT LẦN (cổng khoá-config phải là một file, không phải ba). Mọi thứ còn lại — 9 ký hiệu mồ côi của L3(b), S5/S6/S8 + AdvisorPipeline của L3(c), M3/M4/M5 của L6 — vào TODO/DEFERRED như nợ ĐƠN LẺ có severity và điều kiện mở lại, đúng như charter nói phải làm nếu giả thuyết lớp sai. ⚠ VÀ MỘT ĐIỀU KIỆN TIÊN QUYẾT KHÔNG THUỘC LỚP NÀO: 00-TU-KIEM §3 đo được 6/6 kênh advisor đang TẮT ⇒ bán kính ảnh hưởng HÔM NAY của phần lớn nợ trong cả năm artifact là 0; ba cycle trên phải xếp theo bán kính thật (đường sản phẩm v1/v2 trước, rồi kênh positioning đang sống, rồi độ tin của phép đo), không theo lớp nào tìm ra nhiều thực thể hơn.",
+
+  "cai_toi_CHUA_kiem": [
+    "Tôi KHÔNG chạy lại bất kỳ phép đo sim nào của năm artifact (payout/cuốc, 8× SWAP, 1,205 vs 1,5005, 23.685–25.603đ phân kỳ net, bất biến từng bit trên [0, 4.325]đ/km). Mọi con số sim tôi nhắc đều là TRÍCH LẠI của agent, KHÔNG phải tôi đo. Hai con số duy nhất tôi tự đo trong vòng này là 165 (cổng CANON) và 6/38 (cổng AST luật 1) — đều là phép quét TĨNH, chạy < 3s, tái lập được bằng script trong scratchpad.",
+    "Tôi kiểm CẤU TRÚC của L5-01/L5-02 bằng đọc shift_dp.py, KHÔNG chạy lại lưới 36 case. Ngưỡng lật 4.325đ/km và histogram bất biến là số của L5.",
+    "Danh sách canon trong canon_scan.py là do TÔI dựng theo mô tả của L1 (L1 không liệt kê chính xác giá trị), nên con số 165 phụ thuộc danh sách đó. Nhưng kết luận KHÔNG nhạy: ba giá trị ồn nhất (6, 20, 30) chính là ba giá trị của khuyết tật đầu bảng ⇒ mọi cách thu hẹp danh sách đều đánh đổi giữa ồn và mù.",
+    "Tôi chưa kiểm mã Dart (ui/driver_app/lib) và JS (ui/web) — cả năm artifact cũng đều tự nhận chưa quét. Nếu có thực thể ở đó thì bức tranh đường sản phẩm còn thiếu một mảng, và điều đó có thể LÀM MẠNH lên (không làm yếu đi) cơ chế (2).",
+    "Con số '~36 thực thể phân biệt' là ước lượng từ bản đồ trùng lặp của tôi, không phải phép đếm cơ học. Ai trích phải đếm lại.",
+    "Tôi chưa chạy full suite (`uv run pytest -q` + `uv run pytest -q ui/backend/tests`) ⇒ không có phát biểu nào ở đây dựa trên trạng thái suite.",
+    "Phản biện của tôi về mẫu số trips/giờ dừng ở chỗ 'mẫu số của L1 sai'; tôi KHÔNG chứng minh mẫu số của L6 (giờ CÓ MẶT = online − rest − charge) là mẫu số ĐÚNG của count_supply — count_supply loại cả thời gian ON_TRIP, nên 1,5005 nên đọc là 'không mâu thuẫn', không phải 'đã xác nhận'. Muốn chốt thì phải đo cuốc/giờ trên đúng sổ IDLE+enroute.",
+    "Tôi KHÔNG kiểm chéo 12 finding đã biết (S2-1..S2-6, R-1..R-7) hay các D-* được cite — theo yêu cầu, chỉ CITE."
+  ]
+}
