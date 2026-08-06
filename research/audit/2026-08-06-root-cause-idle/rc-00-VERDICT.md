@@ -1,5 +1,28 @@
 # RC-00 — VERDICT: vì sao thời gian thừa của `station_choice` không chảy vào đơn
 
+> ## ⚠ ĐÍNH CHÍNH 2026-08-06 — đọc TRƯỚC §0 và §2
+>
+> Phép đo **F1 basin-map** (`f1-basin-map-KETQUA.md`, 0 seed, chính là falsifier mà mục adversarial của
+> file này yêu cầu) đã chạy và **làm YẾU hai phát biểu dưới đây**:
+>
+> 1. **"đúng HAI ô bẫy"** là **quá hẹp**. Ở bậc sốt-ruột cao, luật leo dốc cho **6 attractor** (đều là
+>    **chu trình hai ô** — đúng như §2(3) dự đoán ✅), nhưng lưu vực lớn nhất là **`88f`+`8c7` (42,8%)**,
+>    **không phải** `953`/`bb3`; cặp `94b`+`953` chỉ **14,7%**, và `bb3` không có trong top-5 khi σ=0.
+> 2. **"Bẫy do TÍNH ĐỊA PHƯƠNG, không do nhiễu"** — **SAI**. Với σ thực tế theo archetype (0,10–0,60),
+>    attractor **vỡ thành 40–78 cái**, top-3 chỉ còn **30,4% → 13,7%** ⇒ luật leo dốc **một mình không
+>    dự đoán được** việc 56,6% phút idle dồn vào đúng hai ô.
+>
+> **Phát biểu đã hiệu chỉnh:** *luật leo dốc + tầm nhìn 0,74 km tạo ra một **HỌ** điểm hút cục bộ và cung
+> rảnh bị giam trong họ đó* — **không** phải *"đúng hai ô, do tính địa phương chứ không do nhiễu"*.
+>
+> **Phần KHÔNG bị bác, ngược lại còn được củng cố:** cơ chế **là** luật leo-dốc-theo-niềm-tin, không phải
+> nhà ở/deadhead — `rc-03` đo nguồn vào hai ô hút: `relocate_demand_seek` **123** vs `deadhead` **2** vs
+> `go_online` **4** (**95%** do chính luật đó). Và `give_up` sinh **chu trình hai ô** đã được F1 xác nhận
+> độc lập, kể cả tìm ra đúng cặp `94b`+`953`.
+>
+> **Còn `UNRESOLVED`:** vì sao run thật cho `953`+`bb3` mà không phải cặp lưu vực lớn nhất — cần đo **phân
+> bố lượt ghé theo ô** trong run thật; bản đồ tĩnh là mô hình quá thô cho câu đó.
+
 Ngày: 2026-08-06 · Vai: RC-04 (phản biện rc-01/rc-02/rc-03 + phán quyết cuối) · Mock: có (sim)
 Tiền đề: `rc-01-mechanism.json` (cơ chế, đọc code) · `rc-02-numbers.json` (số nền) · `rc-03-overlap.json` (probe đo trong sim)
 
