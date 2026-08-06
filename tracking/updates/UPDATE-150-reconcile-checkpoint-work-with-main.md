@@ -100,6 +100,26 @@ Cường đã flag (`PENDING-REVIEW.md` K-01, "cho KHÁNH") 2 test đỏ sẵn t
 - `tests/test_cadence_sim.py::test_count_positioning_in_budget_flag_is_alive` — pre-existing trên main sạch, KHÔNG thuộc phạm vi cycle này, cần chủ cổng `count_positioning_in_budget`/D-ĐA04-03 xem lại.
 - `UPDATE-114-requirements-and-simulator-setup.md` cũ + `requirements.txt` — hỏi Khánh có cần giữ/renumber riêng không.
 
-## Kết quả cuối (điền sau khi root suite xong)
+## Kết quả cuối
 
-Root suite: **1110 passed / 4 skipped / 3 failed** — cả 3 fail pre-existing trên `origin/main` sạch (chứng minh bằng stash), không do PR này gây ra. Backend: 195/195. Comparator: IDENTICAL 5/5. Sẵn sàng commit + push + PR.
+Root suite (local, có mock data cũ sẵn trong `data/mock/realdata-v1/` từ phiên trước): **1110 passed / 4 skipped / 3 failed** — cả 3 fail pre-existing trên `origin/main` sạch (chứng minh bằng stash), không do PR này gây ra. Backend: 195/195. Comparator: IDENTICAL 5/5. Push + PR #6 đã tạo, MERGEABLE.
+
+### ĐÍNH CHÍNH — CI GitHub Actions phát hiện fail thứ TƯ, khác với local
+
+CI job "test" trên PR #6 chạy `uv run pytest -q` từ checkout SẠCH (không có `data/mock/realdata-v1/*.parquet`, vì `data/mock/**/*.parquet` đã gitignore từ trước — xác nhận bằng `git diff origin/main..HEAD -- .gitignore`, chỉ tôi thêm đúng 1 dòng cho `checkpoint-timeline.json`). Kết quả CI: **4 failed, 1109 passed, 4 skipped**. 3 fail đầu khớp local. Fail thứ 4, **chỉ xuất hiện trên CI vì môi trường không có mock data cục bộ**:
+
+```
+tests/test_schema_versioning.py::test_persisted_old_records_still_validate
+AssertionError: chỉ kiểm được 0 record — bộ persist thiếu, test mất răng
+assert 0 >= 20
+```
+
+**Root cause đã chứng minh (đọc code, không đoán):**
+- `.github/workflows/ci.yml` job "Suite chính" chỉ có `uv sync` rồi `uv run pytest -q` — **không có bước sinh mock data** (`regen_mock.py`) trước khi chạy test.
+- Test đọc `data/mock/realdata-v1/{entity}.parquet` và assert `checked >= 20` record persist thật.
+- `data/mock/**/*.parquet` bị gitignore (dòng có sẵn từ trước, không phải tôi thêm) ⇒ checkout CI không có file nào ⇒ `checked == 0` ⇒ đỏ **theo cấu trúc, ở MỌI branch, MỌI PR**, không riêng PR này.
+- Máy local của tôi (và có lẽ máy Cường) có sẵn parquet từ lần chạy `regen_mock.py` trước đó (leftover, thấy trong `UPDATE-114-requirements-and-simulator-setup.md` cũ, ngoài phạm vi PR này) ⇒ che mất gap này khi chạy local, kể cả trước PR của tôi.
+
+**Không sửa trong cycle này** (ngoài phạm vi checkpoint/UI-idea; sửa đúng cần hoặc (a) thêm bước sinh mock data vào CI workflow, hoặc (b) nới điều kiện test — cả hai đều là quyết định vận hành/test-design cần Cường/Khánh, không phải một fix một dòng). Đã ghi làm follow-up.
+
+**Kết luận:** CI "test" job FAIL trên PR #6, nhưng cả 4 nguyên nhân đều pre-existing/cấu trúc, không phải do nội dung PR — bằng chứng: 3/4 tái lập giống hệt qua `git stash` trên `origin/main` sạch; cái thứ 4 được chứng minh bằng đọc trực tiếp `.gitignore` + `ci.yml`, không phụ thuộc branch nào.
