@@ -1,5 +1,23 @@
 # Schema changelog
 
+## 2026-08-06 — `D-ADV-04`: nhãn CÁCH SUY MẪU SỐ của tốc-độ-điểm (1.1.0, UPDATE-167)
+
+- **`l3/bonus_gap_input` 1.0.0 → 1.1.0**: thêm `historical_rate_method` (enum
+  `measured_intervals | estimated_span_scaled | day_average_mixed | none`) và
+  `historical_rate_days` — cả hai **optional**, additive. Snapshot `bonus_gap_input@1.0.0`
+  giữ nguyên; upcaster 1.0→1.1 **chỉ stamp version**.
+- **Vì sao cần**: `historical_points_per_hour` từng có **hai quy ước** — ba producer chia
+  điểm-của-bucket cho giờ online **TOÀN NGÀY**, còn solver `bonus_feasibility._walk` tiêu thụ nó
+  như điểm/giờ **TRONG bucket** (nhân với từng giờ của bucket) ⇒ rate ước NON 2–5× ⇒ S1 phán
+  *"không với tới mốc"* về mốc **với tới được**. Đã reproduce (`repro-s1-denominator.py`).
+  Nay `description` của trường **ghim quy ước** và phân biệt rõ **khoá vắng mặt** ("không có bằng
+  chứng hiện diện" ⇒ solver fallback) với **giá trị `0.0`** ("đã online mà 0 điểm" — ADV-05).
+- **Vì sao KHÔNG dùng trường `source` sẵn có** để mang nhãn xấp xỉ: `source` là nhãn MOCK/REAL mà
+  `CLAUDE.md` §5 bắt buộc; overload nó sẽ **xoá** nhãn đó. Cũng **không** nhét metadata vào
+  `historical_points_per_hour` — consumer nào `for b, v in hist.items()` sẽ đọc metadata thành rate.
+- Upcaster **KHÔNG bịa** `historical_rate_method` cho record cũ: record 1.0.0 **không biết** mẫu số
+  của nó được suy thế nào; vắng mặt là sự thật, `day_average_mixed` là suy đoán.
+
 ## 2026-08-05 — AdviceCheckpoint facts nền móng (1.2.0, UPDATE-147)
 
 - **`advisor/advice_checkpoint` 1.1.0 → 1.2.0**: thêm `numbers[]` ({value, unit, source}

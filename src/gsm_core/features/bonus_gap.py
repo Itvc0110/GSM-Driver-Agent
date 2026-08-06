@@ -12,15 +12,9 @@ from collections import defaultdict
 from gsm_core.policy import PolicyBundle
 from gsm_core.features._common import (hour as _hour, date as _date,
                                         min_of_day, points_on_date as _points_on_date,
-                                        online_minutes_on_date)
-
-
-def _bucket(policy: PolicyBundle, hour: int) -> str:
-    return "peak" if policy.is_peak(hour) else "offpeak"
-
-
-def _online_hours_on_date(events: list[dict], driver: str, date: str) -> float:
-    return online_minutes_on_date(events, driver, date) / 60.0
+                                        online_intervals_on_date)
+from gsm_core.rates import (bucket_of_hour, bucket_online_hours_measured,
+                            bucket_rate_samples, median_bucket_rates)
 
 
 def derive_bonus_gap_input(driver_id: str, t_now: str, l1: dict, policy: PolicyBundle,
@@ -49,30 +43,41 @@ def derive_bonus_gap_input(driver_id: str, t_now: str, l1: dict, policy: PolicyB
     hours_budget = max(0.0, (shift_window[1] - now_min) / 60.0)
 
     # historical_points_per_hour theo khung — từ history hoặc tự tính từ các ngày < today
+    #
+    # ⚠ D-ADV-04 (2026-08-06): mẫu số là giờ online **TRONG BUCKET**, KHÔNG phải giờ online toàn
+    # ngày. Bản cũ chia `pts / oh_ngày` trong khi solver (`bonus_feasibility._walk`) nhân rate đó
+    # với TỪNG GIỜ của bucket ⇒ ước NON 2–5× ⇒ S1 phán "không với tới" một mốc với tới được.
+    # Quy ước chốt + estimator ở `gsm_core/rates.py`; đây chỉ là caller.
     per_bucket: dict[str, list[float]] = defaultdict(list)
     days = {_date(t["t_request"]) for t in trips if t["driver_id"] == driver_id} - {today}
+    method = "none"
     for d in sorted(days):
-        oh = _online_hours_on_date(events, driver_id, d)
-        if oh <= 0:
+        intervals = online_intervals_on_date(events, driver_id, d)
+        bucket_hours, m = bucket_online_hours_measured(policy, intervals)
+        if not bucket_hours:
             continue
-        # điểm theo bucket trong ngày d
-        bp: dict[str, int] = defaultdict(int)
+        method = m
+        # điểm theo bucket trong ngày d (giờ ngoài khung điểm cho 0đ ⇒ tự loại khỏi tử số)
+        bp: dict[str, float] = defaultdict(float)
         for t in trips:
             if t["driver_id"] == driver_id and _date(t["t_request"]) == d:
-                bp[_bucket(policy, _hour(t["t_request"]))] += policy.trip_points(_hour(t["t_request"]))
-        for b, pts in bp.items():
-            per_bucket[b].append(pts / oh)  # điểm/giờ ngày đó
-    hist_rate: dict[str, float] = {}
-    for b, rates in per_bucket.items():
-        if len(rates) >= 3:  # đủ data mới tin cá nhân
-            hist_rate[b] = round(sorted(rates)[len(rates) // 2], 3)  # median
+                h = _hour(t["t_request"])
+                b = bucket_of_hour(policy, h)
+                if b is not None:
+                    bp[b] += policy.trip_points(h)
+        # ADV-05: bucket ĐÃ online mà 0 điểm ⇒ đóng 0.0 (dữ liệu hợp lệ), không bị loại khỏi mẫu
+        for b, rate in bucket_rate_samples(bp, bucket_hours).items():
+            per_bucket[b].append(rate)
+    hist_rate = median_bucket_rates(per_bucket)
 
     next_tiers = [[pt, vnd] for pt, vnd in policy.day_bonus_tiers if pt > points_now]
 
     return {
-        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now,
+        "schema_version": "1.1.0", "driver_id": driver_id, "t_now": t_now,
         "points_now": points_now, "next_tiers": next_tiers,
         "historical_points_per_hour": hist_rate,
+        # D-ADV-04: nhãn CÁCH SUY MẪU SỐ — đường L1 có mốc thời gian nên đo được, không xấp xỉ.
+        "historical_rate_method": method,
         "hours_budget_remaining": round(hours_budget, 3),
         "acceptance_rate": round(acceptance, 4), "completion_rate": round(completion, 4),
         "policy_bundle_version": policy.version, "view_version": "1.0.0", "source": "MOCK",

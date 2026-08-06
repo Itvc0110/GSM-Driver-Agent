@@ -37,6 +37,20 @@ def _pb_100_to_110(record: dict) -> dict:
     return {**record, "schema_version": "1.1.0"}
 
 
+@_register("bonus_gap_input", "1.0.0")
+def _bgi_100_to_110(record: dict) -> dict:
+    """1.0.0 → 1.1.0 (`D-ADV-04` thêm `historical_rate_method`/`historical_rate_days`, additive-optional).
+
+    ⚠ Record 1.0.0 được sinh bởi quy ước mẫu số **CŨ và SAI** (điểm-của-bucket ÷ giờ online
+    TOÀN NGÀY) ⇒ `historical_points_per_hour` của nó **ước NON 2–5×**. Nhưng upcaster **KHÔNG
+    được sửa số**: nó không biết giờ-trong-bucket của những ngày đã trôi qua, và bịa ra một hệ số
+    quy đổi là đúng cái lỗi "hidden fallback" repo đã trả giá. Cũng **KHÔNG** stamp
+    `historical_rate_method` — record cũ **không biết** mẫu số của nó được suy thế nào; vắng mặt là
+    sự thật, `day_average_mixed` là suy đoán. Chỉ stamp version.
+    """
+    return {**record, "schema_version": "1.1.0"}
+
+
 @_register("shift_plan_input", "1.0.0")
 def _spi_100_to_110(record: dict) -> dict:
     """1.0.0 → 1.1.0 (Cycle R thêm `rest_taken_min`/`shift_elapsed_min`, additive-optional).

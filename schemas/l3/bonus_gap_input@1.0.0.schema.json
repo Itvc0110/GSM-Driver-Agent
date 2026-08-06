@@ -37,21 +37,7 @@
     },
     "historical_points_per_hour": {
       "type": "object",
-      "description": "bucket ('peak'/'offpeak') -> điểm mỗi giờ online TRONG BUCKET ĐÓ (D-ADV-04). KHÔNG phải điểm/giờ-toàn-ngày: solver bonus_feasibility._walk nhân số này với TỪNG GIỜ thuộc bucket. Khoá VẮNG MẶT = không có bằng chứng hiện diện (solver fallback lý thuyết); giá trị 0.0 = ĐÃ online trong bucket mà không kiếm được điểm (ADV-05: dữ liệu hợp lệ). Hai thứ đó KHÁC NHAU."
-    },
-    "historical_rate_method": {
-      "type": "string",
-      "enum": [
-        "measured_intervals",
-        "estimated_span_scaled",
-        "day_average_mixed",
-        "none"
-      ],
-      "description": "Cách suy MẪU SỐ của historical_points_per_hour. measured_intervals = có mốc thời gian online (L1/sim). estimated_span_scaled = bảng chỉ có TỔNG online_time (không mốc) nên giờ-trong-bucket được PHÂN BỔ theo span hoạt động — là XẤP XỈ, không phải số đo. day_average_mixed = trung bình TRỘN cả ngày (quy ước CŨ, sai đơn vị — chỉ còn ở đường sim, nợ B0b). none = không đủ bằng chứng."
-    },
-    "historical_rate_days": {
-      "type": "object",
-      "description": "bucket -> số ngày lịch sử đóng vào median (ĐÃ gồm ngày 0.0). Nền cho phân vị/CI (nợ D-ADV-05); solver 1.1.0 CHƯA đọc."
+      "description": "khung giờ -> tốc độ điểm lịch sử driver này"
     },
     "hours_budget_remaining": {
       "type": "number",
@@ -85,7 +71,7 @@
       "description": "Nhãn nguồn bắt buộc (CLAUDE.md §5 — mock phải gắn nhãn)"
     },
     "schema_version": {
-      "const": "1.1.0"
+      "const": "1.0.0"
     }
   },
   "required": [

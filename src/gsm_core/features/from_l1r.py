@@ -20,6 +20,8 @@ from datetime import date as _dt_date, datetime as _dt_datetime, timedelta
 
 from gsm_core.policy import PolicyBundle
 from gsm_core.features._common import date as _date, hour as _hour, min_of_day
+from gsm_core.rates import (bucket_of_hour, bucket_online_hours_estimated,
+                            bucket_rate_samples, median_bucket_rates)
 
 VIEW_VERSION = "1.0.0"
 
@@ -148,24 +150,44 @@ def derive_bonus_gap_input_l1r(driver_id: str, t_now: str, l1r: dict, policy: Po
     # tức chính ngày tương lai làm đủ ngưỡng ≥3 ngày. S1 dùng số này để nói "đạt mốc được".
     hist_days = sorted(d for d in {_date(t["complete_time"]) for t in _driver_trips(l1r, driver_id)}
                        if d < today)
+    # ⚠ D-ADV-04 (2026-08-06): mẫu số phải là giờ online TRONG BUCKET (solver nhân rate với TỪNG
+    # GIỜ của bucket). Bảng thật KHÔNG có `go_online`/`go_offline` — chỉ có TỔNG `online_time`
+    # (`specs/real-data/data-contract-counterfactual.md`) ⇒ đường này buộc phải XẤP XỈ: phân bổ tổng
+    # đó theo HÌNH DẠNG span hoạt động ∩ bucket. Là xấp xỉ ⇒ có nhãn `estimated_span_scaled`, và bất
+    # biến "không bịa thêm giờ online" được ghim bằng test.
+    rate_method = "none"
     for d in hist_days:
         o = _online_row(l1r, driver_id, d)
         oh = float(o["online_time"]) if o else 0.0
         if oh <= 0:
             continue
-        bp: dict[str, int] = defaultdict(int)
-        for t in _driver_trips(l1r, driver_id, d):
+        day_trips = _driver_trips(l1r, driver_id, d)
+        if not day_trips:
+            continue
+        span = (min(min_of_day(t["request_time"]) for t in day_trips),
+                max(min_of_day(t["complete_time"]) for t in day_trips))
+        bucket_hours, m = bucket_online_hours_estimated(policy, oh, span)
+        if not bucket_hours:
+            continue
+        rate_method = m
+        bp: dict[str, float] = defaultdict(float)
+        for t in day_trips:
             h = _hour(t["request_time"])
-            bp["peak" if policy.is_peak(h) else "offpeak"] += policy.trip_points(h)
-        for b, pts in bp.items():
-            per_bucket[b].append(pts / oh)
-    hist_rate = {b: round(sorted(v)[len(v) // 2], 3) for b, v in per_bucket.items() if len(v) >= 3}
+            b = bucket_of_hour(policy, h)
+            if b is not None:
+                bp[b] += policy.trip_points(h)
+        # ADV-05: bucket ĐÃ online mà 0 điểm ⇒ đóng 0.0, không bị loại khỏi mẫu (survivorship)
+        for b, rate in bucket_rate_samples(bp, bucket_hours).items():
+            per_bucket[b].append(rate)
+    hist_rate = median_bucket_rates(per_bucket)
 
     return {
-        "schema_version": "1.0.0", "driver_id": driver_id, "t_now": t_now,
+        "schema_version": "1.1.0", "driver_id": driver_id, "t_now": t_now,
         "points_now": points_now,
         "next_tiers": [[pt, vnd] for pt, vnd in policy.day_bonus_tiers if pt > points_now],
         "historical_points_per_hour": hist_rate,
+        # D-ADV-04: bảng thật không có mốc online ⇒ mẫu số là XẤP XỈ, phải nói ra
+        "historical_rate_method": rate_method,
         "hours_budget_remaining": round(hours_budget, 3),
         "acceptance_rate": round(acceptance, 4), "completion_rate": round(completion, 4),
         "policy_bundle_version": policy.version, "view_version": VIEW_VERSION,

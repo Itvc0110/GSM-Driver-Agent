@@ -15,7 +15,8 @@ import polars as pl
 
 from gsm_core.advisor import verifier as V
 from gsm_core.policy import PolicyBundle as CorePolicy
-from gsm_core.rates import shrunk_rate
+from gsm_core.rates import (shrunk_rate, bucket_of_hour, bucket_online_hours_estimated,
+                            bucket_rate_samples, median_bucket_rates)
 from gsm_core.solvers import bonus_feasibility
 from gsm_core.vn_format import render_number_vn
 
@@ -41,6 +42,10 @@ def _hour(iso: str) -> int:
     return int(iso[11:13])
 
 
+def _min_of_day(iso: str) -> int:
+    return _hour(iso) * 60 + int(iso[14:16])
+
+
 def _trips_of(driver_id: str) -> pl.DataFrame:
     return _table("trips").filter(pl.col("driver_id") == driver_id)
 
@@ -55,28 +60,51 @@ def _points_until(trips: pl.DataFrame, date: str, now_min: int, pol: CorePolicy)
     return pts
 
 
-def _hist_rate(trips: pl.DataFrame, driver_id: str, date: str, pol: CorePolicy) -> dict:
-    """median điểm/giờ-online theo bucket từ ≤7 ngày trước `date` (≥3 ngày mới tin)."""
+def _hist_rate(trips: pl.DataFrame, driver_id: str, date: str,
+               pol: CorePolicy) -> tuple[dict, str]:
+    """median **điểm / giờ online TRONG BUCKET** theo bucket, từ ≤7 ngày trước `date` (≥3 ngày mới tin).
+
+    ⚠ `D-ADV-04` (2026-08-06) — **đây là đường SẢN PHẨM và nó từng SAI ĐƠN VỊ**: bản cũ chia
+    điểm-của-bucket cho `online_time` **TOÀN NGÀY**, trong khi solver S1 (`bonus_feasibility._walk`)
+    nhân con số đó với **TỪNG GIỜ** thuộc bucket ⇒ rate ước NON 2–5× ⇒ S1 phán *"không với tới mốc"*
+    về mốc **với tới được**. Vì S1 là solver **duy nhất** đường này chạy (`B6-PARITY`), lỗi đó đập
+    thẳng vào card của tài xế thật. Quy ước + estimator nay ở `gsm_core/rates.py` (MỘT nguồn).
+
+    Bảng thật chỉ có TỔNG `online_time`, **không có** `go_online`/`go_offline`
+    (`specs/real-data/data-contract-counterfactual.md`) ⇒ giờ-trong-bucket là **XẤP XỈ** từ span hoạt
+    động; trả kèm `method` để card/nhật ký nói được đây là xấp xỉ, không phải số đo.
+
+    Bỏ luôn `if p > 0` của bản cũ: ngày ĐÃ online trong bucket mà 0 điểm là **dữ liệu hợp lệ**
+    (ADV-05) — loại nó khỏi mẫu làm median thiên LẠC QUAN, đúng chiều ngược với lỗi mẫu số nên hai
+    lỗi từng bù trừ nhau và che nhau.
+    """
     onl = _table("driver_online_hours_sap_id").filter(pl.col("driver_id") == driver_id)
     oh_by_date = {r["local_date"]: float(r["online_time"]) for r in onl.iter_rows(named=True)}
     days = sorted({iso[:10] for iso in trips["request_time"].to_list() if iso[:10] < date})[-7:]
-    per_bucket: dict[str, list[float]] = {"peak": [], "offpeak": []}
+    per_bucket: dict[str, list[float]] = {}
+    method = "none"
     for d in days:
         oh = oh_by_date.get(d, 0.0)
         if oh <= 0:
             continue
-        bp = {"peak": 0, "offpeak": 0}
-        for iso in trips.filter(pl.col("request_time").str.starts_with(d))["request_time"].to_list():
-            b = "peak" if pol.is_peak(_hour(iso)) else "offpeak"
-            bp[b] += pol.trip_points(_hour(iso))
-        for b, p in bp.items():
-            if p > 0:
-                per_bucket[b].append(p / oh)
-    out = {}
-    for b, rates in per_bucket.items():
-        if len(rates) >= 3:
-            out[b] = round(sorted(rates)[len(rates) // 2], 3)
-    return out
+        day = trips.filter(pl.col("request_time").str.starts_with(d))
+        req = day["request_time"].to_list()
+        if not req:
+            continue
+        comp = day["complete_time"].to_list() if "complete_time" in day.columns else req
+        span = (min(_min_of_day(i) for i in req), max(_min_of_day(i) for i in comp))
+        bucket_hours, m = bucket_online_hours_estimated(pol, oh, span)
+        if not bucket_hours:
+            continue
+        method = m
+        bp: dict[str, float] = {}
+        for iso in req:
+            b = bucket_of_hour(pol, _hour(iso))
+            if b is not None:
+                bp[b] = bp.get(b, 0.0) + pol.trip_points(_hour(iso))
+        for b, rate in bucket_rate_samples(bp, bucket_hours).items():
+            per_bucket.setdefault(b, []).append(rate)
+    return median_bucket_rates(per_bucket), method
 
 
 # ---------- ĐA-01: tỷ lệ nhận/hoàn thành KHÔNG được rò tương lai ----------
@@ -138,12 +166,15 @@ def build_gi(driver_id: str, date: str, now_min: int,
     # (bỏ `_stat_row(driver_id, date)`: sau ĐA-01 không còn trường nào của build_gi đọc thống kê
     #  CỦA CHÍNH NGÀY ĐÓ — giữ lại chỉ mời gọi rò tương lai quay về)
     points_now = _points_until(trips, date, now_min, pol)
+    hist_rate, rate_method = _hist_rate(trips, driver_id, date, pol)
     return {
-        "schema_version": "1.0.0", "driver_id": driver_id,
+        "schema_version": "1.1.0", "driver_id": driver_id,
         "t_now": f"{date}T{now_min // 60:02d}:{now_min % 60:02d}:00+07:00",
         "points_now": points_now,
         "next_tiers": [[pt, vnd] for pt, vnd in pol.day_bonus_tiers if pt > points_now],
-        "historical_points_per_hour": _hist_rate(trips, driver_id, date, pol),
+        "historical_points_per_hour": hist_rate,
+        # D-ADV-04: bảng thật không có mốc online ⇒ mẫu số là XẤP XỈ; nói ra thay vì im lặng
+        "historical_rate_method": rate_method,
         "hours_budget_remaining": round(max(0.0, (shift_end_min - now_min) / 60.0), 3),
         # ĐA-01 (UPDATE-077): ước lượng **as-of**, chỉ từ ngày TRƯỚC + shrinkage về prior pooled.
         # Bản cũ lấy aggregate CẢ NGÀY `date` (rò tương lai) và fallback 1.0 (gate thưởng đi qua
@@ -257,6 +288,16 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
         numbers.append({"name": "cuoc_can_them", "value": sol["trips_needed"],
                         "unit": "cuốc", "source": "SOLVER"})
     caveat = " · ".join(report.get("caveats", []))
+
+    # D-ADV-04: sau khi sửa mẫu số, advisor bớt bi quan ⇒ số lượt nói "còn với được" TĂNG, và rủi ro
+    # MỚI là hứa hẹn ở dải sát biên (đo trên mock: nhóm mới-feasible mong manh hơn nhóm vốn feasible).
+    # S1 ĐÃ tính sẵn `sensitivity` với cờ `flips_feasible` — adapter trước đây VỨT nó (cùng lỗi mà
+    # `_cliff_item` đã phải đi sửa cho acceptance). Thêm MỘT CÂU cảnh báo, KHÔNG thêm số nào (verifier
+    # V1 `check_bare_numbers` không có gì để bắn) và KHÔNG đổi `confidence`.
+    if sol.get("feasible") and any(s.get("flips_feasible") for s in (report.get("sensitivity") or [])):
+        canh_bao_sat_bien = ("mốc này sát biên: nếu khách vắng hơn thường lệ thì có thể không tới — "
+                             "đừng dồn hết giờ vào nó")
+        caveat = f"{caveat} · {canh_bao_sat_bien}" if caveat else canh_bao_sat_bien
 
     if sol["feasible"]:
         item = {

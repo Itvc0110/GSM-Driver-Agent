@@ -63,6 +63,8 @@ def test_all_entities_registered():
 # — đúng anti-pattern B-02; nay trả nợ).
 LATEST_VERSIONS = {
     "shift_plan_input": "1.1.0",
+    # D-ADV-04: thêm nhãn CÁCH SUY MẪU SỐ của historical_points_per_hour (measured vs xấp xỉ).
+    "bonus_gap_input": "1.1.0",
     "policy_bundle": "1.1.0",
     "advice_checkpoint": "1.2.0",
     "advice_checkpoint_event": "1.1.0",
