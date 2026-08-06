@@ -110,7 +110,7 @@
             "solver_input_refs": {"type": "array", "items": {"type": "string"}},
             "solver_report_refs": {"type": "array", "items": {"type": "string"}},
             "policy_version": {"type": "string", "minLength": 1},
-            "checkpoint_schema_version": {"const": "1.1.0"},
+            "checkpoint_schema_version": {"enum": ["1.1.0", "1.2.0"]},
             "data_mode": {"enum": ["synthetic", "mock-realdata", "live"]},
             "is_mock": {"type": "boolean"}
           },

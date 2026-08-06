@@ -5,7 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "schema_version": {"const": "1.2.0"},
+    "schema_version": {"const": "1.1.0"},
     "checkpoint_id": {"type": "string", "minLength": 1},
     "driver_id": {"type": "string", "minLength": 1},
     "topic": {"type": "string", "enum": ["bonus_eligibility", "energy", "rest", "shift_boundary", "shift_timing", "positioning_sim_only", "policy_info", "safety_reserved"]},
@@ -53,20 +53,6 @@
     "material_revision": {"type": "string", "minLength": 1},
     "reason_code": {"type": "string", "minLength": 1},
     "confidence_band": {"type": "string", "enum": ["low", "medium", "high"]},
-    "numbers": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["value", "unit", "source"],
-        "properties": {
-          "value": {"type": ["number", "string", "null"]},
-          "unit": {"type": "string"},
-          "source": {"type": "string"}
-        }
-      }
-    },
-    "caveats": {"type": "array", "items": {"type": "string"}},
-    "fingerprint": {"type": "string", "minLength": 1},
     "snapshot_ref": {"type": "string", "minLength": 1},
     "solver_artifact_ref": {"type": "string", "minLength": 1},
     "source_decision_id": {"type": ["string", "null"]},
@@ -78,5 +64,5 @@
     "is_mock": {"type": "boolean"},
     "created_at": {"type": "string", "format": "date-time"}
   },
-  "required": ["schema_version", "checkpoint_id", "driver_id", "topic", "surface", "trigger_type", "current_action", "future_plan", "action_window", "validity", "urgency_band", "material_revision", "reason_code", "confidence_band", "numbers", "caveats", "fingerprint", "snapshot_ref", "solver_artifact_ref", "source_decision_id", "run_id", "solver_input_refs", "solver_report_refs", "solver_set", "data_mode", "is_mock", "created_at"]
+  "required": ["schema_version", "checkpoint_id", "driver_id", "topic", "surface", "trigger_type", "current_action", "future_plan", "action_window", "validity", "urgency_band", "material_revision", "reason_code", "confidence_band", "snapshot_ref", "solver_artifact_ref", "source_decision_id", "run_id", "solver_input_refs", "solver_report_refs", "solver_set", "data_mode", "is_mock", "created_at"]
 }
