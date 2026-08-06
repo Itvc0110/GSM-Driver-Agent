@@ -1,0 +1,442 @@
+{
+  "evidence_type": "read_only_research",
+  "runtime_changed": false,
+  "production_thresholds_changed": false,
+  "simulator": {
+    "seeds": [
+      1000,
+      1001,
+      1002,
+      1003,
+      1004
+    ],
+    "runs": 5,
+    "actor_runs": 450,
+    "run_summaries": [
+      {
+        "seed": 1000,
+        "run_id": "1000-B-sp+al-all-c9beb6ef2",
+        "actors": 90,
+        "events": 8404,
+        "segments": 3785,
+        "checkpoints": 968,
+        "checkpoint_events": 2859,
+        "execution_links": 923
+      },
+      {
+        "seed": 1001,
+        "run_id": "1001-B-sp+al-all-c9beb6ef2",
+        "actors": 90,
+        "events": 8290,
+        "segments": 3813,
+        "checkpoints": 957,
+        "checkpoint_events": 2829,
+        "execution_links": 915
+      },
+      {
+        "seed": 1002,
+        "run_id": "1002-B-sp+al-all-c9beb6ef2",
+        "actors": 90,
+        "events": 7793,
+        "segments": 3577,
+        "checkpoints": 903,
+        "checkpoint_events": 2670,
+        "execution_links": 864
+      },
+      {
+        "seed": 1003,
+        "run_id": "1003-B-sp+al-all-c9beb6ef2",
+        "actors": 90,
+        "events": 8090,
+        "segments": 3767,
+        "checkpoints": 940,
+        "checkpoint_events": 2777,
+        "execution_links": 897
+      },
+      {
+        "seed": 1004,
+        "run_id": "1004-B-sp+al-all-c9beb6ef2",
+        "actors": 90,
+        "events": 8432,
+        "segments": 3757,
+        "checkpoints": 937,
+        "checkpoint_events": 2765,
+        "execution_links": 891
+      }
+    ],
+    "coverage": {
+      "pre_shift_brief_inputs": 450,
+      "post_shift_recap_inputs": 450,
+      "ready_checkpoint": 302,
+      "current_future_distinct": 450,
+      "swap_soon": 387,
+      "soc_skip_awareness": 95,
+      "repeated_soc_skip_pattern": 20,
+      "swap_friction": 110,
+      "long_idle_30m": 379,
+      "high_empty_share_40pct": 361,
+      "cancel_after_accept": 169,
+      "mission_completed": 282,
+      "newbie_event": 76
+    },
+    "distributions": {
+      "ready_checkpoint_per_actor_run": {
+        "p50": 1.0,
+        "p75": 2.0,
+        "p90": 2.0,
+        "max": 4
+      },
+      "longest_inferred_idle_min": {
+        "p50": 40.0,
+        "p75": 42.0,
+        "p90": 44.0,
+        "max": 208.162
+      },
+      "empty_share": {
+        "p50": 0.442,
+        "p75": 0.485,
+        "p90": 0.518
+      },
+      "soc_skips": {
+        "p50": 0.0,
+        "p90": 1.0,
+        "max": 4
+      }
+    },
+    "event_inventory": [
+      {
+        "event_kind": "advice_bonus_gate",
+        "count": 3709,
+        "actor_runs": 173,
+        "detail_keys": [
+          "accept_lift_total",
+          "acceptance",
+          "channel",
+          "decision_id",
+          "followed",
+          "lift",
+          "threshold"
+        ]
+      },
+      {
+        "event_kind": "advice_given",
+        "count": 5708,
+        "actor_runs": 450,
+        "detail_keys": [
+          "adherence",
+          "channel",
+          "decision_id",
+          "followed",
+          "instinct_action",
+          "plan_next",
+          "reason",
+          "solver_action"
+        ]
+      },
+      {
+        "event_kind": "advice_rest_veto",
+        "count": 1215,
+        "actor_runs": 438,
+        "detail_keys": [
+          "channel",
+          "from_action",
+          "reason"
+        ]
+      },
+      {
+        "event_kind": "censored_end_of_run",
+        "count": 69,
+        "actor_runs": 69,
+        "detail_keys": [
+          "state"
+        ]
+      },
+      {
+        "event_kind": "charge_home_end",
+        "count": 11,
+        "actor_runs": 11,
+        "detail_keys": []
+      },
+      {
+        "event_kind": "charge_home_start",
+        "count": 40,
+        "actor_runs": 40,
+        "detail_keys": []
+      },
+      {
+        "event_kind": "day_end_settle",
+        "count": 93,
+        "actor_runs": 93,
+        "detail_keys": [
+          "day_bonus",
+          "payout",
+          "points",
+          "trips"
+        ]
+      },
+      {
+        "event_kind": "dropoff",
+        "count": 4757,
+        "actor_runs": 450,
+        "detail_keys": [
+          "dist_km",
+          "gross",
+          "order_id"
+        ]
+      },
+      {
+        "event_kind": "end_shift",
+        "count": 357,
+        "actor_runs": 357,
+        "detail_keys": [
+          "day_bonus",
+          "payout",
+          "points",
+          "trips"
+        ]
+      },
+      {
+        "event_kind": "go_online",
+        "count": 450,
+        "actor_runs": 450,
+        "detail_keys": []
+      },
+      {
+        "event_kind": "go_swap",
+        "count": 566,
+        "actor_runs": 344,
+        "detail_keys": [
+          "station"
+        ]
+      },
+      {
+        "event_kind": "mission_completed",
+        "count": 333,
+        "actor_runs": 282,
+        "detail_keys": [
+          "mission_id",
+          "name",
+          "reward_vnd"
+        ]
+      },
+      {
+        "event_kind": "newbie_guarantee_topup",
+        "count": 76,
+        "actor_runs": 76,
+        "detail_keys": [
+          "floor_vnd",
+          "gross_day",
+          "tenure_days",
+          "topup_vnd"
+        ]
+      },
+      {
+        "event_kind": "order_cancelled_after_accept",
+        "count": 224,
+        "actor_runs": 169,
+        "detail_keys": [
+          "order_id",
+          "wasted_min"
+        ]
+      },
+      {
+        "event_kind": "order_censored",
+        "count": 25,
+        "actor_runs": 0,
+        "detail_keys": [
+          "last_state",
+          "order_id"
+        ]
+      },
+      {
+        "event_kind": "order_declined",
+        "count": 515,
+        "actor_runs": 273,
+        "detail_keys": [
+          "gross_vnd",
+          "net_vnd",
+          "order_id",
+          "p_accept",
+          "pickup_km",
+          "reason"
+        ]
+      },
+      {
+        "event_kind": "order_expired",
+        "count": 1023,
+        "actor_runs": 0,
+        "detail_keys": [
+          "order_id",
+          "reason"
+        ]
+      },
+      {
+        "event_kind": "order_matched",
+        "count": 5006,
+        "actor_runs": 450,
+        "detail_keys": [
+          "gross_vnd",
+          "net_vnd",
+          "order_id",
+          "p_accept",
+          "pickup_km",
+          "reason"
+        ]
+      },
+      {
+        "event_kind": "order_skipped_soc",
+        "count": 121,
+        "actor_runs": 95,
+        "detail_keys": [
+          "need_km",
+          "order_id",
+          "soc_pct"
+        ]
+      },
+      {
+        "event_kind": "pickup",
+        "count": 4775,
+        "actor_runs": 450,
+        "detail_keys": [
+          "eta_min",
+          "order_id"
+        ]
+      },
+      {
+        "event_kind": "relocate",
+        "count": 7159,
+        "actor_runs": 450,
+        "detail_keys": [
+          "reason"
+        ]
+      },
+      {
+        "event_kind": "rest",
+        "count": 609,
+        "actor_runs": 348,
+        "detail_keys": []
+      },
+      {
+        "event_kind": "swap_done",
+        "count": 533,
+        "actor_runs": 344,
+        "detail_keys": [
+          "station",
+          "wait_min"
+        ]
+      },
+      {
+        "event_kind": "swap_failed",
+        "count": 27,
+        "actor_runs": 26,
+        "detail_keys": [
+          "station",
+          "wait_min"
+        ]
+      },
+      {
+        "event_kind": "trip_rated",
+        "count": 3608,
+        "actor_runs": 450,
+        "detail_keys": [
+          "order_id",
+          "stars"
+        ]
+      }
+    ],
+    "checkpoint_inventory": [
+      {
+        "kind": "S1/bonus_eligibility/PROTECT_ELIGIBILITY/ready",
+        "count": 198,
+        "actor_runs": 198
+      },
+      {
+        "kind": "S2/energy/SWAP/expired",
+        "count": 1,
+        "actor_runs": 1
+      },
+      {
+        "kind": "S2/energy/SWAP/ready",
+        "count": 207,
+        "actor_runs": 161
+      },
+      {
+        "kind": "S2/rest/REST/ready",
+        "count": 57,
+        "actor_runs": 54
+      },
+      {
+        "kind": "S2/shift_timing/ONLINE/expired",
+        "count": 116,
+        "actor_runs": 116
+      },
+      {
+        "kind": "S2/shift_timing/ONLINE/suppressed",
+        "count": 4126,
+        "actor_runs": 450
+      }
+    ]
+  },
+  "mock_90_day_l1r": {
+    "provenance": {
+      "label": "MOCK",
+      "generator": "gsm_core.mockgen.realdata v4",
+      "days": 90,
+      "source_manifest": "data/mock/realdata-v1/manifest.json"
+    },
+    "daily_history": {
+      "income_rows": 12821,
+      "income_drivers": 150,
+      "stat_rows": 12821,
+      "online_rows": 12821,
+      "rush_split_rows": 12821,
+      "stoppoint_rows": 12821,
+      "income_rolling7_eligible_days": 11771,
+      "income_below_80pct_prior7_median": 2154,
+      "income_above_120pct_prior7_median": 2291,
+      "drivers_with_income_deviation": 150,
+      "drivers_with_2day_acceptance_risk": 88
+    },
+    "mission": {
+      "catalog_rows": 6,
+      "progress_rows": 261,
+      "progress_drivers": 150,
+      "earn_rows": 7658,
+      "earn_drivers": 134
+    },
+    "risk_records": {
+      "penalty_rows": 74,
+      "penalty_drivers": 70,
+      "fraud_rows": 139,
+      "fraud_drivers": 96
+    },
+    "hex_tracking": {
+      "rows": 1420051,
+      "drivers": 90,
+      "idle_rows": 67562,
+      "idle_rows_ge_300s": 67562,
+      "campaign_rows": 70941,
+      "target_rows": 70941,
+      "reached_labeled_rows": 70941,
+      "stay_median_seconds": 62.0,
+      "stay_p90_seconds": 153.0
+    },
+    "trips": {
+      "rows": 172079,
+      "drivers": 150,
+      "distance_rows": 172079,
+      "duration_rows": 172079,
+      "pickup_rows": 172079,
+      "drop_rows": 172079
+    }
+  },
+  "probe_thresholds_not_production_policy": {
+    "long_idle_min": 30,
+    "high_empty_share": 0.4,
+    "income_ratio_low": 0.8,
+    "income_ratio_high": 1.2,
+    "income_prior_observations": 7,
+    "acceptance_threshold": 0.85,
+    "acceptance_consecutive_days": 2
+  }
+}

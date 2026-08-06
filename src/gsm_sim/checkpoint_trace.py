@@ -52,15 +52,25 @@ def _state_value(value: Any) -> Any:
     return getattr(value, "value", value)
 
 
-def actor_snapshot(actor: Any, now_min: float, run_id: str) -> dict[str, Any]:
-    """Return the auditable, non-PII state visible to a simulator solver."""
+def actor_snapshot(actor: Any, now_min: float, run_id: str,
+                   validity_hints: dict[str, float] | None = None) -> dict[str, Any]:
+    """Return the auditable, non-PII state visible to a simulator solver.
+
+    ``validity_hints`` mang các boundary THẬT của producer theo phút sim:
+    ``freshness_deadline_min`` (chu kỳ refresh thật của producer — vd interval consult),
+    ``bucket_end_min`` (S2), ``rest_window_end_min`` (S7), ``allocation_bucket_end_min``
+    (S4). Trước UPDATE-147 freshness bị bịa ``now+1`` ⇒ mọi checkpoint chỉ sống 1 phút
+    và ~40% card chết `expired` tại presentation (đo funnel seed 1000). Fallback +1'
+    chỉ còn cho fixture cũ không truyền hints.
+    """
+    hints = validity_hints or {}
     observed_at = _iso(now_min)
-    return {
+    snapshot: dict[str, Any] = {
         "run_id": run_id,
         "driver_id": f"d-{actor.actor_id}",
         "now_min": float(now_min),
         "observed_at": observed_at,
-        "freshness_deadline": _iso(now_min + 1),
+        "freshness_deadline": _iso(hints.get("freshness_deadline_min", now_min + 1)),
         "actor_state": _state_value(getattr(actor, "state", None)),
         "zone_h3": getattr(actor, "cell", None),
         "soc_pct": getattr(actor, "soc_pct", None),
@@ -77,6 +87,12 @@ def actor_snapshot(actor: Any, now_min: float, run_id: str) -> dict[str, Any]:
         "data_mode": "synthetic",
         "is_mock": True,
     }
+    for hint_key, snapshot_key in (("bucket_end_min", "bucket_end"),
+                                   ("rest_window_end_min", "rest_window_end"),
+                                   ("allocation_bucket_end_min", "allocation_bucket_end")):
+        if hints.get(hint_key) is not None:
+            snapshot[snapshot_key] = _iso(float(hints[hint_key]))
+    return snapshot
 
 
 def annotate_segment_ids(run_id: str, segments: Iterable[dict]) -> list[dict]:
@@ -162,10 +178,11 @@ class CheckpointTraceSink:
 
     def capture(self, solver_name: str, actor: Any, now_min: float,
                 solver_input: dict, solver_report: dict,
-                source_decision_id: str) -> str | None:
+                source_decision_id: str,
+                validity_hints: dict[str, float] | None = None) -> str | None:
         if not self.enabled:
             return None
-        snapshot = actor_snapshot(actor, now_min, self.run_id)
+        snapshot = actor_snapshot(actor, now_min, self.run_id, validity_hints)
         created_at = snapshot["observed_at"]
         artifacts = [
             build_artifact_record("state_snapshot", snapshot,

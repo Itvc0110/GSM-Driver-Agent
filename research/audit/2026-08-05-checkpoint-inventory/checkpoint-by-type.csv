@@ -1,0 +1,5 @@
+scope,seed,source_solver,topic,canonical_action,count,driver_count,share_of_checkpoints,ready,queued,suppressed,expired,superseded,offered,displayed,accepted,dismissed,expanded,execution_observed,ready_rate,display_rate_of_ready,mean_validity_minutes,median_gap_minutes,p90_gap_minutes,template_key
+all_seeds,ALL,S1,bonus_eligibility,PROTECT_ELIGIBILITY,198,78,0.229167,198,0,0,0,0,0,0,0,0,0,169,1.0,0.0,1.0,29.0,109.5,S1_BONUS_PROGRESS
+all_seeds,ALL,S2,energy,SWAP,162,72,0.1875,161,0,0,1,0,0,0,0,0,0,145,0.993827,0.0,0.938,49.0,203.8,S2_SWAP_NOW
+all_seeds,ALL,S2,rest,REST,54,27,0.0625,54,0,0,0,0,0,0,0,0,0,51,1.0,0.0,1.0,14.0,34.0,S7_REST_WINDOW
+all_seeds,ALL,S2,shift_timing,ONLINE,450,90,0.520833,0,0,450,0,0,0,0,0,0,0,450,0.0,,1.0,14.0,40.1,S2_ONLINE_NOW[_SWAP_LATER]

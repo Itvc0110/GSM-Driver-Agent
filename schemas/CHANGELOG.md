@@ -1,5 +1,18 @@
 # Schema changelog
 
+## 2026-08-05 — AdviceCheckpoint facts nền móng (1.2.0, UPDATE-147)
+
+- **`advisor/advice_checkpoint` 1.1.0 → 1.2.0**: thêm `numbers[]` ({value, unit, source}
+  của solver report — typed, có provenance), `caveats[]` (string) và `fingerprint`
+  (material digest) vào record. Trước đây cả ba bị strip khi persist ⇒ card nghèo facts
+  và dedup product không bao giờ khớp record đã lưu. Snapshot `advice_checkpoint@1.1.0`
+  giữ nguyên; upcaster 1.1→1.2 điền `numbers=[]`/`caveats=[]` (record cũ không lưu —
+  không bịa) và TÁI LẬP `fingerprint` từ chính material fields đã persist.
+- Fingerprint material bổ sung `future_head` (code + window của hành động kế tiếp):
+  plan đổi bucket SWAP là một lời khuyên KHÁC, không được dedup nhầm với revision cũ.
+- Lifecycle transition mở thêm `ready → queued` (tài xế bắt đầu di chuyển sau khi
+  checkpoint ready — moving gate ghi dấu vết thay vì silent trắng).
+
 ## 2026-08-03 — AdviceCheckpoint runtime contract (1.1.0)
 
 - **`advisor/advice_checkpoint` 1.0.0 → 1.1.0**: thêm identity/reference tách bạch

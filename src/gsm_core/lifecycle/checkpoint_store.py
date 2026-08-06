@@ -42,7 +42,9 @@ def build_artifact_record(artifact_type: str, payload: dict,
 
 def _created_event(checkpoint: dict) -> dict:
     return {
-        "schema_version": checkpoint.get("schema_version", "1.1.0"),
+        # Event là entity RIÊNG (advice_checkpoint_event@1.1.0) — không kéo theo
+        # version của checkpoint record (1.2.0) kẻo validate fail-loud.
+        "schema_version": "1.1.0",
         "event_id": f"created:{checkpoint['checkpoint_id']}",
         "checkpoint_id": checkpoint["checkpoint_id"],
         "driver_id": checkpoint["driver_id"],
@@ -260,7 +262,9 @@ class CheckpointStore:
                 # this transaction; retrying an existing lease never re-renders text.
                 lease.update(dict(presentation))
             event = {
-                "schema_version": checkpoint.get("schema_version", "1.1.0"),
+                # Cùng lý do với `_created_event`: version của EVENT entity, không
+                # phải của checkpoint record.
+                "schema_version": "1.1.0",
                 "event_id": f"offered:{checkpoint_id}",
                 "checkpoint_id": checkpoint_id,
                 "driver_id": checkpoint["driver_id"],

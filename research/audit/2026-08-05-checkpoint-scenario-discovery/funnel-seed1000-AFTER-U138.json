@@ -1,0 +1,1325 @@
+{
+ "seeds": [
+  1000
+ ],
+ "actors": [
+  {
+   "seed": 1000,
+   "actor_id": 0,
+   "total_steps": 29,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 28,
+    "unsafe_while_moving": 1
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 1,
+   "total_steps": 53,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 53
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 2,
+   "total_steps": 35,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 35
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 3,
+   "total_steps": 35,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 35
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 4,
+   "total_steps": 24,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 24
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 5,
+   "total_steps": 35,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 35
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 6,
+   "total_steps": 31,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 31
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 7,
+   "total_steps": 28,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 28
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 8,
+   "total_steps": 36,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 36
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 9,
+   "total_steps": 30,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 29,
+    "unsafe_while_moving": 1
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 10,
+   "total_steps": 39,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 39
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 11,
+   "total_steps": 35,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 34,
+    "unsafe_while_moving": 1
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 12,
+   "total_steps": 38,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 38
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 13,
+   "total_steps": 121,
+   "card_steps": [
+    47
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 47,
+   "silent_reasons": {
+    "no_checkpoint": 119,
+    "expired": 1
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 14,
+   "total_steps": 97,
+   "card_steps": [
+    34,
+    37,
+    79
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 34,
+   "silent_reasons": {
+    "no_checkpoint": 94
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 15,
+   "total_steps": 92,
+   "card_steps": [
+    15
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 15,
+   "silent_reasons": {
+    "no_checkpoint": 91
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 16,
+   "total_steps": 99,
+   "card_steps": [
+    24
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 24,
+   "silent_reasons": {
+    "no_checkpoint": 98
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 17,
+   "total_steps": 112,
+   "card_steps": [
+    39,
+    75
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 39,
+   "silent_reasons": {
+    "no_checkpoint": 110
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 18,
+   "total_steps": 71,
+   "card_steps": [
+    39
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 39,
+   "silent_reasons": {
+    "no_checkpoint": 70
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 19,
+   "total_steps": 107,
+   "card_steps": [
+    28
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 28,
+   "silent_reasons": {
+    "no_checkpoint": 106
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 20,
+   "total_steps": 115,
+   "card_steps": [
+    72
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 72,
+   "silent_reasons": {
+    "no_checkpoint": 114
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 21,
+   "total_steps": 95,
+   "card_steps": [
+    30,
+    71
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 30,
+   "silent_reasons": {
+    "no_checkpoint": 93
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 22,
+   "total_steps": 95,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 95
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 23,
+   "total_steps": 84,
+   "card_steps": [
+    31,
+    73
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 31,
+   "silent_reasons": {
+    "no_checkpoint": 82
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 24,
+   "total_steps": 135,
+   "card_steps": [
+    36,
+    41,
+    50
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 36,
+   "silent_reasons": {
+    "no_checkpoint": 132
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 25,
+   "total_steps": 95,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 95
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 26,
+   "total_steps": 86,
+   "card_steps": [
+    19
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 19,
+   "silent_reasons": {
+    "no_checkpoint": 85
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 27,
+   "total_steps": 86,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 86
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 28,
+   "total_steps": 70,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 70
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 29,
+   "total_steps": 78,
+   "card_steps": [
+    36
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 36,
+   "silent_reasons": {
+    "no_checkpoint": 77
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 30,
+   "total_steps": 57,
+   "card_steps": [
+    23
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 23,
+   "silent_reasons": {
+    "no_checkpoint": 56
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 31,
+   "total_steps": 101,
+   "card_steps": [
+    47,
+    89
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 47,
+   "silent_reasons": {
+    "no_checkpoint": 99
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 32,
+   "total_steps": 82,
+   "card_steps": [
+    30
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 30,
+   "silent_reasons": {
+    "no_checkpoint": 81
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 33,
+   "total_steps": 110,
+   "card_steps": [
+    30,
+    72
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 30,
+   "silent_reasons": {
+    "no_checkpoint": 108
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 34,
+   "total_steps": 148,
+   "card_steps": [
+    31
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 31,
+   "silent_reasons": {
+    "no_checkpoint": 147
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 35,
+   "total_steps": 176,
+   "card_steps": [
+    8,
+    84,
+    156
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 8,
+   "silent_reasons": {
+    "no_checkpoint": 173
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 36,
+   "total_steps": 126,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 125
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 37,
+   "total_steps": 90,
+   "card_steps": [
+    1,
+    43
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 88
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 38,
+   "total_steps": 89,
+   "card_steps": [
+    1,
+    49
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 87
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 39,
+   "total_steps": 66,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 65
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 40,
+   "total_steps": 126,
+   "card_steps": [
+    1,
+    63,
+    93
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 123
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 41,
+   "total_steps": 127,
+   "card_steps": [
+    1,
+    117
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 125
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 42,
+   "total_steps": 125,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 124
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 43,
+   "total_steps": 86,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 85
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 44,
+   "total_steps": 110,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 109
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 45,
+   "total_steps": 91,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 90
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 46,
+   "total_steps": 98,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 97
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 47,
+   "total_steps": 116,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 115
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 48,
+   "total_steps": 59,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 58
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 49,
+   "total_steps": 121,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 120
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 50,
+   "total_steps": 84,
+   "card_steps": [
+    1,
+    66,
+    72
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 81
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 51,
+   "total_steps": 120,
+   "card_steps": [
+    1,
+    43,
+    96
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 117
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 52,
+   "total_steps": 68,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 68
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 53,
+   "total_steps": 59,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 59
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 54,
+   "total_steps": 67,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 67
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 55,
+   "total_steps": 70,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 70
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 56,
+   "total_steps": 74,
+   "card_steps": [
+    19,
+    60,
+    62
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 19,
+   "silent_reasons": {
+    "no_checkpoint": 71
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 57,
+   "total_steps": 59,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 59
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 58,
+   "total_steps": 83,
+   "card_steps": [
+    31
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 31,
+   "silent_reasons": {
+    "no_checkpoint": 82
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 59,
+   "total_steps": 62,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 62
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 60,
+   "total_steps": 82,
+   "card_steps": [
+    22
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 22,
+   "silent_reasons": {
+    "no_checkpoint": 81
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 61,
+   "total_steps": 43,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 43
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 62,
+   "total_steps": 84,
+   "card_steps": [
+    34
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 34,
+   "silent_reasons": {
+    "no_checkpoint": 83
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 63,
+   "total_steps": 69,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 68
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 64,
+   "total_steps": 66,
+   "card_steps": [
+    21
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 21,
+   "silent_reasons": {
+    "no_checkpoint": 65
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 65,
+   "total_steps": 51,
+   "card_steps": [
+    10
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 10,
+   "silent_reasons": {
+    "no_checkpoint": 50
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 66,
+   "total_steps": 90,
+   "card_steps": [
+    1,
+    41
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 88
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 67,
+   "total_steps": 71,
+   "card_steps": [
+    1,
+    8
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 69
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 68,
+   "total_steps": 61,
+   "card_steps": [
+    1,
+    28
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 59
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 69,
+   "total_steps": 58,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 57
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 70,
+   "total_steps": 113,
+   "card_steps": [
+    1,
+    12,
+    31
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 110
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 71,
+   "total_steps": 51,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 50
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 72,
+   "total_steps": 55,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 55
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 73,
+   "total_steps": 54,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 53
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 74,
+   "total_steps": 57,
+   "card_steps": [
+    1,
+    29,
+    33
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 54
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 75,
+   "total_steps": 80,
+   "card_steps": [
+    1,
+    29,
+    70
+   ],
+   "n_card_steps": 3,
+   "unique_checkpoints": 3,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 77
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 76,
+   "total_steps": 78,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 78
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 77,
+   "total_steps": 56,
+   "card_steps": [
+    1,
+    27
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 53,
+    "unsafe_while_moving": 1
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 78,
+   "total_steps": 43,
+   "card_steps": [
+    1
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 1,
+   "silent_reasons": {
+    "no_checkpoint": 42
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 79,
+   "total_steps": 81,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 81
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 80,
+   "total_steps": 58,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 58
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 81,
+   "total_steps": 97,
+   "card_steps": [
+    92
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 92,
+   "silent_reasons": {
+    "no_checkpoint": 95,
+    "unsafe_while_moving": 1
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 82,
+   "total_steps": 66,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 66
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 83,
+   "total_steps": 94,
+   "card_steps": [
+    24
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 24,
+   "silent_reasons": {
+    "no_checkpoint": 93
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 84,
+   "total_steps": 73,
+   "card_steps": [
+    66
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 66,
+   "silent_reasons": {
+    "no_checkpoint": 72
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 85,
+   "total_steps": 95,
+   "card_steps": [
+    30,
+    66
+   ],
+   "n_card_steps": 2,
+   "unique_checkpoints": 2,
+   "first_card_step": 30,
+   "silent_reasons": {
+    "no_checkpoint": 93
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 86,
+   "total_steps": 81,
+   "card_steps": [
+    32
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 32,
+   "silent_reasons": {
+    "no_checkpoint": 80
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 87,
+   "total_steps": 95,
+   "card_steps": [
+    51
+   ],
+   "n_card_steps": 1,
+   "unique_checkpoints": 1,
+   "first_card_step": 51,
+   "silent_reasons": {
+    "no_checkpoint": 94
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 88,
+   "total_steps": 75,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 75
+   }
+  },
+  {
+   "seed": 1000,
+   "actor_id": 89,
+   "total_steps": 87,
+   "card_steps": [],
+   "n_card_steps": 0,
+   "unique_checkpoints": 0,
+   "first_card_step": null,
+   "silent_reasons": {
+    "no_checkpoint": 86,
+    "unsafe_while_moving": 1
+   }
+  }
+ ],
+ "totals": {
+  "n_actor_runs": 90,
+  "total_steps": 7100,
+  "steps_per_actor": {
+   "min": 24,
+   "median": 80.5,
+   "max": 176
+  },
+  "advice_status": {
+   "silent": 7008,
+   "ready": 92
+  },
+  "silent_reason_codes": {
+   "no_checkpoint": 7001,
+   "unsafe_while_moving": 6,
+   "expired": 1
+  },
+  "actors_with_zero_cards": 31,
+  "cards_per_actor": {
+   "min": 0,
+   "median": 1.0,
+   "p90": 3,
+   "max": 3
+  },
+  "first_card_step": {
+   "median": 10,
+   "p75": 31,
+   "p90": 39,
+   "max": 92,
+   "n": 59
+  },
+  "steps_between_cards": {
+   "median": 40,
+   "p90": 65,
+   "max": 116,
+   "n": 33
+  },
+  "card_share_of_steps": 0.012957746478873239,
+  "transition_kinds_all": {
+   "go_online": 90,
+   "advice_given": 1167,
+   "order_declined": 101,
+   "order_matched": 1004,
+   "pickup": 955,
+   "dropoff": 954,
+   "relocate": 1439,
+   "rest": 137,
+   "end_shift": 74,
+   "order_cancelled_after_accept": 49,
+   "go_swap": 124,
+   "swap_done": 116,
+   "advice_bonus_gate": 846,
+   "order_skipped_soc": 25,
+   "swap_failed": 7,
+   "charge_home_start": 3,
+   "charge_home_end": 1,
+   "censored_end_of_run": 8
+  },
+  "transition_kinds_with_card": {
+   "advice_given": 7,
+   "swap_failed": 3,
+   "swap_done": 2,
+   "relocate": 40,
+   "advice_bonus_gate": 6,
+   "go_online": 28,
+   "order_skipped_soc": 4,
+   "order_declined": 2
+  },
+  "card_topics": {
+   "energy": 45,
+   "bonus_eligibility": 33,
+   "rest": 14
+  },
+  "card_actions": {
+   "null": 92
+  },
+  "card_driver_state": {
+   "idle": 92
+  }
+ }
+}

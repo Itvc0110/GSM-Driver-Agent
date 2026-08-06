@@ -413,9 +413,19 @@ class AdviceCheckpointService:
             raise CheckpointNotFoundError(checkpoint_id)
         if checkpoint.get("driver_id") is None:
             raise CheckpointConflictError("checkpoint_missing_driver")
-        if is_driving:
-            return self._silent(surface, generated_at, "unsafe_while_moving")
         state = self.store.state(checkpoint_id)["state"]
+        if is_driving:
+            # UPDATE-147: moving gate phải để lại dấu vết lifecycle. Trước đây trả silent
+            # KHÔNG event ⇒ không phân biệt được "im vì đang lái" với "mất card" khi audit.
+            if state in {"created", "ready"}:
+                try:
+                    self.store.append_event(_event(
+                        checkpoint, "queued", generated_at,
+                        event_id=f"queued:{checkpoint_id}:{generated_at}",
+                        reason_code="unsafe_while_moving"))
+                except ValueError:
+                    pass  # transition race/idempotent replay — vẫn silent đúng nghĩa
+            return self._silent(surface, generated_at, "unsafe_while_moving")
         valid_until = checkpoint.get("validity", {}).get("valid_until")
         if valid_until is None:
             return self._silent(surface, generated_at, "missing_validity")
@@ -434,14 +444,21 @@ class AdviceCheckpointService:
             if lease is None:
                 return self._silent(surface, generated_at, "missing_lease")
             return self._envelope(checkpoint, lease, surface, generated_at)
+        if state == "queued" and not is_driving:
+            # UPDATE-147: state an toàn trở lại ⇒ resume queued→ready (mirror đường
+            # product `get_advice`). Sim không bao giờ tự sinh `queued`, nên record
+            # queued trong store chỉ có thể do chính moving-gate ở trên tạo ra.
+            self.store.append_event(_event(
+                checkpoint, "ready", generated_at,
+                event_id=f"ready:{checkpoint_id}:{generated_at}"))
+            state = "ready"
         if state == "created":
             self.store.append_event(_event(
                 checkpoint, "ready", generated_at,
                 event_id=f"ready:{checkpoint_id}"))
         elif state not in {"ready", "generated", "generation_failed"}:
             # A replay transition is only allowed to present a checkpoint that the
-            # simulator/policy marked displayable.  In particular, queued advice must
-            # not acquire a lease merely because a Web cursor reached its timestamp.
+            # simulator/policy marked displayable.
             return self._silent(surface, generated_at, state)
         rendered = self._prepare_presentation(
             checkpoint, generated_at, allow_shadow=True, is_driving=is_driving)
@@ -568,18 +585,26 @@ class AdviceCheckpointService:
 
     def _presentation_inputs(self, checkpoint: dict) -> tuple[list[dict], list[dict], list[dict]]:
         report_ref = (checkpoint.get("solver_report_refs") or [None])[0]
-        report_artifact = self.store.artifact(report_ref) if report_ref else None
-        report = (report_artifact or {}).get("payload") or {}
+        # UPDATE-147: record 1.2.0 mang numbers/caveats của solver ngay trên checkpoint —
+        # presentation không phụ thuộc artifact lookup. Record 1.1.0 cũ (chưa upcast)
+        # rơi về đường artifact như trước.
+        raw_numbers = checkpoint.get("numbers")
+        raw_caveats = checkpoint.get("caveats")
+        if raw_numbers is None or raw_caveats is None:
+            report_artifact = self.store.artifact(report_ref) if report_ref else None
+            report = (report_artifact or {}).get("payload") or {}
+            raw_numbers = raw_numbers if raw_numbers is not None else report.get("numbers")
+            raw_caveats = raw_caveats if raw_caveats is not None else report.get("caveats")
         numbers = [{
             "id": f"N{index + 1}",
             "value": number.get("value"),
             "unit": number.get("unit"),
             "source": number.get("source"),
             "artifact_ref": report_ref,
-        } for index, number in enumerate(report.get("numbers") or [])]
+        } for index, number in enumerate(raw_numbers or [])]
         facts = [{"id": "F1", "value": str(checkpoint["reason_code"]).replace("_", " ")}]
         caveats = [{"id": f"C{index + 1}", "value": value}
-                   for index, value in enumerate(report.get("caveats") or [])]
+                   for index, value in enumerate(raw_caveats or [])]
         return facts, numbers, caveats
 
     def _prepare_presentation(self, checkpoint: dict, generated_at: str, *,
@@ -588,9 +613,10 @@ class AdviceCheckpointService:
         facts, numbers, caveats = self._presentation_inputs(checkpoint)
         template = CheckpointPresenter(mode="template").present(
             checkpoint, facts=facts, numbers=numbers, caveats=caveats)
+        from gsm_core.advisor.checkpoint_templates import TEMPLATE_VERSION
         template_result = PreparedPresentation(
             template, numbers, caveats,
-            {"presentation_source": "template", "template_version": "checkpoint-template-v1",
+            {"presentation_source": "template", "template_version": TEMPLATE_VERSION,
              "model_version": None, "prompt_version": None,
              "schema_version": "1.0.0", "verifier_version": "checkpoint-verifier-v1"})
 

@@ -479,7 +479,13 @@ class World:
                 aid = int(al["driver_id"][2:])
                 did = self._decision_id(aid, "positioning", now)
                 self.checkpoint_trace.capture(
-                    "S4", self.actors[aid], now, ai, report, did)
+                    "S4", self.actors[aid], now, ai, report, did,
+                    # UPDATE-147: planner chạy mỗi bucket ⇒ allocation/freshness thật
+                    # là biên bucket kế, không phải hằng +1' bịa trong trace.
+                    validity_hints={
+                        "freshness_deadline_min": now + float(self.advice.bucket_min),
+                        "allocation_bucket_end_min": now + float(self.advice.bucket_min),
+                    })
                 assigned_by_cell.setdefault(cell, []).append(aid)
                 dids_by_cell.setdefault(cell, {})[str(aid)] = did
                 # "Đã nói" = advisor đưa lời khuyên, KHÔNG phụ thuộc tài xế có theo hay không

@@ -231,15 +231,41 @@ def _prepare_checkpoint_attachments(
                 continue
             t_min = _checkpoint_minute(checkpoint)
             assert t_min is not None
-            event_choice = next((
+            # UPDATE-147: một checkpoint READY phải được gắn vào transition mà nó CÒN
+            # HIỆU LỰC và tài xế ĐỌC ĐƯỢC (không enroute/on_trip). Trước đây gắn mù vào
+            # event đầu tiên sau bucket ⇒ 34 card chết `expired` + 12 card mất vĩnh viễn
+            # vì moving-at-attach (funnel seed 1000, UPDATE-146 §2.3).
+            valid_until_min = minute_from_iso(
+                (checkpoint.get("validity") or {}).get("valid_until"))
+            after = [
                 (index, event) for index, event in visible
                 if index not in used_event_indices
                 and float(getattr(event, "t_min", -1.0)) >= t_min - _TIME_EPSILON
-            ), None)
+            ]
+            within = [
+                (index, event) for index, event in after
+                if valid_until_min is None
+                or float(getattr(event, "t_min", -1.0)) <= valid_until_min + _TIME_EPSILON
+            ]
+            safe = [
+                (index, event) for index, event in within
+                if str((snapshots_by_event.get(index) or {}).get("state"))
+                not in {"enroute", "on_trip"}
+            ]
+            # Ưu tiên transition an toàn trong validity; nếu tài xế di chuyển suốt
+            # validity thì vẫn gắn vào transition đầu tiên để moving-gate ghi `queued`
+            # (dấu vết lifecycle) thay vì card biến mất không vết.
+            event_choice = (safe or within or [None])[0]
             if event_choice is not None:
                 index, _event = event_choice
                 assignments[index] = checkpoint
                 used_event_indices.add(index)
+                continue
+            if after:
+                # có transition sau bucket nhưng toàn bộ nằm ngoài validity — checkpoint
+                # hết hạn trước khi tài xế có cơ hội thấy; audit thay vì gắn card chết.
+                audit.append({"checkpoint_id": checkpoint_id, "state": "ready",
+                              "reason": "expired_before_transition"})
                 continue
             previous = [snapshot for snapshot in snapshots_by_event.values()
                         if float(snapshot.get("t_min", -1.0)) <= t_min + _TIME_EPSILON]
