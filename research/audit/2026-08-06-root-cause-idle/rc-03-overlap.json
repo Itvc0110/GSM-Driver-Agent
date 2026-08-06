@@ -1,0 +1,251 @@
+{
+ "what": "RC-03 — PROBE CHỒNG LẤN (instrument THẬT, đo trong sim): thời gian rảnh THÊM do kênh station_choice giải phóng có GẶP đơn chết không? Phân xử H1/H2/H3/H4.",
+ "ngay": "2026-08-06",
+ "mock": true,
+ "seeds": [1000, 1001, 1002, 1003, 1004],
+ "n_seeds": 5,
+ "canh_bao_ve_co_mau": "n=5 — ĐỦ để khảo sát CƠ CHẾ (các tỉ lệ dưới đây ở mức 14–70%, đo trên 1.019 đơn chết/arm), KHÔNG ĐỦ để claim thống kê về Δ KẾT QUẢ. ⚠ Bằng chứng cụ thể: ở n=5 này orders_completed Δ = −3,2 và expired Δ = −1,0, NGƯỢC DẤU với n=100 (+1,69 / −1,86 — rc-02 §2). Vì vậy MỌI phát biểu về hướng của Δ kết quả phải lấy từ artifact n=100, KHÔNG lấy từ đây. Đây là bằng chứng CƠ CHẾ.",
+
+ "phuong_phap": {
+  "script": "research/audit/2026-08-06-root-cause-idle/rc-03-probe-script.py (bản chạy: scratchpad/probe_idle_overlap.py — GIỐNG HỆT)",
+  "chay": "uv run python <script> --seeds 5 --seed0 1000 --out <json>   ·   cổng: --verify",
+  "arm": "A = mọi kênh TẮT (advice.enabled=false) · B = CHỈ station_choice=True, positioning_overrides='off', coverage='all' — ĐÚNG bộ kênh của scripts/run_e01_station.py:22-23 ⇒ so sánh được với e01-station-100.json",
+  "khong_sua_repo": "Chỉ ĐỌC. Ba monkeypatch Ở RUNTIME, không sửa file nào: (1) World.log bọc để chụp ảnh trạng thái MỌI actor đúng khoảnh khắc `order_expired`; (2) World.run bọc để cắm 1 observer process lấy mẫu mỗi 1′; (3) world.match_batch bọc để đếm phép gán bị cổng cooldown nuốt. Cả ba chỉ đọc, 0 RNG draw, 0 mutation.",
+  "dinh_nghia_ELIGIBLE": "state == ActorState.IDLE — ĐÚNG và CHỈ điều kiện dispatcher lọc (src/gsm_sim/world.py:628). Probe KHÔNG dùng `actor.idle_min` để đếm tài xế rảnh; nó đọc STATE. Đây là mũi kiểm H4.",
+  "dinh_nghia_ung_vien": "hex = actor IDLE có cell ∈ grid_disk(pickup, k_max=6) (~2,22 km, dispatcher.py:111) · eta = ETA(actor→pickup) ≤ eta_max=11′ tính Y HỆT dispatcher._eta (haversine × road_factor cặp cell ÷ eff_speed(pickup cell), dispatcher.py:94-105) · both = qua CẢ HAI = tập Hungarian được phép gán · eta_not_hex = DẢI MÙ của BUG-DISPATCH-SHORTLIST",
+  "cong_NHIEU_LOAN_da_xanh": {
+   "vi_sao_can": "Thêm process vào SimPy dịch bộ đếm eid ⇒ về lý thuyết có thể đổi tie-break cùng mốc thời gian. Không kiểm thì mọi số là rác.",
+   "ket_qua": "seed 1000: fingerprint (served_rate, orders_completed, expired, n_events, tổng payout, tổng idle_min, tổng charge_min) TRÙNG TỪNG SỐ giữa có-probe và không-probe ở CẢ HAI arm; chạy lại arm A với probe cho exact-repeat.",
+   "so": {"no_probe_A": {"served_rate": 0.788, "orders_completed": 954, "expired": 206, "n_events": 6264, "payout": 22295559, "idle_min": 15160.0, "charge_min": 2635.401},
+          "probe_A": {"served_rate": 0.788, "orders_completed": 954, "expired": 206, "n_events": 6264, "payout": 22295559, "idle_min": 15160.0, "charge_min": 2635.401},
+          "A_identical": true, "B_identical": true, "A_exact_repeat": true},
+   "kiem_tra_dong_nhat_bo_dem": "assign − cooldown_blocked − offers_made = 0 CHÍNH XÁC ở cả hai arm ⇒ bộ đếm phép gán không bỏ sót/đếm trùng kênh mất nào."
+  },
+  "gioi_han_do_phai_khai": [
+   "Observer lấy mẫu 1′ trong khi dispatch tick 5s (12 lần/phút) ⇒ đo 'đời đơn' có ~5,05 mẫu cho một đời 5–10′. Hệ quả BẮT BUỘC đọc kèm: `share_life_had_candidate` (31,7%) là CẬN DƯỚI, và `không ai ETA-khả-thi cả đời` (53,9%) là CẬN TRÊN. Đường chéo kiểm: hợp của (có ứng viên tại mẫu nào đó) HOẶC (từng được chào ở tick nào đó) = 34,8% ⇒ cận dưới thật ≥ 34,8%.",
+   "Ảnh chụp tại t_expire là CHÍNH XÁC (không lấy mẫu) — nó chụp đúng lúc `order_expired` được log.",
+   "Observer chạy TRƯỚC dispatcher trong cùng mốc thời gian (process của nó được tạo trước) ⇒ ảnh nó thấy ĐÚNG là input dispatcher thấy ở tick đó, không phải trạng thái sau khi gán.",
+   "Bản đồ phút-idle là tích phân xấp xỉ theo mẫu 1′, KHÔNG phải bộ đếm; xem §4 H4 cho độ lệch giữa hai đường (3,8%)."
+  ]
+ },
+
+ "1_chong_lan_tai_t_expire": {
+  "cau_hoi": "Với MỖI đơn chết: tại t_expire có bao nhiêu tài xế ELIGIBLE trong bán kính dispatch quanh pickup?",
+  "so": {
+   "don_chet_thuc_moi_ngay": {"A": 203.8, "B": 202.8, "ghi_chu": "loại 0,8–1,0 đơn/ngày `reason=end_of_run` (bị EXPIRE do hết run, không phải hết patience)"},
+   "share_khong_co_AI_idle_toan_thanh_pho": {"A": 0.054, "B": 0.0464},
+   "so_tai_xe_idle_TRUNG_BINH_toan_thanh_pho_luc_don_chet": {"A": 9.49, "B": 10.19, "delta": 0.7},
+   "share_co_ung_vien_HOP_PHAP_tai_t_expire": {"A": 0.1973, "B": 0.1844, "delta": -0.0129},
+   "share_co_nguoi_thoa_ETA_11p": {"A": 0.3101, "B": 0.2939},
+   "share_CHI_co_nguoi_o_dai_mu_2.2_3.1km": {"A": 0.1129, "B": 0.1095},
+   "share_ung_vien_bi_cooldown_chan_HET": {"A": 0.0775, "B": 0.0572},
+   "so_ung_vien_hop_phap_TRUNG_BINH": {"A": 0.757, "B": 0.89, "delta": 0.133, "pct": "+17,6%"},
+   "so_nguoi_thoa_ETA_TRUNG_BINH": {"A": 1.251, "B": 1.513, "delta": 0.262, "pct": "+20,9%"},
+   "khoang_cach_TRUNG_VI_tu_don_chet_toi_tai_xe_idle_GAN_NHAT_km": {"A": 2.575, "B": 2.613},
+   "ETA_TRUNG_VI_tu_don_chet_toi_tai_xe_idle_gan_nhat_phut": {"A": 13.39, "B": 13.52},
+   "phan_bo_khoang_cach_toi_nguoi_gan_nhat_A": {"<=2,22km (trong hex)": 0.3454, "2,22–3,14km (DẢI MÙ)": 0.3062, ">3,14km": 0.2944, "khong ai idle": 0.054}
+  },
+  "dien_giai": [
+   "Ở arm A, 80,3% đơn chết KHÔNG có một ứng viên hợp pháp nào tại thời điểm chết. Tài xế idle trung bình 9,49 người vẫn đang rảnh Ở ĐÂU ĐÓ trong thành phố ⇒ vấn đề không phải 'không còn ai rảnh'.",
+   "Con số ĐẮT NHẤT của mục này: TRUNG VỊ khoảng cách từ đơn đang chết tới tài xế idle GẦN NHẤT = 2,575 km với ETA 13,39′ — VƯỢT CẢ HAI ngưỡng (2,22 km shortlist và 11′ ETA). Nói cách khác: đơn chết điển hình có người rảnh cách 2,6 km, tức 'vừa đủ ngoài tầm với'. Hệ VƯỚNG BÁN KÍNH, không vướng THỜI LƯỢNG.",
+   "Arm B ĐÚNG LÀ đặt nhiều người rảnh hơn cạnh đơn đang chết theo TRUNG BÌNH (+17,6% ứng viên, +20,9% người thoả ETA, +0,7 người idle toàn thành phố). NHƯNG tỉ lệ đơn chết CÓ ÍT NHẤT MỘT ứng viên lại GIẢM (19,73% → 18,44%). Nghĩa là cung rảnh thêm dồn vào những đơn ĐÃ có người cạnh (làm dày chỗ đã dày) chứ không phủ thêm những đơn đang trắng ứng viên.",
+   "Đọc theo số tuyệt đối: đơn-chết-có-ứng-viên giảm 40,2 → 37,4 (−2,8/ngày) trong khi TỔNG đơn chết chỉ giảm 1,0 ⇒ đơn-chết-KHÔNG-ứng-viên TĂNG +1,8. Tức ở n=5 này có một chút chuyển đổi thật ở nhóm có-ứng-viên, nhưng bị bù gần hết bởi nhóm không-ứng-viên xấu đi. KHỚP cảnh báo rc-02: 'payout ns' không được đọc thành 'chuyển đổi = 0'."
+  ],
+  "phan_ra_KIN_kho_don_chet_arm_A": {
+   "ghi_chu": "BA nhóm PHÂN HOẠCH (kiểm: 1019/1019 bản ghi, không chồng, không hở). Dùng đo 'đời đơn' (mọi mẫu 1′ trong lúc đơn mở), không phải ảnh chụp lúc chết.",
+   "1_khong_ai_ETA_kha_thi_ca_doi": {"share": 0.5388, "don_ngay": 109.8, "nhan": "CẬN TRÊN (lấy mẫu 1′)", "y_nghia": "không ai rảnh với tới được, bất kể dispatcher tốt tới đâu — thuộc BÁN KÍNH/VỊ TRÍ/LƯỢNG CUNG, không thuộc dispatcher"},
+   "2_CHI_co_nguoi_o_dai_mu_hex": {"share": 0.1443, "don_ngay": 29.4, "y_nghia": "có người thoả ETA 11′ NHƯNG chưa bao giờ có người trong hex k=6 ⇒ chết THUẦN vì shortlist. Đây là con số ĐẦU TIÊN đo được cho BUG-DISPATCH-SHORTLIST / T-045c ('đơn bỏ oan chưa đo lại', tracking/TODO.md:34)"},
+   "3_tung_co_ung_vien_HOP_PHAP": {"share": 0.317, "don_ngay": 64.6, "phan_ra_con_CHONG_NHAU": {
+     "3a_bi_dispatcher_bo_dot": {"share_tren_TONG": 0.1904, "don_ngay": 38.8, "dinh_nghia": "(≥2 ứng viên đồng thời NHƯNG ≤1 lượt chào cả đời) HOẶC (có ứng viên NHƯNG 0 lượt chào cho bất kỳ ai)"},
+     "3b_da_chao_va_bi_TU_CHOI": {"share_tren_TONG": 0.1766, "don_ngay": 36.0, "dinh_nghia": "hành vi tài xế, KHÔNG phải dispatcher"},
+     "3c_chi_bi_bo_vi_PIN": {"share_tren_TONG": 0.0324, "don_ngay": 6.6}}}
+  }
+ },
+
+ "2_ban_do_cell": {
+  "cau_hoi": "Phút idle THÊM của B tập trung ở ô nào — có phải CELL TRẠM? So với bản đồ đơn chết.",
+  "so": {
+   "tong_dIdle_phut_doi_ngay": 674.6,
+   "cell_tram": {"n": 11, "dIdle_trong_cell_tram": 20.6, "share_dIdle": 0.0305,
+                 "idle_nen_A_trong_cell_tram": 382.8, "share_idle_nen": 0.026,
+                 "don_chet_trong_cell_tram_A": 29.0, "share_don_chet": 0.1423},
+   "top2_o_hut_idle": {"cells": ["89415cb4953ffff", "89415cb4bb3ffff"],
+                       "dIdle": 340.8, "share_dIdle": 0.505,
+                       "idle_nen_A": 8353.4, "share_idle_nen_A": 0.566,
+                       "don_chet_A": 3.2, "share_don_chet": 0.0157,
+                       "la_cell_tram": false},
+   "top10_o_nhieu_don_chet_nhat": {"don_chet_A": 85.8, "share_don_chet": 0.421, "dIdle_NHAN_DUOC": -13.0},
+   "top4_o_nhieu_don_chet_nhat": {"don_chet_A": 48.4, "dIdle_NHAN_DUOC": -45.2},
+   "tuong_quan_qua_cac_o": {"pearson_dIdle_vs_donchet": 0.0409, "spearman_dIdle_vs_donchet": 0.1141,
+                            "pearson_idleNEN_vs_donchet": 0.1203, "spearman_idleNEN_vs_donchet": 0.708},
+   "doi_chieu_voi_CAU_KY_VONG_tu_config": {
+     "nguon": "gsm_sim.demand.expected_demand_field(grid, cfg) gộp cả ngày = 1.200 đơn (khớp demand.orders_per_day)",
+     "o_hut_idle_89415cb4bb3": {"cau_ky_vong_ngay": 31.85, "idle_A_phut": 5662.0, "don_chet_A": 1.4, "idle_moi_don_ky_vong": 177.8, "don_chet_moi_don_ky_vong": 0.04},
+     "o_hut_idle_89415cb4953": {"cau_ky_vong_ngay": 31.85, "idle_A_phut": 2691.4, "don_chet_A": 1.8, "idle_moi_don_ky_vong": 84.5, "don_chet_moi_don_ky_vong": 0.06},
+     "o_don_chet_so_1_89415cb4c0b": {"cau_ky_vong_ngay": 51.69, "idle_A_phut": 253.4, "don_chet_A": 13.6, "idle_moi_don_ky_vong": 4.9, "don_chet_moi_don_ky_vong": 0.26},
+     "o_don_chet_so_2_89415cb4c03": {"cau_ky_vong_ngay": 44.25, "idle_A_phut": 254.0, "don_chet_A": 12.6, "idle_moi_don_ky_vong": 5.7, "don_chet_moi_don_ky_vong": 0.28},
+     "phat_bieu": "Ô hút idle số 1 có cầu kỳ vọng THẤP HƠN (31,85) ô đơn-chết số 1 (51,69) mà nhận NHIỀU HƠN 36 LẦN phút idle trên mỗi đơn kỳ vọng (177,8 vs 4,9). Lệch không giải thích được bằng phân bố cầu."},
+   "nguon_cua_idle_o_hai_o_hut_seed_1000_arm_A": {
+     "89415cb4953": {"relocate_demand_seek": 123, "relocate_deadhead_to_core": 2, "go_online": 4},
+     "89415cb4bb3": {"relocate_demand_seek": 203, "relocate_deadhead_to_core": 15, "go_online": 1},
+     "tong_toan_doi": {"relocate_demand_seek": 892, "relocate_deadhead_to_core": 547, "go_online": 90},
+     "phat_bieu": "326/892 = 36,6% mọi lượt relocate `demand_seek` của cả đội đổ vào ĐÚNG HAI ô này. Đó là bản năng đi tìm khách theo BELIEF (behavior.consider_relocate, hint = expected field TỪ CONFIG × nhiễu, world.py:1146-1175) — hai ô này nằm top-5 belief ở MỌI giờ."}
+  },
+  "dien_giai": [
+   "VẾ 'CELL TRẠM' CỦA H2 ĐỔ: chỉ 3,05% phút idle thêm rơi vào 11 cell trạm (20,6′ trong 674,6′), gần y hệt tỉ lệ nền 2,60%. Lý do nằm trong code: sau swap actor IDLE tại cell trạm (world.py:1243,1287) NHƯNG nếu cell đó ngoài lõi thì vòng actor kế ép deadhead về lõi (world.py:856-857), và `idle_min` chỉ cộng ở nhánh WAIT (world.py:1140) — tức SAU khi đã dịch chuyển. Câu chuyện 'đứng ở cell trạm nên không ai gọi' KHÔNG phải chỗ thời gian rảnh thêm đi tới.",
+   "NHƯNG VẾ TỔNG QUÁT CỦA H2 ĐỨNG RẤT VỮNG, chỉ là sai địa chỉ: 50,5% phút idle thêm dồn vào ĐÚNG HAI ô đã chứa 56,6% toàn bộ idle của đội và chỉ nhận 1,57% đơn chết. Ngược lại 10 ô nhiều đơn chết nhất (42,1% kho đơn chết) nhận −13,0′ — tức KHÔNG nhận gì, còn 4 ô đầu bảng nhận −45,2′ (ÂM).",
+   "Tương quan qua các ô giữa Δidle và đơn chết ≈ 0 (Pearson 0,041 · Spearman 0,114). Đáng chú ý: idle NỀN thì lại có tương quan HẠNG dương với đơn chết (Spearman 0,708) — cả hai đều dồn về vùng lõi đông; nhưng PHẦN TĂNG THÊM thì hoàn toàn không theo đơn chết.",
+   "Cơ chế của hai ô hút idle đã có bằng chứng đếm được: 36,6% lượt relocate `demand_seek` toàn đội trỏ vào đúng hai ô đó. Bản năng đi tìm khách đọc BELIEF TỪ CONFIG (không thấy đơn chết realized), nên nó dồn người về ô có CẦU TUYỆT ĐỐI cao, còn đơn chết lại đặc ở ô có TỈ LỆ KHÔNG-ĐƯỢC-PHỤC-VỤ cao (0,26–0,32 đơn chết/đơn kỳ vọng, so với 0,04–0,06 ở hai ô hút). Rót thêm thời gian rảnh vào một hệ định tuyến như vậy thì thời gian đi đúng vào chỗ đã thừa."
+  ]
+ },
+
+ "3_ban_do_gio": {
+  "cau_hoi": "Δidle theo giờ vs đơn chết theo giờ — lệch pha (H1) hay cùng pha?",
+  "so": {
+   "tuong_quan": {"pearson_dIdle_vs_donchet": 0.0005, "spearman_dIdle_vs_donchet": 0.0378,
+                  "pearson_idleNEN_vs_donchet": -0.0207},
+   "nhom_gio": {
+     "06-08h": {"dIdle": -16.4, "share_dIdle": "-2,4%", "don_chet": 56.2, "share_don_chet": "27,6%"},
+     "16-18h": {"dIdle": 55.2, "share_dIdle": "8,2%", "don_chet": 64.2, "share_don_chet": "31,5%"},
+     "SAU_GIO_DINH_06-08+16-18": {"dIdle": 38.8, "share_dIdle": "5,8%", "don_chet": 120.4, "share_don_chet": "59,1%"},
+     "10-13h": {"dIdle": 280.6, "share_dIdle": "41,6%", "don_chet": 16.8, "share_don_chet": "8,2%"},
+     "20-23h": {"dIdle": 317.2, "share_dIdle": "47,0%", "don_chet": 38.4, "share_don_chet": "18,8%"},
+     "10-13+20-23": {"dIdle": 597.8, "share_dIdle": "88,6%", "don_chet": 55.2, "share_don_chet": "27,1%"}},
+   "dIdle_theo_gio": {"5": 0.0, "6": 0.0, "7": 0.0, "8": -16.4, "9": 5.8, "10": 88.8, "11": 56.4, "12": 81.6, "13": 53.8, "14": -28.4, "15": 31.0, "16": 24.2, "17": -19.6, "18": 50.6, "19": 29.6, "20": 77.2, "21": 90.2, "22": 55.0, "23": 94.8},
+   "don_chet_theo_gio_A": {"5": 1.2, "6": 18.8, "7": 22.8, "8": 14.6, "9": 2.0, "10": 2.6, "11": 4.2, "12": 5.8, "13": 4.2, "14": 7.0, "15": 5.2, "16": 13.4, "17": 19.6, "18": 31.2, "19": 12.8, "20": 12.6, "21": 8.6, "22": 11.2, "23": 6.0}
+  },
+  "dien_giai": [
+   "LỆCH PHA, rõ tới mức tương quan Pearson = 0,0005 (không phải 'yếu' — bằng KHÔNG).",
+   "Số phát biểu gọn nhất: 6 giờ đỉnh (06–08h + 16–18h) chứa 59,1% kho đơn chết nhưng chỉ nhận 5,8% thời gian được giải phóng; ngược lại 8 giờ (10–13h + 20–23h) chứa 27,1% đơn chết lại nhận 88,6%.",
+   "Ở đúng cụm đỉnh sáng 06–08h — nơi 27,6% đơn chết xảy ra — Δidle là ÂM (−16,4′): kênh không giải phóng được phút nào trước 8h (Δ = 0,0 chính xác ở giờ 5,6,7 vì tài xế chưa kịp cạn pin để đi đổi), và giờ 8 còn mất đi.",
+   "Điều này BÁC H1 ở DẠNG MẠNH nhưng CỦNG CỐ H1 ở DẠNG YẾU: không phải 'mọi tài xế đều bận lúc đơn chết' (trung bình vẫn có 9,49 người rảnh toàn thành phố, chỉ 5,4% đơn chết lúc không còn ai rảnh) — mà là 'thời gian rảnh thêm ĐẾN VÀO GIỜ KHÁC'."
+  ]
+ },
+
+ "4_kiem_H4_thuoc_do": {
+  "cau_hoi": "'idle' có gồm trạng thái không nhận được đơn? Bộ đếm có khớp thời gian THỰC ở trạng thái eligible?",
+  "so": {
+   "idle_LAY_MAU_theo_state_IDLE_phut_doi_ngay": {"A": 14746.6, "B": 15421.2, "delta": 674.6},
+   "idle_BO_DEM_actor.idle_min_phut_doi_ngay": {"A": 15310.0, "B": 15998.8, "delta": 688.8},
+   "do_lech_bo_dem_vs_thuc": {"A": "+563,4′ = +3,82%", "B": "+577,6′ = +3,75%", "tren_DELTA": "+14,2′ = +2,1% của Δ"},
+   "so_thoi_gian_DOI_day_du_phut_ngay": {
+     "A": {"idle": 15310.0, "rest": 3932.7, "charge": 3356.9, "empty": 10883.3, "occupied": 13683.3, "online": 45611.0},
+     "B": {"idle": 15998.8, "rest": 4085.2, "charge": 2485.0, "empty": 10826.7, "occupied": 13618.2, "online": 45402.3},
+     "delta": {"idle": 688.8, "rest": 152.5, "charge": -871.9, "empty": -56.6, "occupied": -65.1, "online": -208.7}},
+   "so_thoi_gian_KHONG_KIN": {"tong_5_bucket_A": 47166.2, "online_A": 45611.0, "vuot": "+3,41%",
+                              "tong_5_bucket_B": 47013.9, "online_B": 45402.3, "vuot": "+3,55%"}
+  },
+  "dien_giai": [
+   "H4 với tư cách LỜI GIẢI THÍCH cho nghịch lý: ĐỔ. Đường đo độc lập (lấy mẫu state IDLE thật) cho Δ = +674,6′, lệch 2,1% so với bộ đếm +688,8′. Hiện tượng KHÔNG phải ảo giác đo lường.",
+   "NHƯNG H4 để lại HAI kẽ THẬT, đã đo được:",
+   "(a) `actor.idle_min` báo THỪA 3,8% so với thời gian thực ở trạng thái IDLE (+563,4′/ngày ở arm A). Đúng cơ chế rc-01 dự đoán: world.py:1136 cộng 2,0′ TRƯỚC `timeout(2.0)`, nên bị dispatcher bắt giữa chừng thì phần chưa trôi vẫn được đếm.",
+   "(b) MỚI — SỔ THỜI GIAN ĐỘI KHÔNG KÍN: idle+rest+charge+empty+occupied = 47.166,2′ vượt online 45.611,0′ (+3,41%). Ngoài kẽ (a) còn một khoản ĐẾM HAI LẦN thật: chặng đi tới trạm được cộng vào CẢ `empty_min` (world.py:1248) VÀ `charge_min` (world.py:1288, và nhánh swap_failed world.py:1277). ⇒ con số tiêu đề '−698′ chết ở trạm' KHÔNG phải thuần thời gian XẾP HÀNG; một phần là chặng di chuyển đã được ghi ở empty_min.",
+   "(c) LẤP một lỗ của rc-02: rc-02 §3.2.B phải GIẢ ĐỊNH 'phần dư 59,2′ = Δoccupied' vì UPDATE-159 không in Δoccupied/Δonline. Đo được ở cửa sổ 1000s: Δoccupied = −65,1′ (ÂM — ít thời gian CÓ KHÁCH hơn) và Δonline = −208,7′ (tài xế online ÍT hơn). Giả định 'sổ kín, Δonline≈0' của rc-02 SAI ở cửa sổ này ⇒ không được dùng phép trừ để suy Δoccupied."
+  ]
+ },
+
+ "5_phat_hien_MOI_ve_dispatcher": {
+  "ten": "COOLDOWN-SAU-KHI-GAN LÀM ĐƠN CHẾT ĐÓI (chưa có trong hồ sơ nào; rc-01 đoán được CƠ CHẾ ở mức code, đây là lần ĐẦU có số)",
+  "co_che": "world.py:636-646 — Hungarian gán mỗi đơn cho ĐÚNG MỘT tài xế mỗi tick; cổng cooldown cặp được kiểm SAU khi gán, và khi nó chặn thì vòng lặp `continue` (world.py:644-645): KHÔNG log, KHÔNG chào người kế tiếp, đơn MẤT TRỌN TICK đó. Vì phép gán là tối ưu tất định trên cùng trạng thái, tick sau lại gán đúng cặp đã bị từ chối ⇒ đơn có thể không bao giờ tới được ứng viên thứ hai. Cooldown = 10′ (world.py:171-172, config không override) ≥ patience_max 10′ ⇒ một lần từ chối là vĩnh viễn với đơn đó.",
+  "so": {
+   "phep_gan_Hungarian_moi_ngay": {"A": 3723.4, "B": 3773.4},
+   "phep_gan_bi_cong_cooldown_NUOT_moi_ngay": {"A": 2595.0, "B": 2651.0},
+   "share_phep_gan_bi_nuot": {"A": 0.6961, "B": 0.7015},
+   "luot_chao_THAT_su_toi_tai_xe_moi_ngay": {"A": 1128.4, "B": 1122.4},
+   "kiem_tra_dong_nhat": {"assign_minus_blocked_minus_offers": {"A": 0, "B": 0}, "y_nghia": "KHÔNG có kênh mất thứ ba — 100% khoảng hụt là cổng cooldown"},
+   "cap_KHAC_NHAU_bi_chan_moi_ngay": {"A": 366.6, "B": 361.6, "ghi_chu": "so với 2.595 SLOT bị nuốt ⇒ trung bình mỗi cặp bị chặn lặp ~7 lần"},
+   "share_don_chet_tung_bi_nuot_it_nhat_1_phep_gan": {"A": 0.2326, "B": 0.2081},
+   "so_tick_bi_nuot_TRUNG_BINH_tren_don_bi_anh_huong": {"A": 30.5, "B": 34.5, "y_nghia": "~2,5–2,9 phút đời đơn bị tiêu vào việc gán lại cho người đã từ chối"},
+   "P_chi_duoc_chao_toi_da_1_nguoi_KHI_co_tu_2_ung_vien_dong_thoi": {"A": 0.8416, "B": 0.8529, "mau_so_don_ngay": {"A": 20.2, "B": 20.4}},
+   "P_khong_duoc_chao_cho_AI_khi_tung_co_ung_vien_hop_phap": {"A": 0.3406, "B": 0.3424, "mau_so_don_ngay": {"A": 64.6, "B": 59.0}},
+   "phan_bo_so_nguoi_tung_duoc_chao_moi_don_chet_A": {"0": 774, "1": 216, "2": 26, "3+": 3, "tren_1019_ban_ghi": true}
+  },
+  "vi_du_lan_vet_duoc": "seed 1000 arm A, đơn 30 (chết lúc t=369,0′, ô 89415cb4c33): trong 8/8 mẫu của đời nó ĐỀU có ứng viên hợp pháp, cao nhất 5 ứng viên ĐỒNG THỜI — mà tổng cộng chỉ ĐÚNG MỘT tài xế được chào, người đó từ chối, và đơn chết. (Bản ghi đầy đủ trong `sample_records_A_seed0` của rc-03-raw; xem `oid`:30.)",
+  "phan_bien_da_ghi": "Bản thân cooldown là CÓ CHỦ Ý (M0-2, chống chào lại người vừa từ chối) và tồn tại Y NHAU ở hai arm (0,696 vs 0,702) ⇒ nó KHÔNG tạo ra Δ A/B. Khuyết tật nằm ở HAI điểm khác: (i) thứ tự — lọc cooldown phải nằm TRƯỚC phép gán (hoặc gán lại sau khi loại cặp bị chặn), nếu không đơn mất lượt oan; (ii) IM LẶNG — không event nào ghi lại, nên 2.595 lượt/ngày biến mất khỏi mọi thước đo. Đúng họ lỗi 'cú loại im lặng' (N5) mà repo đã trả giá."
+ },
+
+ "6_verdict_so_bo_tung_gia_thuyet": {
+  "H1_CALIBRATION_lech_pha_gio": {
+   "verdict": "ĐỨNG ở DẠNG YẾU · ĐỔ ở DẠNG MẠNH",
+   "bang_chung_dung": "Tương quan Δidle × đơn chết theo giờ = 0,0005 (Pearson). 6 giờ đỉnh chứa 59,1% đơn chết nhận 5,8% thời gian giải phóng; 8 giờ 10–13h+20–23h chứa 27,1% đơn chết nhận 88,6%. Ở 06–08h (27,6% đơn chết) Δidle = −16,4′.",
+   "bang_chung_do": "Dạng mạnh ('đơn chết vì mọi người đều bận') SAI: trung bình 9,49 tài xế đang rảnh toàn thành phố lúc một đơn chết; chỉ 5,4% đơn chết xảy ra khi KHÔNG còn ai rảnh."
+  },
+  "H2_POSITION_MISMATCH": {
+   "verdict": "ĐỨNG MẠNH ở dạng TỔNG QUÁT · ĐỔ ở vế 'CELL TRẠM' (đúng vế mà rc-01 nghi nhất)",
+   "bang_chung_dung": "Trung vị khoảng cách đơn-chết → tài xế idle gần nhất = 2,575 km / ETA 13,39′, vượt cả 2,22 km và 11′. 53,9% đơn chết cả đời không có ai ETA-khả-thi. Tương quan Δidle × đơn chết qua các ô ≈ 0 (0,041/0,114). 50,5% Δidle dồn vào 2 ô đã giữ 56,6% idle nền và chỉ nhận 1,57% đơn chết; 10 ô nhiều đơn chết nhất (42,1% kho) nhận −13,0′.",
+   "bang_chung_do": "Chỉ 3,05% Δidle rơi vào cell trạm — bằng tỉ lệ nền 2,60%. Lý do code: cell trạm ngoài lõi ⇒ bị ép deadhead về lõi (world.py:856-857) TRƯỚC khi idle được cộng (world.py:1140).",
+   "co_che_thay_the_da_do": "Bản năng relocate theo BELIEF-config dồn 36,6% lượt `demand_seek` toàn đội vào đúng hai ô hút idle đó; hai ô này có 0,04–0,06 đơn chết trên mỗi đơn kỳ vọng, còn các ô đầu bảng đơn chết có 0,26–0,32 (5–8 lần cao hơn)."
+  },
+  "H3_DISPATCHER_GAP": {
+   "verdict": "ĐỨNG — và MẠNH HƠN dự đoán của rc-01; nhưng KHÔNG giải thích được Δ A/B (giống nhau ở hai arm)",
+   "bang_chung": "(a) 69,6% phép gán Hungarian/ngày bị cổng cooldown nuốt im lặng, không có đường lui sang ứng viên kế; đồng nhất assign−blocked−offers = 0 chứng minh không kênh mất nào khác. (b) 84,2% đơn chết TỪNG có ≥2 ứng viên đồng thời chỉ được chào TỐI ĐA MỘT người. (c) 14,4% đơn chết (29,4/ngày) chết THUẦN vì shortlist hex — số đầu tiên đo được cho BUG-DISPATCH-SHORTLIST/T-045c.",
+   "vi_sao_khong_giai_thich_Delta": "Cả hai khuyết tật có cùng cường độ ở arm A và B (0,696 vs 0,702 · 14,4% vs 14,1%) ⇒ chúng đặt TRẦN cho mọi kênh phía cung, không sinh ra hiệu số. Muốn quy Δ cho chúng thì phải chứng minh arm B đẩy người rảnh vào dải mù/cặp-đã-từ-chối NHIỀU HƠN — chưa có bằng chứng đó (mean_n_eta_not_hex tăng 0,495→0,623, cùng chiều nhưng nhỏ và không đủ để claim ở n=5)."
+  },
+  "H4_VISIBILITY": {
+   "verdict": "ĐỔ với tư cách lời giải thích · nhưng XÁC NHẬN hai kẽ đo thật",
+   "bang_chung_do": "Đường đo độc lập theo state cho Δidle = +674,6′ vs bộ đếm +688,8′ — lệch 2,1%. Không phải ảo giác đo.",
+   "ke_xac_nhan": "(a) idle_min thừa 3,8% (world.py:1136 cộng trước timeout). (b) sổ thời gian đội KHÔNG KÍN (+3,41%): chặng đi tới trạm nằm trong CẢ empty_min (world.py:1248) và charge_min (world.py:1288) ⇒ '−698′ chết ở trạm' không thuần là xếp hàng."
+  }
+ },
+
+ "7_phan_loai_cuoi_theo_protocol": {
+  "tra_loi_truc_tiep_cau_hoi_cua_Cuong": "'Đáng ra thời gian thừa phải vào đơn' — KHÔNG, và không phải vì sim kém như MỘT khối. Đo được: thời gian rảnh thêm chỉ thành đơn nếu nó rơi TRONG 2,22 km/11′ quanh một đơn đang chết, TRONG cửa sổ patience 5–10′ của đơn đó, và thắng được cả cổng cooldown. Ba điều kiện đó gần như không xảy ra: về GIỜ, 88,6% thời gian giải phóng đến vào 8 giờ chỉ chứa 27,1% đơn chết (tương quan 0,0005); về Ô, 50,5% dồn vào 2 ô chứa 1,57% đơn chết (tương quan 0,04); và ngay cả khi rơi đúng chỗ thì 69,6% phép gán vẫn bị cổng cooldown nuốt. 'Thiếu thời gian' chưa bao giờ là ràng buộc bị buộc chặt — ràng buộc là BÁN KÍNH VỚI TỚI và CHẤT LƯỢNG VÒNG CHÀO.",
+  "bon_thanh_phan_KHAC_LOAI_khong_duoc_gop": {
+   "MODEL_GAP_co_chu_y_co_nhan": {
+    "noi_dung": "(a) cầu ngoại sinh hoàn toàn, không co giãn theo cung (demand.py:90-171; REVIEW-092-4 đang DEFERRED) ⇒ cung rảnh thêm chỉ có MỘT đường thành tiền: vớt đơn EXPIRED. (b) eligibility = CHỈ state IDLE (world.py:628) ⇒ 152,5′ chảy vào rest là KHÔNG THỂ vớt đơn THEO THIẾT KẾ. (c) bản năng tìm chỗ đọc BELIEF-config, không thấy đơn chết realized, ring ≤3 (~1 km), mất eligibility khi di chuyển (behavior.py:199-238, world.py:1121-1123).",
+    "bang_chung_moi_cua_rc03": "36,6% lượt relocate demand_seek dồn vào 2 ô có tỉ lệ đơn-chết/cầu thấp nhất; Δidle × đơn chết qua ô ≈ 0.",
+    "phan_loai": "MODEL GAP — lựa chọn mô hình có chủ đích, KHÔNG phải bug. Nhưng nó là thành phần TRẬT PHẦN LỚN hiệu ứng."},
+   "CALIBRATION_GAP": {
+    "noi_dung": "Thời điểm swap được giải phóng lệch pha với thời điểm đơn chết. Không có tham số nào sai — chỉ là hai phân phối không trùng nhau.",
+    "bang_chung": "§3: Pearson 0,0005; 6 giờ đỉnh nhận 5,8% thời gian nhưng chứa 59,1% đơn chết.",
+    "phan_loai": "CALIBRATION GAP"},
+   "BUG_hai_cai_ton_tai_o_CA_HAI_arm": {
+    "bug_1_BUG_DISPATCH_SHORTLIST": {"trang_thai": "đã ghi hồ sơ (configs/pilot_dongda.yaml:121-142, TODO.md:34 T-045c) — rc-03 lần đầu ĐO ĐƯỢC", "so": "14,4% đơn chết = 29,4 đơn/ngày chết THUẦN vì hex k=6 hẹp hơn bán kính ETA-khả-thi"},
+    "bug_2_COOLDOWN_SAU_KHI_GAN": {"trang_thai": "MỚI — chưa có trong hồ sơ nào", "so": "69,6% phép gán bị nuốt IM LẶNG (2.595/3.723 mỗi ngày), 84,2% đơn có ≥2 ứng viên chỉ được chào ≤1 người", "hai_khuyet_tat": "thứ tự (lọc sau khi gán, không gán lại) + im lặng (không log)"},
+    "phan_loai": "BUG — nhưng CẢNH BÁO: cả hai đối xứng giữa hai arm ⇒ chúng đặt TRẦN, KHÔNG sinh ra Δ. Cấm dùng chúng để 'giải thích' Δ của kênh station_choice."},
+   "VISIBILITY_GAP": {
+    "noi_dung": "(a) cấp ARTIFACT (rc-02 đã tố): bộ metric A/B không xuất sổ thời gian đội, orders_total, unserved_breakdown. (b) cấp METRIC (rc-03 mới): idle_min thừa 3,8%; sổ thời gian đội KHÔNG KÍN +3,41% do chặng-đi-trạm nằm trong CẢ empty_min lẫn charge_min. (c) cấp DISPATCHER: 2.595 lượt gán bị nuốt/ngày không để lại một event nào.",
+    "phan_loai": "VISIBILITY GAP"}
+  },
+  "cai_gi_van_UNRESOLVED": [
+   "Δ KẾT QUẢ (payout/đơn hoàn thành) của kênh: rc-03 KHÔNG phân xử được — n=5 cho dấu NGƯỢC n=100. Nguồn có hiệu lực vẫn là e01-station-100.json.",
+   "PHÂN BỔ ĐỊNH LƯỢNG cho từng khuyết tật: ba nhóm ở §1 phân hoạch kín kho đơn chết, nhưng 'sửa được thì vớt được bao nhiêu' là PHẢN THỰC — chưa chạy. Muốn số thật phải chạy run đối chứng có sửa (rc-04: nới shortlist theo bán kính ETA · lọc cooldown TRƯỚC khi gán · gán lại sau khi loại cặp bị chặn), mỗi thay đổi MỘT cấu hình một lần, n≥30.",
+   "VÌ SAO đúng hai ô 89415cb4953/89415cb4bb3 hút 56,6% idle nền: đã đo ĐƯỜNG VÀO (36,6% lượt demand_seek) nhưng chưa chứng minh vì sao belief dồn vào đó tới mức đó (cực đại địa phương của prior? hình học deadhead? phân bố home cell?). Chưa loại trừ được các nhánh này.",
+   "Ceiling tiền của hai bug: xem §8 — là ESTIMATE có nhãn, KHÔNG phải dự báo."
+  ],
+  "cam_ghi": "CẤM ghi 'root cause là X'. Nghịch lý có bốn thành phần KHÁC LOẠI; ba trong bốn (MODEL GAP · CALIBRATION GAP · VISIBILITY GAP) đủ để giải thích vì sao Δ thời gian không thành Δ đơn, và thành phần thứ tư (hai BUG) giải thích vì sao KHO ĐƠN CHẾT lớn tới 204/ngày mà không giải thích Δ."
+ },
+
+ "8_quy_mo_tien_CEILING_co_nhan": {
+  "thuoc": "252–284 đ/tài xế cho mỗi +1 đơn toàn đội (rc-02 §3.4, ba nguồn độc lập); tỉ lệ 0,93–0,96 đơn hoàn thành cho mỗi đơn chết tránh được (rc-02 §3.4).",
+  "bug_1_shortlist_hex": {"don_ngay": 29.4, "sau_ti_le_hoan_thanh": "27,3–28,2", "tien_moi_tai_xe_ngay_vnd": "+6.900 … +8.000", "so_voi_toan_bo_kenh_vi_tri": "1,1–1,3 lần (+6.016đ)"},
+  "bug_2_cooldown_sau_gan": {"don_ngay": 38.8, "sau_ti_le_hoan_thanh": "36,1–37,2", "tien_moi_tai_xe_ngay_vnd": "+9.100 … +10.600"},
+  "hai_bug_gop_DISJOINT": {"don_ngay": 68.2, "share_kho_don_chet": "33,5%", "tien_moi_tai_xe_ngay_vnd": "+16.000 … +18.600", "so_voi_kenh_vi_tri": "2,7–3,1 lần"},
+  "phien_ban_TRU_TU_CHOI": {"gia_dinh": "×0,85 tỉ lệ nhận (suy thô từ 951,4 hoàn thành ÷ 1.128,4 lượt chào)", "don_ngay": "~58", "tien_moi_tai_xe_ngay_vnd": "+13.600 … +15.800"},
+  "nhan_BAT_BUOC": "CEILING/ESTIMATE, KHÔNG phải dự báo. Ba lý do nó sẽ nhỏ hơn thực tế: (i) nới bán kính làm pickup xa hơn ⇒ tỉ lệ nhận TỤT (chính lý do BUG-DISPATCH-SHORTLIST chưa được sửa — bảng k=6..12 ở configs/pilot_dongda.yaml:126-133 cho thấy lệch accept_base vượt dung sai 5pp); (ii) hai nhóm §1 phân hoạch nhưng vớt được đơn này có thể chiếm mất tài xế của đơn khác (không cộng tuyến tính); (iii) chưa chạy phản thực."
+ },
+
+ "9_chuyen_tiep_canh_bao_cua_rc02_van_con_hieu_luc": [
+  "⚠ Câu hỏi gốc TRỘN HAI CỬA SỔ SEED: −698′/+520′ là n=30 cửa sổ 7000s (UPDATE-159:16-21, cấp DOCS, không có artifact); +235′ rest là n=100 cửa sổ 1000s. rc-03 chạy cửa sổ 1000s và cho Δcharge = −871,9′ · Δidle = +688,8′ · Δrest = +152,5′ (n=5) — CÙNG CHIỀU nhưng KHÁC ĐỘ LỚN. Không được cộng ba cửa sổ vào một sổ.",
+  "⚠ VISIBILITY GAP cấp artifact vẫn NGUYÊN: bộ metric A/B (parallel.py:194-220) không xuất sổ thời gian đội, orders_total, unserved_breakdown. rc-03 phải tự đo lại từ actor object.",
+  "⚠ `compare.driver` trong mọi file e2 là MỘT tài xế tiêu điểm, không phải trung bình đội.",
+  "MỚI của rc-03: rc-02 §3.2.B giả định 'sổ kín và Δonline≈0' để suy Δoccupied=59,2′. Đo được ở cửa sổ 1000s: Δoccupied = −65,1′, Δonline = −208,7′, và sổ KHÔNG kín (+3,41%) ⇒ giả định đó không dùng lại được."
+ ],
+
+ "10_file_lien_quan": {
+  "artifact_so_tho": "scratchpad/rc03-raw.json (tổng hợp) + scratchpad/rc03-raw.records.json (1.019+1.014 bản ghi từng đơn chết) — KHÔNG commit; tái tạo bằng script dưới",
+  "script_tai_tao": "research/audit/2026-08-06-root-cause-idle/rc-03-probe-script.py",
+  "tien_de": ["research/audit/2026-08-06-root-cause-idle/rc-01-mechanism.json",
+              "research/audit/2026-08-06-root-cause-idle/rc-02-numbers.json",
+              "research/audit/2026-08-06-e2/e01-station-100.json",
+              "tracking/updates/UPDATE-159-de403-root-cause-ui-labels.md:16-21"],
+  "code_duoc_trich": ["src/gsm_sim/world.py:628 (eligibility = IDLE)",
+                      "src/gsm_sim/world.py:636-646 (gán → cổng cooldown → continue im lặng)",
+                      "src/gsm_sim/world.py:1136,1140 (idle_min cộng trước timeout)",
+                      "src/gsm_sim/world.py:1248,1277,1288 (chặng đi trạm vào CẢ empty_min và charge_min)",
+                      "src/gsm_sim/world.py:856-857 (idle ngoài lõi bị ép deadhead)",
+                      "src/gsm_sim/world.py:1146-1175 (belief từ config, không thấy realized)",
+                      "src/gsm_sim/dispatcher.py:94-134 (ETA + Hungarian + shortlist hex)",
+                      "configs/pilot_dongda.yaml:121-142 (BUG-DISPATCH-SHORTLIST), :147 (eta_max 11), :153-155 (patience)"]
+ }
+}

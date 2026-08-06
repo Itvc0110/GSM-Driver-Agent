@@ -62,6 +62,15 @@ mẫu số thì chỉ chuyển chỗ đặt lỗi.
 | **Rủi ro đảo kết luận** | (a) L1R **không có timestamp đủ mịn** ⇒ `oh_bucket` chỉ xấp xỉ được; phải gắn nhãn xấp xỉ, không giả vờ chính xác; (b) sửa xong advisor **lạc quan hơn** ⇒ nếu forecast vẫn là median point-estimate thì rủi ro "khuyên bám mốc rồi không tới" **tăng** — đây chính là `mm-06` issue #2, phải ghi nợ kèm và **không** claim "advisor tốt hơn" chỉ vì bớt im lặng; (c) ba producer sửa ba chỗ ⇒ nguy cơ lệch nhau tiếp; phải có **một test dùng chung** ghim quy ước |
 | **Chi phí** | Nhỏ-vừa (3 producer + 3 test + đo lại bảng feasible) |
 
+### B0 — khảo sát test ghim (đã làm 2026-08-06, đúng kỷ luật ADV-09)
+
+| Đường producer | Có test ghim quy ước? | Kết luận thi công |
+| --- | --- | --- |
+| **L1** `bonus_gap.py:63-64` | **KHÔNG** (grep `tests/`: chỉ `test_future_leak_l1r.py` kiểm rò tương lai, không kiểm mẫu số) | **Bug thuần** — sửa được, không đụng ý định test nào. ⚠ `derive_bonus_gap_input` hiện **chưa có production caller** (chỉ test) ⇒ sửa để đường L1 tương lai không thừa hưởng |
+| **Sản phẩm** `ui/.../advisor.py:74` | **KHÔNG** | **Bug thuần trên ĐƯỜNG SẢN PHẨM** — đây là chỗ đáng sửa nhất |
+| **Sim** `advice_bridge.py:990-992` (day-average vào **CẢ HAI** bucket) | **CÓ** — `tests/test_multiday.py:172-173` | Đọc **ý định**: docstring nói *"Nếu bridge không đọc memory thì multi-day chỉ là vỏ"* ⇒ mục đích test là **kiểm nối memory**, assertion hai-bucket chỉ là cách chứng minh đã đọc — **KHÔNG phải chốt ngữ nghĩa** (khác hẳn bẫy ADV-09 nơi test ghim thiết kế **có giải thích**). ⇒ **cập nhật test CÓ CHỦ Ý**, ghi lý do trong docstring + UPDATE |
+| **Sim — dữ liệu nguồn** | — | ⚠ `multiday.py:142` chỉ có `actor.points / (online_min/60)` = **trung bình trộn**. Muốn rate theo bucket ở sim thì **memory phải tích luỹ điểm và giờ-online THEO BUCKET** ⇒ đổi schema memory ⇒ **phần này to hơn**, có thể tách thành B0b nếu cycle phình |
+
 ---
 
 ## CYCLE B — `D-ADV-02`: `shift_extend` phải biết CỬA SỔ ĐIỂM
