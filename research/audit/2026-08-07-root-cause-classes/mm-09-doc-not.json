@@ -1,0 +1,181 @@
+{
+  "item": "MM-09 doc-not — 3 solver nho (S5 weekly_khoan, S6 mission_knapsack, S8 penalty_explain): tu kiem lai tren code + gan LOP L1..L6",
+  "nguon": "research/audit/2026-08-06-math-model-audit/mm-09-small-solvers.json (12 math_issues)",
+  "nguoi_doc_not": "FINDER subagent, 2026-08-07",
+  "cach_tu_kiem": "moi finding CAO/TB deu mo file:line; 5 finding chay REPRO THAT bang uv run python (solver that, khong phai suy tu config) — script scratchpad/repro_mm09.py; grep doc lap cho cau hoi mo coi (src/ + ui/ + scripts/).",
+  "findings": [
+    {
+      "id": "mm09-1",
+      "title": "CA BA SOLVER MO COI: 0 import production trong src/ + ui/ + scripts/ — chi tests goi solve()",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "grep 'from gsm_core.solvers' ngoai tests: src/gsm_sim/advice_bridge.py:67 (bonus_feasibility, idle_reduction, shift_dp) · src/gsm_sim/multiday.py:37 (idle_reduction) · src/gsm_sim/world.py:383 (capacity_alloc) · ui/backend/app/adapters/advisor.py:20 (bonus_feasibility) · ui/backend/app/services/advice_checkpoint.py:39 (bonus_feasibility, shift_dp) · scripts/probe_rest_window_blockers.py:29 (idle_reduction) · scripts/smoke_advisor_live.py:17 (bonus_feasibility). KHONG dong nao import weekly_khoan/mission_knapsack/penalty_explain. Ke ca smoke LIVE cung khong: scripts/smoke_advisor_live.py:70 reports_by_feat F1=[_s1,_s2], F3=[_s3].",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "PHAI CITE, KHONG PHAI MOI: tracking/ASSIGNMENTS.md:31 (UPDATE-121, Khanh, 2026-08-03) da ghi 'AdvisorPipeline mo coi (0 caller san pham)'; tracking/DEFERRED.md:74 da ghi 'from_l1r chua duoc import o dau ngoai tests'. Phan MOI cua vong nay: (a) khoanh dung 3/9 solver, (b) chi ra CAU TRUC — hai be mat san pham (ui/backend/app/services/advice_checkpoint.py:191,225 va src/gsm_sim/advice_bridge.py:606,851,1025) goi solver TRUC TIEP, di VONG router+pipeline; nen router.py:14-22 la ban do duong ma khong ai lai, va no van liet ke du 9 ten. src/gsm_core/advisor/pipeline.py:59 nhan solver_reports TU CALLER (khong co dispatcher ten->solve) ⇒ them ten vao router KHONG lam solver chay."
+    },
+    {
+      "id": "mm09-13",
+      "title": "MO COI NHUNG DANG DUOC BAO CAO NHU DANG SONG — 4 be mat, trong do 1 o cap bao cao mentor va 1 o artifact ACTIVE",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "(a) docs/reports/week2/Week2-Report-Driver-Advisor-Team.md:161 'Moi con so tai chinh hien thi cho tai xe **phai** di qua mot trong chin solver nay' + bang :166-174 liet ke du 9 solver KHONG co cot trang thai; grep 'chin solver|chua noi|1/9' trong file: khong o dau noi 3/9 solver co 0 caller. (b) CUNG FILE :173 khai S8 = 'Tra cuu + doi chieu PolicyBundle co version' — SAI HAI LAN: penalty_explain.py:38 chu ky la solve(pi) KHONG nhan PolicyBundle, va source cua so la 'policy_v:threshold' khong version (penalty_explain.py:72,78,111). (c) tracking/updates/UPDATE-040-pi5a-wire-s5-s6-into-pipeline.md:1 tieu de 'khoan tuan + mini-task DEN duoc tai xe' + :50 bang claim 'S5/S6 den duoc tai xe qua F1/F2/F3 | OBSERVED-CODE | Cao' — evidence thuc la e2e test TU DUT report vao pipe.handle() (tests/test_advisor_pi5.py:184,194). (d) docs/data-catalog/gsm-data-catalog.csv khai consumed_by 'S5 weekly_khoan' (x3) va 'S6 mission_knapsack' (x3) cho bang GSM THAT (sinh boi scripts/build_data_catalog.py:52,89,92,167,182) — catalog nay la ACTIVE theo CLAUDE.md §2.",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "PHAN BIEN CHINH MINH (ky luat 5): cau :161 co the doc nhu LUAT THIET KE chuan tac ('phai di qua'), khong phai khai bao trang thai ⇒ rieng cau do toi de confidence TB. Nhung o cell :173 la khai bao SU KIEN va no SAI — confidence CAO. Tuong tu 'consumed_by' trong catalog co the la y dinh thiet ke; van la chu doc-nhu-that trong file xuat CSV/XLSX. Day la tra loi truc tiep cau hoi 4 cua nhiem vu: CO, va o dung cho dat gia nhat (bao cao gui mentor, chua commit — con sua duoc)."
+    },
+    {
+      "id": "mm09-2",
+      "title": "S6: cost cong don MAU THUAN voi co che mission PASSIVE cua world — mot cuoc tien do hoa MOI mission active",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/world.py:781-789 (for m in self.mission_catalog: neu window chua done_hour thi mission_progress[mid] += 1 — KHONG loai tru nhau) vs src/gsm_core/solvers/mission_knapsack.py:45 (cost = _slots(remaining/tph) rieng tung mission), :62-73 (DP cong don cost). Config nen: configs/pilot_dongda.yaml:498-506 — m-morning4 window [6,9] va m-allday12 window null CHONG NHAU that.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "DO THAT (repro B): 2 mission cung khung, moi cai con 10 cuoc, tph=2, budget 6h ⇒ solver chon 1 mission, reward 50.000d, bo lo mB 40.000d (khong vao 'skipped', chi khong duoc DP chon). Theo co che world (doc code, KHONG chay sim — ky luat 4: noi ve CAU TRUC): 10 cuoc = 5h hoan thanh CA HAI. Solver dinh gia 10h cho viec world lam trong 5h. Xep L1 vi day la HAI QUY UOC cho MOT dai luong ('so gio de hoan thanh tap mission') — engine so huu su that, solver tu tinh bang cong thuc khac; giong ho D-M3-17/D-ADV-06 nhung truc la model-vs-world chu khong phai UI-vs-engine."
+    },
+    {
+      "id": "mm09-3",
+      "title": "S6: khong co rang buoc khung gio — mission con 30' van 'kha thi' theo tong quy gio",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/mission_knapsack.py:52-54 (chi check cost > cap toan cuc), :56-58 (dung item BO window_start/window_end/mission_type) vs producer GIU du: src/gsm_core/features/from_l1r.py:320-322 (loc active tai t_now) va :328-331 (ghi window_start/window_end/mission_type vao record)",
+      "tu_kiem": true,
+      "lop": "L4",
+      "ghi_chu": "DO THAT (repro C): mission window_end = t_now+30', con 5 cuoc, tph=2 (can 2.5h), budget 4h ⇒ chosen=['sap-het'], feasible=True, digest: 'chon 1 nhiem vu — sap-het (con 5 cuoc); tong thuong 40.000d, uoc 2.5/4.0 gio'. Tuc khuyen theo duoi mot mission BAT KHA THI TUYET DOI. Xep L4 co DE DAT: cong window CO ton tai nhung dat o PRODUCER va kiem sai tinh chat tai vi tri do ('active tai t_now') trong khi tinh chat can kiem la 'con du thoi gian truoc window_end'; sau do khong con cong nao. Neu hoi doc L4 chat theo chu 'truoc/sau buoc sai' thi day gan voi 'thieu rang buoc' hon ⇒ toi ghi lop=L4 nhung danh dau FIT MOT PHAN. Bang chung phu (L2): tests/test_mission_knapsack.py:158 ten la test_window_filter_excludes_expired nhung fixture dung window CA THANG (2026-06-01..06-30 vs 07-01..07-31) ⇒ khong bao gio cham duoc ca 'con 30 phut'; ten test tao cam giac window da duoc lo."
+    },
+    {
+      "id": "mm09-4",
+      "title": "S5: feasible tinh tren quy gio HU CAU — hang 10h/ngay, KHONG tru gio da chay hom nay; verdict DAO CHIEU khi dung capacity that",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:242 (hours_per_day: float = 10.0), :278-279 (hours_today_left = (24*60 - min_of_day)/60; hours_budget = min(hours_today_left, hours_per_day) + days_remaining*hours_per_day) vs :272-275 (gio online THAT da doc ngay canh do, chi dung lam MAU SO cua rate); src/gsm_core/solvers/weekly_khoan.py:89-91 (enough_hours/days_ok/feasible)",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "DO THAT (repro D): tai xe chay 10h/ngay x 3 ngay, hoi luc T4 20:00, quota 5.000.000d ⇒ hours_budget_remaining = 44.0h (4h 'con lai hom nay' + 4 ngay x 10h) DU da chay 10h hom nay; hours_needed = 41.43h ⇒ feasible=True, digest hua 'thieu 2.900.000d (~41.4 gio)'. Neu capacity trung thuc (hom nay da het + 4 ngay x 10h = 40h) thi 41.43 > 40 ⇒ feasible=False. Tuc DUY NHAT 4 gio ma tuong lam verdict dao chieu — dung loai claim THUAN LOI phai verify ky nhat (memory verify-favourable-claims-hardest). He qua tai chinh that: clawback 580.000d trong chinh vi du nay. Xep L1: 'nang luc gio cua tai xe' co nguon do duoc (driver_online_hours_sap_id) da nam trong cung ham, nhung tang nay tu dat mot quy uoc thu hai (hang 10)."
+    },
+    {
+      "id": "mm09-9",
+      "title": "S6: hai default cho cung trips_per_hour — 2.0 (producer l1r) vs 1.5 (ba noi con lai cua repo)",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:311 (trips_per_hour = ... if tot_h > 0 else 2.0) vs configs/pilot_dongda.yaml:395 (trips_per_hour_est: 1.5 — comment 'do duoc ~1.4-1.5') · src/gsm_core/solvers/bonus_feasibility.py:19-20 (DEFAULT_TRIPS_PER_HOUR = 1.5, comment '1.5 cuoc/gio = so DO trong repo ... AUDIT S1-4 thay 3.0 khong nguon') · src/gsm_sim/market_state.py:112 va src/gsm_sim/advice_bridge.py:259 (fallback 1.5)",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu": "Artifact goi la 'hai nguon su that'; do lai thi la 1 CHONG 3: ba site dung 1.5 (co nhan DO), rieng from_l1r dung 2.0 khong nguon. Voi tai xe khong lich su, tph=2.0 lam cost_h thap hon 25% ⇒ knapsack nhoi them mission. Chinh repo da dat ten cho mau nay (T-046 / tracking/TODO.md:237 'hai ten cho mot su that')."
+    },
+    {
+      "id": "mm09-6",
+      "title": "S6: objective reward-only thieu ve chi phi co hoi — va trong world hien tai chi phi that ~0 nen 'chon tap' la CAU HOI SAI",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/mission_knapsack.py:60-83 (value = reward_vnd thuan, gio chi la rang buoc) vs src/gsm_sim/world.py:781-789 (mission passive: cu chay la tien do, khong phai 'chon'); configs/pilot_dongda.yaml:498 comment 'Mission ngay (nen cho solver S6 mission_knapsack co kenh tac dong)'",
+      "tu_kiem": true,
+      "lop": "L5",
+      "ghi_chu": "BIEN THE cua L5, khong phai L5 nguyen ban: L5 trong charter la world config zero-cost (cash_cost=0/swap_fee=0); o day chi phi ~0 do CO CHE (mission passive) chu khong do mot cai co config. Hieu ung giong het: ca ho 'chon mission' tro — moi mission deu dang nhan, rang buoc quy gio khong con y nghia kinh te. Neu Cuong muon lop chat che thi day la ung vien tach thanh L5b 'zero-cost do co che'."
+    },
+    {
+      "id": "mm09-5",
+      "title": "S5: pacing tuyen tinh theo mean realized — khong phuong sai ngay, khong dow, khong CI",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/weekly_khoan.py:82-87 (hours_needed = gap/rate diem), :103-110 (sensitivity DUNG 2 kich ban cung -20%/-40%); src/gsm_core/features/from_l1r.py:272-275 (rate = revenue/online_h tuan-toi-nay, mot so diem); configs/pilot_dongda.yaml:303-305 (world co dow level weekday 1.0 / friday 1.10 / weekend 1.05)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Doc code xac nhan: khong CI, khong shrinkage, khong dow. KHONG lop nao trong 6 lop mo ta duoc 'uoc luong diem trinh bay nhu chac chan'. Gan L1 nhat neu lap luan 'world dinh gia dow, solver gia dinh phang' — nhung rate cua solver den tu DU LIEU REALIZED chu khong tu config world, nen ep vao L1 la ep. Day la du lieu PHAN BIEN gia thuyet lop: co no khong thuoc khuon nao."
+    },
+    {
+      "id": "mm09-7",
+      "title": "S8: KHONG co policy version trong nguon trich — vi pham truc tiep §5 'nguon co trich dan, co version'",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/penalty_explain.py:72,78,111 (source literal 'policy_v:threshold' / 'policy_v:weekly_quota') vs src/gsm_core/solvers/weekly_khoan.py:38 (pv = f'policy_v:{policy.version}|basis={basis}'); producer: src/gsm_core/features/from_l1r.py:457-458 (chi copy HAI SO nguong tu policy) va :460-466 (record tra ve KHONG co policy_bundle_version) vs :290 (weekly_khoan_input CO policy_bundle_version); schemas/l3/penalty_explain_input.schema.json — grep 'policy|version' chi ra view_version/schema_version, khong co truong policy version",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "DO THAT (repro E): sources cua S8 = ['penalization:count','penalization:p1','penalization:p2','penalization:total','policy_v:threshold','statistic_daily:measured'] vs cung luc S5 = [...,'policy_v:sim-policy-v0|basis=gross']. Doi chieu duoc trong CUNG mot lan chay. Xep KHONG: day la THIEU provenance, khong phai hai quy uoc lech nhau ve SO. Neu muon ep lop thi gan L1 ('repo co mot pattern pv chuan, S8 tu lam pattern yeu hon') — toi ghi ro la ep."
+    },
+    {
+      "id": "mm09-8",
+      "title": "S8: khoan PENDING bi cong vao 'tong da tru' — tien CHUA mat duoc noi nhu da mat, dung cho quyen giai trinh 48h quan trong nhat",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/penalty_explain.py:40 (chi loai status == 'waived'), :50-55 (total += amt cho moi khoan con lai), :118 (digest 'ky nay ghi nhan N khoan tru, tong Y'); schemas/l1r/driver_penalization_ATA.schema.json status enum = applied|pending|waived (xac nhan bang doc file)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "DO THAT (repro E): 1 khoan applied 50.000d + 1 khoan pending 200.000d ⇒ total_deducted_vnd = 250.000d; digest: 'ky nay ghi nhan 2 khoan tru, tong 250.000d'. Sai 5x so voi tien thuc su da bi tru. KHONG lop nao phu. Day la khuon 'tron KY VONG voi REALIZED / trang thai chua chot tinh nhu da chot' — cung khuon voi mm09-11 (chan troi) va mot phan mm09-5 (uoc luong diem noi nhu chac). Toi de xuat day la UNG VIEN LOP MOI (tam goi L7) va no co it nhat 3 thuc the trong rieng artifact nay."
+    },
+    {
+      "id": "mm09-11",
+      "title": "S8: lech chan troi (phat gop 30 ngay vs rate 1 dong gan nhat) + dung nguong THUONG lam nguong PHAT",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:427,434 (days_back=30 cho penalties) vs :448-453 (stat = DUNG 1 dong driver_statistic_daily gan nhat) va :457-458 (thresholds lay bonus_min_acceptance/bonus_min_completion); src/gsm_core/solvers/penalty_explain.py:63-78 (so diem-voi-nguong + CLIFF_MARGIN 0.03), :120-122 (cau 'dang duoi muc toi thieu ... theo chinh sach')",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "Artifact de confidence TB; toi NANG len CAO cho VE NGU NGHIA vi da do that (repro E): digest that = 'ty le nhan chuyen 84% dang duoi muc toi thieu 85% theo chinh sach' — trong mot advice GIAI THICH PHAT, tuy nguong 85% do la dieu kien DU THUONG (bonus_min_acceptance), khong phai nguong bi TRU TIEN. Tai xe doc se hieu 'toi bi tru vi 84%' — sai nhan qua. Ve lech chan troi (30 ngay vs 1 ngay) tu kiem bang doc code, chua do dao dong ngay-qua-ngay ⇒ giu TB cho ve do. Khong thuoc lop nao (cung khuon L7 de xuat o mm09-8)."
+    },
+    {
+      "id": "mm09-12",
+      "title": "DA-08 KHONG chay duoc cho S5/S8 bang twin-world hien tai — sim khong co co che khoan tuan/clawback",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "grep -rn 'weekly_quota|khoan|clawback' src/gsm_sim/ ⇒ 0 KET QUA (tu chay lai; artifact bao co 2 hit ve quota nghi, toi khong tim thay ca hai). Nguoc lai mission CO trong world: src/gsm_sim/world.py:781-789 + configs/pilot_dongda.yaml:498-506 (3 mission ngay). Chuan kenh: specs/advisor-objective-model-v2.md §5 DA-08.",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu": "Xep L3 nhu BIEN THE PHIA WORLD cua mo coi: S5 khong the co consumer song vi world khong co co che de loi khuyen tac dong vao. Khac voi mo coi phia code (mm09-1) o cho fix khong phai 'noi day' ma la 'tuyen bo KHONG THE KIEM' theo specs/real-data/data-contract-counterfactual.md §4. Rieng S6 thi world DA co mission ⇒ do duoc bang DA-08 NGAY, nhung phai sua cost model (mm09-2/3) truoc, neu khong se lap lai dung station_choice."
+    },
+    {
+      "id": "mm09-10",
+      "title": "S6: luong tu hoa slot bang int(round()) hai phia — cost tron XUONG 0 tao mission 'mien phi', cap tron LEN thoi budget",
+      "severity": "THAP",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/mission_knapsack.py:24-25 (_slots = int(round(hours*60/15))), :33 (cap = _slots(budget_h)), :45 (cost = _slots(cost_h)), :84 (hours_used = sum(cost)*15/60)",
+      "tu_kiem": true,
+      "lop": "KHONG",
+      "ghi_chu": "DO THAT (repro A): mission con 1 cuoc voi tph=10 (cost that 0.1h) ⇒ cost = 0 slot, LUON duoc DP chon; solver bao hours_used = 2.0 trong khi tong cost_hours that = 2.1. (repro A2): budget 0.2h ⇒ cap = 1 slot (15') ⇒ hours_used = 0.25 > hours_budget = 0.2 — solver tu bao vuot quy gio cua chinh no. Khong thuoc lop nao (loi quy uoc so hoc). BANG CHUNG PHU LOP L2: tests/test_mission_knapsack.py:79-86 ten test_never_exceeds_budget nhung assert co dung sai '+ SLOT_MIN/60' (= +0.25h) ⇒ chinh cai test do HOP THUC HOA vuot 15 phut; ca hai case tren deu pass. Do la mot thuc the L2 that (assertion dung chu, dung sai lam no khong kiem duoc tinh chat)."
+    },
+    {
+      "id": "mm09-14",
+      "title": "(FINDER them) test_never_exceeds_budget dung sai +15' — cong test hop thuc hoa dung khuyet tat no phai bat",
+      "severity": "THAP",
+      "confidence": "CAO",
+      "evidence_file_line": "tests/test_mission_knapsack.py:79-86 (assert r['solution']['hours_used'] <= hours + SLOT_MIN/60 + 1e-9); tests/test_mission_knapsack.py:54-63 (_brute_force dung DUNG cong thuc cost cua solver ⇒ oracle chi chung minh DP dung so voi CHINH mo hinh, khong the bat sai mo hinh)",
+      "tu_kiem": true,
+      "lop": "L2",
+      "ghi_chu": "Hai co che vo hieu hoa khac nhau trong cung mot file test: (a) dung sai bang dung do hat ⇒ bat dang thuc luon dung; (b) brute-force oracle tai su dung cong thuc cua solver ⇒ 30 seed parametrize chi kiem DP-vs-enumeration, khong kiem gio/window/dem-chung. Day la ly do 'test xanh' khong mau thuan voi mm09-2/3/10."
+    }
+  ],
+  "lop_thong_ke": {
+    "tong_finding": 14,
+    "L1": 3,
+    "L2": 1,
+    "L3": 3,
+    "L4": 1,
+    "L5": 1,
+    "L6": 0,
+    "KHONG": 5,
+    "ty_le_giai_thich_duoc": "9/14 = 64%",
+    "chi_tiet": {
+      "L1 — nhieu quy uoc cho mot su that": ["mm09-2 (gio hoan thanh mission: world vs solver)", "mm09-4 (nang luc gio tai xe: hang 10 vs online_time da doc)", "mm09-9 (trips_per_hour 2.0 vs 1.5 x3 site)"],
+      "L2 — test ghim VO HIEU": ["mm09-14 (dung sai +15' + oracle dung cong thuc cua chinh solver)"],
+      "L3 — co che MO COI": ["mm09-1 (0 import production, ca 3 solver)", "mm09-13 (mo coi ma van duoc bao cao nhu song — 4 be mat)", "mm09-12 (bien the phia world: khong co co che khoan de kenh S5 ton tai)"],
+      "L4 — cong dat SAI VI TRI": ["mm09-3 (cong window o producer kiem sai tinh chat; FIT MOT PHAN)"],
+      "L5 — zero-cost lam ca HO kenh tro": ["mm09-6 (bien the: cost ~0 do CO CHE mission passive, khong do co config)"],
+      "L6 — hieu chinh BU cho khuyet tat": [],
+      "KHONG THUOC LOP NAO": ["mm09-5 (uoc luong diem, khong CI/dow/phuong sai)", "mm09-7 (thieu policy version — provenance §5)", "mm09-8 (pending tinh nhu applied)", "mm09-10 (luong tu hoa int(round) hai phia)", "mm09-11 (lech chan troi 30d vs 1d + nguong thuong dung lam nguong phat)"]
+    }
+  },
+  "phan_bien_gia_thuyet_lop": {
+    "lop_giai_thich_duoc_gi": "L3 la lop MANH NHAT o artifact nay: no khong chi dung ma con giai thich VI SAO 11 finding con lai ton tai ma khong ai thay — khong co consumer thi khong co ai dau don, nen no tich lai. L1 cung vung (3 thuc the doc lap).",
+    "lop_KHONG_giai_thich_duoc_gi": "5/14 finding roi ra ngoai. Chung KHONG ngau nhien — 3 trong 5 (mm09-8 pending-nhu-applied, mm09-11 chan troi 30d-vs-1d, mm09-5 diem-noi-nhu-chac) cung mot khuon: TRON KY VONG/CHUA-CHOT VOI REALIZED. De xuat lop moi L7 'trang thai chua chot duoc trinh bay nhu da chot'. Hai cai con lai (mm09-7 provenance thieu version, mm09-10 quy uoc lam tron) khong gom duoc voi nhau.",
+    "canh_bao_ep_lop": "Toi da co y KHONG ep 5 cai vao lop cho dep. Neu ep (mm09-7 -> L1, mm09-5 -> L1, mm09-11 -> L1) thi ty le se thanh 12/14 = 86% — mot con so nghe nhu xac nhan gia thuyet nhung duoc tao ra bang cach noi long dinh nghia L1 den muc 'bat ky hai cach lam khac nhau nao'. Do dung la kieu 'ke chuyen gon' ma charter §3 canh bao.",
+    "L6_bang_0": "Khong tim thay thuc the L6 (hieu chinh bu) nao trong artifact nay. Hop ly: L6 can mot vong hieu chinh tren so do duoc — ma 3 solver nay chua bao gio chay that de co so ma hieu chinh. Tuc L3 va L6 gan nhu loai tru nhau."
+  },
+  "ghi_chu": {
+    "chat_luong_trich_dan_cua_artifact": "12/12 finding kiem lai deu DUNG VE NOI DUNG — khong finding nao bi bac. Nhung LINE REF cua from_l1r.py lech he thong ~+20 dong (artifact ghi :220/:250-257/:289/:306-309/:426-436; thuc te :242/:272-279/:311/:328-331/:448-458). Nguyen nhan: src/gsm_core/features/from_l1r.py bi sua ngay 2026-08-06 boi commit 96a89d3 (UPDATE-167, lech don vi mau so bucket S1) — cung ngay audit. Bai hoc: file:line phan ra rat nhanh; khi doc lai artifact phai neo bang NOI DUNG (ten ham/chuoi literal), khong neo bang so dong.",
+    "hai_diem_artifact_noi_qua_hoac_thieu": "(a) mm09-12 dan 'advice_bridge.py:895,940 quota nghi' — toi grep 'khoan|weekly_quota|clawback' trong src/gsm_sim va duoc 0 KET QUA, khong tai lap duoc hit do; ket luan chinh (sim khong co co che khoan) van DUNG va manh hon artifact ta. (b) mm09-9 ta la 'hai nguon su that'; do lai la 1 CHONG 3 (1.5 o config + bonus_feasibility + market_state/advice_bridge), tuc 2.0 la ngoai le don doc chu khong phai the doi xung.",
+    "cai_toi_KHONG_tu_kiem": "Khong chay sim that de do phia world cua mm09-2 (chi doc world.py:781-789). Theo ky luat 4, toi chi khang dinh CAU TRUC ('mot cuoc cong tien do cho moi mission active'), KHONG khang dinh mot con so ket cuc nao ve sim. Cung khong do dao dong ngay-qua-ngay cua acceptance_rate cho mm09-11 (ve chan troi giu confidence TB).",
+    "trung_voi_NO_DA_BIET": "mm09-1 CHONG voi B6-PARITY (UI chi chay 1/9 solver) va voi UPDATE-121 'AdvisorPipeline mo coi' (ASSIGNMENTS.md:31) va DEFERRED.md:74 ('from_l1r chi duoc import trong tests') ⇒ toi cite chu khong bao lai nhu moi. mm09-9 la ho T-046 (tracking/TODO.md:237 'hai ten cho mot su that'). Phan chua ai ghi: mm09-13 (dang duoc BAO CAO nhu song), va bo phan tich lop.",
+    "repro": "C:/Users/Cuong/AppData/Local/Temp/claude/.../scratchpad/repro_mm09.py — chay bang 'PYTHONIOENCODING=utf-8 uv run python'; tat dinh, khong mang, khong ghi vao repo. 5 khoi A/A2/B/C/D/E tuong ung mm09-10/mm09-10/mm09-2/mm09-3/mm09-4/mm09-7+8+11."
+  }
+}

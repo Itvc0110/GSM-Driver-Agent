@@ -1,0 +1,146 @@
+{
+  "item": "ĐỌC NỐT mm-10-aux-solvers.json (S7 idle_reduction · S9 anomaly_alert · S3 f3_patterns) + TỰ KIỂM trên code + gán LỚP L1..L6",
+  "meta": {
+    "artifact_doc": "research/audit/2026-08-06-math-model-audit/mm-10-aux-solvers.json",
+    "so_finding_thuc_te": "8 mục trong math_issues (nhiệm vụ ghi 7). 6 mục mới + 2 mục tự khai '[Debt cũ CHƯA SỬA]' (S3-1, S8S9-2, audit 2026-07-26).",
+    "da_tu_kiem": "8/8 mục — 4 mục REPRODUCE bằng script chạy thật (F-1, F-1b, F-7, F-8), 4 mục kiểm bằng đọc file:line + grep. Script: scratchpad/probe_mm10.py, scratchpad/probe_s7_sparse.py (chạy qua `uv run python`, output dán trong evidence).",
+    "chua_tu_kiem": "Không có mục nào bị relay mù. Hai điểm CHƯA ĐO tần suất trên sim (ghi rõ trong từng finding): F-4 (kênh rest_window OFF mặc định) và N-3 (kênh shift_extend OFF mặc định)."
+  },
+  "findings": [
+    {
+      "title": "F-1 (mm-10 #1) S3 bonus_progress_gap hứa 'chốt được mốc thưởng' mà KHÔNG kiểm eligibility acceptance/completion — ĐO ĐƯỢC: hứa 115.000đ cho tài xế mà luật trả 0đ",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/f3_patterns.py:95-105 (gọi policy.next_tier_gap, không đọc acceptance/completion dù đã có ở :40-41) · src/gsm_sim/policy.py:94-97 (day_bonus trả 0 nếu acceptance<0.85 HOẶC completion<0.85) — REPRODUCE (probe_mm10.py): acc=comp=0,84 ⇒ patterns=['bonus_progress_gap'], day_bonus(160đ)=0đ, text gửi tài xế = 'kết ca với 150đ — chỉ thiếu 10đ nữa là đạt mốc thưởng 115,000đ. Ca sau chạy thêm ít cuốc là chốt được.' Cùng text ở acc=0,80 và acc=0,60.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu_rieng": "BỔ SUNG CỦA TÔI (mm-10 không nói): ở acc ∈ [0,50 ; 0,85) KHÔNG pattern nào khác bắn — acceptance_cliff chỉ bắn ở acc<0,5 (:72) hoặc 0,85≤acc<0,88 (:81). Đo được: acc=0,84/0,80/0,60 đều ra patterns=['bonus_progress_gap'] ĐƠN ĐỘC. Tức đúng vùng tài xế đã rớt thưởng, hệ thống vừa IM về việc rớt vừa hứa 115k. Hại lớn hơn mm-10 mô tả. || GỐC SÂU HƠN mm-10: `gsm_core.policy.PolicyBundle` KHÔNG có method nào áp eligibility — `bonus_at()` tự khai docstring 'CHƯA xét ràng buộc tỷ lệ' (policy.py:104-105), `next_tier_gap()` cũng mù (policy.py:97-102). Hai field bonus_min_* tồn tại (policy.py:24-25) nhưng không method nào của class dùng. 3/4 caller tự quấn cổng ngoài (bonus_feasibility.py:109-116; shift_dp.py:118-119,174,314,380), S3 là caller DUY NHẤT quên ⇒ đây là 'primitive mù + hợp đồng caller không được cưỡng chế', không phải 'một solver đãng trí'."
+    },
+    {
+      "title": "N-1 (MỚI — của tôi, không có trong mm-10) Đường L1R ghi key `fulfillment_rate`, S3 đọc key `completion_rate` ⇒ completion LUÔN rơi về mặc định 1,0 — và điều này LÀM HỎNG chính CÁCH SỬA mà mm-10 đề xuất",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:215 (`\"fulfillment_rate\": stat[\"fulfillment_rate\"]` — day_state_end đường L1R KHÔNG có key completion_rate) vs src/gsm_core/features/session_summary.py:47 (đường mock ghi `\"completion_rate\": completion`) vs src/gsm_core/solvers/f3_patterns.py:41 (`completion = float(dse.get(\"completion_rate\", 1.0))`) — REPRODUCE (probe_mm10.py): dse L1R có fulfillment_rate=0,40 ⇒ solver đọc completion = 1,0. Đối chứng: from_l1r.py:124 (deriver bonus_gap) DỊCH đúng `completion = float(stat[\"fulfillment_rate\"])` rồi ghi ra `completion_rate` ở :192 — bất đối xứng nằm ở ĐÚNG deriver của S3.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu_rieng": "PHẢN BIỆN CÁCH SỬA CỦA mm-10 (kỷ luật 5): extension_proposals[0] đề nghị thêm `acceptance>=policy.bonus_min_acceptance and completion>=policy.bonus_min_completion`. Đo được: trên đường L1R vế `completion` của cổng đó PASS VÔ ĐIỀU KIỆN (1,0 ≥ 0,85 luôn đúng) vì key sai. ⇒ cổng chỉ còn NỬA. Tài xế acceptance 0,90 + fulfillment 0,40 (day_bonus THẬT = 0đ) vẫn lọt qua cổng đã 'sửa' và vẫn nhận lời hứa 115k. Sửa F-1 mà không sửa N-1 trước là dựng một cổng thủng một nửa và tưởng đã đóng. || Thêm: `completion` ở f3_patterns.py:41 hiện là BIẾN CHẾT — grep toàn file chỉ 1 hit, không dòng nào dùng nó. Nó là dấu vết của một cổng ĐỊNH làm mà chưa bao giờ nối."
+    },
+    {
+      "title": "N-2 (MỚI — của tôi) S7: map demand đường L1R THƯA (chỉ giờ CÓ cuốc), solver mặc định `demand.get(h, 1.0)` ⇒ giờ 0 cuốc (vắng NHẤT) bị chấm là CAO ĐIỂM và LOẠI khỏi khung nghỉ; đường sim map ĐỦ 24 giờ ⇒ hai đường trả HAI lời khuyên khác nhau trên cùng một thế giới",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:402-408 (`by_hour: defaultdict(int)` chỉ nhận key của giờ có trip; `demand = {str(h): ... for h, n in sorted(by_hour.items())}` — giờ 0 cuốc VẮNG MẶT) vs src/gsm_sim/multiday.py:183 (`{str(h): ... for h in range(24)}` — đủ 24, 0 cuốc ⇒ 0.0) vs src/gsm_sim/advice_bridge.py:820-822 (`for h in range(24)` — cũng đủ 24) vs src/gsm_core/solvers/idle_reduction.py:76 (`if demand.get(str(h), 1.0) <= LOW_DEMAND_MAX`) — REPRODUCE (probe_s7_sparse.py), CÙNG idle_segments, CÙNG cầu: map L1R (14h vắng mặt) ⇒ worst_window = {hour: 11, idle_min: 30,0, demand_index: 0,2}; map sim (14h=0.0) ⇒ worst_window = {hour: 14, idle_min: 50,0, demand_index: 0,0}.",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu_rieng": "KHÁC mm-10 F-3: F-3 nói proxy trips làm cầu bị supply-censor (sai ĐỘ LỚN). N-2 nói dù chấp nhận proxy, key THIẾU + mặc định 1.0 làm ĐẢO DẤU đúng những giờ rỗng nhất — 0 cuốc đọc thành cầu đỉnh. Hai lỗi độc lập, chồng lên nhau đúng một chiều: cả hai đều đẩy S7 tránh xa giờ thật sự vắng. || Mặc định 1.0 ở idle_reduction.py:76 là CÓ CHỦ Ý an toàn (không biết ⇒ coi như đông khách, đừng khuyên nghỉ) — với map ĐỦ 24 giờ thì đúng; với map THƯA thì 'không biết' và 'bằng 0' bị gộp làm một, đúng lớp hidden-fallback mà chính gsm_core/policy.py:118-120 cảnh báo ('CẤM gộp UNKNOWN vào OFF_BY_POLICY')."
+    },
+    {
+      "title": "F-3 (mm-10 #3) S7 đường L1R: demand_by_hour = đếm `trips` (chỉ đơn ĐÃ phục vụ) ⇒ giờ thiếu cung trông y hệt giờ ít cầu (S7-2 cũ, vẫn còn nguyên) — NHƯNG mệnh đề GIẢM NHẸ của mm-10 SAI",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:402-408 (`by_hour[_hour(t['request_time'])] += 1` chỉ trên bảng `trips`) · src/gsm_core/solvers/idle_reduction.py:12 (docstring tự khai 'Demand là PROXY (chỉ đơn ĐÃ phục vụ)') — SAI Ở MỆNH ĐỀ GIẢM NHẸ: mm-10 viết 'đường SIM NỘI BỘ dùng ORACLE demand_field ... nên chưa có hại thật đo được'. Nhưng src/gsm_sim/advice_bridge.py:846-849 SHORT-CIRCUIT: `if actor.planned_rest_hour is not None: return int(actor.planned_rest_hour)` — bỏ qua toàn bộ build_idle_reduction_input/oracle. Và planned_rest_hour do src/gsm_sim/multiday.py:165 (`idle_reduction.solve(ii)`) đặt, nạp bằng `_demand_index(result)` (multiday.py:175-184) từ `result.orders`, KHÔNG phải oracle.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu_rieng": "LỚP: mm-10 tự gán 'cùng lớp station_choice' (proxy quan sát được thay cho đại lượng world định giá). Charter L1..L6 KHÔNG CÓ lớp này — xem ghi_chu tổng. L1 là hàng xóm gần nhất nhưng KHÁC nghĩa: L1 = một tầng TỰ TÍNH LẠI cái engine đã sở hữu; ở đây KHÔNG tầng nào sở hữu 'cầu thô' cả — không ai tính sai, mà là không ai có. || TRÙNG mm-04: mệnh đề giảm nhẹ bị R-3 bác thẳng ('Đường SỐNG DUY NHẤT nạp cho S7 dòng đơn NGOẠI SINH của hôm qua, gồm 20,1% đơn KHÔNG ai phục vụ'). Lưu ý R-3 và F-3 lệch NGƯỢC CHIỀU và ở HAI đường khác nhau: multiday dùng TOÀN BỘ đơn sinh (phình tập thông tin), L1R dùng CHỈ đơn đã phục vụ (censor). Không phải cùng một lỗi. || Đây đúng loại 'claim THUẬN LỢI' mà memory bắt kiểm gắt nhất — mm-10 nói 'chưa có hại thật đo được' và câu đó KHÔNG an toàn như viết."
+    },
+    {
+      "title": "F-2 (mm-10 #2) `derive_session_summary_input(_l1r)` là deriver L3 DUY NHẤT không nhận `t_now`, và bị BỎ SÓT khỏi cổng thường trực chống rò tương lai",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/features/from_l1r.py:201-202 (chữ ký `(driver_id, session_date, l1r, policy=None)` — không t_now; mọi deriver *_l1r khác đều có: :243 weekly_khoan, :345 idle_reduction, :455 penalty_explain) · src/gsm_core/features/session_summary.py:14-15 (bản mock cũng không) · tests/test_future_leak_gate.py:82-92 (`_cases()` liệt kê ĐÚNG 7 deriver viết TAY: bonus_gap/weekly_khoan/shift_plan/mission_select/idle_reduction/penalty_explain/anomaly_alert — không có session_summary) · grep `session_summary|f3_patterns` trong tests/test_future_leak_gate.py + tests/test_future_leak_l1r.py = 0 hit (tự chạy) · src/gsm_core/advisor/router.py:29-30 (`\"session_review\": [\"tong ket\",\"ca vua\",\"sao thu nhap\",\"toi uu\",\"thu nhap hom nay\",\"ket qua ca\"]` — 'thu nhap hom nay' khớp được GIỮA ca).",
+      "tu_kiem": true,
+      "lop": "L2",
+      "ghi_chu_rieng": "SỰ THẬT: xác nhận đủ. SEVERITY: mm-10 ghi CAO, tôi hạ TB — chưa có caller sản phẩm nào (xem F-6), mọi test hiện có đều gọi với session_date đã xong, nên hại HIỆN TẠI = 0; giá trị là phòng ngừa cấu trúc. mm-10 tự nói 'thay đổi an toàn thuần phòng thủ' — mâu thuẫn với nhãn CAO của chính nó. || LỚP căng: L2 là 'assertion đúng chữ nhưng fixture suy biến'. Ở đây cổng KHÔNG có assertion nào cho file này cả — cái suy biến là DANH SÁCH liệt kê tay `_cases()`. Đó là một hình dạng RIÊNG: **cổng thường trực dùng danh sách TAY thay vì quét cả họ** ⇒ mỗi thành viên mới của họ mặc định NGOÀI cổng, im lặng. Xếp L2 vì cùng hậu quả (cổng đọc như phủ mà không phủ), nhưng ghi rõ cơ chế khác — ứng viên cho một lớp mới, xem ghi_chu tổng."
+    },
+    {
+      "title": "F-4 (mm-10 #4) S7 rest_window và S4 positioning kéo cùng một actor hai hướng ở hai tick liền kề — standby_plan KHÔNG bị pop khi bản năng là REST",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_sim/world.py:998-1016 (khối standby chạy TRƯỚC; chỉ pop `standby_plan` khi `action == WAIT` (mode wait_only) hoặc `action in (WAIT, RELOCATE)` — nhánh REST không chạm, plan ở lại) · src/gsm_sim/world.py:1029-1041 (khối rest_window chạy SAU, `alt_action_fn = lambda a: consider_relocate(a, self.grid, hour, hint, self.rng, ...)` — KHÔNG đọc self.standby_plan) · src/gsm_sim/advice_bridge.py:901-903 (`alt = alt_action_fn(actor)`; `action, target = alt` ở world.py:1057) · configs/pilot_dongda.yaml:339 (`rest_window: false`).",
+      "tu_kiem": true,
+      "lop": "L4",
+      "ghi_chu_rieng": "Cơ chế xác nhận đúng như mm-10 mô tả, và LỚP khớp L4 rất sạch: khối standby là một CỔNG ĐẶT SAI VỊ TRÍ trong chuỗi — nó quyết định 'có áp kế hoạch toàn cục không' TRƯỚC bước duy nhất có thể biến REST thành RELOCATE. Đặt sau, hoặc cho khối rest đọc standby_plan, là hết. || CHƯA TỰ KIỂM: tần suất/chi phí ENROUTE+SOC thật — kênh OFF mặc định nên không có baseline để đo; muốn số phải bật rest_window trong một sweep. Tôi KHÔNG đo, và mm-10 cũng không. || TRÙNG MỘT PHẦN mm-04 R-5 (bậc rest_window không sạch quy trách: cả kích hoạt lẫn hành động đều là positioning). R-5 nói về QUY TRÁCH Δ; F-4 nói về CHI PHÍ hai lần di chuyển + cơ chế standby_plan treo. F-4 bổ sung thật cho R-5, không thay thế."
+    },
+    {
+      "title": "F-6 (mm-10 #6) S3/S9 là solver MỒ CÔI — không caller sản phẩm nào; NHƯNG mệnh đề về S7 ('ĐÚNG MỘT caller sống') SAI",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "ĐÚNG cho S3/S9: src/gsm_core/advisor/pipeline.py:59 (`handle(self, req, solver_reports, ...)` — nhận report TỪ caller, pipeline không tự gọi solver) · caller không-test DUY NHẤT của handle là scripts/smoke_advisor_live.py:92, và nó VIẾT TAY report S3 ở :58-65 (`_s3()` không gọi f3_patterns.solve) · ui/backend/app/adapters/advisor.py:20 (import solver DUY NHẤT: `bonus_feasibility`) · ui/backend/app/routers/advice.py:343 (`_REAL_ADVICE_ID_PREFIXES = (\"s1-\",\"s2-\",\"s4-\",\"s7-\")` khai 's7-' nhưng không adapter nào sinh id đó) · grep `f3_patterns.solve(|anomaly_alert.solve(` ngoài tests = 0 (tự chạy). SAI cho S7: có HAI call site sống — src/gsm_sim/advice_bridge.py:851 (có cổng ch_rest_window) VÀ src/gsm_sim/multiday.py:165 trong `_update_memory`, gọi tại multiday.py:266 VÔ ĐIỀU KIỆN cho mọi actor mọi ngày, KHÔNG hỏi channel. Đường này còn chạy trong sinh mock: src/gsm_core/mockgen/adapter_sim.py:249 gọi run_multiday.",
+      "tu_kiem": true,
+      "lop": "L3",
+      "ghi_chu_rieng": "Phần S3/S9 = L3 chuẩn (cơ chế mồ côi). Phần S7 phải GẠCH: mm-04 R-3 đã gọi đúng multiday là 'đường SỐNG DUY NHẤT nạp cho S7' ⇒ khẳng định 'ĐÚNG MỘT caller' của mm-10 vừa sai vừa mâu thuẫn artifact anh em. Tôi KHÔNG tính phát hiện này là mới của mình — nó là R-3, chỉ là mm-10 chưa đọc R-3. || Hệ quả cho cách đọc: 'S7 mồ côi ⇒ 3 math_issue kia chưa hại ai' là suy luận KHÔNG đứng cho nhánh sim. Nó chỉ đứng cho nhánh L1R (F-3, N-2) và cho S3/S9."
+    },
+    {
+      "title": "F-5 (mm-10 #5) S9 in `confidence` cho tài xế dưới dạng phần trăm như xác suất đã hiệu chỉnh, trong khi mock sinh nó bằng rng.uniform(0.3, 0.8) và không có closed-loop nào đo false-positive",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/anomaly_alert.py:120 (`độ tin cậy {top['confidence']:.0%}` trong problem_digest — câu văn CHÍNH gửi tài xế) · :96 (`numbers.append(_num(f['confidence'], 'ratio', f\"frauds:{f['fraud_id']}\")`) · src/gsm_core/mockgen/realdata.py:481 (`\"confidence\": round(rng.uniform(0.3, 0.8), 2), ..., \"status\": \"open\"` — mọi bản ghi mock đều `open`, không bản ghi nào chuyển cleared/closed ⇒ không có mẫu để tính precision).",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu_rieng": "Sự thật xác nhận đủ. LỚP: không thuộc L1..L6. Đây là 'số KHÔNG NGUỒN được trình bày như số ĐO' — không phải tính sai (S9 không tính gì), không phải mồ côi, không phải cổng sai chỗ. Nó chạm thẳng CLAUDE §5 ('mock phải gắn nhãn'; 'không hứa chắc') nhưng không có lớp nguyên nhân nào của charter mô tả nó. Ứng viên lớp mới cùng chỗ với F-5 và một phần D-E4-01. || Đề xuất sửa của mm-10 (hạ confidence xuống numbers[] với source 'upstream:uncalibrated', để severity làm tín hiệu chính) tôi thấy đúng ranh giới §5 và không đụng model — không có phản biện."
+    },
+    {
+      "title": "F-7 (mm-10 #7, tự khai debt cũ S3-1) `_dur_min` bỏ phần NGÀY ⇒ hoạt động vắt nửa đêm cho duration ÂM — HẠI LỚN HƠN mm-10 mô tả: số ÂM đi thẳng vào câu văn gửi tài xế, và pattern idle/rest bị NUỐT im lặng",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/f3_patterns.py:21-27 (`_hour` = `int(iso[11:13])`, `_dur_min` cộng trừ trên `iso[14:16]` — không parse ngày) · configs/pilot_dongda.yaml:242 (archetype P7 ca TỐI-ĐÊM 15-16h → 23-24h) — REPRODUCE (probe_mm10.py): `_dur_min({t_start: 2026-07-01T23:40, t_end: 2026-07-02T00:20})` = **-1400** (đúng phải +40). Ca sạc 17:40→00:20 (400 phút THẬT): observed.duration_min = **-1040**, severity = MED (đúng phải HIGH), và heuristic_note gửi tài xế đọc 'sạc/đổi pin ~-1040 phút lúc 17h'.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu_rieng": "mm-10 mô tả hậu quả là 'làm sai severity (HIGH/MED)' — NHẸ HƠN thực tế. Ba hậu quả tôi đo/đọc được: (a) số ÂM lọt vào `heuristic_note` và vào `numbers[]` (:68) tức vào đường truy vết số; (b) `idle_peak` có cổng `dur >= 25` (:116) ⇒ mọi idle vắt nửa đêm bị LOẠI im lặng, không phải sai severity mà là MẤT HẲN pattern; (c) `rest_likely` có cổng `dur < rest_min_dur: continue` (:55) ⇒ tương tự. || LỚP: không thuộc L1..L6 — lỗi đơn vị/thời gian thuần. Có thể gượng vào L1 (`f3_patterns` tự cắt chuỗi ISO trong khi `from_l1r.py` đã có `_parsable_ts`/`_observed_seconds` parse thật) nhưng tôi KHÔNG xếp thế: gượng vào lớp làm hỏng chính dữ liệu vòng này cần. Ghi KHÔNG."
+    },
+    {
+      "title": "F-8 (mm-10 #8, tự khai debt cũ S8S9-2) `_hours_since` chỉ bắt ValueError ⇒ lệch aware/naive làm CRASH toàn bộ solve() S9 thay vì degrade",
+      "severity": "TB",
+      "confidence": "CAO",
+      "evidence_file_line": "src/gsm_core/solvers/anomaly_alert.py:42-45 (`return (datetime.fromisoformat(t_now) - datetime.fromisoformat(detected_at)).total_seconds()/3600.0` trong `try: ... except ValueError: return None`) — REPRODUCE (probe_mm10.py): t_now='2026-07-01T18:00:00+07:00' (aware) + detected_at='2026-07-01T09:00:00' (naive) ⇒ **TypeError: can't subtract offset-naive and offset-aware datetimes**, thoát khỏi solve(), không có degrade.",
+      "tu_kiem": true,
+      "lop": "KHÔNG",
+      "ghi_chu_rieng": "mm-10 ghi confidence TB (chưa reproduce). Tôi reproduce được ⇒ NÂNG lên CAO. Severity giữ TB vì S9 hiện mồ côi (F-6) và mock luôn sinh detected_at có tz (realdata.py:479) — nổ chỉ khi trộn nguồn tz-mixed, đúng như mm-10 dự đoán. || LỚP: không thuộc L1..L6 (bắt exception quá hẹp)."
+    },
+    {
+      "title": "N-3 (MỚI — của tôi, ngoài phạm vi mm-10) `check_shift_extend` cũng gọi `next_tier_gap` mà KHÔNG kiểm eligibility ⇒ khuyên tài xế KÉO DÀI CA để với một mốc thưởng mà luật trả 0đ — thực thể thứ hai của cùng lớp F-1, chưa artifact nào gắn cờ",
+      "severity": "TB",
+      "confidence": "TB",
+      "evidence_file_line": "src/gsm_sim/advice_bridge.py:1105-1175 (đọc TRỌN hàm): cổng theo thứ tự channel_off → soc_low → fatigued → extend_cap → `gap = self.policy.next_tier_gap(int(actor.points))` (:1117) → no_tier → no_rate → reachable_in_shift → would_exceed_fatigue → cap_unreachable → cadence. KHÔNG có bước nào đọc acceptance/completion; grep `bonus_min_acceptance|bonus_min_completion` trong src/gsm_sim/advice_bridge.py = 0 hit. Đối chứng cùng repo: shift_dp.py:118-119 (`_eligible`) và bonus_feasibility.py:109-116 đều quấn cổng. configs/pilot_dongda.yaml:337 (`shift_extend: false`).",
+      "tu_kiem": true,
+      "lop": "L1",
+      "ghi_chu_rieng": "TỰ KIỂM ở mức CODE (đọc trọn hàm + grep). CHƯA TỰ KIỂM ở mức SIM: không chạy sweep đo tần suất actor có acceptance<0,85 lúc kênh bắn — kênh OFF mặc định nên không có baseline sẵn; vì thế confidence TB chứ không CAO. || KHÔNG THUỘC 'nợ đã biết': grep `eligib|bonus_min_acceptance` trong mm-02-shift-family.json = 0 hit; mm-02 mô tả shift_extend chỉ nêu 3 lan can sức khoẻ. || Ý nghĩa cho vòng lớp: F-1 KHÔNG phải sự cố đơn lẻ — cùng primitive mù (`next_tier_gap`) có ÍT NHẤT 2 caller quên cổng (S3 f3_patterns, sim shift_extend) và 3 caller nhớ. Sửa đúng LỚP = cho PolicyBundle một method eligibility-aware (vd `attainable_tier_gap(points, acceptance, completion)`) và khai tử/đổi tên `next_tier_gap` thành tên tự tố cáo là mù, thay vì vá từng caller."
+    }
+  ],
+  "lop_thong_ke": {
+    "tong_finding_xet": 11,
+    "trong_do_cua_mm10": 8,
+    "trong_do_moi_cua_toi": 3,
+    "L1": 4,
+    "L2": 1,
+    "L3": 1,
+    "L4": 1,
+    "L5": 0,
+    "L6": 0,
+    "KHONG_THUOC_LOP_NAO": 4,
+    "ty_le_giai_thich_duoc": "7/11 (64%) xếp được vào L1..L6; 4/11 (36%) KHÔNG",
+    "phan_bo_theo_nguon": {
+      "mm10_xep_duoc": "4/8 (F-2→L2, F-4→L4, F-6→L3, F-1→L1)",
+      "mm10_khong_xep_duoc": "4/8 (F-3, F-5, F-7, F-8)",
+      "moi_cua_toi_xep_duoc": "3/3 (N-1, N-2, N-3 đều L1)"
+    }
+  },
+  "tra_loi_cau_hoi_4_trung_mm04_hay_khong": {
+    "trung_hoan_toan": "0/8 finding của mm-10 trùng hoàn toàn R-1..R-7.",
+    "trung_mot_phan": [
+      "F-4 ↔ R-5: cùng đứng trên `should_defer_rest` + nhánh alt=RELOCATE. R-5 nói Δ của bậc rest_window bị TRỘN (không sạch quy trách); F-4 nói standby_plan treo gây HAI lần di chuyển tốn ENROUTE+SOC. Bổ sung nhau, không thay thế. Nếu Cycle mổ `should_defer_rest` thì mổ CẢ HAI cùng lượt.",
+      "F-3 ↔ R-3: cùng nói về nguồn cầu của S7 nhưng LỆCH NGƯỢC CHIỀU ở HAI đường: R-3 = multiday dùng TOÀN BỘ đơn sinh (phình tập thông tin, 20,1% đơn không ai phục vụ ⇒ giá trị đo là CHẶN TRÊN); F-3 = L1R dùng CHỈ đơn đã phục vụ (censor ⇒ giờ đói cung trông như giờ ít khách). Không phải một lỗi."
+    ],
+    "mm10_BI_mm04_BAC": "F-6 mệnh đề 'S7 chỉ có ĐÚNG MỘT caller sống (rest_window, OFF)' — R-3 đã xác định multiday là 'đường SỐNG DUY NHẤT nạp cho S7', và tôi xác nhận multiday.py:165 chạy VÔ ĐIỀU KIỆN (multiday.py:266). Kéo theo mệnh đề giảm nhẹ của F-3 ('đường SIM dùng oracle nên chưa có hại thật') KHÔNG an toàn: advice_bridge.py:846-849 short-circuit trên planned_rest_hour ⇒ đúng đường oracle mà mm-10 viện dẫn bị BỎ QUA trong cấu hình sống.",
+    "con_MOI_sau_khi_tru_mm04": [
+      "F-1 (+ gốc sâu: PolicyBundle không có method eligibility-aware) — MỚI, không thuộc họ nghỉ.",
+      "F-2 (S3 thiếu t_now + ngoài cổng D-M3-12) — MỚI.",
+      "F-3 phần L1R (censor) — MỚI (R-3 nói đường khác, chiều khác).",
+      "F-5 (S9 confidence không hiệu chỉnh) — MỚI.",
+      "F-6 phần S3/S9 mồ côi — MỚI.",
+      "F-7, F-8 — KHÔNG mới, mm-10 tự khai là debt 2026-07-26 chưa sửa; đóng góp của tôi là REPRODUCE và cho thấy F-7 hại hơn mô tả (số âm vào text + nuốt pattern).",
+      "N-1, N-2, N-3 — MỚI, do tôi tìm khi tự kiểm; không nằm trong mm-10, mm-04, cũng không trong danh sách NỢ ĐÃ BIẾT."
+    ]
+  },
+  "ghi_chu": "PHÁN QUYẾT VỀ GIẢ THUYẾT LỚP (dữ liệu chính của vòng): mô hình 6 lớp giải thích 7/11 (64%). Ba quan sát nên vào 00-BAN-DO-LOP.md: (1) **Lớp còn THIẾU và nó là lớp ĐÔNG NHẤT ở đây**: mm-10 tự gắn nhãn `cung_lop_station_choice: true` cho 3/8 finding (F-1, F-3, F-4) — nhưng 'station_choice' KHÔNG có trong L1..L6. Nó là 'solver dùng một PROXY quan sát được thay cho đại lượng mà world thật sự định giá'. Khác L1: L1 là một tầng TỰ TÍNH LẠI cái engine ĐÃ sở hữu bằng công thức khác (D-M3-17, D-ADV-06); ở station_choice thì KHÔNG tầng nào sở hữu đại lượng đúng cả — không ai tính sai, mà là không ai có. Gộp hai cái vào L1 sẽ làm hỏng vế 'một fix + một cổng chặn' vì cổng chặn khác hẳn nhau (L1 chặn bằng: chỉ một nơi được tính; proxy chặn bằng: mọi proxy phải khai đại lượng nó thay + hướng lệch). ĐỀ XUẤT **L7 — PROXY THAY ĐẠI LƯỢNG ĐỊNH GIÁ**. (2) **L2 cần mở rộng cơ chế**: F-2 không phải 'assertion bị fixture suy biến làm vô hiệu' mà là 'cổng thường trực liệt kê thành viên bằng TAY' (`_cases()` viết 7 tên, họ deriver có 8). Cùng hậu quả (cổng đọc như phủ mà không phủ), cơ chế khác. Hoặc mở rộng định nghĩa L2, hoặc tách. Đây là lớp RẺ nhất để chặn tái diễn: đổi `_cases()` sang QUÉT `dir(F)` theo mẫu tên `derive_*_input_l1r` thì mọi deriver tương lai tự vào cổng. (3) **L1 là lớp thật và đang SỐNG**: cả 3 finding mới của tôi đều rơi đúng L1, và cả 3 đều có cùng vân tay — **hai tầng dùng hai QUY ƯỚC cho một đại lượng, chỗ nối có mặc định THUẬN LỢI nuốt sai lệch**: N-1 (`fulfillment_rate` vs `completion_rate`, mặc định 1,0 = luôn đủ điều kiện), N-2 (map cầu THƯA vs ĐỦ 24 giờ, mặc định 1,0 = luôn cao điểm), N-3 (primitive `next_tier_gap` mù eligibility, 3/5 caller quấn cổng, 2 quên). ⇒ cổng chặn L1 nên nhắm vào **MẶC ĐỊNH IM LẶNG ở chỗ nối giữa hai tầng**, không chỉ vào 'công thức trùng'. || CẢNH BÁO ĐỌC: mm-10 là artifact CHẤT LƯỢNG CAO về mô tả cơ chế (8/8 file:line đúng), nhưng có một điểm mù hệ thống — nó VIỆN DẪN đường sim là đường sạch ở CẢ F-3 lẫn F-6 mà không mở multiday.py ra đọc, và cả hai lần đều sai theo cùng một kiểu (viện dẫn đường bị short-circuit). Đây đúng loại 'claim THUẬN LỢI' memory bắt kiểm gắt nhất. Ai lấy mm-10 làm đầu vào plan phải bỏ mệnh đề 'chưa có hại thật đo được'. || KHÔNG LÀM: tôi KHÔNG đề xuất bật rest_window/shift_extend để đo — hai kênh đều OFF theo phán quyết đã có (ĐA-07, D-E4-06); mọi con số tần suất cho F-4/N-3 phải xin duyệt riêng. || RANH GIỚI: không finding nào đưa sức khoẻ vào objective (F-4 và N-3 chỉ nói về CHI PHÍ di chuyển và về TÍNH ĐÚNG của lời hứa tiền; lan can mệt/SOC giữ nguyên là cổng một chiều). Số tài chính trong mọi evidence đều lấy từ PolicyBundle/day_bonus, không tự tính. Số mock (realdata.py) đã gọi đúng tên là mock."
+}
