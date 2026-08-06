@@ -1,0 +1,190 @@
+{
+  "ma_no": "D-ADV-03",
+  "ten": "positioning chặng về — đổi đích deadhead-to-core theo CẦU thay vì GẦN NHẤT",
+  "goc_soi": "VÌ SAO NÓ SẼ THẤT BẠI — phản biện ĐỀ XUẤT trước khi bỏ công xây (không phải soi bug)",
+  "ngay": "2026-08-06",
+  "mock": true,
+  "verdict": "REFUTED",
+  "verdict_nghia_la": "CLAIM (luận cứ kinh tế của đề xuất) BỊ BÁC ⇒ Cycle D KHÔNG nên bắt đầu. Vế QUAN SÁT CODE của đề xuất thì ĐÚNG (deadhead mù cầu) — cái bị bác là 'chi phí biên ≈ 0' và 'đề xuất mở rộng tốt nhất'.",
+
+  "day_la_artifact_con_thieu": "00-SUMMARY.md:38 và DEFERRED.md:122 đã ghi D-ADV-03 REFUTED nhưng nói rõ 'pb-07 KHÔNG tồn tại trên đĩa ⇒ tôi KHÔNG biết refuter đã bác bằng CƠ CHẾ NÀO'. File này là cơ chế đó, đo lại độc lập.",
+
+  "dinh_chinh_refuter_truoc": {
+    "so_bi_dinh_chinh": "DEFERRED.md:122 viết 'đổi đích sang ô có cầu cách 3–5 km là nhân km rỗng lên nhiều lần'",
+    "do_lai": "SAI ĐỘ LỚN theo hướng NGƯỢC. Ô ranked GẦN NHẤT trung bình chỉ cách 1,66 km (không 3–5 km); Δkm = +0,666 km/lượt = +67%, KHÔNG phải 'nhiều lần'. Nếu Cường/ai đó đọc lại và thấy 3–5 km là bịa thì cả verdict sẽ bị nghi ⇒ phải sửa số.",
+    "phan_baseline_TRUNG": "0,99–1,06 km và 523–565 lượt/ngày: tôi đo lại được 0,994 km và 541/555 lượt (seed 1000/1001) ⇒ baseline của refuter trước ĐÚNG.",
+    "he_qua": "Verdict REFUTED vẫn ĐỨNG, nhưng bằng NĂM cơ chế khác dưới đây, không bằng cơ chế '3–5 km'."
+  },
+
+  "1_ba_ve_cua_CLAIM_va_phan_quyet": {
+    "ve_A_quan_sat_code_deadhead_mu_cau": {
+      "phan_quyet": "ĐÚNG — và còn tệ hơn mô tả",
+      "bang_chung": "world.py:802-811 quét r=1..7, `for c in grid_disk(actor.cell, r)` và lấy ô lõi ĐẦU TIÊN gặp trong thứ tự iteration của h3 — KHÔNG phải ô lõi GẦN NHẤT. Đo được: 4,5% lượt deadhead có một ô-còn-trần thực sự GẦN HƠN đích hiện tại (Δkm = −0,045 km).",
+      "nhung": "Sửa 'first-found → nearest' đổi quỹ đạo mọi actor ⇒ vỡ bit-identity của MỌI số A/B đã đo với positioning. Ngay cả fix 1 dòng này cũng KHÔNG miễn phí."
+    },
+    "ve_B_chi_phi_bien_gan_0": {
+      "phan_quyet": "BỊ BÁC — chỉ đúng trên 4,5% lượt, và trên đúng 4,5% đó thì kênh gần như không làm gì",
+      "bang_chung_so": "Bảng δ (lan can 'dist ≤ dist(gần-nhất)+δ' mà chính đề xuất đưa ra): δ=0 ⇒ 4,5% lượt (35/ngày), Δkm −0,045 (đúng là ~0). δ=0,3 ⇒ 41,2% lượt, +55 km/ngày. Không lan can ⇒ 88,0% lượt, +0,758 km/lượt, **+513 km/ngày** = **+95% trên nền 538–552 km/ngày**.",
+      "phat_bieu_dung": "'km rỗng đằng nào cũng chạy' đúng về sự TỒN TẠI của chuyến đi, SAI về ĐỘ DÀI. Chuyến chạy dù sao, nhưng dài gần GẤP ĐÔI."
+    },
+    "ve_C_de_xuat_mo_rong_TOT_NHAT": {
+      "phan_quyet": "BỊ BÁC — trần hiệu ứng nằm DƯỚI độ phân giải của phép đo tiền",
+      "bang_chung_so": "rc-02 §3.5: nửa độ rộng CI payout ở n=100 = 1.009đ ⇔ ±3,55–4,00 đơn/ngày. Kênh này không có đường nào tới +4 đơn/ngày (xem §2 và §5) ⇒ ĐA-08 dòng 1a (payout SIG dương) KHÔNG THỂ thắng dù cơ chế có đúng hướng."
+    }
+  },
+
+  "2_nam_co_che_that_bai": {
+    "F1_TRAN_DA_CAN_zero_sum": {
+      "do_trong_run_that": "arm B3w (positioning wait_only, coverage=all), seed 1000/1001, đọc event `standby_planner`/`standby_alloc`",
+      "so": {
+        "seed_1000": {"planner_ticks": 16, "n_candidates": 250, "n_assigned": 94, "n_unassigned": 156, "n_follow": 34, "tong_capacity_left": 95},
+        "seed_1001": {"planner_ticks": 15, "n_candidates": 201, "n_assigned": 70, "n_unassigned": 131, "n_follow": 34, "tong_capacity_left": 70}
+      },
+      "lap_luan": "TỔNG trần vị trí cả ngày = 70–95 suất-tài-xế. Đã có 131–156 ứng viên bị TỪ CHỐI vì hết trần. Trong khi đó có 541–555 lượt deadhead/ngày. ⇒ Dù D-ADV-03 chiếm 100% trần, nó đổi đích được ≤ 12,6–17,6% số lượt deadhead — và chiếm bằng cách LẤY của chính kênh positioning đang +6.016đ SIG. Δ trên nền B3w ≈ 0 vì cùng một trần, chỉ đổi ai tiêu nó.",
+      "nhan": "MEASURED (2 seed — DƯỚI chuẩn 5 seed của repo cho stochastic; hai seed cùng chiều và cùng độ lớn)"
+    },
+    "F2_HERDING_view_bi_CACHE_60_phut": {
+      "co_che": "market_state.py:162-167 — `view()` cache theo idx bucket và chỉ clear khi cache-miss. `advice.bucket_min = 60` (configs:403). ⇒ TRONG một bucket, mọi consumer nhận CÙNG MỘT object với CÙNG capacity_left.",
+      "vi_sao_pending_targets_khong_cuu_duoc": "`pending_targets` chỉ được GHI ở world.py:500 (standby planner). Kể cả nếu đường deadhead cũng ghi, market_state.py:167 không recompute trong bucket ⇒ phép trừ trần VÔ HÌNH cho tới biên bucket sau. `enroute_cell` (world.py:820) có vào sổ `inc` (market_state.py:61-63) nhưng cũng chỉ hiện ở bucket SAU.",
+      "do_lon_cua_ro_ri": "56,1–56,5% của 957–990 lượt trả khách là ngoài lõi ⇒ ~29 lượt deadhead MỖI GIỜ, tất cả đọc một ảnh đóng băng liệt kê ≤35 suất toàn lưới (≤3–4 suất lúc 10h–15h). Đây ĐÚNG là fallacy of composition mà market_state.py:11-17 nói nó được xây để chặn.",
+      "the_luong_nan": "Muốn thấy nhau trong bucket thì phải phá/bypass cache — nhưng cache đó DÙNG CHUNG với standby planner ⇒ đổi nó là đổi view của planner ⇒ +6.016đ và MỌI số A/B đo với positioning phải derive lại. Không có đường nào vừa an toàn CRN vừa chống dồn cục."
+    },
+    "F3_TRAN_slots_LAM_KENH_MU_o_noi_don_CHET": {
+      "co_che": "market_state.py:81 `slots = int(demand // trips_per_driver_per_bucket)`; trips_per_driver_per_bucket = 1,5 (advice.trips_per_hour_est mặc định 1,5 × bucket 60/60). Sàn 1,5 đơn/giờ/ô.",
+      "so_do_duoc_can_tren_eff_0": {
+        "n_core_cells": 85,
+        "lambda_TB_moi_o_moi_gio": "0,336 (05h) → 1,248 (18h)",
+        "so_o_co_slots_ge_1_theo_gio": {"5": 0, "6": 8, "7": 12, "8": 12, "9": 6, "10": 4, "11": 4, "12": 4, "13": 3, "14": 3, "15": 4, "16": 10, "17": 24, "18": 30, "19": 24, "20": 10, "21": 8, "22": 4, "23": 0},
+        "tong_slots_toan_luoi": "0 (05h & 23h) · 3–4 (10h–15h) · tối đa 35 (18h)"
+      },
+      "tra_loi_cau_hoi_b": "capacity_left>0 KHÔNG có nghĩa 'ô đang thiếu cung'. Nó có nghĩa 'λ ≥ 1,5 VÀ ít người' — tức một nhúm ô POI. Nguy cơ 'đẩy tài xế vào ô λ THẤP' bị BÁC: sàn slots đảm bảo điều NGƯỢC LẠI. Khuyết tật thật là MÙ: 55–85 ô λ thấp KHÔNG BAO GIỜ là đích, và đơn chết ở đó.",
+      "chong_lan_don_chet": {
+        "n_expired_3seeds": 510,
+        "pct_don_chet_nam_o_o_RANKED_cung_gio": 39.0,
+        "gio_te_nhat": "05h 0/5 · 11h 0/6 · 23h 0/17 · 22h 9/37 · 14h 3/24 · 10h 1/12",
+        "ket_luan": "61% đơn chết ở ô mà kênh KHÔNG THỂ gửi ai tới. Con số 39% này còn là CẬN TRÊN (tính với eff=0); trần thật nhỏ hơn ⇒ chồng lấn thật thấp hơn."
+      }
+    },
+    "F4_HINH_HOC_shortlist_da_phu_gan_het_LOI_nen_doi_o_gan_nhu_KHONG_doi_eligibility": {
+      "hinh_hoc_loi": {"n_core": 85, "p50_cap_o_loi_km": 1.699, "p95": 3.57, "max": 5.346, "pct_cap_trong_2_22km": 64.6, "pct_cap_trong_3_14km": 88.8},
+      "co_che": "Điều kiện được CHÀO = state IDLE (world.py:627) + nằm trong shortlist `candidate_ring_k_max=6` ≈ 2,22 km (configs:121-142). Nhưng 64,6% mọi cặp ô lõi đã ở trong 2,22 km của nhau ⇒ đứng ở đâu trong lõi thì cũng đã nằm trong shortlist của phần lớn lõi.",
+      "do_bang_CAU_NHIN_THAY": {
+        "dinh_nghia": "Λ_reach(ô, giờ) = tổng λ các ô lõi trong 2,22 km — đúng tập đơn dispatcher CÓ THỂ chào",
+        "nen_o_dich_deadhead_hien_tai": "26,8–36,5 đơn/giờ",
+        "sau_khi_doi_sang_o_ranked": "+8,2% đến +10,9% (δ ≤ 1 km) · +21,7% khi BỎ HẲN lan can km",
+        "ket_luan": "Đổi ô chỉ mở rộng tập đơn nhìn thấy ~1/10. Phần còn lại của giá trị vị trí là THỨ HẠNG ETA trong Hungarian — tức PHÂN PHỐI LẠI giữa tài xế, không tạo đơn mới cho hệ. Đúng cái mà kênh positioning hiện hành đã ăn hết (+6.016đ)."
+      }
+    },
+    "F5_GIA_THUC_PHAI_TRA_bang_PHUT_KHONG_DUOC_CHAO": {
+      "co_che": "Suốt deadhead actor là ENROUTE (world.py:819) ⇒ KHÔNG eligible (world.py:627 chỉ quét IDLE). Km rỗng dài hơn = phút KHÔNG ĐƯỢC CHÀO nhiều hơn.",
+      "so": {
+        "delta_phut_DOI_moi_ngay_can_duoi": 1290.1,
+        "cach_tinh_can_duoi": "Δkm theo (giờ, ô-trả) × trọng số lượt thật ÷ speed_kmh cơ bản theo giờ; CHƯA nhân detour đường thật (~1,46) và CHƯA nhân congestion (cap 0,35)",
+        "delta_phut_DOI_uoc_thuc_te": "≈ 2.300 phút/ngày (×1,46/0,8) — NHÃN: ESTIMATE",
+        "doi_chieu_station_choice": "station_choice (vừa NO-GO) chỉ bơm Δempty_min = +98,9 phút-đội/ngày. D-ADV-03 không-lan-can bơm 13–23× nhiều hơn — và KHÔNG có khoản tiết kiệm đối ứng nào (station_choice ít nhất còn −698′ charge)."
+      },
+      "SOC": "513 km rỗng thêm × 1,6 %/km (đội swap, vehicle:272) = 821 điểm-SOC/ngày ≈ 8,2 lần pin đầy ≈ +8 lượt đổi pin/ngày, mỗi lượt nền chờ 5,59′ (e01 arm A) ⇒ đẩy thêm vào đúng chỗ hệ đang lỗ.",
+      "khong_ton_TIEN_MAT": "Đúng: `vehicle.cash_cost_km` mặc định 0 ⇒ km thêm KHÔNG vào sổ tiền. Nên cái giá hiện ra ở PHÚT và SOC, không ở payout — dễ bị bỏ qua nếu chỉ đọc payout."
+    }
+  },
+
+  "3_so_voi_station_choice_cau_hoi_d": {
+    "diem_GIONG_bi_bo_qua": [
+      "Cùng là 'tối ưu một đại lượng CÓ SẴN' (queue trạm ↔ cầu theo ô) mà KHÔNG thêm năng lực phục vụ nào.",
+      "Cùng ĐI XA HƠN để tối ưu đại lượng đó ⇒ cùng bơm empty_min, cùng lấy tài xế ra khỏi pool eligible.",
+      "Cùng ĐÚNG trên metric riêng của nó: station_choice station_hhi −0,0564 SIG và swap_wait −3,6′ SIG; D-ADV-03 sẽ đúng trên 'cầu nhìn thấy +9%'. Cả hai đều KHÔNG đảm bảo đơn/tiền — rc-02 đã đo: 698 phút-đội giải phóng chỉ chuyển đổi 3–7% thành đơn.",
+      "Cùng chịu rủi ro PHÂN PHỐI: ai NGHE LỜI thì trả km/phút, lợi ích (nếu có) tán ra cả đội. station_choice FAIL ĐA-08 1b với P1 −3.863đ ÂM-SIG.",
+      "Cùng nằm trong thế giới mà rc-02 §3.5 đã đo: mỗi đơn chết ĐÃ có ~68 phút-đội idle nằm cạnh mà không gặp nhau ⇒ năng suất biên của phút idle ở nền ≈ 0. Kênh này không thêm phút idle, nó ĐỔI CHỖ phút idle — phải thắng một tích số gần 0 trong khi CHI phút thật."
+    ],
+    "diem_KHAC_ma_de_xuat_neu_ra_co_dung_khong": {
+      "de_xuat_noi": "'không tạo chuyến đi mới, chỉ đổi hướng km rỗng bắt buộc' ⇒ khác cấu trúc",
+      "phan_quyet": "ĐÚNG về CHẤT, VÔ NGHĨA về LƯỢNG: chuyến không mới nhưng dài +67% (không lan can: +95% tổng km rỗng). 'Đổi hướng' và 'tạo chuyến' chỉ khác nhau nếu Δkm ≈ 0, và Δkm ≈ 0 chỉ đúng trên 4,5% lượt."
+    },
+    "diem_KHAC_thuc_su_va_van_khong_du": "Đúng là nó thuộc HỌ VỊ TRÍ (họ duy nhất dương SIG). Nhưng họ vị trí dương SIG *thông qua trần capacity_left*, và F1 cho thấy trần đó đã CẠN. Thuộc họ dương không cho thêm suất."
+  },
+
+  "4_tra_loi_cau_hoi_e_don_chet_trong_hay_ngoai_loi": {
+    "phan_quyet": "TIỀN ĐỀ CỦA CÂU HỎI BỊ BÁC — 100% đơn (kể cả đơn chết) có pickup TRONG lõi",
+    "bang_chung": "demand.py:104-106 `cell_w = _cell_weights(grid, cfg)` và `_cell_weights` chỉ khởi tạo trên `grid.core_cells` (demand.py:49,59) ⇒ pickup luôn là ô lõi. Đo: pickup_noncore = 0,00% trên 3.570 đơn (3 seed). Chỉ ĐIỂM TRẢ ra ngoài lõi (64,65% đơn sinh; 56,1–56,5% lượt trả thực tế — số 65,3% trong UPDATE-163 là mức ĐƠN SINH, cao hơn mức LƯỢT TRẢ ~9đp vì cuốc được phục vụ lệch ngắn hơn).",
+    "nhung_van_de_that": "Đơn chết TRONG lõi nhưng TÁN: 77/85 ô có đơn chết (3 seed), ô đông nhất chỉ 36/3seed = 12 đơn/ngày. Nhắm vào ô nóng nhất cũng chỉ chạm ~12 đơn/ngày trong kho 145–197 đơn chết/ngày, và 61% đơn chết ở ô KHÔNG BAO GIỜ ranked (F3)."
+  },
+
+  "5_hai_ve_cua_de_xuat_bi_do_lai_va_TRUOT": {
+    "ve_HAI_CHANG_RONG_THAY_VI_MOT": {
+      "de_xuat_noi": "'Hiện tài xế về nhầm ô rồi mới bị kéo đi tiếp = HAI chặng rỗng thay vì một'",
+      "do_lai": "Số lượt relocate 'standby' THẬT SỰ xảy ra = n_follow 34–47/ngày (mọi nguồn, không chỉ sau deadhead). Trên 541–555 lượt deadhead ⇒ bệnh 'hai chặng' xảy ra ở TỐI ĐA 6,1–8,7% lượt, KHÔNG phải 65%. Tiết kiệm bất đẳng thức tam giác chỉ áp cho ≤47 lượt/ngày; còn 94% lượt thì +0,666 km là LỖ THUẦN.",
+      "nhan": "MEASURED (2 seed, arm B3w coverage=all)"
+    },
+    "ve_PLANNER_KHONG_THAY_DIEM_QUYET_DINH": {
+      "de_xuat_noi": "'Planner không thấy điểm quyết định này vì actor đang ENROUTE (world.py:421 chỉ quét IDLE)'",
+      "do_lai": "ĐÚNG về cái tức thời nhưng SAI về hệ quả: tới nơi là IDLE ngay (world.py:825) và planner quét mỗi bucket ⇒ planner CÓ thấy anh ta, chỉ TRỄ ≤ 60′. Giá trị thật của D-ADV-03 vì thế chỉ là ĐẨY SỚM một nước đi mà planner đằng nào cũng làm — trên một trần đã cạn (F1). Đó là lý do Δ kỳ vọng ≈ 0, không phải âm-to."
+    }
+  },
+
+  "6_neu_van_muon_xay_thi_dieu_kien_toi_thieu": {
+    "ghi_chu": "Không phải khuyến nghị xây. Đây là điều kiện để lần sau ai đào lại thì phải trả trước.",
+    "dk_1": "Bỏ sàn `slots = int(λ/1.5)` hoặc hạ trips_per_hour_est — vì với sàn hiện tại, 05h và 23h có 0 ô đích và 61% đơn chết ngoài tầm. Nhưng đổi số này đổi HÀNH VI của kênh positioning hiện hành ⇒ phải re-derive +6.016đ.",
+    "dk_2": "Giải quyết cache 60′ (F2) mà KHÔNG đổi view của standby planner. Chưa có thiết kế nào làm được.",
+    "dk_3": "Nguồn trần RIÊNG, không lấy từ 70–95 suất/ngày của positioning — nếu không thì zero-sum.",
+    "dk_4": "Thêm test veto km rỗng cho ĐÚNG đường này: `tests/test_idle_impatience.py:110-121` pin relocate ≤ 2,0 km nhưng MIỄN TRỪ TƯỜNG MINH `deadhead_to_core` ⇒ hiện KHÔNG có test nào chặn deadhead dài ra.",
+    "dk_5": "Prereg ĐA-08 đủ 9 dòng + dòng 1b (P1). P1 = part-time TỐI, mà 21h/22h/23h chỉ có 8/4/0 ô đích ⇒ P1 hoặc không nhận được gì hoặc bị kéo đi xa nhất. Đây đúng là dòng station_choice đã chết."
+  },
+
+  "7_so_nen_do_lai_de_ai_cung_kiem_duoc": {
+    "deadhead_nen": {"luot_moi_ngay": [541, 555], "km_moi_luot": 0.994, "km_moi_ngay": [538, 552], "phut_moi_luot_uoc": "5,6–5,8 (khớp refuter trước)"},
+    "doi_dich_theo_cau_KHONG_lan_can": {"pct_luot_bi_doi": 88.0, "delta_km_moi_luot": 0.758, "delta_km_doi_moi_ngay": 512.6, "delta_phut_doi_moi_ngay_can_duoi": 1290.1},
+    "doi_dich_voi_lan_can_delta": {
+      "0.0km": {"pct_luot": 4.5, "luot_ngay": 35.0, "delta_km_luot": -0.045, "tang_cau_nhin_thay_pct": 9.26},
+      "0.2km": {"pct_luot": 17.1, "luot_ngay": 131.7, "delta_km_luot": 0.079, "tang_cau_nhin_thay_pct": 8.19},
+      "0.3km": {"pct_luot": 41.2, "luot_ngay": 317.3, "delta_km_luot": 0.174, "tang_cau_nhin_thay_pct": 9.44},
+      "0.5km": {"pct_luot": 64.4, "luot_ngay": 495.3, "delta_km_luot": 0.24, "tang_cau_nhin_thay_pct": 10.87},
+      "1.0km": {"pct_luot": 72.5, "luot_ngay": 558.0, "delta_km_luot": 0.296, "tang_cau_nhin_thay_pct": 9.02}
+    },
+    "tran_vi_tri_da_can": {"capacity_left_tong_ngay": [70, 95], "ung_vien": [201, 250], "bi_tu_choi_het_tran": [131, 156], "coin_follow": [34, 47]},
+    "chong_lan_don_chet_x_o_ranked": {"n_expired_3seeds": 510, "pct_trong_o_ranked": 39.0},
+    "hinh_hoc": {"p50_cap_o_loi_km": 1.699, "pct_cap_trong_shortlist_2_22km": 64.6, "pct_cap_trong_ETA_3_14km": 88.8}
+  },
+
+  "8_bang_chung_da_doc_file_line": [
+    "src/gsm_sim/world.py:799-829 — `_relocate_to_core`: quét r=1..7, lấy ô lõi ĐẦU TIÊN trong grid_disk (không phải gần nhất); ENROUTE + enroute_cell + consume_soc + empty_min",
+    "src/gsm_sim/world.py:627 — dispatcher CHỈ xét ActorState.IDLE ⇒ ENROUTE = không được chào",
+    "src/gsm_sim/world.py:637 — kiểm IDLE lần hai khi gán",
+    "src/gsm_sim/world.py:371-517 — `_standby_planner`: view mỗi bucket, cap_left, ứng viên = IDLE ∧ cap_left(ô đứng)==0, Hungarian, world.py:500 ghi pending_targets",
+    "src/gsm_sim/world.py:994-1015 — vòng idle đọc standby_plan, pop pending_targets; wait_only chỉ ghi đè WAIT",
+    "src/gsm_sim/world.py:1119-1135 — nhánh RELOCATE thật (trừ SOC, empty_min, ENROUTE)",
+    "src/gsm_sim/world.py:330-336 — `_pct_per_km` = 1,6 %/km đội swap",
+    "src/gsm_core/features/market_state.py:76-103 — slots = int(demand // trips_per_driver_per_bucket); capacity_left = max(0, slots−eff); ranked chỉ ô còn trần; sd_ratio dùng mẫu số 1 khi eff=0",
+    "src/gsm_core/features/market_state.py:11-17 — chính docstring nói supply_incoming/trần TỒN TẠI để chặn fallacy of composition",
+    "src/gsm_sim/market_state.py:37-70 — count_supply (enroute_cell → inc; pending → inc)",
+    "src/gsm_sim/market_state.py:162-167 — CACHE view theo bucket, chỉ clear khi cache-miss ⇒ đóng băng 60′",
+    "src/gsm_sim/demand.py:38-62,76-87,104-106 — cell_weights CHỈ trên core_cells ⇒ pickup luôn trong lõi; λ(cell,hour) từ config",
+    "configs/pilot_dongda.yaml:32-45 (orders_per_day 1200 + hour_weights), :121-155 (candidate_ring_k_max 6 ≈2,22 km, eta_max_min 11 ≈3,14 km, patience), :228 (n=90), :264-274 (SOC/km, cash_cost 0), :319-365 (advice: coverage, channels, station_choice NO-GO, positioning wait_only), :403 (bucket_min 60)",
+    "research/audit/2026-08-06-root-cause-idle/rc-02-numbers.json §3.4/§3.5 — thước 252–284đ/đơn; độ phân giải ±3,55–4,00 đơn/ngày; 68 phút-đội idle sẵn cạnh mỗi đơn chết",
+    "research/audit/2026-08-06-e2/e01-station-100.json (qua rc-02 §2) — station_choice: payout −32,6đ ns, P1 −3.862đ SIG, station_hhi −0,0564 SIG",
+    "tracking/updates/UPDATE-163-*.md:33-56 — nguyên văn CLAIM D-ADV-03",
+    "tracking/DEFERRED.md:122-123 — verdict BÁC trước đó + thừa nhận pb-07 không có trên đĩa",
+    "research/audit/2026-08-06-math-model-audit/00-SUMMARY.md:38,249-261 — 'không ai biết vì sao bị bác'",
+    "tracking/updates/UPDATE-168-*.md:60-66 + UPDATE-170-*.md:38-45 — rc-03: nguồn idle tại hai ô hút = demand_seek 123 vs deadhead_to_core 2 ⇒ đường deadhead ĐÃ bị loại như đòn bẩy, bằng số, trước đó"
+  ],
+
+  "9_test_ghim_tim_thay": [
+    "tests/test_idle_impatience.py:110-121 `test_relocation_stays_local_knowledge_only` — pin relocate ≤ 2,0 km NHƯNG chỉ cho reason='demand_seek', MIỄN TRỪ TƯỜNG MINH deadhead_to_core ('được phép đi xa'). ⇒ (i) hành vi deadhead đi xa là CHỦ ĐÍCH có ghi chú, không phải bug; (ii) nếu xây D-ADV-03 thì KHÔNG có test nào chặn km rỗng phình ra — phải thêm veto mới.",
+    "tests/test_market_state.py:49-96 — pin `capacity_left = slots − (now+incoming)` và slots = floor(demand/năng suất). Trần là THIẾT KẾ có test, không được tính lại ở chỗ thứ hai (mẫu lỗi T-046) ⇒ đường deadhead phải TIÊU trần này, không được có trần riêng ngầm.",
+    "tests/test_market_state_sim_producer.py (dẫn ở market_state.py:47-53, ADV-09) — pin actor IDLE có lệnh chờ xuất hiện ở CẢ HAI sổ now/inc CÓ CHỦ ĐÍCH. Review r10 từng đọc sai chỗ này và đề xuất sửa ⇒ đừng lặp lại: hai sổ không phải một tổng.",
+    "tests/test_standby_capacity.py — pin thi hành trần của kênh vị trí (nguồn trần duy nhất).",
+    "world.py:458 assert 'zone-veto thủng' — bất biến runtime: không ai được gán vào ô fired."
+  ],
+
+  "10_cai_con_thieu_va_gioi_han_cua_chinh_toi": [
+    "KHÔNG có arm B thật: đề xuất chưa được implement nên KHÔNG có Δpayout/Δđơn đo được. Mọi số 'sau khi đổi đích' là TÍNH TOÁN HÌNH HỌC trên (giờ, ô-trả) có trọng số lượt thật, KHÔNG phải sim A/B.",
+    "ranked_by_hour trong probe dùng eff=0 (cận trên của tập đích). Trần thật nhỏ hơn ⇒ ô ranked gần nhất thật XA hơn ⇒ Δkm 0,666 và Δphút 1.290 là CẬN DƯỚI của cái giá; đồng thời 39% chồng lấn đơn chết là CẬN TRÊN của cái lợi. Hai sai số cùng nghiêng về phía đề xuất ⇒ kết luận bảo thủ.",
+    "Δphút tính bằng speed_kmh cơ bản theo giờ, CHƯA nhân detour đường thật (~1,46) và congestion (cap 0,35) ⇒ cận dưới; số ~2.300′ là ESTIMATE.",
+    "'Cầu nhìn thấy' (Λ trong 2,22 km) là PROXY cho eligibility, KHÔNG phải số offer thật; nó bỏ qua cạnh tranh Hungarian giữa ~40–70 tài xế rỗi và bỏ qua offer_cooldown 10′.",
+    "Trần/ứng viên/n_follow đo trên 2 SEED (1000, 1001) — dưới chuẩn 5 seed cho stochastic. Hai seed cùng chiều, cùng độ lớn, nhưng đừng trích như số đã qua cổng.",
+    "Chồng lấn đơn-chết × ô-ranked đo trên 3 seed (1000–1002), 510 đơn chết. Cũng dưới chuẩn 30 seed cho phân phối.",
+    "TÔI KHÔNG kiểm được: liệu ở config/zone KHÁC (enlarge zone — D-SIM-01 đang treo) deadhead nền có dài hơn nhiều để có cái mà tối ưu. Điều kiện mở lại của DEFERRED.md:122 vẫn hợp lệ và tôi không bác nó.",
+    "TÔI KHÔNG đo: phân phối theo archetype (P1..P7) của lượt deadhead ⇒ rủi ro ĐA-08 dòng 1b là LẬP LUẬN (dựa hình dạng station_choice + số ô đích 21h–23h), không phải phép đo."
+  ],
+
+  "11_ket_luan_mot_cau": "Đường deadhead đúng là mù cầu, nhưng nó chỉ dài 0,99 km trong một quận mà 64,6% cặp ô lõi đã nằm trong shortlist 2,22 km, và trần vị trí cả ngày chỉ có 70–95 suất đã bị 131–156 ứng viên tranh hết: đổi đích theo cầu làm km rỗng tăng 67–95% (1.290–2.300 phút-đội không-được-chào mỗi ngày) để mua thêm ~9% cầu nhìn thấy, trên một kho đơn chết mà 61% nằm ở ô kênh không bao giờ tới — trần hiệu ứng nằm dưới ±4 đơn/ngày, tức dưới độ phân giải của phép đo tiền n=100. Cycle D KHÔNG được bắt đầu."
+}

@@ -1,0 +1,107 @@
+{
+ "ma_no": "D-M3-20",
+ "goc_soi": "HAU QUA DO LUONG co nghiem trong nhu claim khong — do NEN NHIEU bang mot arm NULL that (kenh BAT, coin LUON tu choi => 0 can thiep) roi so voi CI acceptance cua UPDATE-142; va kiem xem fix co khoi phuc duoc bit-identity khong",
+ "verdict": "CONFIRMED",
+ "ngay": "2026-08-07",
+ "ket_luan_mot_cau": "Do duoc n=20 seed: mot arm co DUNG 0 can thiep (coin patch -> luon tu choi) van lech fingerprint 38/40 ngay-arm, va DO PHAN TAN cua no bang ~100-122% do phan tan cua chinh bo so acceptance post-FIX (SD nhieu/SD suy ra tu CI: rest 1,12 · work_span_p90 1,22 · payout doi 1,05) => ba cong 'CI chua 0 / CI khong duoi 0' cua D-M3-04-FIX la CI CUA NHIEU, khong phai bang chung kenh vo hai; nhung ket luan DINH TINH cua cycle (cam ket duoc giu; ban WAIT cu an vao nghi) thi KHONG bi lat.",
+
+ "cach_do": {
+  "nguyen_tac": "KHONG sua file repo nao — monkeypatch trong scratchpad (pb02_probe.py). Ba arm cung seed, dung DUNG thiet ke do cua run_dm304.py (CHANNELS_A/CHANNELS_B, days=3, metric_days=[1,2], coverage=all, positioning_overrides=wait_only o CA HAI arm).",
+  "arm_A": "channels_a: rest_window=False (+ shift_plan/accept_lift/shift_extend False, positioning wait_only)",
+  "arm_Bnull": "channels_b: rest_window=True + patch AdviceActionBridge.coin_follows -> False cho topic rest_window => 0 cam ket, 0 ghi de action, 0 can thiep. Khac biet con lai voi A = cac draw o advice_bridge.py:916.",
+  "arm_Bfix": "nhu Bnull + patch gsm_sim.world.consider_relocate: khi caller la lambda advisor thi dung stream RIENG keyed theo actor (mo phong fix 'tach hai pha / keyed hash'), KHONG tieu self.rng.",
+  "seeds": "7000..7019 (n=20), configs/pilot_dongda.yaml, 90 actor, 3 ngay x 3 arm x 20 seed",
+  "artifact_raw": "scratchpad/pb02_20seed.log + pb02_probe_out.json (khong commit — la file tam); script pb02_probe.py, pb02_analyze.py"
+ },
+
+ "so_do_duoc": {
+  "arm_A_sach": "alt_draws tai :916 = 0 o TAT CA 20 seed (do bang wrapper chi bat call cua lambda) => arm doi chung SACH ve stream. Xac nhan lai ket qua pb-01.",
+  "fingerprint": {
+   "day0": "A == Bnull 20/20  (kenh INERT ngay 0 — chua co planned_rest_hour)",
+   "day1": "A == Bnull 1/20   (seed 7013 la ngoai le duy nhat)",
+   "day2": "A == Bnull 1/20   (seed 7016)",
+   "Bfix": "A == Bfix 20/20 o CA BA ngay = 60/60 ngay-arm, va alt_draws tu stream world = 0",
+   "y_nghia": "Bfix identical 60/60 CHUNG MINH HAI dieu cung luc: (1) draw o :916 la NGUYEN NHAN DUY NHAT — moi thu khac ma kenh bat lam (rest_window_hour goi solver S7, _capture_checkpoint, cadence_note_spoken, note_spoken_outcome, log event) la BEHAVIOR-NEUTRAL; (2) acceptance ma DEFERRED de xuat (kenh BAT + moi coin tu choi => fingerprint IDENTICAL) LA DAT DUOC, tuc test do-truoc viet duoc ngay."
+  },
+  "so_lan_va_so_draw_per_run_3_ngay": {
+   "alt_calls_Bnull": [23, 21, 24, 34, 29, 56, 33, 32, 41, 31, 29, 38, 28, 16, 29, 38, 31, 16, 32, 27],
+   "alt_draws_Bnull": [13, 8, 6, 13, 6, 21, 16, 15, 24, 15, 11, 16, 10, 7, 12, 15, 12, 9, 15, 13],
+   "so_lan_toi_coin": [6, 3, 5, 11, 4, 14, 8, 6, 14, 11, 10, 6, 6, 6, 5, 9, 3, 5, 6, 3],
+   "ghi_chu": "6-24 draw/run la DU: `self.rng` (world.py:127, seed^0xBEEF) la stream DUNG CHUNG cho ca 90 actor (decide_accept:665, cancel_after_accept:709-710, choose_station:980/1209, rest_min uniform:1113, swap_time:1285) => MOT draw lech de-sync toan doi tu tick do tro di. Do lon KHONG ti le voi so draw, no bao hoa ngay o draw dau tien trong ngay."
+  },
+  "nen_nhieu_vs_CI_acceptance": {
+   "chu_thich": "Bang acceptance UPDATE-142 (post-FIX, n=30, bootstrap ghep cap theo seed). 'SD suy ra' = CI_halfwidth/1,96*sqrt(30). 'SD nhieu' = do truc tiep tu arm NULL, n=20.",
+   "rest_min_total_touched": {"noise_mean": 94.2, "noise_SD": 157.5, "noise_SE_at_n30": 28.8,
+     "acc_point": 10.9, "acc_CI": [-41.2, 59.3], "acc_implied_SD": 140.4, "SD_ratio_noise_over_total": 1.12,
+     "nen_A": 3750.6, "rel_SD": "4,20%", "rel_range": "[-5,80%; +13,32%]"},
+   "work_span_p90": {"noise_mean": -5.2, "noise_SD": 22.4, "noise_SE_at_n30": 4.1,
+     "acc_point": -2.9, "acc_CI": [-9.6, 3.6], "acc_implied_SD": 18.4, "SD_ratio_noise_over_total": 1.22,
+     "nen_A": 445.2, "rel_SD": "5,03%", "rel_range": "[-8,00%; +10,71%]"},
+   "payout_cohort": {"noise_mean": -15208.0, "noise_SD": 318718.2, "noise_SE_at_n30": 58189.7,
+     "acc_point": -35954.0, "acc_CI": [-148641, 68098], "acc_implied_SD": 302838.9, "SD_ratio_noise_over_total": 1.05,
+     "nen_A": 23217497.4, "rel_SD": "1,37%", "rel_range": "[-2,17%; +2,25%]"},
+   "doc_ra": "Ba metric doc lap deu cho ratio 1,05-1,22 => nhieu troi-stream MOT MINH da giai thich (thuc te hoi VUOT) TOAN BO do phan tan cua Delta post-FIX. Diem uoc luong (+10,9' · -2,9' · -35.954d) deu nam SAU BEN TRONG mot SE cua nhieu => khong mang thong tin. Ket luan 'moi chi tieu tang 5 ve ~0' doc duoc theo hai cach khong phan biet duoc: (i) kenh that su khong an vao nghi, (ii) hieu ung that bi nhan chim trong nhieu. Cong dang 'CI chua 0' lai la cong ma nhieu lam DE PASS hon — day la mot phep kiem tuong duong THIEU CONG SUAT, khong phai bang chung an toan."
+  },
+  "dau_hieu_LECH_CO_HE_THONG_khong_chi_phuong_sai": {
+   "rest_min_total": "noise mean +94,2' (SE 35,2 => t = +2,67, n=20) — KHAC 0 o muc thong ke thong thuong, va DUNG CHIEU lam cong STOP-C 'advice dang an vao nghi' de PASS hon (+2,5% tren nen 3750'). Neu that thi khong chi CI rong ma DIEM uoc luong cung bi keo.",
+   "work_span_p90": "-5,2 (t = -1,04) — khong phan biet duoc voi 0",
+   "payout_cohort": "-15.208d (t = -0,21) — khong phan biet duoc voi 0",
+   "canh_bao_tu_soi": "1/3 metric co t>2 tren n=20 voi 3 phep so sanh => p~0,015, DANG CHU Y nhung CHUA du de goi la bias da chung minh. Phai n>=100 moi ket luan. Ghi la PLAUSIBLE, khong duoc trich thanh 'nhieu co bias +94 phut'."
+  },
+  "cong_tang_5_bi_anh_huong_bao_nhieu": {
+   "per_seed": "REST_TOTAL_DROP_TOL=2% (sim_metrics.py:341): 2/20 seed co rest_min_total giam >2% CHI DO NHIEU. SPAN_P90_RISE_TOL=10% (:342): 1/20 seed tang >10% chi do nhieu.",
+   "DINH_CHINH_mot_claim_cua_mm_04": "mm-04 noi 'REST_TOTAL_DROP_TOL nam ~8 lan DUOI nhieu do duoc => cong tang 5 ban/khong-ban gan nhu ngau nhien'. Doi voi cong THAT thi cau nay QUA MANH: `aggregate_health_guardrail` (parallel.py:566-575) chay `health_guardrail_flags` tren MEAN qua cac seed, khong per-seed => nhieu zero-mean co nho theo sqrt(n). SE cua ti le o n=30: rest 0,77% (tolerance 2%) · span 0,92% (tolerance 10%). Tuc cong con ~2,6 sigma bien an voi rest va ~11 sigma voi span. Cai DUNG dang lo la LECH CO HE THONG +2,5% do o tren: no an het bien an cua cong rest, chu khong phai phuong sai."
+  }
+ },
+
+ "bon_duong_co_BAC_va_ket_qua": {
+  "a_CRN_stream_rieng_moi_actor_hoac_moi_muc_dich": "BAC HOAN TOAN. world.py:127 chi co MOT `self.rng = default_rng(seed ^ 0xBEEF)` dung chung cho ca doi va moi muc dich hanh vi. Repo CO biet ky thuat stream rieng va da dung o cho khac — `rng_rating` (world.py:130, comment noi ro 'chen vao stream hanh vi se dich chuoi ngau nhien'), nhieu niem tin per-cell keyed `(seed, actor_id, hour, cell)` (world.py:1171), `adherence_coin` sha256 keyed (advice_bridge.py:450-474 + DET-02 :469-470) — nen thieu o :916 la KHUYET DIEM, khong phai lua chon thiet ke. `assert_crn` (parallel.py:359-369) chi so danh sach DON (sinh NGOAI world) nen tra True du moi quy dao lech: no khong phai lan can cho loi nay (chinh docstring fingerprint_actors:395-397 da noi).",
+  "b_chi_la_truong_hop_rieng_cua_D_SIM_K3": "BAC. Co che ma DEFERRED:98 phat bieu cho D-SIM-K3 doi hoi HANH VI PHAI KHAC ('FOLLOW REST rut random thoi luong nghi, IGNORE REST rut random nhan cuoc') — no KHONG du doan hien tuong o day, vi arm NULL cua toi co DUNG 0 hanh vi khac ma van lech 38/40 ngay-arm. Va hai fix khac han VE HE QUA: D-SIM-K3 'doi RNG stream se doi MOI so da do' => bat buoc prereg + do lai toan bo; fix D-M3-20 de arm A BIT-IDENTICAL (do duoc 60/60) => KHONG lam mat hieu luc phep do nao khac. => cycle RIENG, re, va la TIEN DE cho viec do sach; khong gop vao Cycle E.",
+  "c_hieu_ung_that_dang_nao_cung_lam_lech_moi_draw_sau_do_nen_phan_lech_them_khong_dang_ke": "BAC — nhung phai noi dung ly le. Dung la khi mot lan hoan XAY RA THAT thi stream cung lech (do la D-SIM-K3). Cai bi bac la ket luan 'nen KHONG dang ke': arm NULL cua toi khong co MOT can thiep nao, tuc phan 'lech them' o day chinh la TOAN BO Delta, va do phan tan cua no da bang ~100-122% do phan tan cua bo so acceptance. Mot nen nhieu ma bang toan bo phuong sai quan sat duoc thi khong the goi la khong dang ke. Them: vi run_multiday dan seed RIENG cho tung ngay (multiday.py:121 `default_rng((seed, day_index))`), nhiem KHONG cong don qua ngay bang RNG — no tai sinh MOI NGAY, nen 'chi lech mot lan roi thoi' cung sai.",
+  "d_acceptance_la_DINH_TINH_nen_nhieu_khong_lat_duoc": "BAC MOT NUA — va day la cho claim bi CAT GOT. Phan DINH TINH thi dung la khong lat duoc: (i) so cam ket made 2,0 [1,7;2,5] ~ kept 2,0 [1,7;2,4] la DEM TRONG ARM B, khong phai Delta, khong can CRN; (ii) hai bat dong tang 5 `made >= kept+broken+cleared` va `reloc(rest_defer) >= made` la bao toan trong mot run; (iii) tac hai cua ban WAIT cu (rest_min -244,0 [-303,4;-182,8]) lon gap 1,55 lan SD nhieu VA da duoc chung minh bang CO CHE doc lap (FIX-PRE: khoi phuc dong `action := WAIT` cho bit-identical 30/30 seed) => khong lat. NHUNG cai bi cat khoi acceptance khong con nhieu: DUNG BA CONG duoc goi la acceptance ('rest_min CI khong duoi 0', 'idle_min CI chua 0', 'work_span_p90 CI chua 0') deu la phep kiem tren Delta(B-A) va deu la CI cua nhieu. Claim viet 'bo so acceptance khong tin duoc' — chu 'bo so' la dung pham vi."
+ },
+
+ "cai_gi_trong_claim_bi_BAC_hoac_phai_sua": [
+  "'bi cadence NEN' — KHONG BAO GIO XAY RA trong thiet ke da do, va ly do la CAU TRUC chu khong phai may man: configs/pilot_dongda.yaml:432 `cadence.enabled: false`, va advice_bridge.py:334-335 `if not self.cadence_enabled: return True`. pb-01 do duoc 0/379 va 0/386; toi bo sung ly do co che. => phai bo cum tu nay khoi mo ta no.",
+  "'adherence P3/P5 ~0,30 => ~70% luot bi coin tu choi' — SAI CHO QUY GAN. Do duoc: chi 3-14 trong 16-56 call duong advisor MOI DEN duoc coin. Nguon nhieu AP DAO la nhanh `no_alt_action`: da rut p_move roi TRUOT roi return False (advice_bridge.py:917-918). Dang chu y them: `no_alt_action` KHONG nam trong REST_RAILS (sim_metrics.py:329 = soc_low/fatigued/defer_cap) => nhanh sinh nhieu nhieu nhat cung la nhanh KHONG duoc audit tang 5.",
+  "'ARM DOI CHUNG bi ban' — NGUOC CHIEU. Do duoc arm A rut 0 draw o 20/20 seed => arm A SACH. Arm bi dich la B. Ket luan (vo ghep cap CRN) van dung, nhung ai doc de sai cho.",
+  "'chan moi Delta moi cua rest_window' (o cot huong sua) — dung nhung THIEU: sua D-M3-20 KHONG lam bo so sach. Ngay khi coin nghe (made ~2/ngay) thi D-SIM-K3 lai vao. Sua D-M3-20 chi tra lai kha nang co MOT PHEP KIEM NULL (bat bien nhi phan) — do la THUOC, dung nhu 00-SUMMARY da xep. Khong duoc hua 'sua roi do lai la sach'."
+ ],
+
+ "test_ghim_tim_thay": [
+  "tests/test_evaluator_unbiased.py:63 test_placebo_intervention_measures_exactly_zero — chi phu arm MOI KENH OFF (run_once 1 ngay). Xanh va DUNG RA phai xanh (arm off do duoc la sach) => KHONG ghim hanh vi dang tranh chap.",
+  "tests/test_advice_bridge.py:59 test_disabled_advice_does_not_shift_rng — chi phu advice.enabled=False, tuc canh dung cai gate NGOAI CUNG, khong canh 'kenh BAT ma khong noi gi thi phai identical'.",
+  "tests/test_dm304_multiday_ab.py — cong cua duong do D-M3-04: chi ghim `run_pair_multiday` bat loi metric_days rong/vuot, KHONG ghim bat bien stream.",
+  "KHONG TIM THAY test nao ghim 'kenh BAT + moi quyet dinh bi tu choi => fingerprint IDENTICAL'. => khong co test xanh nao dang le do => day la KHUYET, khong phai THIET KE CO CHU DICH co test bao ve (khac han ADV-09).",
+  "Cong hien co KHONG bat duoc loi nay, da doc code de xac nhan: STOP-D (scripts/run_dm304.py:56-68) chay arm A HAI LAN => chi kiem tat dinh cua A; STOP-B (parallel.py:664-677 control_clean_channels) chi kiem arm A khong co QUYET DINH o kenh dang do (arm A co 0 => pass); assert_crn chi so danh sach don ngoai sinh."
+ ],
+
+ "do_lon_uoc": "Nen nhieu (0 can thiep, n=20 seed x 3 ngay, 90 actor): rest_min_total SD 157,5' (4,20% nen) · work_span_p90 SD 22,4' (5,03%) · payout doi SD 318.718d (1,37%), bien do tung seed toi -5,8%..+13,3% rest va +-2,2% payout doi. So voi bo so acceptance UPDATE-142 (n=30): SD nhieu / SD suy ra tu CI = 1,12 · 1,22 · 1,05 => ~100% do phan tan cua Delta post-FIX la troi-stream. Kem theo mot dau hieu LECH CO HE THONG chua chac (rest +94,2', t=2,67) dung chieu lam cong PASS.",
+
+ "cai_con_thieu": [
+  "Delta THAT sau khi sua: chua ai do. Phai chay lai run_dm304.py n=30 (hoac 100 theo prereg) SAU khi tach hai pha / keyed-hash.",
+  "Lech co he thong +94,2' rest la THAT hay la nhieu cua nhieu: n=20 + 3 phep so sanh chua du. Can n>=100.",
+  "Probe cua toi ep coin LUON tu choi; arm B THAT co ~2 cam ket/ngay nen thanh phan nhieu o do chua duoc do TRUC TIEP (uoc la >= muc nay, vi them draw + them phan ky hanh vi).",
+  "Anh xa metric: bang acceptance UPDATE-142 ('rest_min', 'idle_min', 'occupied_min', 'payout_vnd cohort') KHONG co artifact JSON nao trong repo — toi anh xa 'rest_min' -> health_guardrail.rest_min_total (pham vi touched) va 'work_span_p90' -> khoa cung ten, dua tren ten + bac do lon. Neu 'rest_min' la dai luong khac thi dong do SD ratio 1,12 chua duoc xac nhan; hai dong con lai (work_span_p90, payout doi) vung hon. 'idle_min' toi KHONG do.",
+  "Chua chot fix nao re hon: (i) tach `consider_relocate` hai pha (tat dinh cho gate, rut p_move SAU coin) hay (ii) keyed hash cho p_move duong advisor. Probe cua toi mo phong (ii) va no DU de dat bat bien — nhung (ii) doi nghia hanh vi cua nhanh roi (p_move khong con dong bo voi ban nang), con (i) giu nghia. Day la quyet dinh THIET KE, phai qua plan mode."
+ ],
+
+ "bang_chung_da_doc": [
+  "src/gsm_sim/world.py:127 (`self.rng = np.random.default_rng(seed ^ 0xBEEF)` — MOT stream dung chung) + :130 rng_rating (stream rieng, co comment canh bao dich chuoi) + :1171 (nhieu per-cell keyed) + :665/:709-710/:980/:1041/:1113/:1209/:1285 (moi consumer cua self.rng)",
+  "src/gsm_sim/world.py:1037-1046 (`if action == IdleAction.REST and not rest_forced:` + lambda truyen self.rng) va :860-862 (choose_idle_action tieu rng o CA HAI arm — nen tick REST khong he goi consider_relocate o ban nang)",
+  "src/gsm_sim/advice_bridge.py:863-946 (ca ham should_defer_rest: lan can, :898 nhanh committed, :907-908 no_window, :916 alt_action_fn, :922 cadence, :933 coin) + :331-346 cadence_allows + :450-474 coin_follows/DET-02 + :266/:311 (stream rieng cua bridge)",
+  "src/gsm_sim/behavior.py:195-231 (ca consider_relocate — draw CO DIEU KIEN `best_cell != actor.cell and rng.random() < p_move`) + :161-172 (buoc 5 cua choose_idle_action)",
+  "src/gsm_sim/parallel.py:223-243 run_pair · :291-357 run_pair_multiday · :359-369 assert_crn · :549-577 aggregate_health_guardrail (flag tren MEAN) · :594-677 aggregate_adherence + control_clean_channels · :167-173 _driver_metrics",
+  "src/gsm_sim/sim_metrics.py:329-342 (REST_RAILS, REST_TOTAL_DROP_TOL=0,02, SPAN_P90_RISE_TOL=0,10) · :388-411 fingerprint_actors (+docstring noi ro assert_crn khong bat duoc nhiem stream) · :507-549 health_guardrail + health_guardrail_flags",
+  "src/gsm_sim/multiday.py:121 (seed RIENG moi ngay) · :228-233 (nuoi planned_rest_hour chi khi d>0)",
+  "scripts/run_dm304.py:41-49 (CHANNELS_A/CHANNELS_B) · :56-68 (STOP-D chay arm A hai lan) · :100-113 (cong STOP)",
+  "configs/pilot_dongda.yaml:339 (rest_window: false — kenh TAT o san pham) · :349 positioning_overrides wait_only · :377 rest_defer_max_min 120 · :410-432 cadence.enabled false · :442-449 adherence_by_archetype",
+  "tracking/updates/UPDATE-142-dm304-fix-cam-ket-nghi.md (bang acceptance 30 seed + muc adversarial self-review y (3) da tu ghi 'consider_relocate trong nhanh roi rut RNG tu stream world' nhung KET LUAN SAI: no chi canh 'so B_fix voi B cu', va de xuat 'moi so sanh phai la B_fix vs A' — trong khi chinh B_fix vs A moi la cai bi nhiem)",
+  "tracking/DEFERRED.md:98 (D-SIM-K3, doc nguyen van co che) · :125 (D-M3-20)",
+  "tracking/updates/UPDATE-140/141 (FIX-PRE bit-identical 30/30) · UPDATE-162 §1 · UPDATE-166:38",
+  "research/audit/2026-08-06-math-model-audit/pb-01-dm320-chuoi-goi.json (goc soi chuoi goi — toi doc de tranh trung va de doi chieu doc lap) · mm-04-rest-family.json (muc 'tran hieu ung thap hon nen nhieu 1-2 bac')",
+  "PROBE TU CHAY: scratchpad/pb02_probe.py + pb02_analyze.py, 20 seed x 3 arm x 3 ngay, output pb02_20seed.log"
+ ],
+
+ "doi_chieu_voi_pb_01_cung_no": "Hai goc soi DOC LAP va DONG Y ve co che. pb-01 do arm 'coin NEVER' tren 2 seed voi positioning OFF (Delta -1,63M / -794k VND). Toi do tren 20 seed voi positioning WAIT_ONLY — tuc DUNG thiet ke CHANNELS_A/B cua run_dm304.py — nen so cua toi so truc tiep duoc voi CI acceptance. Toi bo sung hai thu pb-01 chua co: (1) SD nhieu vs SD suy ra tu CI acceptance (ratio 1,05-1,22); (2) arm Bfix chung minh fix khoi phuc bit-identity 60/60 => acceptance cua no la DAT DUOC, khong con phai ban. Khong co diem nao hai artifact nguoc nhau."
+}

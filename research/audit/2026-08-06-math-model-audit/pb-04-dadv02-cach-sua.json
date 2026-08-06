@@ -1,0 +1,94 @@
+{
+  "ma_no": "D-ADV-02",
+  "goc_soi": "CACH SUA DE XUAT CO DUNG KHONG — claim: \"sua bang cach goi S1 bonus_feasibility._walk tren cua so [shift_end, shift_end+extend]; solver da xu dung 0-diem-ngoai-khung tu UPDATE-065, kenh chi CHUA GOI\"",
+  "verdict": "REFUTED",
+  "verdict_nghia": "REFUTED = CLAIM \"cach sua dung, chi can goi\" bi bac. Ban than BUG (a) khong bi bac o day (ngoai pham vi goc soi nay).",
+  "ngay": "2026-08-06",
+  "ly_do_ngan": "Ba doan doc lap bac claim: (1) SAI NGU NGHIA — _walk tu shift_end voi gap do tai NOW bo qua diem kiem duoc trong phan ca con lai, tuc doi cua so keo <=60' mot minh dong TRON gap => 71/88 vo nghiem, con 12/88 = 13,6% noi duoc (tu do lai, khong relay). (2) KHONG PHAI DROP-IN — pha 2 test GHIM o tests/test_e1b_cong_thuc_kenh.py, mot trong do la LAN CAN SUC KHOE tang-5 (proj 1245' -> 1024' => rail would_exceed_fatigue TAT). (3) KHONG SUA VE RATE — S1 khong tu tinh cuoc/gio, no AN rate do producer bom vao (hist[bucket]); tren duong multiday bridge bom day-average vao CA HAI bucket => need_S1 == need_flat o 70/88 luot.",
+
+  "a_chu_ky_va_ngu_nghia__walk": {
+    "chu_ky": "_walk(policy, hist, start_h, gap, scale=1.0) — src/gsm_core/solvers/bonus_feasibility.py:56-84",
+    "co_tham_so_END_khong": "KHONG. Vong lap la `while t < DAY_END_HOUR - 1e-9` voi DAY_END_HOUR = 24.0 (dong 22, 70). _walk LUON di tu start_h toi NUA DEM. \"Walk tren cua so [shift_end, shift_end+extend]\" KHONG bieu dien duoc bang _walk mot minh — nguoi goi phai tu chan bang `hours_to_gap <= budget` hoac `_points_possible(checkpoints, budget_h)`; CA HAI deu la ham PRIVATE cua module gsm_core.",
+    "api_public_ho_tro_cai_gi": "Public API la solve(gi, policy) voi gi['hours_budget_remaining']. Tham so nay chi dien ta duoc \"quy gio ke tu t_now\" => API public ho tro TU NHIEN ban W_NOW (budget = remaining + extend) va KHONG ho tro W_END. Claim \"kenh chi chua goi\" ngu y drop-in; that ra phai choc vao 2 ham private VA tham so hoa nguoc lai y nghia cua API.",
+    "input_bridge_co_du_khong": "CO — day la ve DUY NHAT cua claim SONG SOT. self.policy cua bridge la gsm_core.PolicyBundle (advice_bridge.py:158-165 `CorePolicy.from_record(policy.to_core_record())`), co trip_points (policy.py:86) + is_peak (policy.py:112). hist co san qua build_bonus_gap_input (advice_bridge.py:972-1000) / self.memory. Khong thieu input.",
+    "bay_bien_nua_dem": "archetypes.py:93 `shift_end = min(24*60, shift_start + shift_len)` => P5/P7 bi CHAM tran 1440 thuong xuyen. _iso(1440) = '2026-07-02T00:00:00+07:00' va _hour() = 0 (do lai, xac nhan) => start_h = 0.0 => walk phu khung diem 06-21h cua NGAY MAI. Do that: hours_to_gap = 8,41 h va checkpoints[-1] = 207,2 diem — SO cua ngay mai. Trung thuc ve DO LON: quyet dinh noi/im KHONG dao (diem trong 1h dau = 0,0 va 8,41h > tran 60') => day la RO RI SO/LY DO, khong phai ro ri quyet dinh. Chinh tac gia probe pb04 da phai hard-code `se_h = 24.0 if shift_end >= 1440` de ne — mot ca dac biet ma de xuat sua KHONG he neu."
+  },
+
+  "b_S1_lay_toc_do_cuoc_gio_tu_dau__CAU_HOI_QUAN_TRONG_NHAT": {
+    "tra_loi_bang_code": "S1 KHONG tu do va KHONG tu tinh toc do. bonus_feasibility.py:40-53 `_hour_rate`: neu `hist.get(bucket) is not None` -> tra `float(hist[bucket]) * scale` (diem/gio, HANG SO trong bucket) ; nguoc lai -> `float(ppt) * DEFAULT_TRIPS_PER_HOUR * scale` voi DEFAULT_TRIPS_PER_HOUR = 1.5 (dong 20, nhan \"confidence thap\"). Nghia la S1 chi phan giai theo GIO o hai cho: (i) ppt = 0 ngoai khung diem, (ii) doi bucket peak/offpeak — CON DO LON cua rate thi no AN nguyen tu producer.",
+    "he_qua_1_duong_multiday": "advice_bridge.py:988-992 bom `mem.points_per_hour_avg` vao CA HAI bucket (D-ADV-04b) => hist[peak] == hist[offpeak] => walk suy bien thanh RATE PHANG, chi khac o cho gio ngoai khung cho 0. DO DUOC: need_S1(2 bucket = day-avg) == need_flat o 70/88 luot NOI. => Sua xong VE RATE VAN SAI Y NGUYEN. Claim goc cua no (\"rate tron peak lam need_min uoc NON ~2x\") KHONG duoc ban sua nay cham tay vao.",
+    "he_qua_2_duong_1_ngay": "Khong co memory thi hist chi co MOT bucket (bucket cua gio hien tai). Bucket con lai roi ve uoc luong LY THUYET ppt x 1.5. Do duoc tren 88 luot: ty le need_S1(1 bucket)/need_flat co p50 = 1,000 nhung min 0,370 — va 13 luot THAP hon flat >10% vs 1 luot cao hon. Chieu lech KHONG do hinh dang cau that ma do FALLBACK 1,5 cuoc/gio: P3 rate do 5,2đ/h di qua gio peak (ppt=10, thieu hist peak) duoc gan 15đ/h => walk \"dong gap nhanh gap doi\"; P1 rate do 15đ/h o gio peak di sang offpeak (ppt=5, thieu hist offpeak) duoc gan 7,5đ/h => walk bao KHONG DAT (29/88 luot inf). => Ban sua THAY mot gia dinh phang bang MOT HON HOP gia dinh (do + hang so 1,5 khong nguon), va chinh S1 ha confidence xuong 0.5 khi co 'dp:policy_theoretical' (bonus_feasibility.py:160-163) trong khi the RULE cua kenh dang ghi confidence 1.0.",
+    "ket_luan_b": "\"Sua xong VAN SAI, chi doi cho dat loi\" — DUNG cho ve RATE, nhung phai noi CHINH XAC hai chieu: (i) tren duong multiday sai y nguyen (70/88 giong het); (ii) tren duong 1-ngay sai theo huong MOI (fallback 1,5 cuoc/gio), lech CA HAI CHIEU tuy bucket nao thieu. Ve KHUNG DIEM (gio ngoai [6..21] cho 0) thi solver DUNG that — do la ve duy nhat cua UPDATE-065 dung o day."
+  },
+
+  "c_hai_nguon_su_that_D_SIM_09": {
+    "ve_gap_KHONG_co_rui_ro": "policy.next_tier_gap (gsm_core/policy.py:96-101) va next_tiers dung trong build_bonus_gap_input (advice_bridge.py:970-971, loc `int(p) > int(actor.points)`) doc CUNG MOT doi tuong self.policy => vi tu `points < tier_pts` tuong duong, khong the lech. Ve nay cua cau hoi (c) tra loi: KHONG.",
+    "ve_CO_rui_ro_that": "Neu fix them S1 ma GIU nguyen rule_input (advice_bridge.py:1152-1159) thi the se cho tai xe `points_per_hour` = rate PHANG va `need_min` PHANG, trong khi cong lai phan bang walk => HAI con so 'toi can bao lau' cho cung mot loi khuyen, cong them lech confidence (RULE 1.0 vs S1 0.5). Day dung khuon D-M3-17 (UI tu tinh pham vi pin khac engine). TRANH DUOC: fix phai THAY, khong duoc THEM.",
+    "ve_thu_ba_bi_bo_qua": "Neu fix goi solve() (API public) va doc solution.feasible thi no keo THEM hai rang buoc ok_acceptance/ok_completion vao cong. Do duoc: 27/88 = 30,7% luot dang NOI co acc hoac comp DUOI nguong => se bi cam vi mot ly do KHAC HAN 'cua so diem'. Co the la dung ve chinh sach (thuong khong tra khi ty le duoi nguong) nhung phai la QUYET DINH co y, khong phai tac dung phu."
+  },
+
+  "d_kenh_co_thanh_CAM_HAN_khong": {
+    "W_END_ban_sua_nguyen_van": "12/88 = 13,6% con noi duoc (71 vo nghiem, 5 huu han nhung > tran 60'). Gan TRO — dung bai hoc swap_early.",
+    "W_NOW_ban_di_tu_now": "46/88 = 52,3% con noi duoc (29 luot inf). ⚠ SO NAY BAC LAI SO RELAY: DEFERRED ghi ban W_NOW \"giu 66%\" — TOI KHONG TAI LAP DUOC 66%; tu dem lai tren dung bo 88 luot cho 52,3%. Phai sua 66% -> 52,3% (hoac chi ra bo du lieu khac).",
+    "cong_HEP_dung_nhat_khong_cam": "Bien the KHONG ai de xuat: chi dung `_points_possible(_walk(pol, hist, hour(shift_end), gap), extend_budget_h) <= 0` lam CONG MOT CHIEU (reason points_window_closed), GIU NGUYEN need_min. Do duoc: cam dung 16/88 = 18,2% luot co cua so keo 100% ngoai khung diem (toan P7:9 + P5:7), 72/88 con lai KHONG DOI. Cong nay KHONG phu thuoc hist (ppt<=0 tra 0 bat ke hist) => KHONG phu thuoc D-ADV-04b/B0, KHONG doi need_min => KHONG ha lan can met, KHONG tao so thu hai cho the.",
+    "canh_bao_phuong_phap_ve_moi_uoc_luong_tren": "CA BA ty le tren deu tinh tren 88 luot DA NOI DUOI CONG CU (conditioned on old gate). Sau khi sua, dan so noi DOI: 21.276 luot 'reachable_in_shift' + 15.504 luot 'would_exceed_fatigue' (5 seed) co the DAO sang noi khi need_min doi. => 13,6% va 52,3% la uoc luong CO DIEU KIEN, KHONG phai ty le noi hau-fix. Muon so hau-fix thi phai chay lai toan bo cong."
+  },
+
+  "rui_ro_nong_nhat__lan_can_suc_khoe": {
+    "co_che": "rail would_exceed_fatigue = `online_min + remaining_min + need_extra_min*1.15 > fatigue_threshold_min` (advice_bridge.py:1143-1147). Ha need_min => ha need_extra => rail BAN IT HON. Rail nay dang chan 15.504/43.009 = 36,0% luot goi (5 seed).",
+    "do_lai_tay_va_bang_script": "Tai lap dung test ghim test_extend_rail_du_phong_cuoi_ca_thang_tran_kinh_te: points=35, online=700', ca con 200', thr=1220'. FLAT: need 500' -> need_extra 300' -> proj = 700+200+345 = 1245' > 1220 => rail BAN (test PASS). W_NOW: need_S1 = 308' -> need_extra 108' -> proj = 700+200+124,2 = 1024,2' < 1220 => rail KHONG BAN, roi xuong cap_unreachable => assertion `why == 'would_exceed_fatigue'` FAIL.",
+    "ranh_gioi_spec": "Suc khoe KHONG phai bien toi uu (spec §1.2b) — no la cong MOT CHIEU tang-5. Mot ban sua lam cong mot chieu do bot ban la thay doi phai duoc duyet tuong minh, khong duoc di kem nhu tac dung phu cua \"sua thuan math\"."
+  },
+
+  "test_ghim_tim_thay": [
+    "tests/test_e1b_cong_thuc_kenh.py:110-119 test_extend_khong_keo_khi_moc_dat_duoc_trong_ca — ghim `reachable_in_shift`. Duoi W_NOW: now=01:00, ca ket 06:00, hist={'offpeak':55.0}; walk tu 1.0 => 5 gio dau ppt=0, gio 6 ppt=10 thieu hist peak => 15đ/h => hours_to_gap = 320' > rem 300' => KENH NOI (add>0) => test FAIL. Luu y trung thuc: cau tra loi cua fix o day co ve DUNG HON ve ngu nghia (truoc 06:00 khong kiem duoc diem nao), nen test nay la 'phai cap nhat co chu y', khong phai bang chung fix sai.",
+    "tests/test_e1b_cong_thuc_kenh.py:121-142 test_extend_rail_du_phong_cuoi_ca_thang_tran_kinh_te — ghim `would_exceed_fatigue` o knife-edge thr=1220 (docstring noi ro no duoc dung de TACH hai cong thuc). Duoi W_NOW: proj 1024,2' < 1220 => test FAIL. Day la LAN CAN SUC KHOE => KHONG duoc pha nhu tac dung phu.",
+    "tests/test_e1b_cong_thuc_kenh.py:145-155 test_extend_chi_cap_phan_can_them_ngoai_ca — ghim add == 300*1.15; doi need_min lam doi luon DO LON `add` => cung phai xet lai.",
+    "tests/test_shift_extend_rails.py — bo test lan can (soc_low/fatigued/would_exceed_fatigue); chua doc het nhung cung mot ho cong voi test tren, phai chay lai truoc khi tin ban sua nao.",
+    "tests/test_multiday.py:164-173 — ghim hinh dang hai-bucket-BANG-NHAU cua mem.points_per_hour_avg (chinh nguon loi ve rate o (b)). D-ADV-04b da khao sat: y dinh test la kiem 'bridge co DOC memory', khong chot ngu nghia bucket."
+  ],
+
+  "bang_chung_da_doc": [
+    "src/gsm_core/solvers/bonus_feasibility.py:20-22 (DEFAULT_TRIPS_PER_HOUR=1.5, DAY_END_HOUR=24.0), :40-53 (_hour_rate — nguon rate la hist[bucket] do PRODUCER bom, fallback ppt*1.5), :56-84 (_walk — khong co tham so END, luon di tot nua dem), :87-95 (_points_possible), :98-244 (solve — hours_budget_remaining la quy gio ke tu t_now; feasible = enough_hours AND ok_acc AND ok_comp; confidence 0.5 khi co dp:policy_theoretical)",
+    "src/gsm_sim/advice_bridge.py:1064-1222 (check_shift_extend day du: lan can soc/fatigued/extend_cap :1107-1115, gap :1116, rate phang :1120-1122, need_min :1124, reachable_in_shift :1130-1132, rail du phong :1143-1147, cap_unreachable :1148, rule_input :1152-1159, add = need_extra*1.15 :1191, clamp world_end :1196)",
+    "src/gsm_sim/advice_bridge.py:158-165 (self.policy = CorePolicy.from_record(sim_policy.to_core_record()) — S1 nhan dung lop policy co is_peak/trip_points), :972-1000 (build_bonus_gap_input; :988-992 bom day-average vao CA HAI bucket = D-ADV-04b; hours_budget_remaining = (shift_end-now)/60), :42-62 (_iso mang NGAY THAT)",
+    "src/gsm_core/policy.py:86-92 (trip_points = 0 ngoai point_window_hours), :96-101 (next_tier_gap), :112-113 (is_peak)",
+    "configs/pilot_dongda.yaml:254-255 (point_window_hours 6..21 => diem TAT tu 22:00, khong phai 21:00), :256-260 (tiers), :330-342 (shift_extend: false — kenh TAT mac dinh), :378 (shift_extend_max_min: 60), :395 (trips_per_hour_est 1.5), :22-23 (time 05:00-24:00)",
+    "src/gsm_sim/archetypes.py:36-53 + :91-93 (shift_end = min(1440, start+len) — P5 start 15-17h len 8-9h, P7 start 15-16h len 8-9h => ket 23:00-24:00 CHAM TRAN 1440; P1 ket 19:30-22:00; P3 ket 20:00-22:00)",
+    "tests/test_e1b_cong_thuc_kenh.py:85-155 (3 test ghim cong thuc kenh shift_extend)",
+    "tracking/DEFERRED.md:116 (D-ADV-04b) va :120 (D-ADV-02 + dinh chinh 2026-08-06)",
+    "tracking/updates/UPDATE-166-...md:39-59 (canh bao 6/7 artifact phan bien KHONG ton tai tren dia => cam trich so relay)"
+  ],
+
+  "so_da_do_lai_doc_lap": {
+    "nguon": "research/audit/2026-08-06-math-model-audit/pb-04-raw-88-luot.txt (5 seed 1000-1004, 43.009 luot goi check_shift_extend, 88 luot NOI) — do lai bang pb-04-verify-doc-lap.py, KHONG relay",
+    "cua_so_keo_100pct_ngoai_khung_diem": "16/88 = 18,2% (P7:9, P5:7)",
+    "W_END_con_noi": "12/88 = 13,6% (71 vo nghiem + 5 huu han > 60')",
+    "W_NOW_con_noi": "46/88 = 52,3% (29 inf)",
+    "need_S1_thap_hon_flat_hon_10pct": "13/88 (=> ha rail met)",
+    "them_bi_cam_neu_doc_solution_feasible": "27/88 = 30,7% (acc hoac comp duoi nguong)",
+    "need_S1_bang_need_flat_tren_duong_multiday": "70/88",
+    "rail_would_exceed_fatigue_dang_chan": "15.504/43.009 = 36,0% luot goi"
+  },
+
+  "hai_so_relay_phai_dinh_chinh": [
+    "DEFERRED D-ADV-02 (a) ghi \"16/77 = 20,8%\" — MAU SO SAI: bo luot NOI cua chinh probe do la 88, khong phai 77 => 16/88 = 18,2%.",
+    "DEFERRED D-ADV-02 (b) ghi ban W_NOW \"giu 66%\" — KHONG TAI LAP DUOC: tu dem lai tren dung bo 88 luot cho 52,3%. Cho tioi khi co bo du lieu khac, con so phai la 52,3%."
+  ],
+
+  "cai_con_thieu": "1) Chua chay hau-fix that su: moi ty le o day tinh tren 88 luot DA NOI duoi cong CU, nen khong noi duoc ty le noi SAU khi sua (21.276 luot reachable_in_shift + 15.504 luot would_exceed_fatigue co the dao chieu). 2) Chua chay pytest de XAC NHAN hai test ghim that su FAIL — toi tai lap bang chinh so hoc/solver tren dung input cua test, chua chay test that (khong sua repo). 3) Chua do tac dong he thong (payout/served/work_span) cua bat ky ban sua nao — moi so o day la ve CONG NOI/IM. 4) Bo du lieu 88 luot la 5 seed, 1 ngay, coverage=all, kenh shift_extend BAT DON DOC; chua kiem tren duong multiday that (noi ma hist=2 bucket day-avg thuc su xay ra) — ve (b) cho duong do la SUY LUAN TU CODE + gia lap cot need_s1_2bucket_avg, khong phai do tu run multiday. 5) Chua kiem tests/test_shift_extend_rails.py chi tiet.",
+
+  "do_lon_uoc": "Ve BUG goc: 16/88 = 18,2% luot NOI co cua so keo hoan toan ngoai khung diem (P5/P7). Ve CACH SUA: ban nguyen van cat kenh xuong 13,6% (mat ~86% luot noi duoc, trong do ~72 luot vo can), ban W_NOW xuong 52,3% va TAT mot lan can suc khoe dang chan 36% luot goi; ban cong-HEP cat dung 18,2% va giu 72/88 nguyen ven. Chenh lech giua ba ban sua lon hon chenh lech giua co-sua va khong-sua => chon ban nao la quyet dinh CO DO LON, khong phai chi tiet trien khai.",
+
+  "de_xuat_thay_the_co_do": {
+    "buoc_1_BAT_BUOC_truoc": "Cong MOT CHIEU points_window_closed: `if _points_possible(_walk(self.policy, hist, hour_of(actor.shift_end_min), gap_points), (self.extend_max_min - actor.shift_extended_min)/60.0) <= 0: return 0.0, 'points_window_closed'` — dat SAU lan can suc khoe, GIU NGUYEN need_min/rate. Cat dung 18,2% ca chet, khong doi gi khac, khong phu thuoc D-ADV-04b/B0. Phai xu rieng shift_end_min >= 1440 (map ve 24.0, khong ve 0.0) neu khong se lay khung diem NGAY MAI.",
+    "buoc_2_TACH_CYCLE": "Thay need_min phang bang S1 chi duoc lam SAU khi D-ADV-04b (rate theo bucket o memory) xong — neu khong chi doi cho dat loi — VA phai kem quyet dinh tuong minh cua Cuong ve viec lan can would_exceed_fatigue se ban it hon, kem do lai tan suat ban tren >=5 seed.",
+    "buoc_3_khong_duoc_lam": "Khong duoc de rule_input giu rate/need phang trong khi cong doc walk (hai so cho mot loi khuyen — khuon D-M3-17)."
+  },
+
+  "artifact_kem": [
+    "research/audit/2026-08-06-math-model-audit/pb-04-probe-88-luot.py (probe sinh du lieu — monkeypatch runtime, khong sua repo)",
+    "research/audit/2026-08-06-math-model-audit/pb-04-raw-88-luot.txt (raw 88 luot NOI, 5 seed)",
+    "research/audit/2026-08-06-math-model-audit/pb-04-verify-doc-lap.py (script tu dem lai + tai lap 2 test ghim)"
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "ma_no": "D-M3-21",
+  "goc_soi": "TAN SUAT BIND cua san bao lanh tan binh + he qua suy ra (payout HANG ⇒ dao ham 0 ⇒ guard 1b ĐA-08 zero power ⇒ payout_mean_all bi keo ve 0)",
+  "verdict": "REFUTED",
+  "ket_luan_mot_dong": "TIEN DE bind DUNG va manh hon no noi (96-98% ngay-P4 bind, KHONG phai nhanh hiem) — nhung CHUOI SUY RA SAI: payout cua P4 dang bind KHONG hang (27 gia tri phan biet, dai 262.498…352.500d), Delta payout != 0 o 125/150 ngay-cap ca hai arm deu bind, va payout_mean_all = +5.352d [+1.881; +8.955] SIG DUONG.",
+
+  "phuong_phap": {
+    "probe": "scratchpad/pb05_dm321_bind_freq.py (KHONG sua file repo nao) — run_once qua parallel._cfg_with(coverage='all', channels=None) cho arm A (advice.enabled=false) va arm B (true), doc truc tiep actor.gross_vnd / payout_vnd / newbie_topup_vnd / mission_reward_vnd + event newbie_guarantee_topup, day_end_settle, end_shift",
+    "config": "configs/pilot_dongda.yaml khong sua (floor 350.000, min_online 6.0h, guarantee_days 90, tenure_newbie_max 90, driver_share 0.75, bonus_min_acceptance 0.85; channels.accept_lift=false; positioning_overrides=wait_only; positioning_trigger=capacity)",
+    "seeds": [1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009],
+    "n": "160 ngay-tai-xe-P4/arm (16 P4 x 10 seed); 900 ngay-tai-xe toan doi/arm",
+    "CI": "bootstrap 5000 lan, don vi resample = SEED (khong phai actor-day) — actor trong cung seed KHONG doc lap"
+  },
+
+  "a_tan_suat_bind_DO_DUOC": {
+    "ket_luan": "KHONG BAC DUOC — nguoc lai, bind gan nhu PHO QUAT cho P4",
+    "pct_bind_arm_A": 96.25,
+    "pct_bind_arm_A_ci95": [94.38, 98.12],
+    "pct_bind_arm_A_per_seed": [93.8, 100.0, 93.8, 93.8, 93.8, 100.0, 100.0, 100.0, 93.8, 93.8],
+    "pct_bind_arm_B": 97.5,
+    "pct_bind_arm_B_ci95": [95.62, 99.38],
+    "ba_ve_dieu_kien_tach_rieng": {
+      "pct_tenure_le_90": 100.0,
+      "pct_online_ge_6h": 100.0,
+      "pct_gross_below_350k_armA": 96.2,
+      "pct_gross_below_350k_armB": 97.5
+    },
+    "ve_nao_la_ve_rang": "gross < 350k — hai ve kia KHONG BAO GIO chan. tenure P4 sample [5,60) (archetypes.py:113-115) luon <= 90; online median 527' (8,8h), min quan sat 481' (8,0h) >> nguong 360' vi archetypes.py:40 dat shift_len_min=(480,540)",
+    "he_qua": "gia thuyet 'P4 part-time nen online < 6h' va 'P4 thuong vuot 350k' DEU SAI. Muc (a) va (d) cua mandate KHONG bac duoc no — chung XAC NHAN tien de."
+  },
+
+  "b_day_bonus_va_mission_NAM_NGOAI_dong_nhat_thuc": {
+    "ket_luan": "DUNG — day la ve BAC DUOC 'payout HANG'",
+    "co_che_doc_tu_code": [
+      "world.py:566-582 (_newbie_settle) tinh topup tu actor.gross_vnd — KHONG doc payout_vnd",
+      "world.py:792-793 mission reward cong vao payout_vnd, KHONG cong vao gross_vnd ⇒ nam NGOAI dong nhat thuc",
+      "world.py:551-553 (day_end_settle) va world.py:1090-1092 (end_shift): day_bonus duoc cong SAU khi _newbie_settle da chay ⇒ nam NGOAI dong nhat thuc",
+      "CONSUMER/TEST GHIM: tests/test_xanh_detail.py:173 test_four_source_money_conservation ghim payout == trip_payout + day_bonus + mission + newbie_topup — BON nguon RIENG. Day la THIET KE co chu dinh, khong phai tai nan"
+    ],
+    "dong_nhat_thuc_DUNG": "payout(bound) = round(350.000 x 0,75) + mission_reward + day_bonus = 262.500 + mission + day_bonus (+/- 2d lam tron)",
+    "residual_kiem_chung": "payout - mission - day_bonus - 262.500 in [-2, +2] tren TOAN BO 154 (A) / 156 (B) ngay bind ⇒ dong nhat thuc dung EXACT, sai so chi la round() per-trip",
+    "payout_bound_distinct_armA": 27,
+    "payout_bound_range_armA": [262498, 352500],
+    "payout_bound_distinct_armB": 25,
+    "payout_bound_range_armB": [262498, 352499],
+    "bien_do_KHONG_bi_hap_thu": "toi +90.000d/ngay (mission 20k+30k+40k = 90k tran; day_bonus tier quan sat 30k)",
+    "pct_ngay_bind_co_tien_KHONG_bi_hap_thu_armA": 46.12,
+    "pct_ngay_bind_co_tien_KHONG_bi_hap_thu_armA_ci95": [38.88, 52.58],
+    "pct_ngay_bind_co_tien_KHONG_bi_hap_thu_armB": 46.08,
+    "pct_ngay_bind_co_tien_KHONG_bi_hap_thu_armB_ci95": [36.33, 54.54]
+  },
+
+  "c_cong_acceptance_0_85_CO_qua_duoc": {
+    "ket_luan": "BAC duoc menh de 'P4 accept_base 0,80 < 0,85 ⇒ day_bonus = 0' — no chi dung ~71-77% ngay, KHONG phai luon",
+    "accept_lift_channel": "configs/pilot_dongda.yaml:331 channels.accept_lift = false ⇒ KENH NAY TAT. Moi so duoi day la POSITIONING don doc",
+    "co_che": "acceptance_rate la ty le THUC HIEN (accepted/offers), khong phai accept_base — nen phan phoi quanh 0,80 va vuot 0,85 thuong xuyen",
+    "acc_realized_armA": {"min": 0.5, "median": 0.757, "max": 1.0},
+    "acc_realized_armB": {"min": 0.538, "median": 0.788, "max": 1.0},
+    "pct_qua_cong_thuong_ngay_armA": 22.5,
+    "pct_qua_cong_thuong_ngay_armA_ci95": [17.5, 27.5],
+    "pct_qua_cong_thuong_ngay_armB": 28.75,
+    "pct_qua_cong_thuong_ngay_armB_ci95": [22.5, 35.62],
+    "delta_pct_qua_cong": "+6,25 diem phan tram do POSITIONING (22,5 → 28,75) ⇒ kenh dang ship CO day P4 qua cong duoc"
+  },
+
+  "d_ca_cua_P4": {
+    "archetypes_py_40": "Archetype('P4', sigma 0.60, accept_base 0.80, shift_len_min=8*60, shift_start dai (480,540)' = 8-9h)",
+    "shift_len_median_quan_sat": 515.6,
+    "online_median_quan_sat": 527.0,
+    "online_min_quan_sat": 481.0,
+    "ket_luan": "ca P4 8,0-9,0h ⇒ cong online >= 6h dat 100%. Muc (d) KHONG bac duoc no."
+  },
+
+  "e_he_qua_suy_ra_BI_BAC": {
+    "1_payout_hang": {
+      "verdict": "REFUTED",
+      "bang_chung": "27 gia tri payout phan biet trong 154 ngay bind (arm A), dai 262.498…352.500d = bien do +90.002d"
+    },
+    "2_dao_ham_0_nen_guard_1b_zero_power": {
+      "verdict": "REFUTED",
+      "bang_chung": [
+        "150 ngay-CAP (paired CRN) ma CA HAI arm deu bind: Delta payout != 0 o 125/150 = 83,3%",
+        "dai Delta payout khi ca hai bind: -70.000 … +89.998d (48 gia tri phan biet)",
+        "them 10/160 = 6,25% ngay BIND-FLIP (advisor day gross qua/duoi san; gross_max 406.064 → 411.204)",
+        "power dinh luong: sd(Delta payout P4 theo seed) = 3.153d (n=10) ⇒ o n=100 theo ĐA-08, SE ~315d, MDE95 ~620d. Guard 1b co the phat hien +/-620d tren hang P4 — KHONG phai zero power. Tien le: UPDATE-160 da phat hien P1 -3.863d AM-SIG bang chinh guard nay"
+      ]
+    },
+    "3_payout_mean_all_bi_keo_ve_0": {
+      "verdict": "REFUTED",
+      "delta_payout_mean_all_mean": 5351.8,
+      "delta_payout_mean_all_ci95": [1881.25, 8955.06],
+      "delta_payout_mean_all_per_seed": [1971.7, 12729.0, 9810.8, -3294.3, 4138.6, 9063.5, -1835.3, 2584.2, 14596.4, 3753.4],
+      "bang_chung": "SIG DUONG o n=10, khop huong+bac voi +6.016d SIG da cong bo o n=100 (UPDATE-087). Ngay-P4-bind chi la 17,1% ngay-doi, va CHI phan trips-payout cua chung bi hap thu — khong phai ca payout"
+    }
+  },
+
+  "cai_gi_CON_DUNG_va_dang_giu": {
+    "1_dai_so": "Voi P4 dang bind, dong bien tu MOT cuoc them la CHINH XAC 0 o ve trips-payout — dung, va gan nhu pho quat (96-98% ngay-P4)",
+    "2_suy_giam_do_nhay_TRONG_TRUNG_BINH": "Delta payout P4 = +190,8d, CI95 [-1.559; +2.023] (n=10, ns) trong khi toan doi +5.352d SIG ⇒ CO suy giam do nhay o MUC TRUNG BINH. Nhung day la ATTENUATION voi phuong sai SONG, khong phai zero power; va n=10 duoi cong suat (ĐA-08 doi n=100)",
+    "3_rui_ro_dien_giai_DUNG_cach_phat_bieu": "Rui ro THAT khong phai 'guard 1b khong do duoc gi' ma la 'guard 1b do PAYOUT nen KHOI THIEU HUT GROSS cua P4 duoc bao hiem che di': dgross != 0 o 150/150 ngay-cap, nhung ~2/3 bien do do bi topup trung hoa. Phat bieu dung: guard 1b UNDER-REPORT tac hai len GROSS cua P4, chu khong phai mat power"
+  },
+
+  "cai_con_thieu": [
+    "n=10 seed, KHONG phai n=100 cua ĐA-08 ⇒ 'Delta payout P4 ns' CHUA duoc ket luan, chi la chua do duoc o n=10",
+    "single-day (run_once). Lop tan binh thu 2 (moc 50 cuoc/7 ngay, 500k) la TICH LUY multi-day va KHONG duoc kiem o day — o single-day no khong bao gio bind (target 50 cuoc/ngay)",
+    "chi mot config (pilot_dongda, coverage=all, wait_only, trigger=capacity). Voi coverage=single (mac dinh file config) so nay KHONG ap dung",
+    "guarantee_gross_floor_vnd=350.000 la PROXY/ASSUMPTION co nhan (configs:493, so that image-locked D-POL-05) ⇒ tan suat bind 96-98% la HE QUA CUA MOT SO GIA DINH, khong phai su that GSM. Neu san that thap hon (vd 250k) thi bind se tut manh — DAY moi la don bay dang so, khong phai dai so",
+    "chua do CHI PHI: cash_cost=0 mac dinh nen net == payout; neu bat cost-km thi topup KHONG bu chi phi ⇒ net cua P4 van bien thien"
+  ],
+
+  "bang_chung_da_doc": [
+    "src/gsm_sim/world.py:566-582 (_newbie_settle, ca hai lop tan binh)",
+    "src/gsm_sim/world.py:547-555 (day_end_settle — day_bonus cong SAU _newbie_settle)",
+    "src/gsm_sim/world.py:1088-1096 (end_shift — day_bonus cong SAU _newbie_settle)",
+    "src/gsm_sim/world.py:750-758 (accrual gross_vnd + payout_vnd per trip)",
+    "src/gsm_sim/world.py:790-793 (mission reward vao payout_vnd, KHONG vao gross_vnd)",
+    "src/gsm_sim/policy.py:80-102 (driver_payout_from_gross, day_bonus + cong acceptance/completion)",
+    "src/gsm_sim/archetypes.py:30-41, 109-115 (P4 accept_base 0.80, shift_len 8-9h, tenure [5,60))",
+    "configs/pilot_dongda.yaml:229-239 (archetype_mix P4=0.18), :249-262 (driver_share, tiers, bonus_min_acceptance), :318-345 (advice.channels — accept_lift=false, positioning_overrides=wait_only), :487-497 (newbie_program)",
+    "tests/test_xanh_detail.py:122-137 (test_guarantee_topup_requires_diligence, test_guarantee_math — GHIM cong thuc topup)",
+    "tests/test_xanh_detail.py:173-181 (test_four_source_money_conservation — GHIM payout = 4 nguon RIENG)",
+    "src/gsm_sim/parallel.py:73-97, 223-244 (_cfg_with, run_pair — cach dung arm A/B)",
+    "probe: scratchpad/pb05_dm321_bind_freq.py, 10 seed x 2 arm, khong sua file repo"
+  ]
+}

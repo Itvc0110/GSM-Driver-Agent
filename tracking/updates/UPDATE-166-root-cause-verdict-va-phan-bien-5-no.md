@@ -45,6 +45,25 @@ CẶP** (mỗi cặp lặp ~7 lần), thiệt hại thật **~2,5′ đời đơ
 ⚠ Lưu ý tổng hợp viên: `D-ADV-04` *"KHÔNG nằm trong 5 nợ nhưng CHÍN NHẤT"* (đã reproduce, đã phân xử
 solver-đúng/producer-sai, đã khảo sát test ghim).
 
+## 2b. ✅ ĐÃ CHẠY LẠI 2026-08-07 — artifact đủ 7/7, và **BA verdict ĐỔI**
+
+Nợ *"6/7 artifact không tồn tại ⇒ cấm trích số"* ở §3 **đã trả** (`UPDATE-171`). Nhưng lần chạy thứ hai
+cho verdict **khác** ở ba chỗ — bản thân điều đó là một phát hiện: **một lượt refuter KHÔNG phải oracle
+đáng tin tuyệt đối.**
+
+| nợ · góc soi | relay lần 1 | chạy lại (có artifact) |
+| --- | --- | --- |
+| `D-M3-20` chuỗi gọi | CONFIRMED | **CONFIRMED** ✓ |
+| `D-M3-20` hậu quả | CONFIRMED | **CONFIRMED** ✓ |
+| `D-ADV-02` tần suất | CONFIRMED | **CONFIRMED** ✓ |
+| `D-ADV-02` **cách sửa** | PLAUSIBLE | **REFUTED** — cách sửa tôi đề xuất bị bác hẳn |
+| `D-M3-21` tần suất bind | PLAUSIBLE | **REFUTED** — tiền đề đúng, **chuỗi suy luận của tôi sai cả ba vế** |
+| `D-ADV-01` thiết kế/bug | CONFIRMED | **PLAUSIBLE** — 1 chân sai nhãn, 1 chân RỖNG, kết luận chưa chứng minh |
+| `D-ADV-03` sẽ thất bại | REFUTED | **REFUTED** ✓ |
+
+⇒ **Số dùng chính thức là số của lần có ARTIFACT.** Các đính chính chi tiết đã ghi vào `DEFERRED.md`
+(`D-M3-21`, `D-ADV-01`) — xem `UPDATE-171`.
+
 ## 3. ⚠ Cảnh báo TRUNG THỰC về chính hồ sơ này
 
 **6/7 artifact phản biện KHÔNG TỒN TẠI trên đĩa** — plan mode chặn agent ghi vào repo. Chỉ có

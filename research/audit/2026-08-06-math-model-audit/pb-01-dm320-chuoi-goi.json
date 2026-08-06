@@ -1,0 +1,73 @@
+{
+  "ma_no": "D-M3-20",
+  "goc_soi": "CHUOI GOI CO THAT XAY RA KHONG — should_defer_rest:916 -> lambda world.py:1041 -> consider_relocate -> rng.random() behavior.py:228; arm A co rut khong; do lon that",
+  "verdict": "CONFIRMED",
+  "ngay": "2026-08-06",
+  "ket_luan_mot_cau": "Chuoi goi CO THAT: arm A (kenh TAT) khong bao gio toi dong 916 (do duoc 0 lan/moi run), arm B toi 28-63 lan/3 ngay va RUT that 11-21 draw tu `self.rng` DUNG CHUNG truoc cadence/coin; mot phan trong so do la NO-OP (coin tu choi / alt=WAIT sau khi da rut) nen dich chuoi RNG ma khong doi hanh vi nao — dung bat bien ma DET-02 (advice_bridge.py:469-470) va world.py:882-884 tuyen bo phai giu.",
+  "da_co_bac_bang_5_duong_deu_that_bai": {
+    "a_behavior228_luon_rut": "BAC MOT PHAN CLAIM (nhung khong cuu duoc no): `consider_relocate` rut CO DIEU KIEN. Do duoc: 28 call -> 11 draw (seed 7000), 63 call -> 21 draw (seed 7005) = 33-39%. Duong KHONG rut: (i) demand_hint is None (bo qua ca khoi 210-229); (ii) best_cell == actor.cell va give_up=False (17/28 va ~42/63 call tra WAIT voi 0 draw). Nhung 11-21 draw thuc su xay ra la du de vo CRN.",
+    "b_ban_nang_da_goi_roi_nen_hai_arm_rut_bang_nhau": "BAC HOAN TOAN GIA THUYET NAY. `should_defer_rest` chi duoc hoi khi `action == IdleAction.REST` (world.py:1037), va REST chi den tu buoc 3 (meal) hoac buoc 4 (fatigue>1) cua `choose_idle_action` — CA HAI return TRUOC buoc 5, tuc ban nang KHONG he goi `consider_relocate` o dung tick do. Do truc tiep: wrapper dat tren `gsm_sim.world.consider_relocate` (chi bat call cua lambda, khong bat call noi bo cua behavior.choose_idle_action) dem duoc callsA = 0 o MOI run arm A, va calls = 17..63 o arm B.",
+    "c_hint_co_the_None": "KHONG. `hint = self._actor_demand_hint(actor, hour)` (world.py:860) luon tra dict — nhanh field rong tra `{}` (world.py:1159-1161), khong tra None. `{}` van vao khoi `if demand_hint is not None`, va con co the rut neu `give_up` (idle_streak >= step*max_steps) vi nhanh 224-227 chon lang gieng bat ke niem tin. Vay duong 'None cuu bug' khong ton tai.",
+    "d_test_ghim_kenh_tat_bit_identical": "CO test nhung chung KHONG bac claim — chung chi phu arm TAT, va arm TAT do duoc la SACH. `tests/test_evaluator_unbiased.py:63 test_placebo_intervention_measures_exactly_zero` chay `run_once` (MOT ngay) voi MOI kenh off + positioning off; `tests/test_advice_bridge.py:59 test_disabled_advice_does_not_shift_rng` chay advice.enabled=False. KHONG co test nao ghim 'kenh BAT + moi quyet dinh bi nen/tu choi => identical' — dung cai acceptance ma DEFERRED de xuat. Vay khong co test xanh nao dang le do.",
+    "e_do_lon_qua_nho_de_dang_ke": "BAC. Tan so nho nhung hau qua lon vi `self.rng` (world.py:127, seed^0xBEEF) la stream DUNG CHUNG cho CA DOI: decide_accept (665), cancel_after_accept (709), rest_min uniform (1113), swap_time (1285), moi p_move. Mot draw lech lam de-sync toan doi 90 actor tu tick do tro di. Do duoc o thi nghiem 'coin NEVER' duoi day."
+  },
+  "bang_chung_doc_thang_file": [
+    "src/gsm_sim/advice_bridge.py:916 `alt = alt_action_fn(actor)` — dung TRUOC cadence_allows(:922) va coin_follows(:933); dung nhu claim.",
+    "src/gsm_sim/advice_bridge.py:843-844 cong co `if not (self.ch_rest_window and self.covers(actor)): return None` nam trong `rest_window_hour`, KHONG o dau `should_defer_rest`; vi vay arm A vao ham, di het lan can (soc/fatigue/commit/defer_cap) roi return `no_window` o :907-908 TRUOC :916 — khong rut.",
+    "src/gsm_sim/world.py:1037-1042 `if action == IdleAction.REST and not rest_forced:` … `lambda a: consider_relocate(a, self.grid, hour, hint, self.rng, ...)` — lambda dung `self.rng` (stream hanh vi dung chung), KHONG dung stream rieng cua bridge.",
+    "src/gsm_sim/behavior.py:228 `if best_cell != actor.cell and rng.random() < p_move:` — draw CO DIEU KIEN (khong phai vo dieu kien).",
+    "src/gsm_sim/behavior.py:161-168 buoc 3/4 tra REST TRUOC buoc 5 => tick REST khong he goi consider_relocate o ban nang.",
+    "src/gsm_sim/advice_bridge.py:450-474 `coin_follows` dung `adherence_coin` (keyed hash, 0 draw) — comment DET-02 dong 469-470 phat bieu ro bat bien: 'self.rng khong con bi coin tieu => bat/tat mot kenh khong xe dich stream ... hai arm ghep cap that'. Day la bat bien ma :916 pha.",
+    "src/gsm_sim/world.py:882-884 va src/gsm_sim/behavior.py:74-76 phat bieu cung ky luat: advice chi GHI DE ket qua, khong duoc dich dong RNG cua actor.",
+    "src/gsm_sim/world.py:977 (kenh sibling swap_early) gate co DUNG TRUOC choose_station, va choose_station khong rut RNG (behavior.py:241-258, dinh chinh mm-05 MI-8) => rest_window la kenh DUY NHAT tieu stream dung chung cho mot phep THAM DO."
+  ],
+  "so_do_duoc": {
+    "cau_hinh": "configs/pilot_dongda.yaml, advice.enabled=True, coverage=all (90 actor), channels: chi rest_window, positioning_overrides=off; run_multiday days=3 (270 driver-day). Probe chi monkeypatch trong scratchpad, KHONG sua file repo.",
+    "arm_A_kenh_tat": "calls tai :916 = 0 (moi seed, ca run_once 1 ngay va multiday 3 ngay) => arm doi chung SACH ve stream.",
+    "single_day_hoan_toan_INERT": "seed 7000 run_once: A(off) va B(on) giong nhau tung so: payout 22.908.261, trips 960, rest 4026,1', 6296 event; veto toan `window_past`/`no_window`/`fatigued`. Vi khong co `planned_rest_hour` thi S7 luon chi khung DA QUA => KHONG BAO GIO toi :916. Loi chi song o duong MULTIDAY.",
+    "arm_B_multiday_calls_va_draws": {
+      "seed_7000": {"sdr_calls": 379, "calls_916": 28, "draws": 11, "out_wait_0draw": 17, "out_relocate_1draw": 8, "out_wait_1draw": 3},
+      "seed_7001": {"calls_916": 30, "draws": 13, "out_wait_0draw": 17, "out_relocate_1draw": 6, "out_wait_1draw": 7},
+      "seed_7002": {"calls_916": 17, "draws": 7},
+      "seed_7003": {"calls_916": 27, "draws": 14},
+      "seed_7004": {"calls_916": 33, "draws": 12},
+      "seed_7005": {"sdr_calls": 386, "calls_916": 63, "draws": 21}
+    },
+    "draw_NO_OP_thuc_su": {
+      "dinh_nghia": "draw da tieu ma advisor KHONG doi hanh vi gi: (i) alt tra WAIT SAU khi da rut (p_move truot) => why=no_alt_action; (ii) coin tu choi => why=not_followed.",
+      "seed_7000": "3 (wait sau draw) + 3 (not_followed) = 6 / 11 draw",
+      "seed_7001": "7 + 3 = 10 / 13 draw",
+      "ghi_chu": "cadence NEN = 0 lan o ca 6 seed (khong co why_cadence nao) => menh de 'bi cadence NEN' cua DEFERRED chua tung xay ra o cac seed nay."
+    },
+    "smoking_gun_coin_NEVER": {
+      "thiet_ke": "arm B, patch `AdviceActionBridge.coin_follows -> False` => 0 cam ket, 0 doi action, 0 doi state actor (da kiem: cadence_allows/cadence_note_spoken/note_spoken_outcome khong tieu RNG va chi ghi state cua BRIDGE; event chi la log). Khac biet duy nhat con lai voi arm A = cac draw o :916.",
+      "seed_7000": "A payout 68.232.864 / 2858 trip / 11.776,15' rest  vs  B(coin=NEVER) 66.607.585 / 2824 / 12.295,22' — DELTA -1.625.279d, -34 trip, +519,07' rest; commits=0, calls=26, draws=9",
+      "seed_7003": "A 67.670.863 / 2863 / 11.811,66'  vs  B 66.876.446 / 2844 / 11.800,99' — DELTA -794.417d, -19 trip, -10,67'; commits=0, calls=29, draws=14",
+      "y_nghia": "0 can thiep ma lech tien 1,2-2,4% payout doi va lech CA CHI SO SUC KHOE (rest_min +519') => hieu ung MA 100% do dich stream."
+    },
+    "so_sanh_voi_delta_that": "Delta(B-A) do duoc voi coin THAT: seed 7002 +507.913d, 7003 -695.209d, 7004 +450.736d, 7005 +637.754d (3 ngay, 90 actor). Nen nhieu ma (-1,63M o seed 7000) CUNG BAC hoac LON HON hieu ung => moi Delta multiday cua rest_window sau 2026-08-05 khong doc duoc."
+  },
+  "cai_gi_trong_claim_DEFERRED_bi_BAC_hoac_phai_sua": [
+    "'consider_relocate rut RNG that' — dung nhung PHAI ghi la CO DIEU KIEN: chi 33-39% call rut (best_cell == actor.cell + khong give_up => 0 draw).",
+    "'Nhanh cam ket :898 cung rut MOI TICK' — BAC bang do: 0/28 va 0/63 call den tu nhanh commit (in_commit_branch = 0, seed 7000 va 7005). Ve cau truc no cung chi co the chay o tick ma BAN NANG chon REST, khong phai 'moi tick'.",
+    "'phan lon quyet dinh bi cadence NEN hoac coin TU CHOI (adherence P3/P5 ~0,30 => ~70%)' — BAC: cadence nen 0/379 va 0/386; coin tu choi 3/8 (seed 7000) va 4/8 (seed 7005) = 37-50%, khong phai ~70%. Con so ~70% la SUY TU THAM SO adherence, khong phai phep do (pb-02 cung da neu).",
+    "Cach dien dat 'arm DOI CHUNG bi ban' nguoc chieu: arm A do duoc la SACH (0 call, 0 draw). Cai bi dich la arm B. Ket luan cuoi (vo ghep cap CRN, Delta tron nhieu) VAN dung, nhung phai noi dung chieu de nguoi doc sau khong di sua sai cho.",
+    "Pham vi: loi CHI song o duong MULTIDAY (can `planned_rest_hour` tu hom truoc). Run 1 ngay: 0 call, A == B tung so => moi artifact 1-ngay va moi so da ship (kenh default OFF) khong bi nhiem — dung nhu DEFERRED da ghi."
+  ],
+  "test_ghim_tim_thay": [
+    "tests/test_evaluator_unbiased.py:63 `test_placebo_intervention_measures_exactly_zero` — chi phu 'MOI kenh OFF' + run_once 1 ngay; xanh va VAN NEN xanh (arm off sach) => khong bac claim.",
+    "tests/test_advice_bridge.py:59 `test_disabled_advice_does_not_shift_rng` — advice.enabled=False; cung khong phu arm BAT.",
+    "tests/test_e4_e03_swap_early.py:99 `test_tich_hop_kenh_ON_chay_duoc_va_OFF_bit_identical` — mau 'OFF bit-identical' cho kenh sibling; lai la mau cho test con thieu.",
+    "tests/test_rest_commit.py — 15 test ghim CO CHE cam ket (thu tu alt TRUOC cadence la CO CHU DINH: `test_alt_wait_thi_khong_hoan` assert `spoken == []`). Day la diem tinh te: THU TU la thiet ke co test ghim, nen fix PHAI giu duoc ngu nghia 'alt=WAIT => khong nen' MA khong tieu stream — tuc tach hai pha (do 'co o tot hon' tat dinh, 0 draw) hoac keyed-hash cho p_move. Sua bang cach don gian la 'chuyen :916 xuong sau coin' se lam `test_alt_wait_thi_khong_hoan` DO.",
+    "KHONG ton tai test nao ghim 'kenh BAT + moi quyet dinh bi nen/tu choi => fingerprint IDENTICAL voi arm A' (grep fingerprint/determinism/rest_window/crn tren tests/) => lo hong dung nhu DEFERRED noi."
+  ],
+  "do_lon_uoc": "Tan so: 0 lan/ngay o run 1 ngay; 17-63 lan toi :916 va 7-21 draw tren 270 driver-day (3 ngay x 90 actor) ~= 0,026-0,078 draw/driver-day, trong do ~55-77% draw la NO-OP. Hau qua: vi stream dung chung nen 9-14 draw no-op da lam lech toan doi -794.417d..-1.625.279d payout (1,2-2,4%), -19..-34 trip va toi +519' rest tren 3 ngay o thi nghiem 0-can-thiep => cung bac do lon voi Delta 'hieu ung' dang bao (+451k..-695k).",
+  "cai_con_thieu": "(1) Chua do tren 30 seed nen chua co CI cho nen nhieu (chi 6 seed x 3 ngay, 2 seed cho thi nghiem coin=NEVER); (2) chua tach rieng phan draw no-op do cadence (0 lan o cac seed nay — co the khac o cau hinh cadence khac / coverage single); (3) chua do voi positioning_overrides=wait_only (bo so D-M3-04-FIX that dung wait_only, co the tan so khac); (4) chua chon giua hai duong fix (tach hai pha vs keyed-hash) bang so — chi ghi nhan rang bat cu fix nao cung phai giu xanh `tests/test_rest_commit.py::test_alt_wait_thi_khong_hoan`.",
+  "probe_files": [
+    "scratchpad/pb01_dm320.py (run_once 1 ngay: A vs B vs B* no-draw)",
+    "scratchpad/pb01_dm320_md.py (multiday chi tiet outcome + veto)",
+    "scratchpad/pb01_dm320_scan.py (scan seed: commits vs Delta payout)",
+    "scratchpad/pb01_dm320_coinfalse.py (smoking gun: coin NEVER => 0 can thiep ma van lech)",
+    "scratchpad/pb01_dm320_why.py (histogram `why` + dem call tu nhanh cam ket :898)"
+  ]
+}
