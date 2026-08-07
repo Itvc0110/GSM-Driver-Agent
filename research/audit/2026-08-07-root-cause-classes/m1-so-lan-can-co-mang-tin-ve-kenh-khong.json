@@ -1,0 +1,90 @@
+{
+ "cau_hoi": "so lan can nghi co mang thong tin ve KENH khong?",
+ "seeds": [
+  5000,
+  5001,
+  5002
+ ],
+ "rows": [
+  {
+   "seed": 5000,
+   "arm": "A: advice TẮT hẳn",
+   "veto_soc_low_n": 0,
+   "veto_fatigued_n": 56,
+   "veto_defer_cap_n": 0,
+   "veto_calls_n": 125,
+   "veto_fired_n": 56,
+   "commit_made_n": 0,
+   "commit_kept_n": 0,
+   "commit_broken_n": 0,
+   "commit_cleared_n": 0
+  },
+  {
+   "seed": 5000,
+   "arm": "B: rest_window BẬT",
+   "veto_soc_low_n": 0,
+   "veto_fatigued_n": 64,
+   "veto_defer_cap_n": 0,
+   "veto_calls_n": 136,
+   "veto_fired_n": 64,
+   "commit_made_n": 0,
+   "commit_kept_n": 0,
+   "commit_broken_n": 0,
+   "commit_cleared_n": 0
+  },
+  {
+   "seed": 5001,
+   "arm": "A: advice TẮT hẳn",
+   "veto_soc_low_n": 0,
+   "veto_fatigued_n": 42,
+   "veto_defer_cap_n": 0,
+   "veto_calls_n": 107,
+   "veto_fired_n": 42,
+   "commit_made_n": 0,
+   "commit_kept_n": 0,
+   "commit_broken_n": 0,
+   "commit_cleared_n": 0
+  },
+  {
+   "seed": 5001,
+   "arm": "B: rest_window BẬT",
+   "veto_soc_low_n": 0,
+   "veto_fatigued_n": 39,
+   "veto_defer_cap_n": 0,
+   "veto_calls_n": 103,
+   "veto_fired_n": 39,
+   "commit_made_n": 0,
+   "commit_kept_n": 0,
+   "commit_broken_n": 0,
+   "commit_cleared_n": 0
+  },
+  {
+   "seed": 5002,
+   "arm": "A: advice TẮT hẳn",
+   "veto_soc_low_n": 0,
+   "veto_fatigued_n": 48,
+   "veto_defer_cap_n": 0,
+   "veto_calls_n": 118,
+   "veto_fired_n": 48,
+   "commit_made_n": 0,
+   "commit_kept_n": 0,
+   "commit_broken_n": 0,
+   "commit_cleared_n": 0
+  },
+  {
+   "seed": 5002,
+   "arm": "B: rest_window BẬT",
+   "veto_soc_low_n": 0,
+   "veto_fatigued_n": 48,
+   "veto_defer_cap_n": 0,
+   "veto_calls_n": 120,
+   "veto_fired_n": 48,
+   "commit_made_n": 0,
+   "commit_kept_n": 0,
+   "commit_broken_n": 0,
+   "commit_cleared_n": 0
+  }
+ ],
+ "n_seed_giong_het": 0,
+ "n_seed_khac": 3
+}
