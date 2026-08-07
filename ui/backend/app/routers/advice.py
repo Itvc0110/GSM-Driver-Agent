@@ -109,7 +109,8 @@ def _norm_shift_end(shift_end_min: int, start_min: int = DEFAULT_SHIFT_START_MIN
     return shift_end_min + 1440 if shift_end_min < start_min else shift_end_min
 
 
-def _phase_of(at_min: float | None, shift_end_min: int) -> str | None:
+def _phase_of(at_min: float | None, shift_end_min: int,
+              shift_start_min: int = DEFAULT_SHIFT_START_MIN) -> str | None:
     """Pha ca của một mốc thời gian — MỘT công thức duy nhất, dùng ở cả đường ghi lẫn đọc.
 
     F4 (soi đối kháng 2026-07-29): trước đây `POST /action` tính pha bằng
@@ -119,15 +120,32 @@ def _phase_of(at_min: float | None, shift_end_min: int) -> str | None:
     niệm). Cách sửa KHÔNG phải đồng bộ hai công thức mà là **bỏ một cái**: pha nay luôn
     được tính LÚC ĐỌC từ `at_min` đã lưu; trường `phase` trong payload chỉ còn để debug và
     **không được dùng để quyết định**.
+
+    ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 1 / A2) — F4 ở trên bỏ được neo **KẾT ca** cứng nhưng
+    **để nguyên neo MỞ ca**: hàm này đọc hằng module `SHIFT_START_MIN` (06:00) trong khi
+    `get_advice:195` đã tính pha bằng `shift_start_min` **từ query** ⇒ **hai công thức pha
+    trong CÙNG một request**, đúng họ lỗi mà chính docstring này tuyên bố đã diệt.
+
+    Hệ quả với **mọi tài xế không mở ca đúng 06:00**: nút *"Bỏ qua"* hoặc vô tác dụng, hoặc
+    làm advisor im ở một pha **chưa hề bị tắt**. Ca đêm lệch **4/4** mốc thử.
+
+    Và vế thứ hai của cùng lỗi: `at_min` là phút **wall-clock** (0..1439), nên ca vắt nửa đêm
+    (mở 22:00, hỏi lúc 01:30) cho `90 − 1320 < 0` ⇒ pha `early` VĨNH VIỄN. Nay wrap sang
+    ngày hôm sau, đối xứng với `_norm_shift_end`.
     """
     if at_min is None:
         return None
-    end = _norm_shift_end(shift_end_min)
-    return shift_phase(float(at_min) - SHIFT_START_MIN, end - SHIFT_START_MIN)
+    start = shift_start_min
+    end = _norm_shift_end(shift_end_min, start)
+    troi = float(at_min)
+    if troi < start:                       # ca vắt nửa đêm: mốc này thuộc ngày HÔM SAU
+        troi += 1440.0
+    return shift_phase(troi - start, end - start)
 
 
-def _cadence_memory(driver_id: str, date: str, phase: str,
-                    shift_end_min: int = advisor.DEFAULT_SHIFT_END_MIN) -> CadenceMemory:
+def _cadence_memory(driver_id: str, date: str,
+                    shift_end_min: int = advisor.DEFAULT_SHIFT_END_MIN,
+                    shift_start_min: int = DEFAULT_SHIFT_START_MIN) -> CadenceMemory:
     """Dựng ký ức nhịp cho tài xế này HÔM NAY từ store canonical (ĐA-05).
 
     Đây là nửa UI của "một luật": sim nuôi memory trong RAM, UI đọc lại từ
@@ -158,7 +176,7 @@ def _cadence_memory(driver_id: str, date: str, phase: str,
             # ĐA-04, hoặc POST không gửi — field `default=None`) mà gán vào pha hiện tại thì
             # một cú Bỏ qua cũ thành **lệnh im di động**: hỏi ở pha nào cũng im pha đó. Không
             # biết pha thì bỏ qua record — "không biết" khác "là pha này".
-            _ph = _phase_of(payload.get("at_min"), shift_end_min)
+            _ph = _phase_of(payload.get("at_min"), shift_end_min, shift_start_min)
             if _ph is not None:
                 mem.dismissed_in_phase[topic] = _ph
         elif e["event_type"] in ("displayed", "followed"):
@@ -195,7 +213,7 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
     phase = shift_phase(now_min - shift_start_min,
                         _norm_shift_end(shift_end_min, shift_start_min) - shift_start_min)
     verdict = evaluate(topic, float(now_min), phase,
-                       _cadence_memory(did, d, phase, shift_end_min),
+                       _cadence_memory(did, d, shift_end_min, shift_start_min),
                        is_driving=is_driving)
     # `is_soft_advice`: SERVER trả lời "thẻ này có phải khuyên mềm không", client KHÔNG tự suy.
     #
@@ -238,8 +256,28 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
     soft = False
     prov = advisor.provenance(d, now_min)
 
+    # ⚠ Cycle 1 / D-L4-M5 (2026-08-07) — NÉN MỘT LỜI KHUYÊN KHÔNG TỒN TẠI.
+    #
+    # Bản cũ gọi `_note_suppressed` NGAY tại đây, tức **trước khi biết advisor có gì để nói**.
+    # Đối xứng bị vỡ: `_note_shown` có cổng `if not items: return` (`:326`) còn nhánh nén thì
+    # không ⇒ mọi lần nhịp chặn một tài xế mà advisor vốn **im lặng** vẫn ghi một event
+    # `suppressed` vào store canonical. Đo (audit L4): **660/660 = 100%** event `suppressed`
+    # là MA; **26,7%** (3880/14550) driver-phút toàn cohort có `advice()` trả `items == []`.
+    #
+    # Đây đúng nguyên tắc **R-08** mà sim đã sửa cho **5 kênh** (*"nén ở đó là nén một lời
+    # khuyên KHÔNG TỒN TẠI"* — `advice_bridge.should_defer_rest:919-921`); sản phẩm chưa.
+    # Hệ quả của việc để nguyên: mẫu số `suppressed` của đường sản phẩm bị thổi, và hai đường
+    # (sim ↔ sản phẩm) **không so được** dù dùng chung projection — tức mất đúng thứ
+    # `_note_suppressed` sinh ra để có.
+    #
+    # ⚠ Đây là ĐỔI HÀNH VI ĐO (không đổi thứ tài xế nhìn thấy): số event `suppressed` sẽ GIẢM.
+    # Mọi số adherence sản phẩm đo TRƯỚC cycle này không so được với sau.
+    out = advisor.advice(did, d, now_min, shift_end_min)
+    co_gi_de_noi = bool(out.get("items"))
+
     if verdict.verdict != PRESENT:
-        _note_suppressed(did, d, topic, now_min, verdict.reason)
+        if co_gi_de_noi:
+            _note_suppressed(did, d, topic, now_min, verdict.reason)
         # HỢP NHẤT PR #4 (2026-08-03): Khánh và tôi độc lập tìm ra CÙNG lỗi này (nhánh im lặng
         # thiếu `scenario_id`/`seed`/`data_mode` mà contract khai `required`) và sửa hai cách.
         # Giữ bản dùng `advisor.provenance()` vì nó chia sẻ MỘT nguồn với adapter thay vì chép ba
@@ -254,7 +292,6 @@ def get_advice(driver_id: str | None = Query(None), date: str | None = Query(Non
                 "topic": topic, "is_soft_advice": soft,
                 "cadence": {"verdict": verdict.verdict, "phase": phase,
                             "next_eligible_min": verdict.next_eligible_min}}
-    out = advisor.advice(did, d, now_min, shift_end_min)
     _note_shown(did, d, topic, now_min, out.get("items") or [])
     return {**out, "topic": topic, "is_soft_advice": soft,
             "cadence": {"verdict": PRESENT, "phase": phase}}

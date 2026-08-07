@@ -115,3 +115,21 @@ Dòng gốc, giữ để đối chiếu:
 | **ĐA-07** | 2026-07-27 | ✅ **DUYỆT** chi phí cơ hội / ràng buộc SOC-vị thế cho `accept_lift` (hồ sơ `06`). Cường chốt kèm: `accept_lift` **giữ TẮT**; `shift_plan` **giữ BẬT + cảnh báo đỏ**, tương lai thử nghiệm lại; **bản cuối trước khi chốt: TẮT để advisor IM LẶNG nếu không hiệu quả**. |
 | **ĐA-08** | 2026-07-27 | ✅ **DUYỆT** chỉ tiêu chấp nhận KÉP (cá nhân + hệ thống + khách + công bằng + tập trung), `coverage: all`, ≥30 seed. **Bước đo đã xong** (UPDATE-075); ràng buộc CI còn lại. |
 | **ĐA-09** | 2026-07-27 | ✅ **DUYỆT** multi-agent equilibrium (best-response/fictitious play, price of anarchy, quét ngưỡng phủ) + `MarketStateView` mở kênh thông tin CUNG cho solver, robust ở 3 mức `available/degraded/absent`. Spec §2–§3. Chưa implement (cycle C4 bước 4-5). **Diễn giải của agent** — nếu Cường đánh số ĐA-09 cho việc khác, sửa lại dòng này. |
+
+## V-33 (🔴 BLOCKING) — nút "Bỏ qua" ở ca chiều/ca đêm, sau Cycle 1 (UPDATE-181)
+
+**Vì sao cần Cường xem:** đây là đường sản phẩm và **có đổi hành vi**. Trước bản sửa, `_phase_of`
+(đường ghi nhận *"Bỏ qua"*) neo vào hằng 06:00 trong khi đường đọc dùng `shift_start_min` từ query
+⇒ **hai công thức pha trong cùng một request**.
+
+**Hệ quả đo được** (`research/audit/2026-08-07-root-cause-classes/A2-nut-bo-qua-lam-nguoc-y-tai-xe.md`):
+tài xế **ca đêm** bấm *"Bỏ qua"* lúc **01:36** thì hệ thống làm im khung **22:00–23:20 (đã trôi
+qua)** còn khung **00:40–02:00** — đúng khung vừa xin im — **vẫn nói tiếp**. **4/4 mốc sai** ở ca
+đêm, **2/4** ở ca chiều, **0/4** ở ca ngày (đúng do **tình cờ** trùng hằng — đó là lý do lỗi sống lâu).
+
+**Cần xác nhận:** mở card ở một `(driver, date, now_min)` thuộc **ca chiều hoặc ca đêm** → bấm
+*"Bỏ qua"* → hỏi lại **cùng pha** phải IM; hỏi ở **pha khác** phải HIỆN LẠI. Trước bản sửa hai
+điều đó **đảo nhau**.
+
+**Trạng thái:** `DONE-CODE / WAITING-VERDICT`. Suite: `tests/` 1189P/2F (đúng 2 lỗi của Khánh) ·
+`ui/backend/tests` 216P. **Không** gộp vào V-31/V-32.

@@ -233,7 +233,7 @@ def test_polling_same_bucket_does_not_burn_budget(tmp_path, monkeypatch):
     # event và KHÔNG đốt ngân sách. Tức "một lời khuyên miễn phí". Nay cooldown = bucket
     # (`effective_gap_min`) ⇒ trong cùng bucket luôn SUPPRESS, nhất quán với việc không ghi.
     assert r["cadence"]["verdict"] == "SUPPRESS", "trong cùng bucket phải im, không nói lại"
-    mem = advice_router._cadence_memory(dv["driver_id"], dv["date"], "mid")
+    mem = advice_router._cadence_memory(dv["driver_id"], dv["date"])
     assert mem.proactive_count == 1, f"15 lần poll = 1 lần nói, nhận {mem.proactive_count}"
 
 
@@ -278,7 +278,7 @@ def test_budget_counts_decisions_not_events(tmp_path, monkeypatch):
             assert client.post("/api/v1/advice/action", json={
                 **BODY, "advice_id": aid, "action": act, "at_min": 600 + i,
                 "topic": topic}).status_code == 200
-    mem = advice_router._cadence_memory("driver-01", "2026-07-29", "mid")
+    mem = advice_router._cadence_memory("driver-01", "2026-07-29")
     assert mem.proactive_count == 3, (
         f"3 card phải = 3 suất, không phải {mem.proactive_count} (đếm event = double-count)")
     # và ngân sách 6 CHƯA cạn — advisor vẫn được nói

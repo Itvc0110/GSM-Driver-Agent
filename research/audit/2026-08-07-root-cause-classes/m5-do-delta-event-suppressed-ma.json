@@ -1,0 +1,80 @@
+{
+ "cau_hoi": "bao nhieu driver-phut advisor VON IM LANG (=> event suppressed la MA)?",
+ "ngay": [
+  "2026-09-26",
+  "2026-09-27",
+  "2026-09-28"
+ ],
+ "n_tai_xe": 110,
+ "n_moc": 64,
+ "n_driver_phut": 21120,
+ "n_im_lang": 20,
+ "ty_le_im_lang": 0.000946969696969697,
+ "theo_gio": {
+  "6": {
+   "tong": 1320,
+   "im": 0
+  },
+  "7": {
+   "tong": 1320,
+   "im": 0
+  },
+  "8": {
+   "tong": 1320,
+   "im": 0
+  },
+  "9": {
+   "tong": 1320,
+   "im": 0
+  },
+  "10": {
+   "tong": 1320,
+   "im": 0
+  },
+  "11": {
+   "tong": 1320,
+   "im": 0
+  },
+  "12": {
+   "tong": 1320,
+   "im": 0
+  },
+  "13": {
+   "tong": 1320,
+   "im": 0
+  },
+  "14": {
+   "tong": 1320,
+   "im": 0
+  },
+  "15": {
+   "tong": 1320,
+   "im": 0
+  },
+  "16": {
+   "tong": 1320,
+   "im": 0
+  },
+  "17": {
+   "tong": 1320,
+   "im": 0
+  },
+  "18": {
+   "tong": 1320,
+   "im": 3
+  },
+  "19": {
+   "tong": 1320,
+   "im": 4
+  },
+  "20": {
+   "tong": 1320,
+   "im": 5
+  },
+  "21": {
+   "tong": 1320,
+   "im": 8
+  }
+ },
+ "canh_bao": "day la ty le driver-phut IM LANG, KHONG phai ty le event suppressed bi cat"
+}
