@@ -1,0 +1,166 @@
+{
+ "goc": "pb2 — phan bien LOGIC THIET KE cua S4 / kenh vi tri (kenh DUY NHAT dang ship trong sim)",
+ "ngay": "2026-08-07",
+ "phuong_phap": {
+  "artifact_do": [
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb2-thiet-ke-S4.py -> ket qua THO o pb2-DO-raw.json (khoa `per_seed` = 30 dong/seed)",
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb2b-do-phan-giai-ham-muc-tieu.py (+ .json cung ten)",
+   "chay lai toan bo pipeline sau khi doi duong ghi: ket qua TRUNG TUNG CHU SO voi lan chay dau"
+  ],
+  "thiet_ke": "3 arm CUNG CRN, n=30 seed 3300-3329 (cung cua so voi c9a-c9d). A = advisor TAT. B = advisor BAT, coverage=all (duong dang ship). SHUF = ban MU cua c9d (hoan vi assigned_target giua chinh cac allocation). Ghep cap CUNG ACTOR, bootstrap 2000 lan tren 30 seed.",
+  "bo_sung": "pb2b chay rieng 10 seed 3300-3309, chi arm B, boc `capacity_alloc.solve` de doc cau truc ma tran cost.",
+  "kiem_truoc_khi_do": "Bat `probe.wait_stats` de lay panel (actor, bucket) -> o dang dung roi. DA KIEM bit-identity truoc khi dung: payout + toan bo event stream GIONG HET voi/khong-co probe tren seed 3300 va 3301. Khong tin docstring, do lai.",
+  "mau_so": "coverage=all => `AdviceBridge.covers` tra True cho ca 90 actor (advice_bridge.py, ham `covers`, nhanh `self.coverage == \"all\"`). Khong co doi car/premium trong sim nay. Moi phan ra chi loc `advice_kind == \"standby_zone\"` (nhanh swap_window RONG vi world.py truyen `stations=[]` vao `derive_allocation_input`). => mau so KHONG nhiem ngoai pham vi."
+ },
+ "gia_thuyet_cua_goc_BI_BAC": {
+  "noi_dung": "'Hungarian toi thieu hoa TONG ETA/quang duong, ma cash_cost_vnd_per_km = 0 => no toi uu mot dai luong MIEN PHI.'",
+  "phan_xu": "BAC BANG DOC CODE. Ma tran cost cua `_assign_kind` KHONG CO bat ky so hang khoang cach/ETA nao. `cost[i, j] = pen` neu `tgt == c[\"target\"]`, nguoc lai `pen + 10.0`; `pen = soc/100` hoac 0.5. Khoang cach xuat hien DUNG MOT LAN trong ca pipeline, va o NGOAI S4: `world.py` dong tinh `pref = min(ranked_eff, key=lambda c: (cell_distance_km(self.grid, a.cell, c), c))`.",
+  "he_qua": "Ket luan 'toi uu mot dai luong mien phi' phai doi thanh mot cau MANH HON va DUNG HON: S4 khong toi uu dai luong nao ca (xem S4-D1/D2/D3). Va cai bi c9d bac khong phai 'Hungarian toi uu sai muc tieu' ma 'Hungarian khong co muc tieu de toi uu'."
+ },
+ "findings": [
+  {
+   "ma": "S4-D1",
+   "tieu_de": "(a) HAM MUC TIEU cua S4 khong chua MOT dai luong nao cua bai toan — no toi uu 'so nguoi duoc dung dung o ma world da chon ho', khong phai 'phu cau'",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:44-53 · src/gsm_core/features/allocation.py (ham `derive_allocation_input`) · src/gsm_sim/world.py (khoi `_standby_planner`, dong `zones = [{\"zone\": c, \"capacity\": cap_left[c]} for c in ranked_eff]`)",
+   "neo_noi_dung": "`cost = np.full((nC, nS), LARGE)` roi vong doi `cost[i, j] = pen if tgt == c[\"target\"] else pen + 10.0` · `pen = (soc / 100.0) if soc is not None else 0.5` · `zone_cap = [{\"zone\": z[\"zone\"], \"bucket\": bucket, \"capacity\": int(z.get(\"capacity\", ...))}]`",
+   "hau_qua": "Hai dau vao cua S4 deu bi cat het noi dung kinh te TRUOC khi toi cua: `derive_allocation_input` chi chuyen tiep {zone, bucket, capacity} cho moi o, va {driver_id, advice_kind, target, priority_soc} cho moi ung vien. `expected_demand`, `sd_ratio`, `supply_now`, `supply_incoming` — toan bo phan GIA TRI ma `market_state.build_market_state` tinh ra — KHONG BAO GIO toi S4. => cau hoi cua goc 'no toi uu cho AI?' co cau tra loi chinh xac: no toi uu cho TONG SO LUOT DUOC DUNG DUNG O DINH HUONG, cong mot tie-break theo SOC. Khong ai trong ham muc tieu dai dien cho tai xe DANG O o dich, cho cau, cho tien, cho km, cho thoi gian.",
+   "so_do_duoc": "472/472 lo S4 (30 seed): `zone_supply` mang DUNG bo khoa ('bucket','capacity','zone'); `candidate` mang DUNG bo khoa ('advice_kind','driver_id','priority_soc','target'). Khong lo nao khac. nC trung binh 14,18 ung vien vs nS 8,86 suat; 268/472 lo (56,8%) la lo KHAN (nC > nS).",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (472 lo, 30 seed) + DOC CODE"
+  },
+  {
+   "ma": "S4-D2",
+   "tieu_de": "(a) Moi HANG cost chi co toi da 2 gia tri => moi o 'sai target' BANG NHAU TUYET DOI; 58,2% luot gan roi vao cai bang nhau do va dich duoc chon bang PHA HOA cua scipy",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:46-50 (vong doi ghi cost) — `pen` KHONG phu thuoc `j`",
+   "neo_noi_dung": "`for i, c in enumerate(cand): soc = c.get(\"priority_soc\"); pen = (soc / 100.0) ...` roi `for j, (tgt, _bk) in enumerate(slots): cost[i, j] = pen if tgt == c[\"target\"] else pen + 10.0`",
+   "hau_qua": "DAY LA CO CHE giai thich ket qua c9d (ban MU tai tao toan bo hieu ung). Khi mot ung vien khong lay duoc o dinh huong cua minh, MOI o con lai co cost y het nhau => `linear_sum_assignment` chon bang tie-break noi bo cua scipy, khong bang bat ky mo hinh nao. Va do KHONG phai truong hop hiem: no la DA SO. Thong tin dia ly duy nhat cua ca pipeline (`pref` = o con tran GAN NHAT, tinh o `world.py`) bi chinh S4 vut di trong 58,2% luot gan.",
+   "so_do_duoc": "pb2b, 10 seed, 2171 hang cost: 1738 hang co DUNG 2 gia tri khac nhau, 433 hang co 1 gia tri — va ca 433 deu vi lo do CHI CO 1 zone (0 truong hop `target` nam ngoai `zones`). Stagger: 1301/2234 = 58,2% (n=30 seed); 365/653 = 55,9% (n=10 seed pb2b). Khi bi stagger, so o dich CUNG COST trung binh 11,92 (median 9, min 1, max 26; so zone/lo TB 7,75). Khoang cach tu o dinh huong toi o thuc su bi gan: TB 2,095 km, median 2,060 km, max 4,734 km.",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (2171 hang / 653 alloc, 10 seed) + DOC CODE"
+  },
+  {
+   "ma": "S4-D3",
+   "tieu_de": "(a) `scipy.linear_sum_assignment` khong mua duoc gi: mot greedy first-fit tam thuong dat DUNG gia tri ham muc tieu toi uu o 472/472 lo",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:52-53 (`rows, cols = linear_sum_assignment(cost)`)",
+   "neo_noi_dung": "docstring module: `scipy.linear_sum_assignment toi uu tong cost` · docstring `_assign_kind`: `Gan candidates vao slots (target,bucket) voi capacity. linear_sum_assignment tren slot expand`",
+   "hau_qua": "Ca kien truc 'gan theo LO dung ban chat S4 (Hungarian), khong greedy tru dan — giu tinh gan toi uu va so duoc voi phan bo tap trung' (`world.py`, docstring `_standby_planner`) dang bao ve mot tinh chat KHONG TON TAI o diem van hanh nay. Vi cost tach duoc thanh `sum(pen cua nguoi duoc chon) + 10 x so luot lech target`, va vi 10 >> bien do cua pen (thuoc [0;1]), bai toan suy bien thanh 'nhoi toi da nguoi vao dung o cua ho, roi uu tien nguoi nhieu pin'. Ai bo cong bao ve/toi uu hoa/A-B tang Hungarian nay dang toi uu mot thu khong co do phan giai.",
+   "so_do_duoc": "GREEDY (sap theo (pen, driver_id) — DUNG thu tu solver tu sap — cho dung target neu con cho, het thi nhet vao suat trong bat ky) dat CUNG gia tri cost voi Hungarian o 472/472 lo (100,0%). Doi chung do phan giai: mot cach chon NAIVE (bo qua pen, lay theo alphabet driver_id) chi trung cost o 177/472 lo => ma tran cost co phan biet duoc mot so thu, nhung khong phan biet duoc greedy voi Hungarian.",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (472 lo, 30 seed). ⚠ Day la phep DO tren phan bo input thuc te, KHONG phai chung minh toan hoc rang greedy luon toi uu."
+  },
+  {
+   "ma": "S4-D4",
+   "tieu_de": "(b/d) AI TRA GIA — do duoc: 58,4% phan chuyen ma nhom RANH NHIEU nhat duoc them la LAY TU hai nhom con lai, khong phai tao ra",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb2-DO-raw.json khoa `b_nhom` va `per_seed[*].nhom`",
+   "neo_noi_dung": "phan ra tercile theo `idle_min` do o ARM A (tien-can-thiep, khong phai bien hau-xu-ly)",
+   "hau_qua": "Ve 'lay cua nguoi ban' ma goc do duoc bang TIEN nay do duoc bang CUOC, va do la don vi khong the cai nhau: nhom ban nhat mat −0,586 cuoc/nguoi/ngay (SIG), nhom giua mat −0,233 (SIG), nhom ranh nhat duoc +1,394 (SIG). Cong lai dung bang muc tang rong cua he. => Bat ky ban cong bo nao cua kenh nay ma chi neu trung binh toan doi deu dang gop mot phep CHUYEN GIAO co huong voi mot phep TAO GIA TRI, va phan chuyen giao lon hon phan tao ra.",
+   "so_do_duoc": "n=30 seed, ghep cap cung actor. Δcuoc/nguoi/ngay: tercile ranh IT −0,586 CI[−0,722; −0,446] SIG · giua −0,233 CI[−0,383; −0,071] SIG · ranh NHIEU +1,394 CI[+1,193; +1,590] SIG. Quy ve toan nhom (30 nguoi/nhom): nhom ranh nhieu +41,83 cuoc/ngay CI[+36,07; +47,47]; hai nhom kia mat 24,57 cuoc/ngay CI[+19,53; +29,47]; rong +17,27 CI[+13,03; +21,60]. TY LE CHUYEN GIAO = 0,584 CI[0,468; 0,717] tinh bang cuoc, 0,590 CI[0,422; 0,761] tinh bang tien. Bang tien: nhom ranh nhieu +783.192d/ngay, hai nhom kia −493.462d/ngay, rong +289.730d/ngay (= +3.219d x 90 nguoi, khop voi so cua goc).",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (30 seed, bootstrap 2000)"
+  },
+  {
+   "ma": "S4-D5",
+   "tieu_de": "PHAN BIEN NGUOC (giu can bang): kenh nay KHONG phai tro choi tong-bang-khong — no bien don HET HAN thanh don duoc phuc vu",
+   "file_line": "pb2-DO-raw.json khoa `b_he_thong`",
+   "neo_noi_dung": "dem `dropoff` va `order_expired` tren toan event log cua ca hai arm",
+   "hau_qua": "Neu ai doc S4-D4 thanh 'kenh nay chi la xao tron, khong tao gi' thi SAI. Co gia tri THAT, do duoc, va no den dung tu co che ma `market_state` tuyen bo: dua cung toi cho co cau chua duoc phuc vu. Nhung do lon cua no la +17,27 chuyen/ngay tren doi 90 nguoi (~1,7% tong chuyen), chu khong phai toan bo bien do ma tercile ranh-nhieu the hien. ⚠ Cung phai noi ro: c9d da chung minh phan gia tri nay KHONG can thong tin cua solver (ban MU tai tao duoc) — tuc gia tri den tu VIEC DIEU NGUOI ROI DI CHO CO TRAN, khong tu VIEC CHON O NAO.",
+   "so_do_duoc": "n=30 seed. Δ chuyen hoan thanh toan he +17,27 CI[+13,03; +21,60] SIG · Δ don HET HAN −16,27 CI[−20,93; −11,83] SIG · Δ don duoc nhan o cac o NHAN nguoi +24,67 CI[+18,50; +30,47] SIG · Δ don duoc nhan o cac o NGUON +1,50 CI[−4,63; +7,27] ns. Lieu: 35,83 luot relocate-standby/ngay vao 15,27 o.",
+   "severity": "THONG TIN (khong phai loi)",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (30 seed)"
+  },
+  {
+   "ma": "S4-D6",
+   "tieu_de": "(b) Gia thuyet CO CHE cua goc — 'nguoi duoc day vao o dong canh tranh voi nguoi DA O DO' — KHONG duoc phep do nay ung ho; phep thu phoi nhiem BI NHIEU va doi chung MU chung minh dieu do",
+   "file_line": "pb2-DO-raw.json khoa `b_phoi_nhiem` va `b_phoi_nhiem_SHUF`",
+   "neo_noi_dung": "phoi nhiem = so luot probe ma o dang dung roi cua actor NHAN it nhat 1 luot relocate-standby cua NGUOI KHAC trong cua so ±bucket",
+   "hau_qua": "Ba bang chung deu di NGUOC gia thuyet 'chen lan tai o dich': (1) o NHAN nguoi PHUC VU THEM +24,67 don SIG, khong sut; (2) o NGUON khong mat gi (+1,50 ns) — nguoi roi di von dang ROI o do; (3) nhom khong-duoc-gan ma CO phoi nhiem lai LAI NHIEU HON nhom khong phoi nhiem (+22.202d vs +6.363d). Nhung (3) la QUAN SAT, khong phai NHAN QUA: arm MU SHUF cho dung mau hinh (+20.231d vs +8.409d) mac du dich la ngau nhien => 'phoi nhiem' chi dang danh dau nhung nguoi dang dung o o co `capacity_left > 0` (= o co ty le cau/cung cao), tuc mot bien CHON MAU. => Phep thu nay KHONG tra loi duoc cau hoi cua goc, va toi khong duoc dung no de ket luan theo chieu nao. B1 (tran tinh tren mot o res-9 vs kernel phuc vu ~2,22 km) VAN LA MOT KHUYET TAT THAT (doc `market_state.py`, dong `slots = int(demand // trips_per_driver_per_bucket)`), nhung day chua phai bang chung rang no la NGUON cua phan chuyen giao.",
+   "so_do_duoc": "n=30 seed. Nguoi KHONG he duoc gan, co phoi nhiem (n≈3,3/seed): Δpayout +22.202d CI[+3.585; +40.658] SIG, Δcuoc +0,915 CI[+0,152; +1,733] SIG. Khong phoi nhiem (n≈34,4/seed): +6.363d CI[+1.956; +10.654] SIG, Δcuoc +0,350 CI[+0,185; +0,522] SIG. DOI CHUNG MU (SHUF): +20.231d CI[+9.484; +32.660] SIG vs +8.409d CI[+3.937; +12.618] SIG — cung mau hinh.",
+   "severity": "TB (day la ket qua AM TINH + canh bao phuong phap)",
+   "confidence": "TB",
+   "tu_do_hay_suy": "DO (30 seed) — ket luan la 'KHONG DU BANG CHUNG', khong phai 'da bac'"
+  },
+  {
+   "ma": "S4-D7",
+   "tieu_de": "(c) S4 KHONG mo hinh hoa chi phi co hoi cua nguoi bi day di — khong co so hang km, khong co so hang thoi gian, khong o dau; va chi phi do do duoc",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:44-50 (khong co bien khoang cach) · src/gsm_core/features/allocation.py (candidate khong mang truong khoang cach) · configs/pilot_dongda.yaml (`cash_cost_vnd_per_km: 0`, `swap_fee_vnd: 0`)",
+   "neo_noi_dung": "candidate dung DUNG 4 truong `{\"driver_id\", \"advice_kind\", \"target\", \"priority_soc\"}` · `cash_cost_vnd_per_km: 0` ngay duoi comment `Mac dinh 0 = DUNG chinh sach hien hanh cho tai xe Platform doc quyen`",
+   "hau_qua": "Chi phi that su cua mot lenh 'sang o khac dung' co HAI ve, va S4 khong thay ve nao: (i) TIEN — nhung o the gioi nay `cash_cost_vnd_per_km = 0` la co y va dung chinh sach (doi pin mien phi toi 31/03/2029), nen ve nay hom nay bang 0 that; ⚠ va theo ban do lop §4.9 thi van nay INERT (bat bien tung bit tren [0; 4.325]d/km) nen KHONG the sua bang cach van config. (ii) THOI GIAN — ve nay KHONG bang 0 va khong ai bu: moi lenh di lam mat trung binh 2,596 km chay rong, va nguoi di theo mat THEM 13,75 phut chay rong/ngay so voi chinh ho o arm A. Doi mot chuyen moi duoc phuc vu, he thong dot 24,0 phut chay rong them cua tai xe. Do la mot dai luong CO THAT, KHONG nam trong bat ky ham muc tieu, bat ky metric quyet dinh (`net_mean_all` do payout gop — C2/C3), va bat ky caveat nao cua kenh.",
+   "so_do_duoc": "n=30 seed. Khoang cach/luot relocate-standby 2,596 km CI[+2,496; +2,687]; tong km rong standby 93,69 km/ngay/doi CI[+86,36; +101,37]. MOVER (n≈30,3/seed = 33,7% doi hinh): Δ phut chay rong +13,751 CI[+12,245; +15,286] SIG, Δ km +4,091 CI[+2,917; +5,230] SIG, Δ payout −2.326d CI[−6.987; +2.141] ns. DERIVED (chia hai so do duoc): 415 phut chay rong them/ngay / 17,27 chuyen moi = 24,0 phut/chuyen moi. DERIVED (neu ai muon quy ra tien bang gia tham chieu 150d/km ma chinh comment config neu): 93,69 km x 150d = 14.054d/ngay toan doi — NHAN DERIVED, KHONG PHAI SO DO.",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DOC CODE (khong co so hang) + DO (km/phut) + DERIVED (24,0 phut/chuyen; 14.054d)"
+  },
+  {
+   "ma": "S4-D8",
+   "tieu_de": "(d) KHONG co bat ky rang buoc CONG BANG nao trong S4; tieu chi DUY NHAT phan phoi suat khan la SOC. Gini khong xau di, nhung Pareto thi SAI — mot phan ba nhan dien duoc TRUOC khi chay bi mat tien co he thong",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:36-50 · src/gsm_sim/world.py (dong `cands.append({... \"priority_soc\": round(100.0 - a.soc_pct, 1)})`)",
+   "neo_noi_dung": "`cand = sorted(candidates, key=lambda c: ((c.get(\"priority_soc\") ... else 999.0), c[\"driver_id\"]))` · comment `priority_soc cua S4: gia tri THAP duoc xep truoc. Dao SOC de uu tien nguoi NHIEU pin`",
+   "hau_qua": "Khong co bien nao trong S4 dai dien cho: thu nhap luy ke cua tai xe, so lan da duoc gan trong ngay, tai xe DANG O o dich, hay bat ky khai niem chia se co hoi nao. Suat khan (88,0% suat co capacity = 1) duoc phan phoi theo DUNG mot tieu chi khong ai tuyen bo la chinh sach: nguoi CO NHIEU PIN HON duoc uu tien co hoi. Ve tong the Gini khong xau di — nhung do la vi phan chuyen giao chay tu nhom BAN (thu nhap cao) sang nhom RANH (thu nhap thap), tuc no vo tinh 'san bang'. Cau tra loi cho cau hoi cua goc — 'ai dam bao no khong lam giau nguoi ranh bang tien nguoi ban' — la: KHONG AI. Khong co co che nao dam bao dieu do; ket qua Gini trung tinh la mot TAI NAN MAY MAN cua phan bo hien tai, khong phai mot rang buoc.",
+   "so_do_duoc": "n=30 seed: Gini payout A 0,2195 -> B 0,2163, Δ −0,0032 CI[−0,0089; +0,0022] ns. p10 payout A 123.147d -> B 126.616d (Δ +3.469d). Δ payout TRUNG BINH toan doi +3.219d vs Δ payout TUYET DOI trung binh moi nguoi 57.379d => ty le xao tron/rong = 17,8x (⚠ dinh nghia KHAC voi con so ~8x cua goc: goc lay bien do tercile 26.106/3.219 = 8,1x; toi lay trung binh |Δ| per-actor). Phan bo capacity cua suat zone (pb2b, 10 seed): {1: 1058, 2: 135, 3: 9} => 88,0% suat co tran = 1.",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DOC CODE (khong co rang buoc) + DO (Gini, p10, phan bo capacity)"
+  },
+  {
+   "ma": "S4-D9",
+   "tieu_de": "Tai do B8 (SOC khong co SAN): co that nhung PHOI NHIEM HOM NAY NHO — 0,76%, khong phai mot van de CAO",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:48 (`pen` thuoc [0;1] vs mismatch `+10.0`) · configs/pilot_dongda.yaml (`swap_soc_threshold_pct: 20`)",
+   "neo_noi_dung": "`cost[i, j] = pen if tgt == c[\"target\"] else pen + 10.0` — pen bi ap dao boi hang 10",
+   "hau_qua": "B8 dung ve CAU TRUC: SOC la xep hang MEM, khong co san, va khong bao gio thang duoc so hang mismatch. Nhung ban do lop ghi severity TB dua tren 'co luot gan cho tai xe SOC 8,7% / 20,3% / 22,2%' — mot phep dem MIN theo seed. Do lai bang mau so dung (tong so luot gan), ty le la 0,76%. => Neu ai xep uu tien theo B8 thi dang xep theo mot con so cuc tri, khong theo do lon. Ghi lai de khong ai mo mot cycle cho no.",
+   "so_do_duoc": "n=30 seed, 2234 luot gan standby: 17 luot gan cho tai xe co SOC < 20% (nguong doi pin) = 0,76%. SOC thap nhat tung duoc gan: 10,3%.",
+   "severity": "THAP",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (2234 luot, 30 seed) — day la phep do LAI mot claim co san, khong phai claim moi"
+  },
+  {
+   "ma": "S4-D10",
+   "tieu_de": "Tai do B5 bang phan bo tran THUC TE: 'sensitivity capacity −20%' khong the nhuc nhich o 99,25% suat, va do la HE QUA SO HOC cua `max(1, int(round(...)))` chu khong phai mot lua chon",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:101-109",
+   "neo_noi_dung": "`zc = {k: max(1, int(round(v * (1 - pct)))) for k, v in zone_caps.items()}` voi `pct = 0.20`",
+   "hau_qua": "S4 tra ve mot khoa `sensitivity` trong output contract va mot caveat 'capacity tram/zone la DANH DINH (chua telemetry that) — ESTIMATED'. Doc chung, nguoi dung tin rang bat dinh cua tran DA duoc do. Nhung o phan bo tran that: capacity 1 -> max(1, round(0,8)) = 1 (khong doi); capacity 2 -> round(1,6) = 2 (khong doi); chi capacity 3 -> round(2,4) = 2 moi doi. Do la 9/1202 suat. Ket hop voi `params` khong duoc doc mot lan nao trong than `solve` (B9, toi tu doc lai xac nhan), S4 trung ra HAI cua phan tich do nhay ma ca hai deu khong the tra loi khac baseline.",
+   "so_do_duoc": "pb2b, 10 seed, 1202 ban ghi zone_supply: capacity = 1 chiem 1058 (88,0%), = 2 chiem 135 (11,2%), = 3 chiem 9 (0,75%) => 99,25% suat bat dong duoi −20%.",
+   "severity": "TB",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (1202 ban ghi) + DOC CODE"
+  }
+ ],
+ "de_xuat_va_phan_bien": [
+  {
+   "de_xuat": "P1 — Truoc khi sua bat ky thu gi trong S4: DUNG TRICH bien do tercile va dung trinh bay `+6.016d`/`+3.219d` nhu 'gia tri tao ra'. Cong bo phai co DUNG hai so: phan TAO RA (+17,27 chuyen/ngay, −16,27 don het han) va phan CHUYEN GIAO (58,4% cua phan nhom ranh nhat duoc them).",
+   "phan_bien": "Doi lap: 'chuyen giao cung la mot ket qua tot neu no chay tu nguoi giau sang nguoi ngheo' — dung, va Gini do duoc khong xau di. Nhung do la mot LUA CHON CHINH SACH (tai phan phoi thu nhap giua tai xe) ma khong ai trong repo tuyen bo, khong o trong SCOPE, va no chua bao gio duoc trinh cho Cuong duyet nhu mot muc tieu. De xuat nay chi doi CONG BO DU, khong doi doi huong.",
+   "rui_ro": "THAP (docs-only). Khong doi hanh vi, khong can regate."
+  },
+  {
+   "de_xuat": "P2 — Sua ham muc tieu de no chua it nhat MOT dai luong cua bai toan (vi du: cost co so hang khoang cach thuc `cell_distance_km(a.cell, zone)`, thay vi mot co nhi phan 'dung target hay khong').",
+   "phan_bien": "⚠ CHONG LAI CHINH TOI: c9d da do duoc rang ban MU tai tao TOAN BO hieu ung. Neu thong tin hien tai dong gop 0 thi khong co bang chung nao noi rang MOT thong tin TOT HON se dong gop > 0 — rat co the gia tri cua kenh nay hoan toan den tu VIEC DIEU NGUOI ROI DI CHO CO TRAN, va o nao khong quan trong o quy mo/lieu nay (35,8 luot/ngay, tran = 1 o 88% suat). Sua ham muc tieu ma khong sua tran (B1) se ton cong ma khong doi duoc gi. ⇒ P2 KHONG duoc lam truoc P3, va phai co mot phep do TRUOC-SAU tren cung 30 seed lam dieu kien nghiem thu.",
+   "rui_ro": "TB. Doi cost = doi lieu = phai regate DA-08 n=100."
+  },
+  {
+   "de_xuat": "P3 — Neu muon biet co gi de toi uu khong: chay mot arm ORACLE (tran = kernel phuc vu that ~2,22 km thay vi mot o res-9, va cost co khoang cach) DOI DAU voi arm MU SHUF tren cung 30 seed. Neu ORACLE khong thang SHUF thi ket luan la 'kenh nay khong co bai toan gan de giai' va nen bo Hungarian, giu lai dung phan 'dieu nguoi roi di cho co tran' bang greedy.",
+   "phan_bien": "Doi lap: 'ORACLE thang thi chung to nen sua' — chua chac; ORACLE la ban co lieu KHAC (tran rong hon), nen no thang co the chi vi LIEU chu khong vi THONG TIN. Phai giu lieu bang nhau (cung so luot gan) giua ORACLE va SHUF thi phep so sanh moi tach duoc thong tin khoi lieu. ⚠ Va ban do lop §5.6 canh bao: kenh duong hien tai dang chay o diem van hanh DOI TRAN, tang lieu CO THE DAO DAU.",
+   "rui_ro": "CAO ve ket luan. Phai prereg tieu chi PASS/NO-GO truoc khi chay."
+  },
+  {
+   "de_xuat": "P4 — Ghi 24,0 phut chay rong/chuyen moi vao cong bo cua kenh nhu mot chi phi, va them thoi gian chay rong vao bo chi so quyet dinh.",
+   "phan_bien": "Doi lap: 'thoi gian roi cua tai xe von da la 0 gia tri, ho dang cho khong'. Phan nao dung — nhung ho dang cho o CHO HO CHON, con day la he thong bao ho di 2,6 km. Ranh gioi san pham §5 noi ro he thong khong tu thuc thi thay tai xe; toi thieu phai DO va CONG BO cai gia do. ⚠ KHONG de xuat dua suc khoe/moi vao objective (spec §1.2b) — day la mot chi so BAO CAO, khong phai mot bien toi uu.",
+   "rui_ro": "THAP (them chi so, khong doi hanh vi)."
+  }
+ ],
+ "cai_chua_kiem": [
+  "CO CHE cua phan chuyen giao 58,4% VAN CHUA BIET. Toi loai duoc gia thuyet 'chen o o dich' (S4-D6) nhung khong thay the duoc bang gia thuyet nao DA DO. Gia thuyet manh nhat con lai, CHUA KIEM: dispatcher phuc vu tu ban kinh ~2,22 km (`candidate_ring_k_max: 6`, `eta_max_min: 11`), nen mot tai xe di 2,596 km doi thu tu 'ai gan nhat' cho hang chuc o, ke ca o ma khong ai relocate den. Bang chung gian tiep, DERIVED va co canh bao don vi: o NHAN nguoi +24,67 don duoc nhan trong khi toan he chi +17,27 chuyen hoan thanh => co mot lo hut khoang −7 o CHO KHAC ma toi khong co lap duoc (hai so nay dem hai su kien khac nhau: `order_matched accepted` vs `dropoff`).",
+  "Toi KHONG chay `uv run pytest -q` va `uv run pytest -q ui/backend/tests`. Khong phat bieu nao o day dua tren trang thai suite.",
+  "Toi KHONG kiem lai `+6.016d` cua UPDATE-087 (goc da bao khong tai tao duoc). Toi chi tai tao duoc `+3.219d` cua goc: do lai doc lap ra +3.219d/nguoi/ngay = +289.730d/ngay/doi tren cung cua so seed 3300-3329.",
+  "Kiem cheo doc lap voi mm-08 (3 seed): toi do o n=30 duoc 30,3/90 = 33,7% doi hinh di chuyen >=1 lan/ngay va 52,3/90 = 58,1% duoc gan >=1 lan — nam trong dai 32,2-44,4% va 53,3-63,3% ma mm-08 bao. KHONG mau thuan.",
+  "S4-D3 la phep DO tren phan bo input thuc te (472 lo), KHONG phai chung minh rang greedy first-fit luon toi uu cho ma tran cost nay. Neu ai doi cost (them so hang khoang cach) thi ket luan nay HET HIEU LUC ngay lap tuc.",
+  "Phep do phoi nhiem (S4-D6) dung cua so ±bucket va panel `probe_wait_stats` chi chup tai xe dang IDLE tai bien bucket. Tai xe ban (dang chay don) khong xuat hien trong panel => phoi nhiem cua NHOM BAN gan nhu khong do duoc bang thuoc nay. Day co the la ly do phep thu am tinh.",
+  "Toi khong do gi tren duong SAN PHAM. Kenh vi tri bi D-004 cam o san pham; moi so o day la SIM voi mock data (`configs/pilot_dongda.yaml`, seed 3300-3329). Ban kinh anh huong hom nay = bang chung dung de quyet dinh ship, khong phai mot tinh nang tai xe dang dung.",
+  "Toi KHONG kiem lai B1 bang cach do lai histogram `slots = 0` (87,6-88,2%, 3 seed cua mm-08). Toi chi tu doc lai dong `slots = int(demand // trips_per_driver_per_bucket)` va xac nhan no tinh tren mot o res-9.",
+  "`file:line` trong ban nay da neo kem NOI DUNG (ten ham / literal) theo canh bao §5.8 cua ban do lop, nhung so dong duoc lay ngay 2026-08-07 va se phan ra."
+ ],
+ "tom_tat": "Bon cau hoi thiet ke, tra loi bang code + do (30 seed CRN, 3 arm). (a) Ham muc tieu cua S4 KHONG chua mot dai luong nao cua bai toan: `derive_allocation_input` chi chuyen {zone,bucket,capacity} va {driver_id,advice_kind,target,priority_soc} — cau, sd_ratio, cung, khoang cach, tien deu bi cat truoc cua (472/472 lo). Cost = pen + 10 x lech-target, va `pen` khong phu thuoc cot => moi hang cost chi co toi da 2 gia tri (1738/2171 hang co dung 2, 433 con lai vi lo chi 1 zone) => moi o 'sai target' bang nhau tuyet doi. 58,2% luot gan roi vao cai bang nhau do, voi trung binh 11,92 o dich cung cost, va bi day trung binh 2,095 km khoi o gan nhat ma pipeline da tinh. Mot greedy first-fit tam thuong dat DUNG cost toi uu o 472/472 lo => `linear_sum_assignment` khong mua duoc gi. Day chinh la CO CHE giai thich ket qua c9d, va no BAC gia thuyet cua goc: khong co so hang ETA/quang duong nao trong cost ca. (b) Ve 'lay cua nguoi ban' la THAT va do duoc bang cuoc: nhom ban nhat −0,586 cuoc SIG, giua −0,233 SIG, ranh nhat +1,394 SIG; 58,4% CI[46,8%; 71,7%] phan nhom ranh nhat duoc them la LAY TU hai nhom kia. Nhung CO CHE ma goc gia thuyet ('chen o o dich do tran tinh tren o res-9') KHONG duoc ung ho: o nhan nguoi phuc vu THEM +24,67 don SIG, o nguon khong mat gi (ns), va phep thu phoi nhiem bi arm MU SHUF tai tao y het => bien phoi nhiem la bien chon mau. Cung phai ghi nhan chieu nguoc: kenh KHONG phai tong-bang-khong, no tao that +17,27 chuyen/ngay va giam −16,27 don het han (deu SIG). (c) Khong co so hang chi phi co hoi o dau ca; do duoc 2,596 km/luot, 93,7 km rong/ngay/doi, mover mat them 13,75 phut chay rong/ngay SIG — quy ra 24,0 phut chay rong them cho MOI CHUYEN MOI (DERIVED). Tien thi bang 0 dung chinh sach (`cash_cost_vnd_per_km: 0`), nhung THOI GIAN thi khong ai bu va khong metric quyet dinh nao dem. (d) Khong co rang buoc cong bang nao; tieu chi duy nhat chia suat khan (88,0% suat co tran = 1) la SOC — 'nguoi nhieu pin duoc uu tien co hoi', mot chinh sach khong ai tuyen bo. Gini khong xau di (−0,0032 ns) nhung do la tai nan may man, khong phai rang buoc: mot phan ba nhan dien duoc TRUOC khi chay mat −15.290d SIG. Cau tra loi truc tiep cho cau hoi cua goc — 'ai dam bao no khong lam giau nguoi ranh bang tien nguoi ban' — la KHONG AI."
+}

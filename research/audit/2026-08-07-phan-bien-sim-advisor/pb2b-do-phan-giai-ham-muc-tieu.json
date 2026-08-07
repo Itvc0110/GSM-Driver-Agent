@@ -1,0 +1,38 @@
+{
+ "seeds": [
+  3300,
+  3301,
+  3302,
+  3303,
+  3304,
+  3305,
+  3306,
+  3307,
+  3308,
+  3309
+ ],
+ "n_hang_cost": 2171,
+ "so_gia_tri_khac_nhau_moi_hang": {
+  "2": 1738,
+  "1": 433
+ },
+ "ly_do_hang_1_gia_tri": {
+  "chỉ_1_zone": 433
+ },
+ "n_alloc": 653,
+ "n_stagger": 365,
+ "pct_stagger": 0.55895865237366,
+ "tap_hoa_tb": 11.915068493150685,
+ "tap_hoa_median": 9,
+ "tap_hoa_min": 1,
+ "tap_hoa_max": 26,
+ "km_vut_tb": 2.0951509730751314,
+ "km_vut_median": 2.060475679582757,
+ "km_vut_max": 4.733905137359564,
+ "n_zone_tb": 7.754838709677419,
+ "capacity_phan_bo": {
+  "1": 1058,
+  "2": 135,
+  "3": 9
+ }
+}

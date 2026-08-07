@@ -1,0 +1,169 @@
+{
+ "goc": "pb3 — THIẾU METRIC ĐO HIỆU QUẢ: cái gì đang KHÔNG được đo trên kênh positioning/S4 đang ship",
+ "ngay": "2026-08-07",
+ "phuong_phap": {
+  "harness": "research/audit/2026-08-07-phan-bien-sim-advisor/pb3-do-metric-thieu.py + pb3b-vi-sao-1b-mu.py (tái tạo được)",
+  "arm": "A = advice enabled:false · B = enabled:true, coverage=all, positioning mặc định (configs/pilot_dongda.yaml)",
+  "seeds": "3300–3329 (n=30, CÙNG cửa sổ với c9/c9b/c9d ⇒ so được), ghép cặp CRN cùng actor_id",
+  "bootstrap": "B=2000 trên HIỆU THEO SEED — đúng cách parallel.compare/_rows làm",
+  "kiem_chung_harness": "tái lập ĐÚNG delta_t0 = -15.290,3967đ của c9b tới 4 chữ số thập phân; chiều của served/expired/gini/HHI khớp UPDATE-092:307 (served +1,44đp vs +1,74đp báo cáo; đơn chết -16,3 vs -23,4; Gini & HHI đều GIẢM)",
+  "null": "c9c đo arm null: fingerprint giống 30/30, delta_null = 0,0 CHÍNH XÁC ⇒ KHÔNG có sàn nhiễu CRN; mọi độ rộng phân phối Δ dưới đây là do can thiệp, 100%",
+  "moc_neo_muc": "payout arm A = 251.354đ/người/ngày (TB, 2.700 quan sát); p10=118.683đ · p50=262.500đ · p90=379.549đ · SD=97.273đ (tôi tự đo)"
+ },
+ "so_do_duoc_toan_canh": {
+  "D_payout_mean_all": "+3.219,22đ CI[+1.677,07; +4.731,50] SIG  (= +1,28% của 251.354đ)",
+  "D_payout_mean_P1..P7": {
+   "P1": "+1.146,17 CI[-3.529,60; +5.564,37] ns",
+   "P2": "+4.811,14 CI[-4.169,32; +13.312,13] ns",
+   "P3": "-18.757,95 CI[-41.357,76; +4.009,23] ns  ← điểm ước lượng ÂM LỚN NHẤT nhưng KHÔNG SIG",
+   "P4": "+421,02 CI[-2.452,98; +3.267,06] ns",
+   "P5": "+3.024,91 CI[-3.431,64; +10.197,63] ns",
+   "P6": "+2.023,50 CI[-4.989,05; +8.807,33] ns",
+   "P7": "+19.057,55 CI[+9.965,65; +28.385,36] SIG DƯƠNG"
+  },
+  "tercile_idle_arm_A": "t0 -15.290,40 SIG · t1 -1.158,32 ns · t2 +26.106,39 SIG (tái lập c9b)",
+  "tang_he_thong": "served_rate +0,0144 CI[+0,0110; +0,0178] SIG TĂNG",
+  "tang_khach": "expired_n -16,27 SIG GIẢM · wait_median_min +0,0002 ns · wait_p90_min +0,0088 ns (khoá này KHÔNG vào compare — tôi phải tính riêng)",
+  "tang_cong_bang": "gini_payout -0,0032 CI[-0,0087; +0,0023] ns",
+  "tang_tap_trung": "supply_cell_hhi -0,0009 CI[-0,0013; -0,0005] SIG GIẢM · station_hhi -0,0086 ns · n_supply_cells -0,17 ns",
+  "khoa_bi_vut": "payout_p10 +3.469,47 ns · payout_median +257,27 ns · payout_p90 +2.981,73 ns  (cả ba ĐANG ĐƯỢC TÍNH, KHÔNG ai đọc)",
+  "ung_vien_moi": "harmed_share 42,30% CI[40,85%; 43,78%] SIG · delta_p10 -89.263,67đ SIG · delta_p90 +98.276,47đ SIG · loss_total -2.437.177đ/seed SIG · gain_total +2.726.907đ/seed SIG · churn_ratio(pooled) 17,82×",
+  "PHAN_QUYET_DA08": "PASS TOÀN BỘ 5 TẦNG (1a PASS · 1b PASS, 0/7 archetype âm-SIG · hệ thống PASS · khách PASS · công bằng PASS · tập trung PASS)"
+ },
+ "findings": [
+  {
+   "ma": "PB3-01",
+   "tieu_de": "ĐA-08 PASS TOÀN BỘ 5 TẦNG trên chính arm đang ship trong khi 1/3 đội mất 15.290đ/ngày (SIG) — lỗ hổng ĐÃ XÁC NHẬN BẰNG ĐO, không phải suy luận",
+   "file_line": "specs/advisor-objective-model-v2.md:252-266 (bảng 5 tầng §5) · src/gsm_sim/parallel.py:486-505 (compare) · artifact: research/audit/2026-08-07-phan-bien-sim-advisor/pb3-do-metric-thieu.json → verdict_da08",
+   "neo_noi_dung": "spec: `Kênh nào vi phạm bất kỳ dòng nào ⇒ **không được bật**, kể cả khi số cá nhân đẹp.` · code: `row[\"significant\"] = _sig(lo, hi, n_sub, ms)`",
+   "hau_qua": "Câu hỏi (a) trả lời XONG: CÓ, DA-08 PASS. Tôi chạy đúng 5 tầng của §5 trên n=30 CRN seed 3300–3329, arm B = positioning mặc định coverage=all: 1a PASS (+3.219,22đ CI[+1.677,07;+4.731,50]) · 1b PASS (0/7 archetype âm-SIG) · hệ thống PASS (served +1,44đp SIG TĂNG) · khách PASS (expired -16,27 SIG GIẢM, wait_median +0,0002 ns) · công bằng PASS (Gini -0,0032 ns) · tập trung PASS (supply_cell_hhi -0,0009 SIG GIẢM, station_hhi -0,0086 ns). ĐỒNG THỜI: tercile `idle_min` đo ở arm A cho t0 = -15.290,40đ CI[-17.877,75;-12.791,86] SIG và t2 = +26.106,39đ SIG. ⇒ Bộ chỉ tiêu ship của chương trình cấp giấy thông hành cho một can thiệp có biên độ phân phối lại 17,82× phần giá trị ròng, và KHÔNG dòng nào của nó nhìn thấy điều đó. Mọi phán quyết PASS đã tuyên bằng bộ này (kể cả `+6.016đ PASS 9/9` của UPDATE-087) đều mang đúng vùng mù này.",
+   "so_do_duoc": "DA08_TONG = PASS · 1a +3.219,22đ SIG · 1b: archetype_bi_hai_SIG = [] · t0 -15.290,40đ SIG · t2 +26.106,39đ SIG · churn pooled 17,82× · n=30 seed CRN",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (pb3-do-metric-thieu.py, 30 seed, 3m34s; null c9c = 0,0 chính xác nên không có sàn nhiễu)"
+  },
+  {
+   "ma": "PB3-02",
+   "tieu_de": "Vế 1b MÙ THEO CẤU TRÚC: archetype gần trực giao với trục mà tác hại nằm trên — R² 0,0095 vs 0,0463 (4,90× dù ít nhóm hơn: 3 vs 7)",
+   "file_line": "specs/advisor-objective-model-v2.md:239-240 (định nghĩa 1b) · src/gsm_sim/parallel.py:143-145 (`payout_mean_{arch}`) · artifact pb3b-vi-sao-1b-mu.json",
+   "neo_noi_dung": "spec: `- **(1b) no-harm guard công bằng**: KHÔNG archetype nào có Δ `payout_mean_{arch}` ÂM có ý nghĩa` · code: `out[f\"payout_mean_{arch}\"] = round(st.mean(by_arch_pay[arch]), 2)`",
+   "hau_qua": "Không phải 1b thiếu lực — nó đo SAI TRỤC. Ma trận Δ (archetype × tercile idle_A, 2.700 quan sát): P2 -52.941/-39.951/+29.027 → TB archetype +4.811 · P6 -73.082/+6.530/+54.162 → TB +2.024 · P7 -24.239/+27.058/+106.980 → TB **+19.058 SIG DƯƠNG** · P4 -11.526/-6.663/+6.888 → TB +421 · P5 -11.808/+31.326/+118.820 → TB +3.025. Tức 6/7 archetype CHỨA một nhóm bị hại -11.526đ đến -165.407đ, và MỌI nhóm đó bị chính trung bình archetype của mình triệt tiêu. `harmed_share` theo archetype: P4 22,9% · P7 40,6% · P1 46,7% · P6 45,8% · P2 45,7% · P5 49,7% · P3 56,7% — KHÔNG archetype nào 'sạch'. ⇒ Muốn 1b bắt được tái phân phối thì phải phân tầng theo BIẾN TIỀN-CAN-THIỆP dự báo được tác hại (idle_min ở arm A), không phải theo nhãn persona. Đây KHÔNG phải lỗi hiệu chỉnh — thêm seed sẽ không sửa được.",
+   "so_do_duoc": "R²(archetype)=0,0095 · R²(tercile idle_A)=0,0463 · R²(archetype×tercile)=0,1595 · tỷ lệ 4,90× · ma trận 21 ô trên 2.700 quan sát · harmed_share theo archetype 22,9–56,7%",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (pb3b-vi-sao-1b-mu.py). ⚠ R² là thước MÔ TẢ sức giải thích; 2.700 quan sát KHÔNG độc lập (90 tài xế × 30 seed) ⇒ tôi KHÔNG suy p-value từ nó."
+  },
+  {
+   "ma": "PB3-03",
+   "tieu_de": "Lập luận biện minh cho 1b trong chính spec CẮT HAI CHIỀU: nhóm nhỏ nhất bị hại nặng nhất là nhóm 1b khó bắn nhất (P3: -18.758đ, ns, n=5/90)",
+   "file_line": "specs/advisor-objective-model-v2.md:242-244",
+   "neo_noi_dung": "`Lý do chọn dạng này thay hai cực đoan: đòi TỪNG archetype dương-SIG thì subgroup không bao giờ đủ power (chặn mọi thứ một cách giả tạo)`",
+   "hau_qua": "Spec chọn dạng non-inferiority-per-subgroup vì 'subgroup không bao giờ đủ power'. Nhưng thiếu lực đối xứng: nếu subgroup không đủ lực để chứng minh LỢI thì nó cũng không đủ lực để tố giác HẠI — và 1b được viết ở dạng CHỈ tố giác hại. Đo được: P3 có điểm ước lượng ÂM LỚN NHẤT trong 7 archetype (-18.757,95đ) nhưng CI [-41.357,76; +4.009,23] trùm 0 ⇒ 1b PASS. P3 chỉ có 5/90 tài xế (đo: 150 quan sát/30 seed). ⇒ 1b có xác suất tố giác TỈ LỆ NGHỊCH với độ hiếm của nhóm, tức nó bảo vệ kém nhất đúng những nhóm dễ tổn thương nhất. Cách sửa KHÔNG phải nới ngưỡng mà là (i) báo kèm LỰC (MDE) cho từng archetype, và (ii) thêm một phân tầng có mẫu cân bằng (tercile = 30/30/30).",
+   "so_do_duoc": "P3: Δ = -18.757,95đ, CI[-41.357,76; +4.009,23], ns, n = 5 tài xế/seed (150/2.700 quan sát) · so với tercile: mỗi tầng 30 tài xế/seed (900/2.700)",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (số) + trích nguyên văn spec (lập luận)"
+  },
+  {
+   "ma": "PB3-04",
+   "tieu_de": "BÁC mệnh đề 'HHI cung theo ô chưa ai đo': nó ĐÃ CÓ, ĐANG được đọc, và ĐANG GIẢM SIG — nhãn 'metric MỚI cần viết' ở spec §5 là NHÃN STALE đã có đính chính ngay dưới nó",
+   "file_line": "src/gsm_sim/sim_metrics.py:260-268 (concentration_metrics) → :307 (system_guardrail) → src/gsm_sim/parallel.py:208 (chuyển tiếp) → :491-505 (compare) · specs/advisor-objective-model-v2.md:260 vs :262-264",
+   "neo_noi_dung": "code: `\"supply_cell_hhi\": hhi(list(cell_minutes.values())),` và `\"supply_cell_hhi\": g[\"supply_cell_hhi\"],         # dồn khu` · spec dòng stale: `| **Tập trung** | HHI tải trạm và concentration cung theo ô không tăng | metric MỚI cần viết |` · đính chính: `ba dòng Khách hàng/Công bằng/Tập trung ở trên **đã viết VÀ được gọi**`",
+   "hau_qua": "Câu hỏi (b): CÓ, đã đo. Đường dây đầy đủ và tôi đo được số: Δ supply_cell_hhi = -0,0009 CI[-0,0013; -0,0005] SIG **GIẢM** (cung TRẢI ĐỀU hơn); station_hhi -0,0086 ns; n_supply_cells -0,17 ns. VÌ SAO QUAN TRỌNG Ở ĐÂY: c9d chứng minh hiệu ứng của kênh được TÁI TẠO TOÀN BỘ bởi arm hoán vị mù (SHUF +4.590đ vs solver +3.219đ, hiệu THẬT -1.371đ ns) ⇒ giả thuyết sống là 'giá trị đến từ việc DỜI người đi khỏi chỗ đông, không từ việc ghép cặp thông minh'. `supply_cell_hhi` là đúng đại lượng kiểm giả thuyết đó, và nó nói CÓ: cung trải đều ra SIG. ⚠ NHƯNG cùng phép đo cũng chứng minh HHI **không bao giờ** bắt được lỗ hổng (a): HHI là đại lượng theo Ô (phút hiện diện/ô H3), tái phân phối là đại lượng theo NGƯỜI — hai không gian khác nhau. Đừng dùng 'HHI giảm' làm bằng chứng công bằng.",
+   "so_do_duoc": "supply_cell_hhi Δ = -0,0009 CI[-0,0013; -0,0005] SIG · station_hhi Δ = -0,0086 CI[-0,0205; +0,0032] ns · n_supply_cells Δ = -0,17 ns · n=30 seed",
+   "severity": "TB",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO + tự mở nguồn gốc đọc (kỷ luật 3: mệnh đề 'repo nói chưa' đã được kiểm và BÁC)"
+  },
+  {
+   "ma": "PB3-05",
+   "tieu_de": "Cổng chấm ĐA-08 TỰ ĐỘNG DUY NHẤT của repo BỎ HẲN tầng 'Tập trung' — và tên số 5 bị tầng-5 sức khoẻ (sinh sau) chiếm chỗ",
+   "file_line": "scripts/cham_da08_station_choice.py:10-19 (danh sách tiêu chí) và :50-89 (6 phép chấm) · đối chiếu specs/advisor-objective-model-v2.md:254-260 (bảng 5 dòng)",
+   "neo_noi_dung": "script chấm: `ok[\"4 gini không tăng\"] = not duong_sig(ci)` rồi nhảy thẳng sang `ok[\"5 tầng 5 (rest/span<10%)\"]` — KHÔNG có dòng nào đọc `station_hhi` hay `supply_cell_hhi`",
+   "hau_qua": "Bảng §5 có 5 dòng: Cá nhân · Hệ thống · Khách hàng · Công bằng · **Tập trung**, và spec ghi `Kênh nào vi phạm bất kỳ dòng nào ⇒ không được bật`. Script chấm máy duy nhất trong repo chấm 6 mục: 1a, 1b, served, expired+wait_median, gini, và 'tầng 5' — nhưng 'tầng 5' của nó là guardrail SỨC KHOẺ D-M3-05 (sinh sau, không thuộc bảng §5), còn dòng **Tập trung** của bảng §5 KHÔNG được chấm. Hai khoá `station_hhi`/`supply_cell_hhi` CÓ SẴN trong `compare()[\"system\"]` mà script bỏ qua. ⇒ Một dòng của chỉ tiêu ship tồn tại trên giấy, được chấm bằng TAY (UPDATE-092:307 có ghi 'Gini & HHI GIẢM' cho positioning — nên hôm nay không lật kết luận nào), không có cổng. Cùng họ với `wait_p90_min`: tiêu chí 'thời gian chờ khách không tăng' chỉ được chấm trên TRUNG VỊ vì khoá p90 không tồn tại trong compare (xem PB3-06).",
+   "so_do_duoc": "6 phép chấm trong script / 5 dòng bảng §5; 0 dòng đọc `station_hhi`|`supply_cell_hhi`; 2 khoá này CÓ trong system dict (tôi đo được cả hai)",
+   "severity": "TB",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (đọc trọn 107 dòng script + đối chiếu bảng spec)"
+  },
+  {
+   "ma": "PB3-06",
+   "tieu_de": "(d) TÍNH RỒI VỨT: `payout_p10/median/p90` được tính ở MỌI lượt guardrail rồi bị `_system_metrics` bỏ lại — cùng 11 khoá khác, trong đó `n_stations_used` và `event_repeat_ratio` có 0 reader kể cả test",
+   "file_line": "src/gsm_sim/sim_metrics.py:218-225 (fairness_metrics) · :282-293 (customer_impact) · :260-268 (concentration_metrics) · :697-702 (event_repeat_ratio) · vs src/gsm_sim/parallel.py:194-220 (danh sách chuyển tiếp)",
+   "neo_noi_dung": "sinh ra: `\"payout_p10\": int(_pct(pay, 0.10)),` · `\"wait_p90_min\": w[\"wait_p90_min\"],` · `\"n_stations_used\": len(st_load),` · `row[\"event_repeat_ratio\"] = (row[\"event_decided\"] / row[\"decided\"]` · vứt tại: `_system_metrics` chỉ liệt kê `\"gini_payout\": g[\"gini_payout\"],         # công bằng` và 8 khoá anh em, không có ba khoá phân vị",
+   "hau_qua": "`system_guardrail()` trả đủ, `_system_metrics()` chọn tay 9 khoá ⇒ phần còn lại không bao giờ vào `PairResult` ⇒ không bao giờ vào `compare()` ⇒ không bao giờ vào artifact. Grep toàn repo (.py/.js/.dart/.md/.json trên src|scripts|ui|tests|configs): `payout_p10`, `payout_median`, `payout_p90`, `wait_p90_min`, `n_supply_cells`, `supply_minutes_total`, `peak_swap_per_hour`, `peak_rest_per_hour`, `expired_rate`, `unserved_breakdown` = **producer + tests, 0 consumer phân tích**; `n_stations_used`, `event_repeat_ratio`, `event_adherence_is_lower_bound` = **producer, 0 reader kể cả test**; `sim_metrics.cost_summary`/`net_mean_vnd` và `full_report` = producer + test. ⚠ Hai cái đau nhất: (i) `wait_p90_min` — tiêu chí khách hàng của §5 chỉ được chấm trên trung vị, đuôi chờ không ai canh; (ii) `event_repeat_ratio`+`event_adherence_is_lower_bound` chính là NHÃN mà L3-04 dựng để chặn người ta so event_adherence giữa các kênh — một nhãn cảnh báo 0 người đọc là nhãn không tồn tại. ⚠⚠ PHẢN BIỆN CHÍNH ĐỀ XUẤT CỦA TÔI: nối `payout_p10` vào **KHÔNG** chữa được lỗ hổng (a) — tôi đo được Δ payout_p10 = +3.469,47đ **ns**. Lý do cấu trúc: p10/Gini là thước HÌNH DẠNG phân phối cắt ngang; tái phân phối đổi AI đứng ở đâu chứ không đổi hình dạng. Đó là lý do metric mới bắt buộc phải là đại lượng GHÉP CẶP (PB3-07/08/09).",
+   "so_do_duoc": "13 khoá bị bỏ khỏi đường chuyển tiếp; 3 khoá 0 reader tuyệt đối; Δ payout_p10 = +3.469,47 CI[-347,80; +7.189,93] ns · payout_median +257,27 ns · payout_p90 +2.981,73 ns · wait_p90_min +0,0088 ns (tôi tính riêng vì compare không có khoá này)",
+   "severity": "TB",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (grep toàn repo + đo Δ của chính các khoá bị vứt)"
+  },
+  {
+   "ma": "PB3-07",
+   "tieu_de": "METRIC ĐỀ XUẤT 1/3 — `harmed_share`: tỷ lệ tài xế bị hại, ghép cặp CRN. ĐO ĐƯỢC HÔM NAY 42,30% trong khi ĐA-08 PASS",
+   "file_line": "đề xuất đặt tại src/gsm_sim/parallel.py:239-243 (`run_pair`, nơi DUY NHẤT giữ cả `ra` lẫn `rb`)",
+   "neo_noi_dung": "chỗ nối: `return PairResult(seed=seed, actor_id=aid,` — cả `ra` và `rb` còn sống ở dòng trên",
+   "hau_qua": "ĐỊNH NGHĨA CHÍNH XÁC: với mỗi `actor_id` có mặt ở CẢ HAI arm (CRN ⇒ 90/90), d_i = payout_B(i) − payout_A(i); `harmed_share = |{i : d_i < −T}| / N`, T = 1.000đ. Chọn T: c9c đo arm null cho `delta_null = 0,0 CHÍNH XÁC` (fingerprint giống 30/30) ⇒ sàn nhiễu = 0, T chỉ để bỏ vụn làm tròn; T=0 cũng hợp lệ. TÍNH TỪ DỮ LIỆU SẴN CÓ: `result.actors` đã có `actor_id` + `payout_vnd` ở cả hai arm — 0 trường mới, 0 event mới, ~10 dòng. NGƯỠNG: (dưới) **CÔNG BỐ BẮT BUỘC** — mọi artifact A/B phải in `harmed_share`, `n_harmed/N` cạnh mỗi Δ, không có ngưỡng; (trên) **TREO** khi `harmed_share ≥ 0,50` — kênh làm hại đa số trong khi báo lãi trung bình là mệnh đề phải dừng lại xem, không phải ghi chú nhỏ. ⚠ Ngưỡng 0,50 là ĐỀ XUẤT CHÍNH SÁCH cho Cường, KHÔNG phải kết quả đo; cái ĐO ĐƯỢC là hiện trạng 42,30% và sàn null 0,00%. Metric này KHÔNG đưa sức khoẻ vào objective (chỉ đọc payout) và không tạo chiều khen (chỉ tố giác).",
+   "so_do_duoc": "harmed_share = 42,30% CI[40,85%; 43,78%] SIG (n=30 seed, T=1.000đ) · null c9c = 0,00% chính xác · theo archetype 22,9%–56,7%",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO giá trị hiện trạng; NGƯỠNG = ĐỀ XUẤT (chỉ neo 0,00% của null là đo được)"
+  },
+  {
+   "ma": "PB3-08",
+   "tieu_de": "METRIC ĐỀ XUẤT 2/3 — `churn_ratio`: biên độ tiền bị DỊCH CHUYỂN trên mỗi đồng giá trị RÒNG. Neo 1,0 là DẪN XUẤT (Pareto), đo được 17,82×",
+   "file_line": "cùng chỗ nối PB3-07 (src/gsm_sim/parallel.py:239-243)",
+   "neo_noi_dung": "cùng `return PairResult(seed=seed, actor_id=aid,`",
+   "hau_qua": "ĐỊNH NGHĨA: gộp trên toàn bộ (actor × seed) — `churn_ratio = (Σ d_i⁺ + Σ|d_i⁻|) / |Σ d_i|`. ⚠ PHẢI tính GỘP, KHÔNG lấy trung bình tỷ số theo seed: tôi đo cả hai và bản trung-bình-theo-seed cho 273,51 với CI[+15,99; +783,70] vì mẫu số gần 0 ở vài seed — con số đó KHÔNG dùng được, đây là bẫy tôi tự đặt rồi tự gỡ. TÍNH TỪ DỮ LIỆU SẴN CÓ: cùng vector d_i của PB3-07. NGƯỠNG: neo **1,0 là DẪN XUẤT, không phải quy ước** — can thiệp Pareto (mọi d_i ≥ 0) cho churn_ratio = 1,0 CHÍNH XÁC; can thiệp zero-sum thuần cho → ∞. Vậy `churn_ratio − 1` là phần tái phân phối, đo bằng cùng đơn vị với giá trị tạo ra. (dưới) CÔNG BỐ BẮT BUỘC; (trên) TREO câu 'kênh này TẠO giá trị' khi `churn_ratio > 3` mà chưa có phân rã theo biến tiền-can-thiệp — ngưỡng 3 là ĐỀ XUẤT CHÍNH SÁCH. Ý nghĩa hiện trạng: mỗi 1đ giá trị ròng đi kèm 17,82đ bị dịch giữa các tài xế. Đây là metric trả lời trực tiếp câu §5 tự đặt ra khi viết `total_payout_vnd` (`không có nó thì không phân biệt được advice TẠO THÊM giá trị với advice chỉ TÁI PHÂN PHỐI`) — `total_payout_vnd` KHÔNG đủ để phân biệt, `churn_ratio` mới đủ.",
+   "so_do_duoc": "pooled churn_ratio = (2.726.907,10 + 2.437.176,83)/289.730,27 = **17,82×** · gain_total +2.726.907đ/seed SIG · loss_total -2.437.177đ/seed SIG · net +289.730đ/seed (=90 × 3.219,22đ) · bản per-seed-mean 273,51 CI[15,99; 783,70] = BẤT ỔN, loại",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO; neo 1,0 là DẪN XUẤT (đại số, không đo); ngưỡng 3 là ĐỀ XUẤT"
+  },
+  {
+   "ma": "PB3-09",
+   "tieu_de": "METRIC ĐỀ XUẤT 3/3 — `delta_p10`: phân vị 10 của Δ GHÉP CẶP (KHÔNG phải p10 của payout). -89.264đ SIG, trong khi `payout_p10` có sẵn chỉ cho +3.469đ ns",
+   "file_line": "cùng chỗ nối PB3-07 · đối chiếu src/gsm_sim/sim_metrics.py:222 (`payout_p10` — khoá SAI mà người ta sẽ với tay lấy trước)",
+   "neo_noi_dung": "khoá dễ nhầm: `\"payout_p10\": int(_pct(pay, 0.10)),`",
+   "hau_qua": "ĐỊNH NGHĨA: p10 của {d_i} tính TRONG mỗi seed, rồi bootstrap qua seed (đúng cách `compare` làm). TÍNH TỪ DỮ LIỆU SẴN CÓ: cùng vector d_i. VÌ SAO KHÔNG THAY BẰNG `payout_p10` ĐÃ CÓ: tôi đo cả hai trên cùng 30 seed — `delta_p10` = **-89.263,67đ CI[-95.088,73; -83.145,83] SIG**, còn `payout_p10` = **+3.469,47đ ns**. Cùng dữ liệu, hai kết luận ngược nhau, vì p10-của-payout là thước HÌNH DẠNG cắt ngang (mù việc đổi AI đứng ở đâu) còn p10-của-Δ là thước GHÉP CẶP. Đây là bằng chứng định lượng rằng chữa PB3-06 (nối khoá bị vứt) KHÔNG chữa được PB3-01. NGƯỠNG, neo bằng MỨC ĐO ĐƯỢC: payout arm A = 251.354đ/người/ngày ⇒ -89.264đ = **-35,51% một ngày công**, và so với p10 payout (118.683đ) là **-75,21%**. (dưới) CÔNG BỐ BẮT BUỘC kèm % của payout ngày TB arm A; (trên) TREO khi `delta_p10 < −0,20 × payout_mean_A` (tức mất >1/5 ngày công ở phân vị 10) — hệ số 0,20 là ĐỀ XUẤT CHÍNH SÁCH; hiện trạng 0,3551 vượt gần 1,8×. Báo kèm `delta_p90` (+98.276,47đ SIG) để không tạo chiều khen một phía.",
+   "so_do_duoc": "delta_p10 = -89.263,67đ CI[-95.088,73; -83.145,83] SIG · delta_p90 = +98.276,47đ SIG · payout_p10 (khoá có sẵn) = +3.469,47đ ns · mốc neo: payout arm A TB 251.354đ, p10 118.683đ (tôi tự đo, 2.700 quan sát)",
+   "severity": "CAO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO; ngưỡng hệ số 0,20 là ĐỀ XUẤT"
+  },
+  {
+   "ma": "PB3-10",
+   "tieu_de": "RÀO CẢN THI CÔNG (phản biện cách sửa): cả ba metric là đại lượng GHÉP CẶP, mà `PairResult` không có chỗ chứa chúng — nhét vào `system_b` sẽ bị `compare()` TRỪ cho `system_a` ⇒ đổi CONTRACT, không phải thêm test",
+   "file_line": "src/gsm_sim/parallel.py:56-70 (PairResult) · :167-173 (_driver_metrics) · :463-484 (_rows)",
+   "neo_noi_dung": "`a: dict          # metric của tài xế đích ở World A` · `def _driver_metrics(result, actor_id: int) -> dict:` · `diffs = [b - a for a, b in zip(va, vb)]`",
+   "hau_qua": "Cấu trúc hiện tại chỉ mang: (i) metric của MỘT tài xế đích (`_driver_metrics(result, actor_id)`), (ii) scalar hệ thống mỗi arm. `compare()._rows` chỉ biết TRỪ hai phía. Ba metric đề xuất đều đã là HIỆU ⇒ đặt vào `system_b` sẽ bị trừ cho `system_a` (ra chính nó, hoặc 0 nếu ai đó 'sửa' bằng cách điền cả hai phía) — một loại vô nghĩa im lặng đúng họ với `net_mean_all` hai công thức (C2/Cycle 7). ⇒ Phải THÊM TRƯỜNG MỚI vào `PairResult` (vd `paired: dict`) và cho `compare()` in thẳng không qua `_rows`. Đây là **đổi SHAPE của contract A/B**, đúng cảnh báo mà Cycle 7 đã nêu cho G3 (`G3 đổi shape output solver ⇒ là đổi CONTRACT`). Kèm theo: mọi consumer đọc `PairResult`/artifact (dashboard.py:730-738, scripts/measure_e10.py, measure_l104.py, cham_da08_*.py) phải được rà. KHÔNG được lén nhét vào `system_*`.",
+   "so_do_duoc": "PairResult có 7 trường, 0 trường mang phân phối per-actor · `_driver_metrics` trả 12 khoá cho ĐÚNG 1 actor · `_rows` áp `b − a` cho MỌI khoá không phân biệt",
+   "severity": "TB",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (đọc code)"
+  },
+  {
+   "ma": "PB3-11",
+   "tieu_de": "BẪY NGỦ: tầng-5 sức khoẻ bị tính HAI LẦN mỗi lượt `_system_metrics`, một bản SAI PHẠM VI bị vứt — vô hại hôm nay, sai số im lặng ngay khi ai đó chuyển tiếp thêm một khoá từ `g`",
+   "file_line": "src/gsm_sim/parallel.py:193 và :219 · src/gsm_sim/sim_metrics.py:307",
+   "neo_noi_dung": "`g = system_guardrail(result)` · trong system_guardrail: `out.update(health_guardrail(result))` (actor_ids=None ⇒ TOÀN cohort) · rồi parallel lại gọi `**health_guardrail(result, actor_ids=health_actor_ids)` (nhóm BỊ CHẠM)",
+   "hau_qua": "`system_guardrail(result)` tự gắn trọn tầng 5 với phạm vi TOÀN COHORT; `_system_metrics` chỉ lấy 9 khoá không thuộc tầng 5 từ `g`, rồi gọi LẠI `health_guardrail` với `actor_ids` = nhóm bị chạm. ⇒ `continuous_work` (duyệt toàn bộ segment) + `rest_rails_audit` + `extend_rails_audit` chạy hai lượt mỗi arm mỗi seed, một lượt bị vứt. Hôm nay 0 sai số vì 9 khoá lấy từ `g` đều ngoài tầng 5. NHƯNG: ngày ai đó thêm một khoá tầng-5 vào danh sách chuyển tiếp từ `g` (việc rất tự nhiên — `g` đang nằm ngay đó và ĐANG chứa khoá đó), họ sẽ lấy bản TOÀN COHORT thay vì bản BỊ CHẠM, tức đúng cái mà `n_actors_scope` được thêm vào để phân biệt (`cùng một verdict OK có nghĩa hoàn toàn khác khi chấm trên 90/90 so với 9/90`) — và sẽ không có cổng nào kêu vì cả hai đều là số hợp lệ.",
+   "so_do_duoc": "2 lời gọi `health_guardrail` cho cùng một `result` trong cùng một lượt `_system_metrics`; 9/9 khoá lấy từ `g` hiện nằm ngoài tầng 5 ⇒ độ lệch hôm nay = 0",
+   "severity": "THẤP-TB",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "TỰ ĐO (đọc code). Hậu quả là CẤU TRÚC — tôi CHƯA reproduce bằng một ca sai thật."
+  }
+ ],
+ "cai_chua_kiem": [
+  "Cửa sổ seed 3300–3329 (n=30), KHÔNG phải 3000–3099 (n=100) mà UPDATE-087 dùng. `+6.016đ` vẫn KHÔNG tái tạo được (tôi đo +3.219,22đ); vòng này KHÔNG điều tra nguyên nhân chênh lệch đó.",
+  "`harmed_share` đo trên MỘT NGÀY/seed (`run_once` = 1 ngày) ⇒ nó là tỷ lệ NGƯỜI-NGÀY, KHÔNG phải tác hại DAI DẲNG. Một tài xế lỗ hôm nay có thể lãi hôm khác. `run_pair_multiday` tồn tại nhưng tôi CHƯA chạy — trước khi dùng 42,30% để chặn ship phải đo lại multiday.",
+  "CHƯA đo `harmed_share`/`churn_ratio`/`delta_p10` cho arm SHUF (c9d) ⇒ CHƯA biết ba metric này có PHÂN BIỆT được solver với hoán vị mù không. Dự đoán: KHÔNG (c9d cho B ≈ SHUF trên payout). ⇒ chúng là metric CÔNG BỐ TÁC HẠI, KHÔNG phải metric đo THÔNG TIN của solver. Đừng bán chúng như cái sau.",
+  "Trong ba ngưỡng đề xuất, CHỈ neo `churn_ratio = 1,0` (Pareto) là DẪN XUẤT. Ngưỡng chặn 0,50 / 3 / 0,20 đều là ĐỀ XUẤT CHÍNH SÁCH cho Cường — không phải kết quả đo, và tôi không có cơ sở thống kê để chốt chúng.",
+  "R² dùng one-way ANOVA trên 2.700 quan sát KHÔNG độc lập (90 tài xế × 30 seed, cùng world) ⇒ chỉ đọc như thước MÔ TẢ sức giải thích tương đối, KHÔNG suy p-value.",
+  "CHƯA chạy full suite (`uv run pytest -q` và `uv run pytest -q ui/backend/tests`) ⇒ không phát biểu nào ở đây dựa trên trạng thái suite. Ba metric đề xuất CHƯA được implement (chỉ đo bằng script rời), nên chưa có test nào.",
+  "Tôi chỉ tự mở đọc: `src/gsm_sim/sim_metrics.py` (trọn), `src/gsm_sim/parallel.py:56-244,380-620`, `specs/advisor-objective-model-v2.md:228-338`, `scripts/cham_da08_station_choice.py` (trọn), `research/audit/2026-08-07-root-cause-classes/00-BAN-DO-LOP.md §1-2,§3(cycle 3-10),§4,§5`. KHÔNG kiểm chéo `mm-*`/`rc-L*`; mọi số trích từ chúng tôi ghi rõ là TRÍCH.",
+  "PB3-11 là hậu quả CẤU TRÚC, chưa reproduce bằng một ca sai thật.",
+  "`n_stations_used` / `event_repeat_ratio` / `event_adherence_is_lower_bound` = 0 reader: kết luận dựa trên grep `--include` các đuôi .py/.js/.dart/.md/.json trên src|scripts|ui|tests|configs. Không quét notebook, không quét file ngoài repo."
+ ],
+ "ranh_gioi_da_kiem": "Không đề xuất nào biến sức khoẻ thành tiền (§1.2b): cả ba metric chỉ đọc `payout_vnd` và `actor_id`, không nhân phút/veto với tiền, không vào objective, chỉ tố giác một chiều. Không khuyên nhận/từ chối đơn cụ thể, không can thiệp matching/dispatch/pricing. Mọi số là MOCK (`configs/pilot_dongda.yaml`, seed 3300–3329) và đã gắn nhãn.",
+ "tom_tat": "ĐO ĐƯỢC, KHÔNG SUY: ĐA-08 PASS TOÀN BỘ 5 tầng trên chính arm đang ship (n=30 CRN) trong khi tercile rảnh-ít-nhất mất 15.290đ/ngày SIG và 42,30% đội bị hại. Vế 1b mù THEO CẤU TRÚC chứ không thiếu seed: archetype giải thích 0,95% phương sai của Δ, tercile idle giải thích 4,63% (4,90× dù ít nhóm hơn); 6/7 archetype chứa một nhóm lỗ 11.526–165.407đ bị chính trung bình của mình triệt tiêu, P7 lỗ 24.239đ ở nhóm t0 mà vẫn báo +19.058đ SIG DƯƠNG. HHI cung theo ô thì NGƯỢC với giả định: nó ĐÃ CÓ, ĐANG ĐƯỢC ĐỌC và ĐANG GIẢM SIG (-0,0009) — nhưng cổng chấm ĐA-08 tự động duy nhất của repo không đọc nó, và HHI theo Ô về nguyên tắc không bắt được tái phân phối theo NGƯỜI. 13 khoá bị tính rồi vứt (3 khoá 0 reader tuyệt đối), nhưng nối chúng vào KHÔNG chữa được lỗ hổng: `payout_p10` có sẵn cho +3.469đ ns trong khi `delta_p10` ghép cặp cho -89.264đ SIG — thước hình-dạng mù, thước ghép-cặp thì không. Đề xuất 3 metric ghép cặp (harmed_share · churn_ratio · delta_p10), tất cả tính từ dữ liệu SẴN CÓ, nhưng phải THÊM TRƯỜNG vào `PairResult` = đổi CONTRACT chứ không phải thêm test."
+}

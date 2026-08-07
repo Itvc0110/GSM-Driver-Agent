@@ -1,0 +1,180 @@
+{
+  "goc": "pb4 — THIẾU TÍNH NĂNG: đối chiếu problem statement (planning/SCOPE.md, planning/USER_STORIES.md, flow image/GSM_Driver_Income_AI_Agentv2.drawio) với cái ĐÃ XÂY trong src/gsm_core/solvers/ và ui/backend/app/. Mọi con số dưới đây do tôi TỰ ĐO trong vòng này bằng research/audit/2026-08-07-phan-bien-sim-advisor/pb4-thieu-tinh-nang.py (artifact thô: pb4-raw.json). KHÔNG trích lại số của agent khác.",
+
+  "mau_so_da_kiem": {
+    "cau_hoi_bat_buoc": "mẫu số có gồm cả ngoài phạm vi không? (bài học M1/M5 — 2/5 finding hôm nay bị bác vì đúng cơ chế này)",
+    "tra_loi": "MẪU SỐ = 110 tài xế bike (`d-*` 90 + `r-*` 20), KHÔNG phải 150. `ui/backend/app/adapters/advisor.py` chặn ngay ở cửa bằng `if not driver_id.startswith((\"d-\", \"r-\"))` → `no_active_channel` ⇒ 40 tài xế `ce-*`/`cp-*` (car / car-premium) CỐ Ý ngoài phạm vi. Đo lại: 150 tổng, 110 in-scope. Mọi tỷ lệ % dưới đây chia cho 110 (hoặc 110×10 ngày = 1100 tài-xế-ngày, hoặc 110×10×3 mặt thẻ = 3300 lượt gọi).",
+    "kiem_lai_lan_hai": "Tôi ĐÃ tự bác một số của chính mình trong vòng này: lượt đo đầu cho S9 crash 14/110 = 12,7%; nhưng crash đó do TÔI truyền `t_now` naive. Shape mà sản phẩm thực sự sản xuất (`advice_checkpoint._iso_for_minute` → literal `+07:00`) là tz-aware ⇒ đo lại với shape đúng: **0 crash / 1100**. Con số 12,7% bị RÚT."
+  },
+
+  "findings": [
+    {
+      "ma": "TN-01",
+      "tieu_de": "(a) 12/14 user story KHÔNG có đường chạy nào tới tài xế — chỉ US-F1-04 được phục vụ trọn vẹn",
+      "file_line": "planning/USER_STORIES.md:9-33 (14 US) · ui/backend/app/main.py:41-46 (toàn bộ router được mount)",
+      "neo_noi_dung": "neo bằng NỘI DUNG: 6 lệnh `app.include_router(...)` trong `main.py` với các prefix `/api/v1/routing`, `/api/v1/driver`, `/api/v1/advice`, `/api/v2/advice`, `/api/v1/sim`, `/api/v1/demo` — KHÔNG có router policy/FAQ, KHÔNG có router goal/mục tiêu, KHÔNG có router recap/session-summary.",
+      "hau_qua": "Bảng đối chiếu từng US (đo, không suy):\n· US-F0-01 (câu hỏi định sẵn về THƯỞNG TUẦN + citation) — KHÔNG ĐƯỜNG: không endpoint policy/FAQ; `policy().weekly_quota = None`.\n· US-F0-02 (bundle riêng track thuê/RTO: phí thuê, share, khấu trừ) — KHÔNG ĐƯỜNG: `policy().track = None`, `policy().costs = None`; grep `rental` toàn code = 0 hit. 20 tài xế `r-*` (bike-rto) CÓ trong mock và ĐƯỢC advisor phục vụ, nhưng nhận đúng policy bike, không có một khoản chi phí thuê nào.\n· US-F0-03 (cảnh báo khi chính sách đổi so với lần xem trước) — KHÔNG ĐƯỜNG: `effective_from = None`, `effective_to = None`, không có lịch sử version, grep `policy_diff` = 0.\n· US-F1-01 (chương trình thưởng/giới hạn MỚI hôm nay) — KHÔNG ĐƯỜNG: đo 3.300 lượt gọi, chỉ ra ĐÚNG 3 dạng câu, không dạng nào là 'chính sách mới'.\n· US-F1-02 (đặt/chỉnh/bỏ mục tiêu payout TUẦN) — KHÔNG ĐƯỜNG: grep `goal` trên toàn `{src,ui,scripts,configs,schemas}/**/*.{py,json,js,dart,html,yaml,ts}` = **1 hit duy nhất**, và nó là một chữ trong docstring của `ui/backend/tests/test_demo_moving_queue.py`. Không có store, không có endpoint, không có field contract.\n· US-F1-03 (nhận xét chỉ tiêu quá cao/thấp) — KHÔNG ĐƯỜNG: phụ thuộc US-F1-02.\n· US-F1-04 (cần thêm bao nhiêu cuốc/giờ để với mốc thưởng) — ✅ CÓ ĐƯỜNG, kênh DUY NHẤT hoạt động đủ (S1, 1.687/3.300 = 51,1% lượt gọi).\n· US-F2-01 (demand proxy cao/thấp giờ tới) — KHÔNG ĐƯỜNG SẢN PHẨM (chỉ có trong sim: `market_state.py`).\n· US-F2-02 (khung thấp điểm để nghỉ/sạc) — KHÔNG ĐƯỜNG SẢN PHẨM: S7 `idle_reduction` 0 call site ở `ui/backend`; chỉ chạy trong `gsm_sim/multiday.py` và `advice_bridge.py`; kênh `rest_window: false`.\n· US-F2-03 (voucher/ưu đãi mới trong ca) — KHÔNG ĐƯỜNG Ở ĐÂU CẢ: grep `voucher` trên toàn cây code = **0 hit**. Đây là ô số 4 trong trang F2 của drawio (`4. Cập nhật voucher`) và là gạch đầu dòng trong SCOPE §F2.\n· US-F2-04 (gợi ý khu vực đứng chờ) — CỐ Ý sim-only (D-004/D-004b); chính repo đặt tên topic là `positioning_sim_only`.\n· US-F3-01 (recap tách gross / payout / estimated net) — KHÔNG ĐƯỜNG (xem TN-04: số đã tính xong rồi vứt).\n· US-F3-02 (vài pattern chưa tối ưu) — KHÔNG ĐƯỜNG (TN-04).\n· US-F3-03 (một gợi ý duy nhất cho ca tới) — KHÔNG ĐƯỜNG (TN-04).\n⇒ 12/14 KHÔNG có đường chạy; 1/14 có đủ (US-F1-04); 1/14 cố ý hoãn (US-F2-04). Cả khối F3 và cả khối F0 của SCOPE §3 hiện có **0 đầu ra sản phẩm**.",
+      "so_do_duoc": "150 tài xế mock, 110 in-scope. 3.300 lượt gọi `advisor.advice()`. grep `goal` = 1 hit (test docstring), grep `voucher` = 0 hit, grep `rental` = 0 hit, grep `policy_diff` = 0 hit trên `{src,ui,scripts,configs,schemas}`.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (chạy code + grep + AST). Phần 'US nào coi là có đường' là PHÁN ĐOÁN của tôi trên tiêu chí 'tài xế có nhận được nội dung đó không', không phải phép đo."
+    },
+    {
+      "ma": "TN-02",
+      "tieu_de": "(c) Advisor sản phẩm nói được ĐÚNG 3 dạng câu, 100% từ MỘT solver (S1) — và thẻ 'tổng kết ca' chỉ là thẻ mốc-thưởng chạy lúc 21:30",
+      "file_line": "ui/backend/app/adapters/advisor.py:235 · ui/backend/app/routers/advice.py:68 · ui/web/js/cards.js:9,15",
+      "neo_noi_dung": "`report = bonus_feasibility.solve(gi, policy())` là lời gọi solver DUY NHẤT trong `adapters/advisor.py` · `CLIENT_TOPICS = (\"brief\", \"nudge\", \"recap\")` · `const KIND_HOURS = { brief: 9 * 60, nudge: 14 * 60, recap: 21 * 60 + 30 }`",
+      "hau_qua": "Đo 3.300 lượt (110 tài xế × 10 ngày × 3 mặt thẻ): 3.296 nói (99,9%), 4 im (0,1%, đều `already_on_track`). Toàn bộ 3.296 thẻ thuộc ĐÚNG 3 hình dạng, tất cả solver='S1':\n· `bonus_gap|feasible_gap` 1.687 = 51,1% — 'còn với được mốc X'\n· `info|insufficient_budget_hours` 1.181 = 35,8% — 'hết giờ, đừng cố quá'\n· `info|acceptance_below_threshold` 428 = 13,0% — 'tỷ lệ nhận dưới ngưỡng'\nBa mặt thẻ `brief`/`nudge`/`recap` dùng CÙNG một hàm, chỉ khác `now_min` ⇒ 'Tổng kết ca' (F3) thực chất là thẻ mốc-thưởng-hôm-nay in lúc 21:30, không phải bản tổng kết ca. Ngoài ra: thẻ phòng ngừa `acceptance_near_threshold` (`_cliff_item`, kind `info`) bắn **0/3.300** — 1.687+1.181+428 = 3.296 = đúng số lượt nói, tức mỗi lượt chỉ 1 thẻ, không lượt nào có thẻ cliff kèm.\nContract `ui/contracts/advice.json` khai `kind` enum 5 giá trị; 3 giá trị `rest_window`, `charge_now`, `demand_shift` có **0 producer trên 3.300 lượt** — khớp A10 của bản đồ lớp (tôi đo độc lập, không trích).",
+      "so_do_duoc": "n=3.300 lượt gọi; outcome {spoke: 3296, silent: 4}; item_shapes 3 khoá; cliff 0.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO"
+    },
+    {
+      "ma": "TN-03",
+      "tieu_de": "(c) Kênh v2 (S2 shift_dp) chết ở HAI cửa độc lập: cờ môi trường tắt + không ai cắm RuntimeStateProvider",
+      "file_line": "ui/backend/app/routers/advice_v2.py:28,38-39 · ui/backend/app/services/advice_checkpoint.py:175-176,206-209",
+      "neo_noi_dung": "`ORCHESTRATOR_FACTORY = ProductSolverOrchestrator` (gọi KHÔNG tham số ở `_open_service`) · `return os.getenv(\"ADVICE_V2_ENABLED\", \"0\") == \"1\"` · `runtime_state_provider or UnavailableRuntimeStateProvider()` · `result.reasons[\"S2\"] = \"missing_state\"; return result`",
+      "hau_qua": "Đo trực tiếp: `ADVICE_V2_ENABLED` = '0' ⇒ GET /api/v2/advice trả 503 `{status: disabled, fallback: v1}`. Và kể cả bật: `ProductSolverOrchestrator()` mặc định = `UnavailableRuntimeStateProvider`, không một chỗ nào trong `ui/backend/app/` truyền `runtime_state_provider` (grep toàn thư mục: 7 hit, tất cả nằm TRONG chính `advice_checkpoint.py`) ⇒ chạy thật cho `d-0` ra `solver_set = ['S1']`, `reasons = {'S2': 'missing_state'}`. Xác nhận độc lập điều A12 của bản đồ lớp nói: cổng thật là `missing_state`, KHÔNG phải ĐA-07. Hệ quả sản phẩm: mọi lời khuyên THỜI ĐIỂM (nghỉ/đổi pin/kết ca) mà S2 sinh ra không có đường tới tài xế, dù toàn bộ dây (validate schema → artifact → candidate → presenter) đã nối xong.",
+      "so_do_duoc": "provider mặc định = UnavailableRuntimeStateProvider; ADVICE_V2_ENABLED='0'; solver_set=['S1']; reasons={'S2':'missing_state'}.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO"
+    },
+    {
+      "ma": "TN-04",
+      "tieu_de": "(b) S3 `f3_patterns` là tính năng THIẾU đắt nhất: nó CHẠY ĐƯỢC trên 110/110 tài xế và đã tính sẵn cả gross/payout, nhưng có 0 call site ⇒ khối F3 không phát ra một chữ nào",
+      "file_line": "src/gsm_core/solvers/f3_patterns.py (0 lời gọi `.solve(` ngoài test) · src/gsm_core/features/from_l1r.py:201-232 (`derive_session_summary_input_l1r`)",
+      "neo_noi_dung": "neo bằng NỘI DUNG: trong `from_l1r.py`, docstring `\"\"\"payout_breakdown ĐỌC THẲNG: gross=total_fee, driver_payout=commission (đã tách sẵn).\"\"\"` và literal `\"estimated_net_vnd\": None, \"net_definition_version\": None`. Trong solver: literal `\"us_ref\": \"US-F3-02\"`.",
+      "hau_qua": "Đo trên 1.100 tài-xế-ngày (110 × 10 ngày), qua ĐÚNG loader mà sản phẩm dùng (`mockdata._table(...).to_dicts()`):\n· S3 chạy KHÔNG lỗi 1.100/1.100 = 100%\n· sinh ≥1 pattern cho **767/1.100 = 69,7%** tài-xế-ngày; tổng pattern theo loại: `bonus_progress_gap` 739, `acceptance_cliff` 119\n· `payout_breakdown` đã có `gross_vnd` + `driver_payout_vnd` cho **1.069/1.100 = 97,2%** (31 ngày còn lại là ngày không cuốc)\n· output đã có `top_pattern` (đúng US-F3-03 'một gợi ý duy nhất'), `heuristic_note` tiếng Việt sẵn sàng hiển thị, `severity` ordinal, và `numbers[].source` truy vết được (`observed:day_state_end`, `session:payout_breakdown`, `policy_v:...`).\n⇒ Ba US của F3 đang bị chặn KHÔNG phải vì thiếu thuật toán hay thiếu dữ liệu, mà vì thiếu ĐÚNG một lời gọi + một endpoint. Đây là khoảng cách rẻ nhất trên bảng.\n⚠ GIỚI HẠN THẬT phải nói kèm: `session_summary_input.inferred_activities` rỗng ở **1.100/1.100 = 100%** ⇒ 2 trong 4 pattern mà docstring S3 khai (sạc/nghỉ giờ cao điểm, idle giờ cao) KHÔNG THỂ bắn trên đường dữ liệu sản phẩm. F3 ship được hôm nay chỉ nói được 2 loại, không phải 4.",
+      "so_do_duoc": "1.100 tài-xế-ngày; S3 ok 100%; có pattern 69,7%; gross+payout 97,2%; inferred_activities rỗng 100%; 2/4 loại pattern bắn được.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO"
+    },
+    {
+      "ma": "TN-05",
+      "tieu_de": "(b) S6 `mission_knapsack` VỠ 100% ở ranh giới parquet — `public_mission.rewards` là dict trong bộ nhớ nhưng str sau khi ghi đĩa, và test chỉ chạm bản trong bộ nhớ",
+      "file_line": "src/gsm_core/features/from_l1r.py:323-325 · ui/backend/app/adapters/mockdata.py:157 · src/gsm_core/mockgen/realdata.py:366,384 · tests/test_mission_knapsack.py:127,148-149,162",
+      "neo_noi_dung": "GÃY: `rewards = m.get(\"rewards\") or {}` rồi `reward = int(rewards.get(\"vnd\", 0))` trong `derive_mission_select_input_l1r` · ĐÃ BIẾT NHƯNG CHỈ VÁ MỘT CHỖ: `rw = json.loads(row[\"rewards\"]) if isinstance(row[\"rewards\"], str) else row[\"rewards\"]` trong `mockdata.py` · SINH RA: `\"rewards\": {\"vnd\": reward, \"target_count\": target}` trong `realdata.py` · FIXTURE SUY BIẾN: `tables = generate_realdata(...)[\"tables\"]` rồi `assert (m[\"rewards\"] or {}).get(\"target_count\", 0) > 0`",
+      "hau_qua": "Đo shape ba nơi: sinh trong bộ nhớ = `dict` 6/6 · đọc lại từ `public_mission.parquet` = `str` 6/6 · loader sản phẩm `_default_l1r()` = `str` 6/6 (literal `'{\"vnd\": 30000, \"target_count\": 20}'`). Deriver gọi `.get()` trên `str` ⇒ `AttributeError: 'str' object has no attribute 'get'` cho **1.100/1.100 = 100%** tài-xế-ngày in-scope. Nghĩa là S6 chưa từng chạy một lần nào trên hình dạng dữ liệu mà sản phẩm sẽ đưa cho nó.\nVì sao suite vẫn xanh: `test_derivation_filters_and_chains` và `test_mock_missions_are_actionable` lấy `generate_realdata(...)[\"tables\"]` — GIÁ TRỊ TRẢ VỀ trong bộ nhớ, chưa qua parquet; `test_window_filter_excludes_expired` tự dựng dict tay. Không test nào đọc lại file đã ghi. Đây đúng họ 'fixture suy biến' (cơ chế (3) của bản đồ lớp) chứ không phải bug logic solver.\nVà nó là 'hai quy ước cho một khái niệm' (cơ chế (2)): `mockdata.py:157` CHỨNG MINH có người đã đụng đúng vách này rồi và chỉ vá cho consumer của mình.\nDữ liệu thì có sẵn và dày: 6 mission active, 261 dòng `public_user_mission_progress` (159 `in_progress`), phủ **110/110** tài xế in-scope.",
+      "so_do_duoc": "in-memory dict 6/6 · parquet str 6/6 · loader sản phẩm str 6/6 · S6 crash 1.100/1.100 = 100% (AttributeError) · public_mission n=6, progress n=261 phủ 110/110.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (reproduce + so shape ba tầng)"
+    },
+    {
+      "ma": "TN-06",
+      "tieu_de": "(b) S8 `penalty_explain` và S9 `anomaly_alert`: dữ liệu CÓ, solver CHẠY, nhưng twin-world hiện tại KHÔNG THỂ đo chúng — phải tuyên bố KHÔNG THỂ KIỂM, không được xếp vào hàng đợi ĐA-08",
+      "file_line": "src/gsm_core/solvers/penalty_explain.py, anomaly_alert.py (0 lời gọi `.solve(`) · src/gsm_sim/** (grep)",
+      "neo_noi_dung": "neo bằng NỘI DUNG: grep case-insensitive trên `src/gsm_sim/**/*.py` cho `penal` = **0 hit**, cho `fraud` = **0 hit**, cho `weekly_quota|khoan|clawback` = **0 hit**, cho `voucher` = **0 hit**. Đối chứng dương: cùng lệnh cho `mission` = **27 hit** (gồm `mission_reward_vnd`, `mission_progress`, `mission_completed` trong `dashboard.py`).",
+      "hau_qua": "S8: chạy sạch 1.100/1.100; `notable=True` cho **482/1.100 = 43,8%** tài-xế-ngày; nhưng chỉ **19/1.100 = 1,7%** có tiền thực bị trừ trong cửa sổ 30 ngày ⇒ nội dung chủ yếu là RỦI RO/quy tắc, không phải giải thích khoản trừ. Bảng `driver_penalization_ATA` có 75 dòng, phủ **54/110 = 49,1%** tài xế in-scope, 100% `status='applied'`, 4 loại (`conduct` 23, `late` 20, `acceptance` 19, `clawback_khoan` 13).\nS9: chạy sạch 1.100/1.100 với `t_now` tz-aware (shape sản phẩm thật). **127/1.100 = 11,5%** tài-xế-ngày có ≥1 cờ MỞ trong cửa sổ 14 ngày. `public_frauds` 138 dòng, phủ **70/110 = 63,6%** tài xế in-scope. ⚠ 138/138 dòng có `status='open'`, **0 dòng `cleared`** ⇒ nhánh guardrail 'cờ đã cleared → im lặng' mà docstring S9 hứa CHƯA TỪNG được thực thi trên mock — cổng an toàn quan trọng nhất của solver nguy hiểm nhất đang không có phơi nhiễm nào.\n⇒ KẾT LUẬN CHO KẾ HOẠCH: S8 và S9 KHÔNG phải scaffold nên bỏ (dữ liệu thật có, solver có guardrail viết kỹ), nhưng chúng **không đo được bằng ĐA-08 với twin-world hiện có** vì world không mô hình hoá phạt lẫn cờ gian lận. Đưa chúng vào hàng đợi 'đo hiệu quả' là hứa một phép đo không tồn tại — phải tuyên bố KHÔNG THỂ KIỂM theo `specs/real-data/data-contract-counterfactual.md §4`.",
+      "so_do_duoc": "S8 notable 482/1100=43,8%, có tiền bị trừ 19/1100=1,7%, bảng 75 dòng phủ 54/110 · S9 cờ mở 127/1100=11,5%, bảng 138 dòng phủ 70/110, cleared 0/138 · gsm_sim: penal 0, fraud 0, khoan 0, voucher 0, mission 27.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO"
+    },
+    {
+      "ma": "TN-07",
+      "tieu_de": "(b) S5 `weekly_khoan` KHÔNG phải scaffold nên bỏ — nó đang từ chối bịa số đúng như §5 yêu cầu; thứ chặn là số khoán của GSM chưa có",
+      "file_line": "src/gsm_core/solvers/weekly_khoan.py (docstring) · ui/backend/app/adapters/advisor.py:31-39 (`policy()`)",
+      "neo_noi_dung": "solver: `BẤT BIẾN §5: **KHÔNG bịa số policy.** Nếu policy chưa có số khoán (quota=None — image-locked, TBC-với-GSM) thì solver báo quota_available=False` · `policy()` dựng bundle bằng `Config.load(... \"configs\" / \"pilot_dongda.yaml\")` rồi `SimPolicy.from_config(cfg).to_core_record()`",
+      "hau_qua": "Đo bundle mà sản phẩm THỰC SỰ dùng: `weekly_quota = None`. Solver do đó chỉ trả về số ĐO ĐƯỢC, không có mốc khoán ⇒ không trả lời được US-F0-01 ('tuần này chạy bao nhiêu chuyến thì được thưởng gì'). Cộng với grep `weekly_quota|khoan|clawback` trên `src/gsm_sim` = 0 hit ⇒ kể cả nối dây xong cũng KHÔNG đo được bằng ĐA-08. ⇒ Xếp S5 là **BỊ CHẶN BỞI DỮ LIỆU NGOÀI**, không phải nợ kỹ thuật, và không đưa vào hàng đợi thi công. Điều kiện mở lại là một con số từ GSM, không phải một commit.",
+      "so_do_duoc": "policy().weekly_quota = null (đo trực tiếp) · gsm_sim grep khoan/clawback = 0.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO"
+    },
+    {
+      "ma": "TN-08",
+      "tieu_de": "(b) Cái THỰC SỰ là scaffold nên bỏ KHÔNG phải solver nào cả, mà là cụm pipeline C6 free-text — 1.184 dòng có đúng MỘT lối vào là script smoke, và SCOPE đã tự khai nó là legacy",
+      "file_line": "src/gsm_core/advisor/{pipeline,router,templates,policy_kb,episode_store,observability,composer,context_pack}.py · scripts/smoke_advisor_live.py:18 · planning/SCOPE.md:23-24",
+      "neo_noi_dung": "SCOPE tự khai: `Router/KB C6 free-text hiện là legacy và phải được deprecate khi chạm tới` · lối vào duy nhất: `from gsm_core.advisor.pipeline import AdvisorPipeline` trong `scripts/smoke_advisor_live.py`",
+      "hau_qua": "Dựng đồ thị import bằng AST trên `src/**` + `ui/backend/app/**` + `scripts/*`: `pipeline.py` có **1 importer** = script smoke. `router.py`, `templates.py`, `policy_kb.py`, `episode_store.py` mỗi cái có **1 importer duy nhất = `pipeline.py`**. `observability.py` 1 = script smoke. `composer.py` 2 = script smoke + `llm_client.py`. `context_pack.py` 3 = đều nằm trong chính cụm (composer/pipeline/templates). ⇒ cụm KHÉP KÍN 8 module = 229+73+345+68+126+118+115+110 = **1.184 dòng** mà lối ra khỏi cụm chỉ là một script.\nĐã loại trừ nhầm lẫn: `verifier.py` (135 dòng) THUỘC ĐƯỜNG SẢN PHẨM (`ui/backend/app/adapters/advisor.py` import nó), và `render_number_vn` mà sản phẩm dùng đến từ `gsm_core/vn_format.py` chứ không phải `context_pack` (context_pack chỉ re-export, literal `# noqa: F401 (re-export)`) ⇒ xoá cụm không kéo theo sản phẩm.\nCái ĐẮT không phải 1.184 dòng chết, mà là: 11 file test đang giữ cụm này xanh, nên mỗi vòng audit lại có người đọc `router.py` (khai đủ 9 solver S1..S9 trong `_ROUTES`) rồi tin rằng 9 solver đang chạy. Chính `router.py` là nguồn của ảo giác 'có 9 kênh'.",
+      "so_do_duoc": "AST import graph: pipeline 1 importer (script), router/templates/policy_kb/episode_store 1 importer (=pipeline), composer 2, context_pack 3 (nội cụm), observability 1 (script). Tổng LOC cụm = 1.184. verifier.py có importer từ ui/backend ⇒ GIỮ.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (AST + wc -l). Câu 'nên bỏ' là ĐỀ XUẤT của tôi dựa trên SCOPE §3-F0, không phải phép đo."
+    },
+    {
+      "ma": "TN-09",
+      "tieu_de": "Thẻ sản phẩm KHÔNG mang trích dẫn chính sách và không có ngày hiệu lực; 'version' duy nhất tài xế/​client nhìn thấy là `policy_v:sim-policy-v0` — một id CONFIG SIM đóng vai version chính sách",
+      "file_line": "ui/contracts/advice.json (khối `items.items.properties`) · ui/backend/app/adapters/advisor.py:358-364 (`_policy_thresholds`) · src/gsm_core/policy.py (trường `effective_from`)",
+      "neo_noi_dung": "`return {\"bonus_min_acceptance\": ..., \"source\": f\"policy_v:{p.version}\"}` · trong `policy.py`: `effective_from: str | None = None    # ISO date; None = nguồn không ghi (validity UNKNOWN)`",
+      "hau_qua": "Đo bundle sản phẩm: `version='sim-policy-v0'`, `effective_from=None`, `effective_to=None`, `costs=None`, `track=None`. Đo contract: item của `advice.json` có ĐÚNG 9 trường (`advice_id, solver, kind, title, message, confidence, reason_code, numbers, caveat`) — **không trường nào là citation / doc_id / effective_date**. Đo output thật: `policy_thresholds.source = 'policy_v:sim-policy-v0'`.\n⇒ Hai hệ quả tách bạch: (1) CLAUDE.md §5 đòi 'trả lời chính sách phải dựa trên nguồn có trích dẫn... có version' — đường sản phẩm hiện KHÔNG CÓ CHỖ để đặt trích dẫn, nên yêu cầu này không thể thoả bằng cách sửa nội dung, phải sửa contract. (2) Corpus policy có thật và có 7 record (`research/policy/t004-current-policy-text-corpus-2026-07-22.json`, `corpus_id='t004-current-policy-text-corpus-v1'`) nhưng chỉ `PolicyKB` đọc nó, mà `PolicyKB` chỉ được `pipeline.py` import (TN-08) ⇒ corpus KHÔNG có đường tới tài xế.\n⚠ Nói cho chính xác: các con số TIỀN/ĐIỂM trên thẻ CÓ nguồn (`numbers[].source` ∈ {MOCK, SOLVER}) và thẻ có `is_mock: true` + `data_mode: 'mock-realdata'` ⇒ ranh giới 'không trình bày mock như số thật' KHÔNG bị vi phạm. Cái thiếu là trích dẫn CHÍNH SÁCH, không phải nhãn mock.",
+      "so_do_duoc": "policy version='sim-policy-v0'; effective_from/to = null; costs=null; track=null; advice.json item = 9 trường, 0 trường citation; corpus t004 = 7 record, 1 importer.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO"
+    },
+    {
+      "ma": "TN-10",
+      "tieu_de": "Vế `estimated net income` của MỤC TIÊU CỐ ĐỊNH (SCOPE §1) chưa có đường: 0/1.100 tài-xế-ngày có số, vì `policy().costs = None`",
+      "file_line": "planning/SCOPE.md:9 (mục tiêu cố định) · src/gsm_core/features/from_l1r.py:230-232",
+      "neo_noi_dung": "SCOPE: `driver payout ... hoặc estimated net income (driver payout trừ các chi phí tài xế chịu đã biết)` · code: literal `\"estimated_net_vnd\": None, \"net_definition_version\": None` — hằng None, không nhánh nào gán giá trị khác.",
+      "hau_qua": "Đo 1.100 tài-xế-ngày: `estimated_net_vnd is not None` = **0/1.100 = 0,0%**. Nguyên nhân gốc đo được ở thượng nguồn: `policy().costs = None` và `policy().track = None` ⇒ không có bảng chi phí nào để trừ. Đây KHÔNG phải lỗi (§5 cấm ước đoán chi phí; trả None là hành vi ĐÚNG), nhưng nó nói rằng một trong hai mục tiêu tiền của SCOPE hiện là 0% khả dụng, và nó ràng buộc chặt với US-F0-02 (track thuê/RTO): 20 tài xế `r-*` có mặt, được advisor phục vụ, và không có một đồng chi phí thuê nào trong mô hình. Ai đọc payout của tài xế RTO như 'tiền về túi' là đọc sai, và sản phẩm hiện không có nhãn nào cản việc đó.",
+      "so_do_duoc": "estimated_net khác None: 0/1.100 = 0,0% · policy().costs = null · policy().track = null · 20 tài xế `r-*` (bike-rto) trong mock.",
+      "severity": "TB",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO. Câu 'ai đọc payout RTO như tiền về túi là đọc sai' là SUY LUẬN, không phải phép đo về hành vi người dùng."
+    },
+    {
+      "ma": "TN-11",
+      "tieu_de": "Demo Track UI chạy bộ kênh NGƯỢC HẲN với bản đang ship — bật đúng hai kênh ĐA-07 đã tắt và tắt kênh duy nhất đang bật",
+      "file_line": "ui/backend/app/services/demo_session.py:66-72 · configs/pilot_dongda.yaml:336-343,357 · src/gsm_sim/parallel.py:44-47",
+      "neo_noi_dung": "demo: `advice[\"positioning_overrides\"] = \"off\"` + `advice[\"channels\"] = {\"shift_plan\": True, \"accept_lift\": True, \"shift_extend\": False, \"rest_window\": False}` + `advice[\"coverage\"] = \"all\"` + `adherence_by_archetype = {archetype: 0.0 ...}` · ship: `shift_plan: false` … `positioning_overrides: wait_only`",
+      "hau_qua": "Bộ kênh của demo trùng khít nấc `accept_lift` trong `CHANNEL_LADDER` (`{shift_plan: True, accept_lift: True, ..., positioning_overrides: \"off\"}`) — tức đúng cấu hình mà ĐA-07 đã TẮT với lý do ghi thẳng trong config (`thu nhập ns, served −0,33đp SIG, đơn chết +4,1 SIG`). Đồng thời `positioning_overrides='off'` làm `world.py` short-circuit không dựng `MarketStateProducer` (neo: `if self.advice.enabled and self.advice.positioning_overrides != \"off\":`) ⇒ kênh vị trí — kênh DUY NHẤT đang bật mặc định và là kênh mọi kết luận +6.016đ/+3.219đ nói về — **không xuất hiện trong demo**.\n⇒ Người xem demo (kể cả stakeholder) đang nhìn một advisor khác với advisor đang ship, theo chiều bất lợi cả hai phía. Thêm: `adherence_by_archetype = 0.0` cho cả P1..P7 ⇒ không actor nào làm theo, nên demo cũng không biểu diễn được hiệu ứng của lời khuyên lên hành vi.",
+      "so_do_duoc": "Đọc code (không chạy demo): demo channels = {shift_plan:T, accept_lift:T, shift_extend:F, rest_window:F}, positioning='off', adherence 0.0×7; ship = 6 kênh false + positioning 'wait_only'.",
+      "severity": "TB",
+      "confidence": "TB",
+      "tu_do_hay_suy": "TỰ ĐO phần cấu hình (đọc nguyên văn cả hai file). CHƯA chạy demo end-to-end để xác nhận thẻ hiện ra khác nhau ⇒ hậu quả 'người xem thấy advisor khác' là SUY LUẬN từ cấu hình."
+    },
+
+    {
+      "ma": "DX-01",
+      "tieu_de": "ĐỀ XUẤT 1 — Thẻ TỔNG KẾT CA chỉ-đọc (F3): nối S3 vào một endpoint, KHÔNG xin tài xế làm gì cả",
+      "file_line": "src/gsm_core/solvers/f3_patterns.py · src/gsm_core/features/from_l1r.py (`derive_session_summary_input_l1r`) · ui/backend/app/routers/advice.py (mặt thẻ `recap`)",
+      "neo_noi_dung": "tái dùng nguyên `top_pattern` + `heuristic_note` + `payout_breakdown` mà S3 đã trả; không viết lại lý lẽ nào.",
+      "hau_qua": "(i) US THẬT: US-F3-01 (tách gross / driver payout / estimated net), US-F3-02 (vài pattern chưa tối ưu), US-F3-03 (đúng MỘT gợi ý). Cả ba đang có 0 đường (TN-01), trong khi 97,2% con số đã tính xong và 69,7% tài-xế-ngày đã có pattern (TN-04).\n(ii) ĐO BẰNG ĐA-08: **KHÔNG THỂ KIỂM** — nói thẳng. Twin-world không có cơ chế nào biến 'đọc một bản tổng kết' thành payout; muốn đo phải THÊM một hook hành vi ngày N+1 (chỗ duy nhất có sẵn là `multiday.py`, hiện chỉ nuôi `planned_rest_hour` từ S7). Và pattern chi phối của S3 là `bonus_progress_gap` (739/858 = 86,1% số pattern) mà hành động kế tiếp của nó là 'ca sau chạy thêm ít cuốc' — tức họ KÉO DÀI CA, đúng chỗ `D-M3-04` đã đo được `work_span_p90 +42′` và STOP-C bắn. ⇒ ĐỪNG hứa một phép đo ĐA-08. Đo thay bằng hai thứ ĐO ĐƯỢC ngay: (1) **test vi phân**: số trên thẻ recap phải TRÙNG TỪNG ĐỒNG với `payout_breakdown` của ledger cùng (tài xế, ngày) — cổng này chặn đúng cơ chế (2) của bản đồ lớp; (2) tỷ lệ hiển thị/ẩn thẻ qua event log đã có (`AdviceEventLog`).\n(iii) §5: an toàn nhất trong ba đề xuất — không khuyên nhận/từ chối đơn, không hứa thu nhập (S3 cố ý không in số tiền tổn thất tuyệt đối, docstring literal `KHÔNG số loss tuyệt đối`), số tài chính do rule tính, `is_mock: true` giữ nguyên. `estimated_net` phải hiện là `partial/unknown`, KHÔNG ước đoán (TN-10).\n⚠ PHẢN BIỆN CHÍNH ĐỀ XUẤT NÀY (kỷ luật 5): thẻ này chỉ nói được 2/4 loại pattern vì `inferred_activities` rỗng 100% (TN-04) ⇒ đừng bán nó là 'phân tích sau ca đầy đủ'. Và nó KHÔNG có bằng chứng làm tăng thu nhập — giá trị của nó là lấp một khối SCOPE đang trống, không phải một Δ tiền.",
+      "so_do_duoc": "S3 chạy 1.100/1.100; pattern 767/1.100 = 69,7%; gross+payout 1.069/1.100 = 97,2%; estimated_net 0/1.100; pattern chi phối 739/858 = 86,1%.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO cho mọi con số; phần 'nên làm' là ĐỀ XUẤT."
+    },
+    {
+      "ma": "DX-02",
+      "tieu_de": "ĐỀ XUẤT 2 — Sửa vách parquet của S6 rồi nối kênh `mission_pick`: đây là đề xuất DUY NHẤT trong ba cái ĐO ĐƯỢC bằng ĐA-08 với twin-world HIỆN CÓ",
+      "file_line": "src/gsm_core/features/from_l1r.py (`rewards.get(\"vnd\", 0)`) · ui/backend/app/adapters/mockdata.py:157 (bản vá mẫu) · src/gsm_sim/parallel.py:39-52 (`CHANNEL_LADDER`)",
+      "neo_noi_dung": "sửa theo ĐÚNG khuôn đã có ở `mockdata.py`: `json.loads(row[\"rewards\"]) if isinstance(row[\"rewards\"], str) else row[\"rewards\"]`, đặt ở MỘT chỗ dùng chung, không chép lần thứ ba.",
+      "hau_qua": "(i) US THẬT: US-F1-04 (cách tối ưu để với mốc thưởng gần nhất) mở rộng sang mini-task, và ô `UC8 mini-task` mà `router.py` khai từ đầu. Dữ liệu dày: 6 mission active, 261 dòng progress phủ 110/110 tài xế in-scope, 159 dòng `in_progress`.\n(ii) ĐO BẰNG ĐA-08: **ĐO ĐƯỢC** — world ĐÃ mô hình hoá mission (grep `mission` trên `src/gsm_sim` = 27 hit, gồm `mission_reward_vnd`, `mission_progress`, `mission_completed`; đối chứng: `penal`/`fraud`/`khoan`/`voucher` đều 0). Thêm một nấc `mission_pick` vào `CHANNEL_LADDER` rồi chạy `run_pair` 30+ seed CRN, chấm đủ hai vế ĐA-08: (1a) `payout_mean_all` > 0 CI95 loại 0; (1b) không archetype P1..P7 nào âm SIG. Hạ tầng chấm đã tồn tại và đã dùng thật (UPDATE-160 chấm `station_choice` NO-GO bằng đúng đường này).\n(iii) §5: an toàn — `reward_vnd` LẤY TỪ `public_mission` (docstring solver literal `Giá trị = reward_vnd LẤY TỪ public_mission (không bịa)`), không khuyên nhận/từ chối đơn, không can thiệp dispatch.\n⚠ PHẢN BIỆN CHÍNH ĐỀ XUẤT NÀY: (a) sửa 1 dòng KHÔNG đủ — test hiện tại không thể đỏ vì nó chạy trên bảng in-memory (TN-05); cổng phải là 'deriver đọc lại từ parquet ĐÃ GHI', nếu không lần sau vẫn thế. (b) `tests/test_mission_knapsack.py` còn một cơ chế vô hiệu độc lập (dung sai `+SLOT_MIN/60` = 0,25h **bằng đúng độ hạt lưới** ⇒ bất đẳng thức ràng buộc giờ luôn đúng; và oracle brute-force dùng lại chính công thức cost của solver) — tôi CHƯA đo lại hai cái này trong vòng nay, chỉ đọc code xác nhận literal `<= hours + SLOT_MIN / 60` có mặt. Đừng tin suite xanh của S6 sau khi sửa. (c) Kỳ vọng hiệu ứng phải đặt THẤP và đăng ký TRƯỚC: chỉ 6 mission, nên trần giá trị nhỏ; đo ra ns là kết quả HỢP LỆ, không phải thất bại.",
+      "so_do_duoc": "S6 crash 1.100/1.100 = 100%; public_mission n=6; progress n=261 phủ 110/110, 159 in_progress; gsm_sim grep mission=27 vs penal/fraud/khoan/voucher=0.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO cho mọi con số; điều kiện (b) về dung sai test là ĐỌC CODE, chưa đo lại."
+    },
+    {
+      "ma": "DX-03",
+      "tieu_de": "ĐỀ XUẤT 3 — Đưa `policy_ref` (version + hiệu lực + doc) vào contract thẻ, và một cổng CẤM version dạng `sim-policy-*` đi ra ngoài sản phẩm",
+      "file_line": "ui/contracts/advice.json (khối `items.items.properties` — thêm trường) · ui/backend/app/adapters/advisor.py (`_policy_thresholds`) · src/gsm_core/policy.py (`effective_from`/`effective_to` đã có, đang bị bỏ trống)",
+      "neo_noi_dung": "cổng đề xuất assert theo NỘI DUNG: mọi payload advice phải có `policy_ref.version` và nó KHÔNG khớp mẫu `^sim-policy-`; và `effective_from` phải không rỗng khi `is_mock=false`.",
+      "hau_qua": "(i) US THẬT: US-F0-03 ('cảnh báo khi chính sách/mức thưởng thay đổi so với lần tôi xem trước') không thể tồn tại khi `effective_from=None` và không có version chính sách thật — đây là lõi tối thiểu của nó; đồng thời là điều kiện cần của US-F0-01 (câu trả lời phải kèm nguồn) và của yêu cầu §5.\n(ii) ĐO BẰNG ĐA-08: **KHÔNG THỂ KIỂM** — đây là tính năng xuất xứ/tuân thủ, không có cơ chế payout trong twin-world; nói thẳng thay vì bịa một phép đo. Cái ĐO ĐƯỢC là cổng tĩnh: hôm nay nó ĐỎ (đo: `policy_v:sim-policy-v0`, `effective_from=None`), sau khi sửa thì XANH — tức cổng tự chứng minh đỏ được, đúng tiêu chí cổng của bản đồ lớp.\n(iii) §5: đây chính là điều §5 đòi; không tạo số tài chính mới, không đụng dispatch.\n⚠ PHẢN BIỆN CHÍNH ĐỀ XUẤT NÀY: (a) Nó KHÔNG tự sinh ra dữ liệu — nếu GSM chưa cấp policy có ngày hiệu lực thì cổng sẽ đỏ vĩnh viễn, và áp lực rẻ nhất khi test đỏ là **đặt bừa một `effective_from`**, tức đúng mẫu lỗi 'vặn config cho khớp phép đo'. ⇒ Cổng phải assert **NHÃN KHỚP TRẠNG THÁI** (`validity: UNKNOWN` là hợp lệ và phải hiện ra cho tài xế), KHÔNG assert 'phải có ngày'. Đây là khác biệt sống-chết giữa cổng tốt và cổng sẽ bị nới. (b) Không được để nó nở thành 'nối lại pipeline C6 để có citation' — corpus t004 chỉ 7 record, và cụm C6 là thứ TN-08 đề nghị BỎ; citation phải đi kèm từng thẻ qua `policy_ref`, không qua một tầng KB free-text.",
+      "so_do_duoc": "policy version='sim-policy-v0' (đo); effective_from/to=null (đo); advice.json item 9 trường, 0 citation (đo); corpus t004 7 record, 1 importer = pipeline.py (đo AST).",
+      "severity": "TB",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO cho mọi con số; thiết kế cổng là ĐỀ XUẤT."
+    }
+  ],
+
+  "cai_chua_kiem": [
+    "CHƯA chạy full suite (`uv run pytest -q` VÀ `uv run pytest -q ui/backend/tests`) ⇒ không phát biểu nào ở đây dựa trên trạng thái suite. Riêng TN-05 nói suite XANH trong khi S6 vỡ 100% — câu đó tôi suy từ việc `tests/test_mission_knapsack.py` chỉ chạm bảng in-memory, KHÔNG từ một lần chạy suite.",
+    "CHƯA chạy demo Track UI end-to-end (TN-11) — hậu quả 'người xem thấy advisor khác' là suy luận từ cấu hình, không phải quan sát.",
+    "CHƯA quét `ui/web` (JS) và `ui/driver_app` (Dart) bằng AST. Grep chuỗi có chạm (`cards.js` KIND_HOURS/KIND_TOPIC) nhưng không phân tích cây. Nếu client Khánh có nhánh cho `charge_now`/`demand_shift`/`rest_window` thì bức tranh 'kind 0 producer' còn xấu hơn, không tốt hơn.",
+    "CHƯA đo lại hai cơ chế vô hiệu của `tests/test_mission_knapsack.py` (dung sai +0,25h bằng độ hạt lưới; oracle brute-force dùng lại cost của solver) — chỉ đọc code xác nhận literal có mặt. Cần đo trước khi tin suite S6 sau khi sửa (DX-02).",
+    "CHƯA đo tần suất S8/S9 theo TỪNG tài xế qua thời gian (mới đo lát cắt 10 ngày rời rạc) ⇒ chưa biết một tài xế bị nhắc bao nhiêu lần/tháng. Với S9 (cảnh báo gian lận) con số đó là điều kiện an toàn, không phải chi tiết.",
+    "CHƯA reproduce end-to-end đường API cho TN-03 (mới đo ở tầng `ProductSolverOrchestrator.solve`, chưa gọi qua HTTP với `ADVICE_V2_ENABLED=1`).",
+    "CHƯA kiểm chéo bất kỳ finding nào của `00-BAN-DO-LOP.md`. Chỗ trùng (A10 kind mồ côi, A12 missing_state, §4 #13 sim thiếu khoán) tôi ĐO LẠI ĐỘC LẬP và ghi số của mình; mọi chỗ khác chỉ CITE.",
+    "Con số LOC 1.184 (TN-08) là `wc -l` thô, gồm cả docstring và comment — không phải LOC hiệu dụng."
+  ],
+
+  "tom_tat": "Đo trên 110 tài xế bike in-scope (KHÔNG phải 150 — 40 tài xế car/premium bị `advisor.py` chặn ngay cửa): 12/14 user story không có đường chạy nào tới tài xế; chỉ US-F1-04 được phục vụ trọn vẹn. Trên 3.300 lượt gọi đường sản phẩm, advisor nói được ĐÚNG 3 dạng câu và 100% đến từ MỘT solver (S1); thẻ 'Tổng kết ca' chỉ là thẻ mốc-thưởng chạy lúc 21:30. Kênh v2 (S2) chết ở hai cửa độc lập: `ADVICE_V2_ENABLED='0'` và không ai cắm `RuntimeStateProvider` (`reasons={'S2':'missing_state'}`). Trong 5 solver 0-call-site: S3 là khoảng cách rẻ nhất và đắt nhất — nó CHẠY được trên 1.100/1.100 tài-xế-ngày, sinh pattern cho 69,7%, và đã tính sẵn gross+payout cho 97,2%, chỉ thiếu một lời gọi; S6 KHÔNG chỉ thiếu dây mà VỠ 100% ở vách parquet (`public_mission.rewards` là dict trong bộ nhớ, str trên đĩa; test chỉ chạm bản in-memory, còn `mockdata.py:157` chứng minh có người đã vá đúng vách này cho consumer của họ); S8/S9 có dữ liệu thật và guardrail viết kỹ nhưng twin-world có 0 hit `penal`/`fraud` nên phải tuyên bố KHÔNG THỂ KIỂM, không đưa vào hàng đợi ĐA-08; S5 bị chặn bởi `weekly_quota=None` — nó đang từ chối bịa số đúng như §5 đòi, không phải nợ kỹ thuật. Thứ THỰC SỰ là scaffold nên bỏ không phải solver nào, mà là cụm pipeline C6 free-text: 1.184 dòng khép kín, lối vào duy nhất là một script smoke, và chính `router.py` của nó (khai đủ S1..S9) là nguồn của ảo giác 'có 9 kênh đang chạy'. Ba đề xuất, mỗi cái kèm phản biện của chính nó: (1) thẻ tổng kết ca chỉ-đọc từ S3 — KHÔNG THỂ KIỂM bằng ĐA-08, đo bằng test vi phân với ledger, và chỉ nói được 2/4 loại pattern vì `inferred_activities` rỗng 100%; (2) sửa vách parquet của S6 rồi nối kênh `mission_pick` — đề xuất DUY NHẤT ĐO ĐƯỢC bằng ĐA-08 với twin-world hiện có (world có 27 hit `mission`), nhưng phải thay cổng test trước vì cổng hiện tại không thể đỏ; (3) đưa `policy_ref` vào contract thẻ + cổng cấm `sim-policy-*` rò ra sản phẩm — không đo được bằng ĐA-08, và cổng phải assert NHÃN KHỚP TRẠNG THÁI chứ không assert 'phải có ngày hiệu lực', nếu không nó sẽ bị vặn. Tôi đã tự bác một con số của chính mình trong vòng này: S9 crash 12,7% là do TÔI truyền `t_now` naive; với shape sản phẩm thật (tz-aware) là 0/1.100."
+}

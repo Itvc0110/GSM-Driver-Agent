@@ -1,0 +1,189 @@
+{
+  "goc": "pb5 — PHẢN BIỆN ĐƯỜNG SẢN PHẨM (S1 + card): cái tài xế THỰC SỰ nhìn thấy",
+  "ngay": "2026-08-07",
+  "pham_vi_da_doc": [
+    "ui/backend/app/adapters/advisor.py (434 dòng, đọc hết)",
+    "src/gsm_core/solvers/bonus_feasibility.py (244 dòng, đọc hết)",
+    "ui/backend/app/routers/advice.py (542 dòng, đọc hết)",
+    "ui/backend/app/services/advice_checkpoint.py (§ orchestrator :116-240 + grep toàn file)",
+    "kèm theo vì là NƠI CHỮ ĐẾN MẮT TÀI XẾ: ui/web/js/cards.js, ui/web/js/api.js, ui/backend/app/routers/advice_v2.py, src/gsm_core/advisor/verifier.py, src/gsm_core/vn_format.py, src/gsm_core/policy.py, ui/contracts/advice.json, ui/backend/tests/test_e3_canh_bao_thu_nhap.py, ui/driver_app/lib/services/api_service.dart"
+  ],
+  "mau_so_va_thiet_ke_do": {
+    "canh_bao_M1_M5": "TRƯỚC KHI CHIA đã hỏi: mẫu số có gồm ngoài phạm vi không? Có 150 tài xế trong mock, `advisor.py:227` chặn car/premium ngay ở cửa (40/150). Nên MỌI tỷ lệ dưới đây (trừ PB5-03, nơi mẫu số CỐ Ý là non-bike) tính trên ĐÚNG 110 tài xế bike (d-*, r-*).",
+    "gio_hoi": "KHÔNG quét lưới phút. Dùng ĐÚNG ba mốc client thật gọi — `ui/web/js/cards.js` KIND_HOURS = {brief 09:00, nudge 14:00, recap 21:30}. Đây là bề mặt phơi nhiễm thật, không phải bề mặt lý thuyết.",
+    "mau": "110 tài xế bike × 7 ngày (dates[7::12] của snapshot 90 ngày, bỏ tuần đầu vì thiếu lịch sử) × 3 mốc = 2.310 lượt gọi → 2.309 thẻ + 1 lượt im lặng.",
+    "du_lieu": "MOCK — data/mock/realdata-v1, manifest seed_base=7000, 90 ngày từ 2026-07-01, label MOCK. Policy `sim-policy-v0`, tiers ((60,30.000),(100,60.000),(160,115.000),(200,170.000)), ngưỡng nhận/hoàn thành 0,85.",
+    "script": "research/audit/2026-08-07-phan-bien-sim-advisor/pb5-do-duong-san-pham.py (tái tạo được, deterministic — không RNG)"
+  },
+  "findings": [
+    {
+      "ma": "PB5-01",
+      "tieu_de": "Cảnh báo E3.1 \"tỷ lệ nhận sát ngưỡng\" bị CHÍNH verifier của file đó giết 100% — 246 sinh ra, 0 tới tay tài xế; 160 trong số đó rơi đúng lúc thẻ kia đang giục chạy thêm",
+      "file_line": "ui/backend/app/adapters/advisor.py:367-386 (_cliff_item) + :405-411 (_verify_item) + :315,:339 · src/gsm_core/solvers/bonus_feasibility.py:213-218 · ui/web/js/cards.js:291,314,342",
+      "neo_noi_dung": "`_cliff_item` trả `\"numbers\": [], \"caveat\": \"cảnh báo phòng ngừa — không phải cam kết mức thưởng\"` và `\"message\": str(cliff.get(\"note\") ...)`; note do solver dựng bằng f-string `f\"tỷ lệ nhận {acceptance:.2f} sát ngưỡng {policy.bonus_min_acceptance:.2f} — vài lần từ chối nữa có thể mất TOÀN BỘ thưởng dù đủ điểm\"` tại `\"param\": \"acceptance_cliff\"`; `_verify_item` gọi `V.check_bare_numbers(text, rendered)` với `rendered` dựng từ `item.get(\"numbers\", [])`; client `const it = a.items[0];` (ba lần, trong brief/nudge/recap)",
+      "hau_qua": "HAI bất biến trong CÙNG một file loại trừ nhau: `_cliff_item` cố ý để `numbers: []` (\"KHÔNG số tiền, KHÔNG hứa hẹn\"), còn `_verify_item` đòi mọi chuỗi số trong text phải trace về `numbers`. Note của solver luôn chứa hai số thập phân ⇒ V1 luôn bắn ⇒ thẻ luôn bị `advice()` loại. Tầng chặn THỨ HAI độc lập: `cards.js` chỉ vẽ `items[0]`, mà cliff luôn được `append` thứ hai. Kết quả: loại cảnh báo mà chính docstring `_cliff_item` gọi là \"loại cảnh báo giá trị nhất (phòng ngừa TRƯỚC khi rơi ngưỡng)\" vẫn KHÔNG BAO GIỜ tới tài xế — y hệt lỗi mà E3.1 sinh ra để sửa, chỉ khác cơ chế. Nguy hiểm hơn con số: 160/246 lần cliff bị vứt là lần thẻ CHÍNH đang nói \"Còn với được mốc thưởng 30.000đ hôm nay … Quỹ giờ còn lại đủ\" — advisor giục tài xế chạy thêm 7,7 giờ để lấy thưởng, đúng lúc nó BIẾT mà không nói rằng vài cú từ chối nữa là mất trắng khoản thưởng đó.",
+      "so_do_duoc": "246/2.310 lượt (10,65%) sinh cliff item trước verifier · 0/246 sống sót sau `advisor.advice()` · 0/246 được client vẽ. Phân rã đồng hành: 160 đi kèm thẻ `feasible_gap`, 86 đi kèm thẻ infeasible. Lỗi verifier nguyên văn: [\"V1: số trần '0.86' không trace được về numbers_registry\", \"V1: số trần '0.85' không trace được về numbers_registry\"]. Số item mỗi payload: TRƯỚC verifier {1: 2.063, 2: 246, 0: 1} — SAU verifier {1: 2.309, 0: 1}. VD tái lập: d-0 / 2026-08-25 / 540' acc=0,8617; d-1 / 2026-07-20 / 540' acc=0,8618.",
+      "cong_da_bi_bit": "ui/backend/tests/test_e3_canh_bao_thu_nhap.py — 4 test, KHÔNG test nào gọi `advisor.advice()` (điểm vào công khai duy nhất). `test_cliff_item_sinh_tu_sensitivity_cua_S1` gọi `_cliff_item` trực tiếp và assert `it[\"numbers\"] == []` như một ĐỨC TÍNH, trong khi fixture của chính nó chứa \"0.86\"/\"0.85\" — hai điều kiện giết nhau nằm cách nhau 6 dòng mà không test nào ghép. `test_advice_raw_noi_cliff_va_thresholds` assert bằng `inspect.getsource(...)` + `src.count(\"_cliff_item(\") >= 2`, tức kiểm CHỮ TRONG SOURCE chứ không kiểm hành vi ⇒ vẫn xanh dù đầu ra bằng rỗng.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (2.310 lượt) + tự đọc code cả bốn tầng"
+    },
+    {
+      "ma": "PB5-02",
+      "tieu_de": "SỐ TIỀN TRÊN MẶT THẺ LÀ TỔNG MỐC, KHÔNG PHẢI PHẦN KIẾM THÊM — 111 thẻ trưng ra số tiền gấp ~2× phần thật sự đổi được bằng số giờ mà chính thẻ đó đòi",
+      "file_line": "ui/backend/app/adapters/advisor.py:281 + :306-309 · src/gsm_core/solvers/bonus_feasibility.py:147-149 · src/gsm_core/policy.py:104-110 (bonus_at) · src/gsm_sim/policy.py:94-102 (day_bonus)",
+      "neo_noi_dung": "`(\"thuong_moc_ke\", sol[\"tier_vnd\"], \"vnd\", \"MOCK\")` · title `f\"Còn với được mốc thưởng {_vn(sol['tier_vnd'], 'vnd')} hôm nay\"` · message `f\"Bạn thiếu {...} để chạm mốc kế (khoảng {...} chạy nữa, {...}). Quỹ giờ còn lại đủ.\"` · solver `tier_pts, tier_vnd = gi[\"next_tiers\"][0]` · `def bonus_at(self, points)` với vòng `for tier_pts, tier_vnd in self.day_bonus_tiers: if points >= tier_pts: bonus = tier_vnd` (GÁN, không CỘNG DỒN)",
+      "hau_qua": "Cả hai lớp `PolicyBundle` của repo (core `bonus_at`, sim `day_bonus`) đều trả GIÁ TRỊ CỦA MỐC CAO NHẤT ĐẠT ĐƯỢC — thưởng ngày là bậc thang THAY THẾ, không cộng dồn. Vậy phần tiền thật sự đổi được bằng công sức thêm là `tier_vnd − bonus_at(points_now)`. KHÔNG tầng nào (solver, adapter, contract, client) tính hay hiển thị đại lượng này. Thẻ đặt số tiền TỔNG ngay cạnh \"khoảng X giờ chạy nữa, Y cuốc\" ⇒ nó dựng đúng khung đánh đổi công-sức ↔ tiền, và vế tiền sai theo chiều KHUYẾN KHÍCH CHẠY THÊM. Tài xế 60 điểm (đã chốt 30.000đ) đọc \"Còn với được mốc thưởng 60.000đ hôm nay\" sẽ định giá 4,x giờ tới bằng 60.000đ trong khi giá thật là 30.000đ.",
+      "so_do_duoc": "1.129 thẻ `feasible_gap` · 111 thẻ (9,83%) có mốc thấp hơn ĐÃ CHỐT (bonus_at(points_now) > 0). Phân rã chính xác: 105 thẻ hiển thị 60.000đ trong khi biên = 30.000đ (bội số 2,00×); 6 thẻ hiển thị 115.000đ trong khi biên = 55.000đ (2,09×); 1.018 thẻ hiển thị 30.000đ và biên đúng bằng 30.000đ (không sai). Tổng tiền thổi = 3.510.000đ trên 111 thẻ; median phần thổi 30.000đ, max 60.000đ.",
+      "severity": "CAO",
+      "confidence": "CAO cho cơ chế; TB cho tầm ảnh hưởng thực (xem `cai_chua_kiem` #2 — chưa xác nhận với policy GSM THẬT rằng thưởng ngày là bậc thang thay thế; ở đây tôi chỉ chứng minh HAI implementation trong repo đều thế)",
+      "tu_do_hay_suy": "TỰ ĐO (1.129 thẻ) + tự đọc `bonus_at`/`day_bonus`"
+    },
+    {
+      "ma": "PB5-03",
+      "tieu_de": "Đường v2 (checkpoint) gọi thẳng `advisor.build_gi` nên BỎ QUA cổng đội xe DUY NHẤT của repo — 120/120 lượt car/premium sinh ra một con số thưởng theo chính sách BIKE",
+      "file_line": "ui/backend/app/services/advice_checkpoint.py:189-198 (ProductSolverOrchestrator.solve) vs ui/backend/app/adapters/advisor.py:227-233",
+      "neo_noi_dung": "orchestrator: `s1_input = advisor.build_gi(driver_id, t_now[:10], now.hour * 60 + now.minute, shift_end_min)` rồi `s1_report = bonus_feasibility.solve(s1_input, policy)` · cổng duy nhất: `if not driver_id.startswith((\"d-\", \"r-\")):` → `\"reason_code\": \"no_active_channel\"`, kèm chính lời khai \"policy S1 hiện là policy BIKE — không áp bừa cho đội car/premium (không bịa policy)\"",
+      "hau_qua": "Cổng \"không bịa policy cho đội xe khác\" nằm trong `_advice_raw`, KHÔNG nằm trong `build_gi` cũng không nằm trong solver. Đường v2 nhập từ `build_gi` xuống ⇒ đi vòng qua cổng. Grep toàn repo (.py/.js/.dart): chuỗi `startswith((\"d-\", \"r-\"))` xuất hiện đúng MỘT lần trong mã sản phẩm. Ngày `ADVICE_V2_ENABLED` bật, 40/150 tài xế nhận thẻ tiền tính bằng chính sách của đội khác — đúng loại lỗi mà `no_active_channel` được viết ra để chặn.",
+      "so_do_duoc": "120/120 lượt (40 tài xế car/premium × 3 ngày, 14:00) sinh ra `tier_vnd` khác 0 qua đường `build_gi + bonus_feasibility.solve`. VD nguyên văn ce-0 @2026-08-13T14:00: `points_now=65`, `next_tiers=[[100,60000],[160,115000],[200,170000]]`, solution `{feasible: true, gap_points: 35, trips_needed: 5, hours_needed: 2.86, tier_vnd: 60000}`, digest \"Tài xế ce-0: 65đ, mốc kế 100đ (thưởng 60,000đ); thiếu 35đ ≈ 2.9 giờ\". Cùng tài xế qua đường v1: `{is_silent: true, reason_code: 'no_active_channel'}`.",
+      "phoi_nhiem_hom_nay": "= 0, VÀ TÔI ĐÃ KIỂM CHỖ CHẶN: `ui/backend/app/routers/advice_v2.py::_enabled()` đọc `os.getenv(\"ADVICE_V2_ENABLED\", \"0\") == \"1\"` ⇒ mặc định trả 503 `{status: disabled}` ⇒ `cards.js::_v2` rơi về v1 (có cổng). NHƯNG hai điều làm câu \"tắt nên vô hại\" KHÔNG ĐỦ: (a) cổng là MỘT biến môi trường, không phải một cấu trúc; (b) app Flutter của Khánh (`api_service.dart::fetchAdviceV2`) CHỈ gọi v2 — không có đường v1 nào để rơi về.",
+      "severity": "CAO (tiềm ẩn) — hôm nay bán kính 0",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (gọi thẳng orchestrator + build_gi trên 40 tài xế) + tự đọc cả hai đường"
+    },
+    {
+      "ma": "PB5-04",
+      "tieu_de": "(b) 100% thẻ dựng trên một MẪU SỐ XẤP XỈ, và cái nhãn được tạo ra để nói điều đó có ĐÚNG 0 consumer hiển thị",
+      "file_line": "ui/backend/app/adapters/advisor.py:63-107 (_hist_rate, docstring :74-75) + :176-177 · src/gsm_core/rates.py (bucket_online_hours_estimated, MIN_SHAPE_COVERAGE)",
+      "neo_noi_dung": "docstring `_hist_rate`: \"Bảng thật chỉ có TỔNG `online_time`, **không có** `go_online`/`go_offline` … ⇒ giờ-trong-bucket là **XẤP XỈ** từ span hoạt động; **trả kèm `method` để card/nhật ký nói được đây là xấp xỉ, không phải số đo**\" · payload `\"historical_rate_method\": rate_method` (comment `# D-ADV-04: bảng thật không có mốc online ⇒ mẫu số là XẤP XỈ; nói ra thay vì im lặng`)",
+      "hau_qua": "Trường được sinh ra với mục đích tường minh là để CARD nói ra tính xấp xỉ. Grep toàn repo (.py/.js/.dart/.json) cho `historical_rate_method`: 9 hit = 1 schema + 3 producer + 1 upcaster + 3 test + 1 script audit. **KHÔNG hit nào ở tầng hiển thị** (`cards.js`, `driver_app`, `_advice_raw` không đọc lại nó, không caveat nào nhắc nó). ⇒ câu \"khoảng 7,7 giờ chạy nữa, 11 cuốc\" — con số quyết định tài xế có chạy thêm hay không — đứng trên một mẫu số suy từ hình dạng span hoạt động, và tài xế không có cách nào biết. Đây đúng khuôn A9/A10 (khai một cơ chế minh bạch rồi không nối đường phát) nhưng nằm trên trường nói về ĐỘ TIN của con số tiền-công.",
+      "so_do_duoc": "2.310/2.310 lượt (100%) có `historical_rate_method == \"estimated_span_scaled\"` — không lượt nào là `measured_intervals`. 1.482 thẻ mang số `gio_can_them`; chỉ 93 (6,3%) mang caveat có chữ \"ước lượng\" — và caveat đó nói về chuyện KHÁC (nhánh `dp:policy_theoretical` thiếu lịch sử), không nói về mẫu số xấp xỉ. ⇒ 1.389/1.482 = 93,7% thẻ trưng số giờ mà không một chữ nào về tính xấp xỉ của mẫu số. Bốn chuỗi caveat DUY NHẤT tồn tại trên toàn bộ 2.309 thẻ: 1.898× \"số cuốc thực nhận phụ thuộc nhu cầu (demand proxy) — không đảm bảo\"; 313× thêm vế \"sát biên\"; 71× thêm vế \"ước lượng lý thuyết\"; 27× cả ba.",
+      "severity": "CAO",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (2.310 lượt) + grep đầy đủ consumer"
+    },
+    {
+      "ma": "PB5-05",
+      "tieu_de": "Hai con số sinh từ MỘT lần `_walk` được dán hai lớp xuất xứ mâu thuẫn — `cuoc_can_them` hardcode \"SOLVER\" trong 1.482/1.482 thẻ, và bảng \"Vì sao\" in đúng chữ đó cho tài xế",
+      "file_line": "ui/backend/app/adapters/advisor.py:284-289 vs :199-206 (_num_source) · src/gsm_core/solvers/bonus_feasibility.py:172-175 · ui/web/js/cards.js:42-57 (numberTable) + :267",
+      "neo_noi_dung": "`numbers.append({\"name\": \"gio_can_them\", \"value\": sol[\"hours_needed\"], \"unit\": \"giờ\", \"source\": _num_source(report[\"numbers\"][2][\"source\"])})` NGAY TRÊN `numbers.append({\"name\": \"cuoc_can_them\", \"value\": sol[\"trips_needed\"], \"unit\": \"cuốc\", \"source\": \"SOLVER\"})` · `_num_source`: `if raw.startswith(\"dp:\"): return \"ASSUMPTION\"` · client: `node(\"td\", null, number.source)` trong `numberTable(item.numbers, {useName: true})`",
+      "hau_qua": "`hours_to_gap` và `trips_to_gap` là hai giá trị trả về của CÙNG một lời gọi `_walk`, dựng trên CÙNG một `rate`. Adapter cho số thứ nhất đi qua bộ ánh xạ xuất xứ của chính file (`_num_source` → MOCK/ASSUMPTION) và dán cứng \"SOLVER\" cho số thứ hai. Khi rate là `dp:policy_theoretical` (thiếu lịch sử — tức TÂN BINH / ĐẦU CA, đúng lúc câu \"còn kịp mốc không\" quan trọng nhất), số cuốc là một ƯỚC LƯỢNG LÝ THUYẾT nhưng cột nguồn in cho tài xế chữ \"SOLVER\". Contract `ui/contracts/advice.json` enum source có sẵn cả \"ASSUMPTION\" lẫn \"MOCK\" ⇒ đây KHÔNG phải hạn chế schema, chỉ là dán nhãn sai. Ở tầng dưới solver cũng dán `_num(trips_needed, \"trips\", pv)` với `pv = f\"policy_v:{policy.version}\"` — gán một đại lượng suy từ TỐC ĐỘ cho nguồn CHÍNH SÁCH.",
+      "so_do_duoc": "1.482/1.482 thẻ mang cả hai số: `gio_can_them` nhận MOCK 1.389 / ASSUMPTION 93; `cuoc_can_them` nhận \"SOLVER\" 1.482 (100%). Phân rã theo nguồn THẬT của rate: historical:self 1.389 · dp+historical hỗn hợp 89 · dp thuần 4 — cả ba đều ra \"SOLVER\".",
+      "severity": "TB",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO + tự đọc"
+    },
+    {
+      "ma": "PB5-06",
+      "tieu_de": "(c-luật 3) Bề mặt `nudge`: 71,7% thẻ KHÔNG có một chữ bất định nào trên mặt — client thay nguyên câu của backend bằng một cặp tên:số, và caveat nằm trong div `hidden`",
+      "file_line": "ui/web/js/cards.js:314-321 (nudge shortMsg) + :210 (`const why = node(\"div\", \"adv-why hidden\")`) + :265-277 (_whyHtml đặt caveat vào `why`)",
+      "neo_noi_dung": "`const shortMsg = firstNum ? \\`${firstNum.name.replaceAll(\"_\", \" \")}: ...\\` : it.message.split(\".\")[0] + \".\";` rồi `this._render(\"nudge\", it.advice_id, it.title, shortMsg, this._whyHtml(it), ...)` · `if (item.caveat) meta.appendChild(node(\"div\", null, \\`⚠ ${item.caveat}\\`));` — `meta` nằm trong fragment được gắn vào `why`, mà `why` khởi tạo với class `adv-why hidden`",
+      "hau_qua": "CLAUDE §5: \"luôn nêu bất định/điều kiện\". Backend LÀM ĐÚNG — 2.309/2.309 thẻ có `caveat` khác rỗng, và mặt thẻ của `brief` giữ nguyên câu message có \"khoảng\"/\"khó khả thi\". Nhưng ở `nudge`, client VỨT `it.message` và thay bằng \"diem con thieu: 10 điểm\", nên thẻ chỉ còn tiêu đề khẳng định + một con số trần; toàn bộ vế bất định lùi vào sau một cú bấm \"Vì sao\". Đây là bề mặt DUY NHẤT bắn giữa ca — tức đúng lúc lời khuyên thật sự đổi hành vi.",
+      "so_do_duoc": "770 thẻ `nudge`: 552 (71,7%) không chứa bất kỳ token bất định nào trong (title + shortMsg) — 218 còn lại chỉ \"thoát\" nhờ tiêu đề chứa chữ \"khó khả thi\". Đối chiếu: `brief` 0/770 thiếu (0,0%), `recap` 0/769. Tổng toàn sweep 552/2.309 = 23,9%. ⚠ Tỷ lệ 1/3-1/3-1/3 giữa ba bề mặt là do THIẾT KẾ SWEEP của tôi, không phải tần suất thật tài xế mở từng bề mặt.",
+      "severity": "TB",
+      "confidence": "CAO cho cơ chế (đọc code); TB cho tỷ lệ (tôi tái lập logic `shortMsg` bằng Python, KHÔNG chạy trình duyệt thật)",
+      "tu_do_hay_suy": "TỰ ĐO trên text tái lập theo cards.js + tự đọc code"
+    },
+    {
+      "ma": "PB5-07",
+      "tieu_de": "(c-luật 1) 2.309/2.309 thẻ mang số tiền; contract KHÔNG có bất kỳ trường nào phân loại gross/payout/net — và ở recap chính client ghép hai loại tiền vào MỘT câu, chỉ một loại có nhãn",
+      "file_line": "ui/contracts/advice.json (khối `numbers.items.properties` — chỉ name/value/unit/source) · ui/backend/app/adapters/advisor.py:279-289 · ui/web/js/cards.js:339-341",
+      "neo_noi_dung": "contract: `\"unit\": { \"type\": \"string\" }`, `\"source\": {\"enum\": [\"THẬT\",\"PROXY\",\"ASSUMPTION\",\"MOCK\",\"SOLVER\"]}` — không có `money_kind`/`gross`/`payout`/`net` ở bất kỳ đâu trong file · client recap: `const msg = \\`Payout hôm nay ${fmtVnd(m.payout_vnd)} (cuốc ${fmtVnd(bd.trip_payout_vnd)}\\` + … + \\`${st.payout_summary.trips_count} cuốc. ${tail}\\`` với `tail = \\`${a.items[0].title} — mở \"Vì sao\" để xem chi tiết.\\``",
+      "hau_qua": "CLAUDE §5: \"Tiền phải tách gross revenue / driver payout / estimated net income; payout là mục tiêu mặc định\". Đây là khuyết tật CẤU TRÚC chứ không phải quên câu chữ: contract không có chỗ để khai loại tiền, nên không cổng nào kiểm được và mọi consumer phải tự đoán. Chỗ nó thành ambiguity THẬT là recap: một câu duy nhất chứa `payout_vnd` (có nhãn \"Payout\") ghép liền với \"Còn với được mốc thưởng 30.000đ hôm nay\" (không nhãn) ⇒ tài xế đọc hai con số cùng đơn vị, cùng câu, một cái là tiền đã vào ví, một cái là mốc thưởng có điều kiện. Thêm nữa, câu recap này do CLIENT ghép ⇒ nó KHÔNG đi qua `_verify_item` (verifier chỉ soi `title`+`message` do backend sinh).",
+      "so_do_duoc": "2.309/2.309 thẻ (100%) mang ít nhất một số `unit == \"vnd\"` hoặc ký tự \"đ\" trên mặt. 1.540/2.309 (66,7%) mặt thẻ không có bất kỳ token phân loại nào (gross/payout/net/doanh thu/thực nhận): brief 770/770, nudge 770/770, recap 0/769 (recap \"thoát\" chỉ vì client tự gõ chữ \"Payout hôm nay\").",
+      "severity": "TB",
+      "confidence": "TB — chấm bằng từ khoá, và có một phản biện thật của chính tôi: \"mốc thưởng\" là khoản thưởng chính sách, có thể lập luận loại tiền là hiển nhiên. Vế TÔI TIN CHẮC là vế cấu trúc: contract không có trường, và câu recap trộn hai loại tiền không qua verifier.",
+      "tu_do_hay_suy": "TỰ ĐO + tự đọc contract"
+    },
+    {
+      "ma": "PB5-08",
+      "tieu_de": "(b) Câu \"Quỹ giờ còn lại của CA không đủ\" (35,8% thẻ) khẳng định về một ca tài xế chưa từng khai — hằng ASSUMPTION 22:00 đi thẳng vào lời khẳng định, và client sống duy nhất KHÔNG gửi tham số ca",
+      "file_line": "ui/backend/app/adapters/advisor.py:25-26 (DEFAULT_SHIFT_END_MIN) + :178 + :389-399 (_infeasible_text) · ui/web/js/api.js:42-45 · ui/backend/app/routers/advice.py:200 (Query default)",
+      "neo_noi_dung": "`# Ca khai báo mặc định khi tài xế chưa khai (ASSUMPTION — UI cho sửa qua query param)` / `DEFAULT_SHIFT_END_MIN = 22 * 60` · `\"hours_budget_remaining\": round(max(0.0, (shift_end_min - now_min) / 60.0), 3)` · `_infeasible_text` trả \"Quỹ giờ còn lại của ca không đủ để kiếm thêm số điểm còn thiếu.\" · client: `advice: (driverId, date, nowMin, topic, isDriving) => get(\\`/api/v1/advice?driver_id=${driverId}&date=${date}&now_min=${nowMin}\\` + …)` — KHÔNG có `shift_end_min`, KHÔNG có `shift_start_min`",
+      "hau_qua": "Comment ngay cạnh hằng số tự dán nhãn ASSUMPTION và nói \"UI cho sửa qua query param\". Nhưng client web — đường advice SỐNG DUY NHẤT hôm nay (v2 tắt bằng env, Flutter chỉ gọi v2) — không gửi hai tham số đó lần nào ⇒ mọi tài xế bị áp ca 06:00–22:00 cứng. Giả định đó rồi thành một câu khẳng định không điều kiện trên mặt thẻ, và không caveat nào nhắc tới nó (đã liệt kê đủ 4 chuỗi caveat tồn tại ở PB5-04 — không chuỗi nào nói về ca). Ở mốc recap 21:30 quỹ giờ luôn = 0,5h, tức chính giả định này quyết định phần lớn thẻ recap. ⚠ Đây KHÔNG phải A2: A2 nói về hai công thức PHA trong một request; ở đây là một giả định về ĐỘ DÀI CA bị trình bày như sự thật, cộng với việc đường sửa nó không có client nào dùng.",
+      "so_do_duoc": "827/2.310 lượt (35,80%) trả thẻ `insufficient_budget_hours` — mã reason phổ biến thứ hai toàn sweep. Phân bố toàn sweep: feasible_gap 1.129 (48,87%) · insufficient_budget_hours 827 (35,80%) · acceptance_below_threshold 353 (15,28%) · silent already_on_track 1 (0,04%).",
+      "severity": "TB",
+      "confidence": "CAO cho cơ chế và cho việc api.js không gửi tham số; TB cho việc gọi nó là \"sai\" (nếu ca 06:00–22:00 đúng với tài xế thì câu đúng — cái sai là KHÔNG NÓI ĐÓ LÀ GIẢ ĐỊNH)",
+      "tu_do_hay_suy": "TỰ ĐO + tự đọc api.js/advisor.py"
+    },
+    {
+      "ma": "PB5-09",
+      "tieu_de": "`_note_shown` dùng CÙNG `event_id` cho mọi item trong một payload — hôm nay phơi nhiễm 0, nhưng nó BẬT NGAY khoảnh khắc PB5-01 được sửa",
+      "file_line": "ui/backend/app/routers/advice.py:353-369",
+      "neo_noi_dung": "`bucket = decision_bucket(float(now_min))` rồi `for it in items:` … `\"event_id\": f\"ui-shown-{driver_id}-{date}-{topic}-{bucket}\"` (KHÔNG chứa `advice_id`) trong khi `\"decision_id\": aid` (CÓ chứa). Docstring cùng hàm khai \"Idempotent nhờ `event_id` chứa `advice_id` (đã mang `now_min`) + `INSERT OR IGNORE`\" — câu đó KHÔNG còn đúng với code hiện tại.",
+      "hau_qua": "Với payload ≥2 item, item thứ hai trở đi bị `INSERT OR IGNORE` nuốt ⇒ không có event `displayed` ⇒ nó vắng khỏi `_spoken_ids` (ngân sách ca) và khỏi mẫu số adherence sản phẩm, dù đã hiện lên màn hình. Docstring tự mô tả một cơ chế idempotency (`event_id` chứa `advice_id`) mà code không còn thực hiện — người đọc sau sẽ tin nhầm.",
+      "so_do_duoc": "PHƠI NHIỄM HÔM NAY = 0, đã đo chứ không suy: số item SAU verifier = {1: 2.309, 0: 1} — không payload nào có 2 item. NHƯNG TRƯỚC verifier = {1: 2.063, 2: 246, 0: 1} ⇒ nếu PB5-01 được sửa mà không sửa dòng này, 246/2.310 lượt (10,65%) sẽ đánh rơi một event `displayed` ngay lập tức.",
+      "severity": "THẤP hôm nay · TB nếu sửa PB5-01 trước",
+      "confidence": "CAO",
+      "tu_do_hay_suy": "TỰ ĐO (đếm item hai phía verifier) + tự đọc"
+    },
+    {
+      "ma": "PB5-10",
+      "tieu_de": "Nguyên tắc \"không hiện số tiền khi thưởng đang có nguy cơ không được trả\" áp ở một nhánh và bị vi phạm ở nhánh có nghĩa Y HỆT — 353 thẻ",
+      "file_line": "ui/backend/app/adapters/advisor.py:264-277 (nhánh already_maxed at-risk) vs :279-282 + :320-337 (nhánh infeasible do tỷ lệ)",
+      "neo_noi_dung": "nhánh A: `# KHÔNG kèm số tiền: mức thưởng đó chính là thứ đang có nguy cơ KHÔNG được trả. Hiển thị nó ở đây sẽ thành lời hứa. \"numbers\" để rỗng ⇒ verifier V1 không có gì để neo` → `\"numbers\": [], \"caveat\": …` · nhánh B (cùng file, cách ~50 dòng): `numbers = [… (\"thuong_moc_ke\", sol[\"tier_vnd\"], \"vnd\", \"MOCK\")]` rồi `\"numbers\": numbers` cho item có `reason_code` = `acceptance_below_threshold`/`completion_below_threshold`",
+      "hau_qua": "Hai nhánh nói CÙNG một sự thật cho tài xế: \"tỷ lệ của bạn dưới ngưỡng, thưởng sẽ không được trả\". Nhánh đã-đạt-mốc cố ý giấu số tiền vì \"hiển thị nó sẽ thành lời hứa\"; nhánh chưa-đạt-mốc lại mang `thuong_moc_ke` đi kèm, và `cards.js::_whyHtml` in nó vào bảng \"Vì sao\" (`thuong moc ke | 30.000đ | MOCK`). ⇒ đúng con số mà tầng trên vừa tuyên bố là nguy hiểm lại được hiện ở tầng dưới cho cùng loại tình huống. Không phải sai số học — là một lan can đạo đức chỉ phủ một nửa các nhánh mà nó dùng lý lẽ để phủ.",
+      "so_do_duoc": "353/2.310 lượt (15,28%) trả thẻ `acceptance_below_threshold` — tất cả đều mang `thuong_moc_ke`. VD nguyên văn (d-0 / 2026-07-08 / 09:00, acc=0,8059): TITLE \"Mốc thưởng kế khó khả thi hôm nay\" · MSG \"Tỷ lệ nhận đang dưới ngưỡng chính sách — dù đủ điểm thì thưởng vẫn không được trả…\" · NUMBERS chứa `{\"name\":\"thuong_moc_ke\",\"value\":30000,\"unit\":\"vnd\",\"source\":\"MOCK\"}`. Đối chiếu: 1/2.310 lượt rơi vào nhánh already_maxed (r-0/2026-09-18/21:30) và nhánh đó cho `is_silent: already_on_track` vì `feasible=True`.",
+      "severity": "TB",
+      "confidence": "CAO cho sự bất đối xứng; TB cho mức hại (số tiền chỉ hiện sau khi bấm \"Vì sao\")",
+      "tu_do_hay_suy": "TỰ ĐO + tự đọc"
+    },
+    {
+      "ma": "PB5-11",
+      "tieu_de": "`policy_thresholds` (E3.3) khai \"Đi kèm MỌI payload advice\" — sai ở ít nhất hai nhánh, và trường này có 0 consumer trên toàn repo",
+      "file_line": "ui/backend/app/adapters/advisor.py:358-364 (docstring `_policy_thresholds`) + :229-233 (nhánh no_active_channel) · ui/backend/app/routers/advice.py:287-294 (nhánh nhịp chặn) · ui/contracts/advice.json",
+      "neo_noi_dung": "docstring: \"expose ngưỡng chính sách cho client — UI thôi hardcode (họ D-M3-17…). **Đi kèm MỌI payload advice**\" · nhưng nhánh car/premium trả `return {**provenance(date, now_min), \"silent\": {…\"no_active_channel\"…}, \"items\": []}` (không có `base`, không có `policy_thresholds`) · nhánh nhịp chặn của router trả `{**prov, \"driver_id\": did, \"date\": d, \"items\": [], \"silent\": {…}, \"topic\": …, \"cadence\": {…}}` (cũng không có)",
+      "hau_qua": "Câu \"đi kèm MỌI payload\" là một lời khai quản trị không đúng — người đọc module tin rằng client luôn có ngưỡng để đọc. Đồng thời grep `policy_thresholds` toàn repo (.py/.js/.dart/.html/.json): 0 hit ở `ui/web`, 0 hit ở `ui/driver_app`, và KHÔNG có trong `ui/contracts/advice.json` ⇒ trường không nằm trong contract nên không cổng schema nào phủ, và không client nào đọc ⇒ mục tiêu \"UI thôi hardcode\" hôm nay chưa đạt được ở đâu cả. Cùng họ A10 (giá trị/trường khai mà không có đường phát-hoặc-nhận).",
+      "so_do_duoc": "Đo trực tiếp: `advisor.advice('ce-0', '2026-08-13', 840)` trả keys = ['data_mode','generated_at_min','is_mock','items','scenario_id','seed','silent'] — KHÔNG có `policy_thresholds`. Trên 2.310 lượt bike thì có đủ (0 thiếu) — tức lỗ đúng ở nhánh non-bike (40/150 tài xế) và nhánh nhịp chặn của router (chưa lượng hoá tần suất, xem `cai_chua_kiem` #4).",
+      "severity": "THẤP",
+      "confidence": "CAO cho vế \"0 consumer\" và vế nhánh non-bike; TB cho nhánh router (đọc code, chưa chạy HTTP)",
+      "tu_do_hay_suy": "TỰ ĐO (payload thật) + grep đầy đủ + đọc code"
+    }
+  ],
+  "cham_10_the_that_theo_3_luat": {
+    "phuong_phap": "Gọi `advisor.advice()` THẬT trên mock, rồi tái lập ĐÚNG chuỗi chữ mà `ui/web/js/cards.js` vẽ ra cho từng bề mặt (brief: title+message · nudge: title+shortMsg · recap: 'Tổng kết ca hôm nay' + câu client tự ghép). Chấm trên MẶT THẺ (thứ hiện ngay), không chấm trên phần nằm sau nút 'Vì sao'.",
+    "luat_1_tach_gross_payout_net": "VI PHẠM 1.540/2.309 = 66,7% (brief 100%, nudge 100%, recap 0%). Nguyên nhân gốc là CẤU TRÚC: `ui/contracts/advice.json` không có trường phân loại tiền. → PB5-07",
+    "luat_2_moi_so_co_nguon": "MẶT THẺ: 0/2.309 vi phạm — verifier V1 chặn đúng, không có số trần nào lọt. NHƯNG hai lỗ ở rìa: (a) 246 thẻ bị verifier giết THẦM và tài xế không nhận được cảnh báo nào thay thế (PB5-01); (b) nhãn nguồn SAI ở 1.482/1.482 thẻ mang `cuoc_can_them` (PB5-05); (c) câu recap do client ghép KHÔNG đi qua verifier (PB5-07).",
+    "luat_3_khong_hua_chac": "MẶT THẺ: vi phạm 552/2.309 = 23,9%, TẬP TRUNG TOÀN BỘ ở bề mặt `nudge` (552/770 = 71,7%); brief 0/770, recap 0/769. Backend không phải thủ phạm — 2.309/2.309 thẻ có caveat khác rỗng; client vứt câu message ở nudge và đẩy caveat vào div `hidden` (PB5-06). Cộng thêm: 93,7% thẻ mang số giờ mà không nói mẫu số là xấp xỉ (PB5-04).",
+    "muoi_the_that": [
+      {"n": 1, "the": "d-0 / 2026-07-08 / 09:00 (brief) · acc=0,8059", "title": "Mốc thưởng kế khó khả thi hôm nay", "msg": "Tỷ lệ nhận đang dưới ngưỡng chính sách — dù đủ điểm thì thưởng vẫn không được trả. Đừng cố quá — giữ tỷ lệ hoàn thành tốt cho ngày mai.", "cham": "L1 VI PHẠM (numbers có thuong_moc_ke 30.000đ, không phân loại) · L2 đạt · L3 đạt ('Đừng cố quá') · thêm PB5-10 (hiện số tiền của khoản thưởng sẽ không được trả)"},
+      {"n": 2, "the": "d-0 / 2026-07-08 / 21:30 (recap) · points_now=60", "title": "Mốc thưởng kế khó khả thi hôm nay", "msg": "Quỹ giờ còn lại của ca không đủ để kiếm thêm số điểm còn thiếu.", "cham": "L1 VI PHẠM (60.000đ trong numbers) · L2 đạt · L3 đạt · thêm PB5-02 (60.000đ trong khi biên là 30.000đ) + PB5-08 ('ca' là giả định 06:00–22:00)"},
+      {"n": 3, "the": "d-0 / 2026-08-25 / 09:00 (brief) · acc=0,8617", "title": "Còn với được mốc thưởng 30.000đ hôm nay", "msg": "Bạn thiếu 60 điểm để chạm mốc kế (khoảng 7,7 giờ chạy nữa, 11 cuốc). Quỹ giờ còn lại đủ.", "cham": "L1 VI PHẠM · L2 đạt · L3 đạt ('khoảng') · ⚠ THẺ NÀY LÀ VÍ DỤ NẶNG NHẤT: cliff item đi kèm bị verifier giết, tài xế không được biết 'tỷ lệ nhận 0,86 sát ngưỡng 0,85 — vài lần từ chối nữa có thể mất TOÀN BỘ thưởng' (PB5-01)"},
+      {"n": 4, "the": "r-0 / 2026-09-18 / 21:30 (recap) · points_now=205", "title": "(IM LẶNG) already_on_track", "msg": "Bạn đã đạt mốc thưởng ngày cao nhất — không có gì cần chỉnh. Giữ nhịp hiện tại.", "cham": "không có số ⇒ L1/L2/L3 không áp dụng. Đây là 1/2.310 lượt duy nhất im lặng."},
+      {"n": 5, "the": "d-50 / 2026-08-13 / 21:30 (recap) · points_now=20", "title": "Mốc thưởng kế khó khả thi hôm nay", "msg": "Quỹ giờ còn lại của ca không đủ…", "cham": "L1 VI PHẠM · L2 đạt · L3 đạt · PB5-08"},
+      {"n": 6, "the": "r-11 / 2026-07-08 / 14:00 (nudge) · points_now=50", "title": "Còn với được mốc thưởng 30.000đ hôm nay", "msg_mat_the": "diem con thieu: 10 điểm", "cham": "L1 VI PHẠM · L2 đạt · **L3 VI PHẠM** — mặt thẻ không còn một chữ bất định nào (câu gốc 'khoảng 1,5 giờ chạy nữa, 2 cuốc' bị client thay) (PB5-06)"},
+      {"n": 7, "the": "d-35 / 2026-08-25 / 09:00 (brief) · acc=0,945", "title": "Mốc thưởng kế khó khả thi hôm nay", "msg": "Quỹ giờ còn lại của ca không đủ…", "cham": "L1 VI PHẠM · L2 đạt · L3 đạt · PB5-08 (tài xế này tỷ lệ tốt, 'không đủ giờ' hoàn toàn do hằng 22:00)"},
+      {"n": 8, "the": "d-78 / 2026-07-08 / 21:30 (recap) · points_now=30", "title": "Mốc thưởng kế khó khả thi hôm nay", "msg": "Quỹ giờ còn lại của ca không đủ…", "cham": "L1 VI PHẠM · L2 đạt · L3 đạt"},
+      {"n": 9, "the": "d-2 / 2026-08-25 / 14:00 (nudge) · acc=0,8741", "title": "Mốc thưởng kế khó khả thi hôm nay", "msg_mat_the": "diem con thieu: 60 điểm", "cham": "L1 VI PHẠM · L2 đạt · L3 'đạt' NHỜ chữ 'khó khả thi' trong title, không nhờ câu nào nêu bất định thật · cliff (0,87 sát 0,85) lại bị giết (PB5-01)"},
+      {"n": 10, "the": "d-1 / 2026-07-20 / 09:00 (brief) · acc=0,8618", "title": "Còn với được mốc thưởng 30.000đ hôm nay", "msg": "Bạn thiếu 60 điểm để chạm mốc kế (khoảng 8,3 giờ chạy nữa, 10 cuốc). Quỹ giờ còn lại đủ.", "cham": "L1 VI PHẠM · L2 đạt · L3 đạt · cliff bị giết (PB5-01); và 'khoảng 8,3 giờ' dựa trên mẫu số estimated_span_scaled không được nói ra (PB5-04)"}
+    ]
+  },
+  "da_biet_chi_cite_khong_dem_lai": [
+    "A1 first-match giấu lý do (`_infeasible_text` + `reason_code` chuỗi if/elif) — TÔI XÁC NHẬN còn nguyên trên code hôm nay, KHÔNG đo lại (§5 #7 của bản đồ lớp cảnh báo con số 549 ca đã sập bẫy mẫu số một lần và phải đo lại ở Cycle 5)",
+    "A5 hai thước acceptance (shrunk 7-ngày as-of vs tỷ lệ trong ngày) — chỉ cite",
+    "A7 nhánh `already_maxed` return sớm nuốt sensitivity — chỉ cite. Bổ sung một số đo phụ trên sweep của tôi: 1/2.310 lượt rơi vào nhánh này (r-0/2026-09-18/21:30) và nó `feasible=True` ⇒ phơi nhiễm A7 trên ba mốc client thật vẫn ~0, khớp ghi chú của A7",
+    "A3/A4 hàng nhịp v2 và trạng thái hấp thụ (`_cadence_memory` cộng dồn trọn đời) — chỉ cite; PB5-09 là một cơ chế KHÁC (event_id trùng trong một payload), không phải A4",
+    "D-L4-M3 trạng thái hấp thụ — chỉ cite"
+  ],
+  "phan_bien_chinh_toi_truoc_khi_nop": [
+    "MẪU SỐ: mọi tỷ lệ (trừ PB5-03) tính trên ĐÚNG 110 tài xế bike. Tôi ĐÃ loại 40 tài xế car/premium mà `advisor.py:227` chặn ở cửa — đúng bẫy đã bác M5 hôm nay. Ở PB5-03 mẫu số CỐ Ý là 40 non-bike, và tôi nói rõ phơi nhiễm hôm nay = 0.",
+    "GIỜ HỎI: tôi KHÔNG quét lưới phút (sẽ thổi mẫu số bằng những thời điểm không client nào hỏi). Dùng đúng ba mốc `KIND_HOURS` của cards.js.",
+    "TRẠNG THÁI TRIP: tôi đã nghi `_points_until` cộng điểm cho cả cuốc huỷ ⇒ BÁC BẰNG ĐO — bảng `trips` mock có 167.575/167.575 dòng `status == 'completed'`, `complete_time` null = 0. Giả thuyết này SAI, không đưa vào findings.",
+    "PB5-02 — tôi đã đi kiểm nguồn gốc trước khi nói con số sai: mở `policy.py::bonus_at` VÀ `gsm_sim/policy.py::day_bonus`, cả hai GÁN (`bonus = tier_vnd`) chứ không CỘNG DỒN. Nếu một trong hai cộng dồn thì finding này sai.",
+    "PB5-06/PB5-07 chấm bằng danh sách từ khoá tiếng Việt do tôi soạn ⇒ là phép đo THÔ. Vế tôi tin chắc là vế cấu trúc (client thay message; contract không có trường loại tiền), không phải con số phần trăm.",
+    "PB5-01: tôi đã kiểm LỰC của kết luận, không báo null từ một phép thử yếu — cliff SINH RA 246 lần (10,65%), tức phép thử có gì để giết; và tôi đọc nguyên văn hai chuỗi lỗi V1 chứ không suy từ 'chắc verifier bắn'.",
+    "PB5-09: tôi từ chối báo nó như một lỗi đang gây hại — ĐO ĐƯỢC phơi nhiễm = 0 hôm nay và nói ra điều kiện làm nó bật."
+  ],
+  "cai_chua_kiem": [
+    "1. CHƯA chạy full suite (`uv run pytest -q` và `uv run pytest -q ui/backend/tests`) ⇒ không phát biểu nào ở đây dựa trên trạng thái suite. Tôi chỉ ĐỌC `test_e3_canh_bao_thu_nhap.py`, chưa chạy nó.",
+    "2. PB5-02 — CHƯA xác nhận với chính sách GSM THẬT rằng thưởng ngày là bậc thang THAY THẾ (không cộng dồn). Tôi chỉ chứng minh HAI implementation trong repo đều thế. Nếu chính sách thật cộng dồn thì `bonus_at` sai (một lỗi khác, nặng hơn), nhưng con số trên thẻ lại đúng.",
+    "3. CHƯA chạy backend qua HTTP thật (TestClient/uvicorn). Mọi số đo gọi thẳng `advisor.advice()`/`build_gi`/`ProductSolverOrchestrator.solve` ⇒ tầng router (nhịp nói, `_note_shown`, `_note_suppressed`) chưa được exercise end-to-end; PB5-09 và nửa router của PB5-11 là ĐỌC CODE + đo ở tầng adapter.",
+    "4. CHƯA lượng hoá tần suất nhánh nhịp chặn (`verdict != PRESENT`) trên đường sản phẩm — cần một `advice_lifecycle.db` có lịch sử thật.",
+    "5. CHƯA chạy trình duyệt thật. Chuỗi chữ của `nudge`/`recap` là tôi TÁI LẬP bằng Python theo `cards.js`; chưa xác nhận bằng screenshot/DOM.",
+    "6. CHƯA đọc hết `ui/driver_app` (Flutter) — chỉ đọc `api_service.dart` đủ để xác nhận nó CHỈ gọi v2. Nếu Flutter có đường v1 nào khác thì kết luận về phơi nhiễm ở PB5-03/PB5-08 phải sửa.",
+    "7. CHƯA đọc hết `advice_checkpoint.py` (1.194 dòng) — đọc kỹ `:116-240` (orchestrator) và grep toàn file cho def/money/numbers/caveat. Tầng presenter/template (`_prepare_presentation`, `checkpoint_templates`) chưa soi câu chữ ⇒ đường v2 có thể còn khuyết tật chữ nghĩa tôi chưa chạm.",
+    "8. Tôi đo trên 7 ngày (dates[7::12]) chứ không 90 ngày. Đủ cho một quyết định ĐO TIẾP; các tỷ lệ có thể xê dịch nếu quét cả snapshot.",
+    "9. `file:line` trong file này PHÂN RÃ NHANH (bài học §5 #8 của bản đồ lớp) — mọi neo đã kèm `neo_noi_dung` bằng tên hàm/literal; khi thi công phải tìm theo literal, không theo số dòng."
+  ],
+  "tom_tat": "Đo 2.310 lượt gọi advisor thật trên MOCK (110 tài xế BIKE — đã loại 40 car/premium mà `advisor.py:227` chặn ở cửa, đúng bẫy mẫu số vừa bác M5 — × 7 ngày × ĐÚNG ba mốc client thật 09:00/14:00/21:30). 11 phát hiện, 4 CAO. Nặng nhất và chưa ai báo: (1) PB5-01 — cảnh báo E3.1 'tỷ lệ nhận sát ngưỡng' SINH RA 246 lần và SỐNG SÓT 0 lần, vì `_cliff_item` cố ý để `numbers: []` còn `_verify_item` của cùng file lại bắn mọi số trần trong note của solver ('0.86'/'0.85'); 160/246 lần bị vứt là đúng lúc thẻ chính đang giục tài xế chạy thêm 7,7 giờ để lấy thưởng mà không nói vài cú từ chối nữa là mất trắng — và 4 test E3.1 vẫn xanh vì không test nào gọi `advisor.advice()`, cái mạnh nhất assert bằng `inspect.getsource`. (2) PB5-02 — SỐ TIỀN TRÊN MẶT THẺ LÀ TỔNG MỐC, không phải phần kiếm thêm: 111/1.129 thẻ feasible (9,8%) hiện 60.000đ hoặc 115.000đ trong khi phần thật sự đổi được bằng số giờ mà chính thẻ đó đòi chỉ là 30.000đ/55.000đ (bội 2,00×/2,09×; tổng thổi 3.510.000đ) — cả `policy.bonus_at` lẫn `gsm_sim.day_bonus` đều GÁN chứ không CỘNG DỒN, và không tầng nào tính đại lượng biên. (3) PB5-03 — đường v2 gọi thẳng `advisor.build_gi` nên đi vòng qua cổng đội xe DUY NHẤT của repo: 120/120 lượt car/premium sinh ra một con số thưởng BIKE (ce-0: 'mốc kế 100đ, thưởng 60.000đ'); phơi nhiễm hôm nay = 0 nhưng cổng chỉ là biến môi trường `ADVICE_V2_ENABLED`, và app Flutter CHỈ gọi v2. (4) PB5-04 — 2.310/2.310 lượt dựng trên mẫu số `estimated_span_scaled`, và trường `historical_rate_method` (sinh ra với lời khai 'để card nói được đây là xấp xỉ') có 0 consumer hiển thị ⇒ 93,7% thẻ trưng 'khoảng 7,7 giờ chạy nữa' mà không một chữ nào về độ tin của mẫu số. Chấm 3 luật CLAUDE §5 trên MẶT THẺ: luật 1 (tách gross/payout/net) vi phạm 66,7% và là khuyết tật CẤU TRÚC (contract `advice.json` không có trường loại tiền); luật 2 (mọi số có nguồn) mặt thẻ 0 vi phạm — verifier làm đúng việc — nhưng nhãn nguồn SAI ở 1.482/1.482 thẻ (`cuoc_can_them` hardcode 'SOLVER' trong khi số anh em `gio_can_them` sinh từ CÙNG một `_walk` đi qua `_num_source` ra MOCK/ASSUMPTION), và câu recap do client ghép không qua verifier; luật 3 (không hứa chắc) vi phạm 23,9%, TẬP TRUNG TOÀN BỘ ở bề mặt `nudge` (71,7%) vì `cards.js` vứt câu message của backend và đẩy caveat vào div `hidden`. Backend nói bất định ở 2.309/2.309 thẻ; chỗ mất là ở client. Một giả thuyết của tôi đã tự bác bằng đo: `_points_until` KHÔNG cộng điểm cuốc huỷ (167.575/167.575 dòng trips là 'completed')."
+}

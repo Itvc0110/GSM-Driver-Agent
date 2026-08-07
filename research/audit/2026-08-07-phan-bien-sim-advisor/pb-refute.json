@@ -1,0 +1,140 @@
+{
+ "goc": "pb-refute — PHAN BIEN VIEN doc lap tren 6 goc pb1..pb6 (76 finding). Nhiem vu: CO BAC, khong xac nhan.",
+ "ngay": "2026-08-07",
+ "phuong_phap_cua_toi": {
+  "do_lai_doc_lap": [
+   "Tai lap tung dong tercile tu `research/audit/2026-08-07-phan-bien-sim-advisor/pb1b-raw.json.gz` (30 seed, 3 arm A/B/N, 90 actor/seed, per-actor payout+trips+idle+archetype): payout arm B = -15290.397 / -1158.321 / +26106.393, net +3219.225 — KHOP c9b va khop pb1 tung chu so.",
+   "DO ARM NULL (N = advice enabled=False + doi khoa RNG cua `_actor_demand_hint` them 7919; KHONG advisor, KHONG allocation, KHONG adherence coin): payout -20756.862 / -6887.233 / +25337.776 (ca ba SIG), net -768.773 (ns). trips: arm B -0.586/-0.233/+1.394 (net +0.192) vs arm N -0.846/-0.478/+1.358 (net +0.011).",
+   "DO ba metric de xuat cua pb3 tren CHINH arm null: harmed_share (T=1000d) arm B 42.30% CI[40.78;43.81] vs arm N 46.00% CI[44.74;47.37]; churn_ratio pooled arm B 17.82x vs arm N 78.02x; delta_p10 arm B -89264d vs arm N -98467d. NULL XAU HON HIEN TRANG O CA BA.",
+   "DO R2 mot chieu tren 2700 quan sat (90 actor x 30 seed): arm B R2(archetype)=0.0095 R2(tercile)=0.0463 R2(ca hai)=0.1595; arm N R2(archetype)=0.0007 R2(tercile)=0.0526 R2(ca hai)=0.1328.",
+   "DO tuong quan trong-seed o arm A (TB 30 seed): corr(idle, shift_len)=+0.765 · corr(idle, online)=+0.765 · corr(idle, empty)=+0.367 · corr(idle, rest)=+0.287 · corr(idle, payout)=+0.227 · corr(idle, offered)=+0.076 · corr(idle, trips)=+0.070. Payout NEN theo tercile = 224540 / 270525 / 258998.",
+   "DO do ben thanh vien tercile qua 30 seed: 13/90 actor luon o cung mot tercile; 63/90 trai het ca ba.",
+   "CHAY LAI DUONG SAN PHAM bang `uv run python` (110 tai xe bike d-*/r-*, 7 ngay dates[7::12] cua snapshot 90 ngay, 3 moc client 09:00/14:00/21:30 = 2310 luot, mock realdata-v1): cliff sinh 246 / song 0; so item TRUOC verifier {1:2063, 2:246, 0:1} -> SAU verifier {1:2309, 0:1}; loi V1 nguyen van 'so tran 0.85 khong trace duoc' 288 lan, 0.87 99 lan, 0.86 66 lan, 0.88 39 lan; DUNG 3 dang the {feasible_gap 1129, insufficient_budget_hours 827, acceptance_below_threshold 353}; 111/1129 the feasible co moc DA CHOT (105 the hien 60000 khi bien = 30000; 6 the hien 115000 khi bien = 55000).",
+   "CHAY duong v2: advisor.advice cho ce-0 -> silent no_active_channel; build_gi + bonus_feasibility.solve cho CUNG tai xe -> feasible True, tier_vnd 60000, hours_needed 2.86, gap_points 35.",
+   "CHAY deriver S6 tren l1r doc TU PARQUET: AttributeError 'str' object has no attribute 'get'; rewards tren dia la str 6/6 (mau: chuoi JSON vnd 30000 target_count 20).",
+   "DOC CODE: capacity_alloc.py `_assign_kind` (cost[i,j] = pen neu tgt trung, nguoc lai pen + 10.0; pen khong phu thuoc cot; KHONG co so hang km/ETA/cau) · policy.py `bonus_at` va gsm_sim/policy.py `day_bonus` (ca hai GAN `bonus = tier_vnd`, khong cong don) · entities.py (idle_min = cho don tai cho; empty_min = pickup + relocate + deadhead) · world.py (chi MOT cho `actor.idle_min += 2.0`) · parallel.py `_system_metrics` (KHONG chuyen tiep payout_p10/median/p90 va wait_p90_min; CO chuyen tiep station_hhi va supply_cell_hhi) · sim_metrics.py `out.update(health_guardrail(result))` trong system_guardrail roi parallel.py goi LAI `health_guardrail(result, actor_ids=...)` · scripts/cham_da08_station_choice.py (6 phep cham, 0 dong doc hhi) · advice_v2.py `os.getenv('ADVICE_V2_ENABLED', '0')` · parallel.py docstring `pick_target` (co nguyen van BUG-EVAL-ARGMAX + argmax-A -19654d, argmax-B +27416d, mean-P4 +3610d) · c9c json (n_fingerprint_giong 30, delta_t0=t1=t2 = 0.0 chan, ci95 [0,0]).",
+   "GREP: voucher 0 hit · rental 0 hit · penal|fraud trong src/gsm_sim 0 hit doi voi mission 27 hit · f3_patterns 0 call site duong san pham (chi router/templates cua cum C6 legacy + test + script) · historical_rate_method 8 hit, 0 hit o ui/web va ui/driver_app · gsm_core.advisor.pipeline 1 importer ngoai test (scripts/smoke_advisor_live.py)."
+  ],
+  "khong_lam": [
+   "KHONG chay `uv run pytest -q` va `uv run pytest -q ui/backend/tests` — khong phat bieu nao o day dua tren trang thai suite.",
+   "KHONG do lai arm SHUF cua c9d bang mot lan chay doc lap.",
+   "KHONG mo UPDATE-087, khong dieu tra vi sao +6.016d khong tai tao duoc."
+  ]
+ },
+ "phan_xu_trung_tam": {
+  "cai_song": "Hieu ung MUC HE THONG cua kenh positioning: +17,27 chuyen hoan thanh/ngay/doi va -16,27 don HET HAN, ca hai SIG (pb2 S4-D5). Toi kiem cheo bang arm null: net trips cua arm null = +0.011/nguoi (~+1 chuyen toan doi) so voi arm B +0.192/nguoi (~+17 chuyen toan doi) ⇒ phan he thong nay KHONG tai tao duoc bang nhieu, no la THAT.",
+  "cai_chet": "MOI phat bieu 'ai duoc ai mat' dua tren tercile `idle_min` do o arm A. Arm KHONG CO ADVISOR tai tao toan bo mau hinh voi bien do BANG hoac LON HON (-20757 / -6887 / +25338, ca ba SIG) trong khi net cua no la -769d ns. Bien do nhom bi TACH ROI khoi gia tri tao ra ⇒ khong dai luong nao chia theo truc do duoc phep quy cho kenh.",
+  "he_qua_cho_pb3": "Ba metric de xuat (harmed_share, churn_ratio, delta_p10) deu bao dong MANH HON o arm null hon o arm that. Lam nguong chan thi ca ba se TREO mot the gioi khong co can thiep nao."
+ },
+ "tu_phan_bien_de_khong_over_claim": [
+  "PHAN BIEN CHINH TOI: arm N xao tron niem tin cua ca 90 tai xe, arm B chi cham khoang 33%. Co the noi 'N la cu soc manh hon nen gradient lon hon la duong nhien'. BA DIEM CHONG LAI: (i) lieu per-driver do bang MAD cua tri tuyet doi Delta payout gan bang nhau (N 59983d vs B 57379d); (ii) N cho gradient bang hoac lon hon trong khi net = -769d ns, tuc bien do nhom khong dinh gi toi gia tri tao ra; (iii) tercile 2 cua N (+25338d) va cua B (+26106d) khong phan biet duoc ve thong ke.",
+  "CAI TOI KHONG CHUNG MINH: toi KHONG chung minh hieu ung nhom bang 0. Toi chung minh no KHONG DO DUOC va KHONG QUY DUOC cho kenh. Mot placebo hoan hao (giu nguyen DUNG tap khoang 33% nguoi bi cham) chua ai chay — do la phep thu duy nhat con lai neu ai muon cuu bat ky con so tercile nao.",
+  "TOI DA THU CUU cac finding bi bac: voi PB3-07/08/09 toi thu gia thuyet 'null cua ho la c9c bang 0 nen ho khong the biet' — dung, nhung PB1-02 trong CUNG batch da chi ra c9c la placebo phuong sai 0; va ba nguong chan van khong cuu duoc vi so null THAT cao hon so hien trang o ca ba.",
+  "TOI KHONG BAC S4-D5 du no do tren cung arm: no do o MUC HE THONG (dem event dropoff va order_expired), khong dieu kien hoa tren bien nhieu do o arm A ⇒ khong dinh hoi-quy-ve-trung-binh.",
+  "MOT VET NUT toi de lai trong cai toi GIU: S4-D7 dung nhom MOVER (nguoi thuc su relocate o arm B) — day la dieu kien hoa HAU-XU-LY, dung cai bay ma docstring c9b canh bao. Con so an toan cua S4-D7 la con so DEM SU KIEN (35,83 luot relocate/ngay nhan 2,596 km = 93,69 km rong/ngay/doi); con so 13,75 phut/mover va so DERIVED 24,0 phut/chuyen moi phai kem canh bao chon mau khi trich.",
+  "DX-02 (noi kenh mission_pick): kha thi, nhung MDE cua DA-08 o n=30 la khoang 2560d/nguoi/ngay (PB6-08). Voi 6 mission, hieu ung ky vong nho hon MDE ⇒ rat co the ra ns. pb4 DA prereg 'ns la ket qua hop le' nen chap nhan duoc, nhung dung ban no nhu 'de xuat do duoc gia tri'."
+ ],
+ "dung_vung": {
+  "pb1": ["PB1-01", "PB1-02", "PB1-03", "PB1-04", "PB1-05", "PB1-06", "PB1-07", "PB1-08", "PB1-09", "PB1-10", "PB1-11"],
+  "pb2": ["S4-D3", "S4-D5", "S4-D6", "S4-D7", "S4-D9", "S4-D10"],
+  "pb3": ["PB3-03", "PB3-04", "PB3-05", "PB3-06", "PB3-10", "PB3-11"],
+  "pb4": ["TN-01", "TN-02", "TN-03", "TN-04", "TN-05", "TN-06", "TN-07", "TN-08", "TN-09", "TN-10", "TN-11", "DX-01", "DX-02", "DX-03"],
+  "pb5": ["PB5-01", "PB5-02", "PB5-03", "PB5-04", "PB5-05", "PB5-06", "PB5-07", "PB5-08", "PB5-09", "PB5-10", "PB5-11"],
+  "pb6": ["PB6-03", "PB6-04", "PB6-05", "PB6-06", "PB6-07", "PB6-08", "PB6-09", "PB6-11", "PB6-12", "PB6-13", "PB6-14", "PB6-15", "PB6-16", "PB6-17", "PB6-19"]
+ },
+ "ghi_chu_cho_mot_so_finding_DUNG_VUNG": {
+  "PB1-01": "TOI TAI LAP DOC LAP tu pb1b-raw.json.gz: arm B -15290.397 / -1158.321 / +26106.393 net +3219.225; arm N -20756.862 / -6887.233 / +25337.776 net -768.773. Kiem code arm N: `_cfg_with(cfg, enabled=False, ...)` cho CA arm A lan arm N, chi khac khoa RNG (self.seed + 7919, actor_id, hour, int(c,16)) trong NoisyWorld._actor_demand_hint ⇒ dung la placebo khong-advisor. ⚠ Theo tieu chi (f): GIA THUYET nay DA CO trong tracking/DEFERRED.md muc D-C9-PHAN-PHOI ('chua loai duoc can thiep nhu mot BO XAO TRON... bien do tercile CHUA duoc phep trich'), va pb1 khong cite. Cai pb1 dong gop la PHEP DO dong lai gia thuyet do ⇒ GIU, nhung phai ghi la DONG D-C9-PHAN-PHOI chu khong phai phat hien moi.",
+  "PB1-02": "Kiem c9c json: n_fingerprint_giong = 30, ca 30 dong per_seed co delta_t0 = delta_t1 = delta_t2 = 0.0 chan, ci95 [0,0]. Luc cua phep thu bang 0 dung nhu pb1 noi. Day la neo cho viec bac PB3-07/08/09.",
+  "PB1-05": "Kiem code: entities.py ghi `idle_min: float = 0.0  # cho don tai cho` va `empty_min ... # di chuyen khong khach (pickup + relocate + deadhead)`; `idle_min +=` xuat hien DUNG MOT LAN toan src/gsm_sim (world.py, nhanh WAIT). Tuong quan toi do lai khop tung chu so: shift_len +0.765, payout +0.227, trips +0.070. Payout nen theo tercile toi do o 30 seed = 224540 / 270525 / 258998 ⇒ nhom 'ranh IT nhat' la nhom co thu nhap nen THAP NHAT, dung nhu pb1 noi. Day la finding LAM CHET nhan 'lay cua nguoi ban'.",
+  "PB1-08": "Kiem parallel.py docstring pick_target: co nguyen van 'BUG-EVAL-ARGMAX' cung ba con so argmax-A -19654d, argmax-B +27416d, mean-P4 khong chon loc +3610d. Ba cap so cung cau truc voi -15290 / +26106 / +3219 dung nhu pb1 doi chieu.",
+  "S4-D3": "MOI (khong co trong DEFERRED). Toi kiem cau truc cost: cost = pen_i + 10 nhan chi bao lech target, pen khong phu thuoc cot ⇒ ham muc tieu tach duoc thanh 'so luot lech target' (troi) cong 'tong pen cua tap duoc chon' (thu); voi nS trung binh 8,86 thi 10 lon hon han bien do pen thuoc [0;1] ⇒ bai toan suy bien. Ket qua greedy trung Hungarian 472/472 la HOP LY. pb2 DA tu gan nhan 'phep DO tren phan bo input, KHONG phai chung minh toan hoc' ⇒ trung thuc.",
+  "S4-D5": "PHAN SONG SOT DUY NHAT o muc gia tri. Toi kiem cheo bang arm null: net trips cua arm N = +0.011/nguoi (~+1 chuyen toan doi) so voi arm B +0.192/nguoi (~+17 chuyen toan doi).",
+  "S4-D7": "GIU vi no lam DUNG viec ma DEFERRED D-ADV-01 ghi la 'Do lon thiet hai CHUA DO'. ⚠ xem muc tu_phan_bien: nhom MOVER la dieu kien hoa hau-xu-ly; chi con so DEM SU KIEN (93,69 km rong/ngay/doi) la mien nhiem.",
+  "S4-D9": "Day chinh la ky luat mau so cua M1/M5 duoc ap dung DUNG: ban do lop bao 'co luot gan cho tai xe SOC 8,7%' (cuc tri theo seed), pb2 do lai voi mau so dung (2234 luot gan) ra 0,76%. GIU va HA severity cua B8.",
+  "PB3-03": "Ve DUNG va doc lap voi van de hoi-quy-ve-trung-binh: guard 1b mot chieu tren subgroup hiem co xac suat to giac ti le NGHICH voi do hiem (P3 n=5/90, diem uoc luong -18758d nhung CI trum 0 ⇒ PASS). ⚠ NHUNG de xuat sua (ii) 'them phan tang tercile 30/30/30' BI BAC theo PB3-02 — chi giu de xuat (i) bao kem MDE cho tung archetype.",
+  "PB3-04": "Toi kiem code: `_system_metrics` CO chuyen tiep station_hhi va supply_cell_hhi tu system_guardrail ⇒ menh de 'HHI cung theo o chua ai do' bi BAC dung. Day la ky luat 3 (mo nguon goc truoc khi noi repo thieu) duoc thi hanh dung.",
+  "PB3-05": "Toi doc scripts/cham_da08_station_choice.py: 6 muc cham la 1a, 1b, served, khach (expired+wait), gini, va 'tang 5 (rest/span<10%)'. KHONG dong nao doc station_hhi hay supply_cell_hhi. XAC NHAN.",
+  "PB3-06": "Toi doc `_system_metrics`: chuyen tiep 9 khoa, KHONG co payout_p10/median/p90, KHONG co wait_p90_min — trong khi sim_metrics CO sinh ca bon. XAC NHAN.",
+  "PB3-11": "XAC NHAN: system_guardrail tu goi `out.update(health_guardrail(result))`, roi `_system_metrics` goi LAI health_guardrail voi actor_ids khac. Hai lan moi luot, mot ban bi vut.",
+  "TN-02": "Toi tai lap doc lap tren 7 ngay: DUNG 3 dang the (feasible_gap 1129, insufficient_budget_hours 827, acceptance_below_threshold 353), 0 the cliff song sot. Khop pb4 va pb5.",
+  "TN-05": "Toi reproduce CRASH THAT: doc public_mission.parquet ra rewards kieu str 6/6, goi derive_mission_select_input_l1r ⇒ AttributeError 'str' object has no attribute 'get'. XAC NHAN 100%.",
+  "PB5-01": "TAI LAP TUNG CON SO: 246 sinh / 0 song; item truoc verifier {1:2063, 2:246, 0:1} sang sau verifier {1:2309, 0:1}; loi V1 nguyen van cho 0.85 (288 lan), 0.87 (99), 0.86 (66), 0.88 (39). Day la finding MANH NHAT ca batch: no nam tren duong SAN PHAM THAT, khong dinh gi toi tranh cai sim.",
+  "PB5-02": "TAI LAP: 1129 the feasible_gap, 111 the co bonus_at(points_now) lon hon 0 — phan ra CHINH XAC 105 the hien 60000d khi bien la 30000d va 6 the hien 115000d khi bien la 55000d. Da mo nguon goc truoc khi noi con so sai: policy.py bonus_at va gsm_sim/policy.py day_bonus DEU GAN, khong cong don. XAC NHAN.",
+  "PB5-03": "TAI LAP: advisor.advice cho ce-0 tra silent no_active_channel; build_gi + bonus_feasibility.solve cung tai xe tra feasible True, tier_vnd 60000, hours_needed 2.86. Cong doi xe bi di vong. XAC NHAN.",
+  "PB5-04": "TAI LAP: historical_rate_method = estimated_span_scaled. Grep 8 hit: 2 producer, 1 upcaster, 1 schema, 3 test — 0 hit o ui/web, 0 o ui/driver_app. XAC NHAN 0 consumer hien thi.",
+  "PB6-12": "Toi do lai o n=30 (pb6 do o n=10): 13/90 actor giu nguyen mot tercile qua ca 30 seed, 63/90 trai het ca ba — MANH HON so pb6 bao. Day la bang chung DOC LAP thu hai cho phan xu hoi-quy-ve-trung-binh, va la ly do khong the lam bat ky chinh sach bu tru nao theo tercile.",
+  "PB6-05": "GIU va NHAN MANH: no dat TRAN cho chinh ket luan thuan loi ('Hungarian bi bac'). Can tren CI cua that = B tru SHUF o toan doi la +414d = 12,9% cua +3219d; o tercile long toi 16,7%. Bat ky ban bao cao nao noi 'thong tin cua solver dong gop 0' phai kem tran nay.",
+  "PB6-06": "GIU: hieu chinh Bonferroni k=4 lam tran null noi tu 12,9% len 28,3%. Dung tinh than 'claim THUAN LOI phai verify ky hon'."
+ },
+ "bi_bac": [
+  {
+   "ma": "S4-D1",
+   "ly_do": "(f) DA BIET, bao nhu moi. tracking/DEFERRED.md muc D-ADV-01 da ghi tu truoc, sev CAO, trang thai TODO: 'positioning (kenh DANG SHIP) la bai toan FEASIBILITY, khong co ve Delta-GIA-TRI va khong co cong vat chat — capacity_alloc.py cost chi gom SOC-penalty cong +10 PHANG cho slot lech preferred'. pb2 khong cite dong nao va trinh bay nhu phat hien CAO moi. Noi dung code toi kiem la DUNG (cost khong co so hang km/ETA/cau; derive_allocation_input chi chuyen zone/bucket/capacity va driver_id/advice_kind/target/priority_soc) — nhung dung voi cai da nam trong hang doi. Phan MOI duy nhat (472/472 lo mang DUNG bo khoa do) la bang chung bo tro, khong phai finding."
+  },
+  {
+   "ma": "S4-D2",
+   "ly_do": "(e) va (f) TRUNG THUC THE voi D-ADV-01 (b) trong DEFERRED, von DA CO CA CON SO: 'tie EXACT trong cost matrix (dai pen chi [0;1] = 1/10 muc lech +10)' va '143/255 = 56% luot gan bi stagger' (3 seed), roi 'DINH CHINH 2026-08-07: 255/421 = 60,6%' (5 seed). pb2 do lai ra 58,2% (30 seed) va trinh bay nhu co che moi. Con so cua pb2 TOT HON (n lon hon) va nen THAY THE con so cu trong DEFERRED, nhung day la CAP NHAT MOT MUC DA CO chu khong phai finding CAO moi. Ve suy dien them ('day la co che giai thich c9d') thi hop ly nhung KHONG DUOC DO — no la gia thuyet; chinh S4-D3 (thu toi giu) moi la phep do."
+  },
+  {
+   "ma": "S4-D4",
+   "ly_do": "(b) va (c) LAT CAT NHIEM — dung ho co che da lam hong 2/5 finding hom nay, chi khac la nhiem o TRUC CHIA chu khong o mau so. TOI DO LAI tren arm KHONG CO ADVISOR (pb1b-raw, 30 seed, cung ghep cap): Delta trips theo tercile arm N = -0.846 / -0.478 / +1.358 so voi arm B -0.586 / -0.233 / +1.394 — gradient cuoc cua arm null LON HON arm that o hai nhom dau va bang o nhom ba, trong khi net cua arm null la +0.011 cuoc/nguoi (~+1 cuoc toan doi) so voi +0.192 (~+17 cuoc). Quy ra TY LE CHUYEN GIAO theo dung cong thuc cua S4-D4: arm null cho khoang 97% (39,7 cuoc mat tren 40,7 cuoc duoc), tuc mot the gioi KHONG CO CAN THIEP NAO cho ty le chuyen giao con CAO HON 58,4%. Con so 0,584 CI[0,468; 0,717] do dung nhung khong dinh gi toi kenh: no la ham cua DO XAO TRON, khong phai cua HUONG CHUYEN GIAO. Phat bieu 've lay cua nguoi ban la THAT va do duoc bang cuoc' phai RUT."
+  },
+  {
+   "ma": "S4-D8",
+   "ly_do": "(a) va (b) MO TA NUA DUNG NUA SAI, va ve lam nen severity CAO thi sai. Ve DUNG (toi kiem code): S4 khong co bien nao dai dien cho thu nhap luy ke, so lan da duoc gan trong ngay, hay tai xe DANG O o dich; tieu chi duy nhat chia suat khan la priority_soc; 88,0% suat co tran bang 1. Ve SAI la ve lam nen ket luan: 'Pareto thi SAI — mot phan ba NHAN DIEN DUOC TRUOC KHI CHAY bi mat tien co he thong' dua nguyen van vao -15290d SIG, ma arm null cho -20757d SIG o cung nhom voi net -769d ns. Va PB6-12 (toi do lai o n=30: 13/90 giu tercile, 63/90 trai het ca ba) chung minh nhom do KHONG 'nhan dien duoc truoc khi chay' theo bat ky nghia van hanh nao. Cau 'ai dam bao no khong lam giau nguoi ranh bang tien nguoi ban — KHONG AI' con dung ve THIET KE, nhung phai phat bieu lai thuan tuy nhu mot mo ta thiet ke, KHONG duoc kem bang chung tercile."
+  },
+  {
+   "ma": "PB3-01",
+   "ly_do": "(b) va (c) CA HAI TRU CHONG DEU DO O ARM NULL VA XAU HON. (i) '1/3 doi mat 15290d SIG' chinh la tercile ma arm khong-advisor tai tao voi -20757d SIG. (ii) '42,30% doi bi hai' — TOI DO LAI harmed_share (T=1000d, ghep cap CRN, 90/90 actor, 30 seed) tren arm N: 46,00% CI[44,74%; 47,37%], CAO HON arm B 42,30%. Vay DA-08 khong 'cap giay thong hanh cho mot can thiep co bien do phan phoi lai'; no dang bao cao dung mot null tren truc cong bang (Gini -0,0032 ns) trong mot sim co san nhieu per-driver 57-60 nghin dong. Menh de 'lo hong DA XAC NHAN BANG DO' sai dau: cai duoc do la SAN NHIEU, khong phai lo hong. Phan CON DUNG cua pb3 ve cong DA-08 nam o PB3-05 (thieu tang Tap trung), toi da giu."
+  },
+  {
+   "ma": "PB3-02",
+   "ly_do": "(b) TRUC MA TAC HAI DUOC CHO LA NAM TREN chinh la truc NHIEU, chung minh bang do. Toi tai lap chinh xac so cua pb3b tren arm B: R2(archetype)=0.0095, R2(tercile)=0.0463, R2(ca hai)=0.1595. Roi toi tinh CUNG BA SO tren arm KHONG CO ADVISOR: R2(archetype)=0.0007, R2(tercile)=0.0526, R2(ca hai)=0.1328. Truc tercile giai thich NHIEU HON o the gioi khong co can thiep (5,26% so voi 4,63%). Ket luan '1b mu theo cau truc vi no do sai truc' vi vay sup: truc duoc de nghi la truc do NHIEU, va de xuat 'phan tang 1b theo idle_min o arm A' se tao mot cong bao dong manh nhat dung luc khong co gi xay ra. Ti so 4,90x la that nhung y nghia bi dao nguoc."
+  },
+  {
+   "ma": "PB3-07",
+   "ly_do": "(c) va (d) NEO NULL SAI nen NGUONG KHONG THI HANH DUOC. pb3 neo T va nguong bang cau 'c9c do arm null cho delta_null = 0,0 CHINH XAC nen san nhieu bang 0'. Nhung PB1-02 — trong CUNG batch — da chung minh c9c la placebo PHUONG SAI BANG 0 (bit-identical 30/30; toi tu mo json xac nhan ci95 [0,0] ca ba tercile) nen no khong do duoc san nhieu nao. TOI DO SAN NHIEU THAT: harmed_share o arm khong-advisor = 46,00%, cao hon hien trang 42,30%. Nguong de xuat 'TREO khi harmed_share lon hon hoac bang 0,50' se treo mot the gioi khong co can thiep gan nhu chac chan khi doi kich ban hoac so seed. Metric nay do DO NHAY HON LOAN cua sim, khong do tac hai cua kenh."
+  },
+  {
+   "ma": "PB3-08",
+   "ly_do": "(c) va (d) CUNG CO CHE, ro nhat trong ba. Toi do churn_ratio pooled theo dung cong thuc cua pb3 tren arm KHONG ADVISOR: 78,02x, so voi 17,82x cua arm that. Ly do dai so: churn_ratio tien ra vo cung khi net tien ve 0, va arm null co net -769d ns. Nguong 'TREO cau kenh nay TAO gia tri khi churn_ratio lon hon 3' se bat o MOI arm ke ca arm khong lam gi, va cang bat manh khi can thiep cang VO HAI — tuc no thuong phat dung chieu nguoc. Neo 1,0 (Pareto) van dung ve dai so, nhung dai luong duoc neo thi khong do cai no tuyen bo do. Cau 'moi 1d gia tri rong di kem 17,82d bi dich giua cac tai xe' phai rut; phat bieu dung la 'sim nay co san nhieu per-driver khoang 57-60 nghin dong', tuc dung nhu PB1-06."
+  },
+  {
+   "ma": "PB3-09",
+   "ly_do": "(c) va (d) CUNG CO CHE. Toi do delta_p10 (p10 cua Delta ghep cap trong tung seed, trung binh 30 seed) tren arm KHONG ADVISOR: -98467d CI[-105857; -91050] — AM HON arm that -89264d. Nguong de xuat 'TREO khi delta_p10 nho hon -0,20 nhan payout_mean_A' (bang -50271d) bi vuot boi CHINH ARM NULL gan gap doi. Ve doi chieu voi payout_p10 (+3469d ns) van la mot quan sat DUNG va huu ich ve khac biet giua thuoc HINH DANG va thuoc GHEP CAP — nhung no khong cuu duoc de xuat, vi thuoc ghep cap o sim nay do NHIEU chu khong do TAC HAI."
+  },
+  {
+   "ma": "PB6-01",
+   "ly_do": "(e) va (b) TRUNG THUC THE voi PB1-06, va ban cua pb6 QUY KET NHAN QUA ma ban cua pb1 khong. Cung mot dai luong (mean tri tuyet doi Delta per-driver chia net: 18,3x cua pb6, 17,8x cua pb1, 17,82x cua pb3) — tinh MOT lan. pb1 dung arm null nen goi dung ten no la SAN NHIEU cua sim; pb6 khong co arm doi chung nao va goi no la 'kenh nay la XAO TRON CUOC chu khong phai cai thien'. Do la quy ket sai: toi do MAD tri tuyet doi Delta payout o arm null = 59983d, LON HON arm B 57379d, tuc mot the gioi KHONG CO KENH NAO cung xao tron nhieu hon. Giu PB1-06, bo PB6-01."
+  },
+  {
+   "ma": "PB6-02",
+   "ly_do": "(e) va nhom khong ton tai. Ve thong ke thi dung va do that (mean chia median o t2 bang 5,3x; 33,7% trong nhom 'thang' van am). Nhung thuc the duoc mo ta — 'nhom ranh NHIEU' — da bi PB1-01 va boi CHINH PB6-12 chung minh la khong ton tai on dinh: toi do o n=30, 63/90 actor trai het ca ba tercile va chi 13/90 giu nguyen mot tercile. Mo ta phan phoi cua mot nhom khong ton tai thi khong the la finding HIGH; ve canh bao con lai ('dung trich mean nhu mot loi hua') da nam trong PB1-06 va PB1-11, o cap manh hon la 'khong duoc trich con so tercile nao ca'."
+  },
+  {
+   "ma": "PB6-10",
+   "ly_do": "(b) KHANG DINH MOT CHUYEN GIAO CO THAT ma phep do khong chong duoc. Su that ve MUC NEN thi DUNG va toi tai lap doc lap (payout nen theo tercile o 30 seed = 224540 / 270525 / 258998; t0 la nhom nen thap nhat, gom P1 va P5 ca ngan) — nhung do dung la noi dung cua PB1-05, tinh MOT lan. Cai pb6 THEM vao la ket luan nhan qua 'kenh dang chuyen tien tu nhom NGHEO NHAT sang nhom kha hon' (-6,6% doi +9,9%), va do la phep chia hai so ma tu so (-15290 va +26106) da bi arm null tai tao (-20757 va +25338, net -769 ns). Vay 'tai phan phoi la NGHICH TIEN' phai rut; cau duoc phep noi la 'nhan ranh IT NHAT bi doc sai — do la nhom ca ngan, thu nhap nen thap nhat', tuc PB1-05."
+  },
+  {
+   "ma": "PB6-18",
+   "ly_do": "(e) TRUNG THUC THE voi PB1-02 (c9c mang nhan sai, suy dien trong docstring sai logic). Tinh MOT lan, va ban cua pb1 manh hon: no chi ra hau qua (neu c9c duoc trich nhu 'da loai hoi quy ve trung binh' thi moi ket luan dung tren no sup) va no THAY THE bang mot placebo co nhieu that. Phan pb6 them vao — 'gia tri THAT cua c9c la chung minh positioning la kenh DUY NHAT dang chay, 30/30 bit-identical, nen doi nhan chu khong xoa' — la mot GHI CHU VAN HANH dung va nen giu trong chinh file c9c, nhung khong phai mot finding."
+  }
+ ],
+ "ba_viec_nen_lam_ngay_theo_thu_tu": [
+  "1. SUA VAN BAN, KHONG SUA CODE: rut moi con so tercile (-15290 / +26106 / +23566 / -14602 / ty le chuyen giao 58,4% / churn 17,82x / harmed_share 42,30% / delta_p10 -89264d) khoi moi ban bao cao, va cap nhat DEFERRED D-C9-PHAN-PHOI tu 'chua loai duoc' sang 'DA LOAI — arm null khong-advisor tai tao voi bien do lon hon, artifact pb1b-raw.json.gz + pb-refute.json'. Cai duoc phep cong bo ve kenh positioning hom nay: +17,27 chuyen hoan thanh/ngay/doi va -16,27 don het han (S4-D5), kem chi phi 93,69 km chay rong/ngay/doi (S4-D7) va kem tran null cua c9d (PB6-05: thong tin cua solver dong gop toi da 12,9% mot chieu, 28,3% neu hieu chinh da so sanh).",
+  "2. PB5-01 va PB5-02 tren duong SAN PHAM — hai cai nay khong dinh gi toi tranh cai sim va toi da tai lap tung con so. PB5-01: 246 canh bao 'ty le nhan sat nguong' bi chinh verifier cua file do giet 100%, 160 lan trong so do roi dung luc the kia dang giuc chay them. PB5-02: 105 the trung 60000d khi phan doi duoc bang cong suc chi la 30000d. Ca hai la sai chu tren MAT THE tai xe doc.",
+  "3. TN-05 va DX-02 (vach parquet cua S6) — toi reproduce duoc crash 'str object has no attribute get' bang chinh loader san pham. Sua theo dung canh bao cua pb4: cong test phai la 'deriver doc LAI tu parquet DA GHI', khong phai bang trong bo nho."
+ ],
+ "cai_toi_chua_kiem": [
+  "KHONG chay `uv run pytest -q` va `uv run pytest -q ui/backend/tests`. Khong phat bieu nao o day dua tren trang thai suite.",
+  "KHONG do lai arm SHUF cua c9d bang mot lan chay doc lap; moi so B tru SHUF toi doc tu per_seed cua c9d json (dung gioi han ma pb6 tu khai).",
+  "KHONG chay placebo 'giu nguyen DUNG tap khoang 33% nguoi bi cham' — phep thu duy nhat con lai co the cuu mot phan bien do nhom. Toi ket luan 'khong do duoc / khong quy duoc', KHONG ket luan 'bang 0'.",
+  "Moi so sim cua toi doc tu pb1b-raw.json.gz: mot kich ban (configs/pilot_dongda.yaml), mot ngay, coverage=all, seed 3300-3329. Khong multi-day, khong kich ban mua/su kien, khong coverage khac.",
+  "Duong san pham toi do tren 7 ngay (dates[7::12] cua snapshot 90 ngay) nhan 110 tai xe bike nhan 3 moc — khop cua so cua pb5, KHONG khop cua so 10 ngay cua pb4; so cua toi so voi pb5 thi trung, so voi pb4 thi phai quy ti le.",
+  "pb4 TN-01 phan 'US nao coi la co duong' la PHAN DOAN chu khong phai phep do — toi chi kiem duoc cac grep neo (voucher 0, rental 0, f3_patterns 0 call site san pham, penal/fraud 0 trong gsm_sim), khong doi chieu lai 14 user story.",
+  "Toi khong mo pb2-DO-raw.json de tai tinh 472 lo va 2171 hang cost; toi kiem CAU TRUC cost bang doc code va chap nhan cac phep dem cua pb2.",
+  "Toi khong kiem lai pb5 PB5-06/07 bang trinh duyet that (pb5 tu khai la tai lap logic cards.js bang Python).",
+  "file:line trong ban nay se phan ra — moi khang dinh da neo kem ten ham hoac literal."
+ ],
+ "tom_tat": "Bac 13/76. TRUNG TAM: toi do lai arm KHONG CO ADVISOR (advice tat, chi rut lai nhieu niem tin) tu pb1b-raw.json.gz va no tai tao TOAN BO cau truc nhom voi bien do bang hoac lon hon arm that — payout -20757 / -6887 / +25338 (ca ba SIG) so voi -15290 / -1158 / +26106, trong khi net cua no la -769d ns; trips -0.846/-0.478/+1.358 so voi -0.586/-0.233/+1.394; R2(tercile) 0,0526 so voi 0,0463; harmed_share 46,00% so voi 42,30%; churn_ratio 78,02x so voi 17,82x; delta_p10 -98467d so voi -89264d. NAM SO SAU CUNG DEU LA SAN NHIEU, VA SAN NHIEU CAO HON HIEN TRANG. Vi vay moi phat bieu 'ai duoc ai mat' theo tercile (S4-D4, S4-D8, PB3-01, PB6-01, PB6-02, PB6-10) va ca ba metric de xuat lam CONG (PB3-07, PB3-08, PB3-09) deu sup — ba nguong chan de xuat se TREO mot the gioi khong co can thiep nao. Them hai cai bac vi da co trong DEFERRED D-ADV-01 (S4-D1, S4-D2) va hai cai bac vi trung thuc the (PB6-01 voi PB1-06, PB6-18 voi PB1-02). CAI SONG SOT: hieu ung MUC HE THONG +17,27 chuyen va -16,27 don het han (S4-D5; arm null chi cho khoang +1 chuyen nen day la that), greedy trung Hungarian 472/472 (S4-D3, moi), chi phi 93,69 km rong/ngay/doi (S4-D7), va TOAN BO duong SAN PHAM cua pb4 va pb5 — toi tai lap tung con so cua PB5-01 (246 canh bao sinh, 0 song), PB5-02 (105 the trung 60000d khi bien la 30000d), PB5-03 (v2 di vong cong doi xe), TN-05 (S6 vo 100% o vach parquet). Hai goc pb4 va pb5 khong co finding nao bi bac; toan bo thiet hai roi vao cac goc dieu kien hoa tren idle_min do o arm A."
+}

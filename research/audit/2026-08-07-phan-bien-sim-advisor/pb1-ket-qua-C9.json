@@ -1,0 +1,151 @@
+{
+ "goc": "pb1 — phản biện kết quả C9 (c9/c9b/c9c/c9d) về 'kênh positioning phân phối lại thu nhập'",
+ "ngay": "2026-08-07",
+ "phuong_phap": {
+  "tai_lap": "Chạy lại ĐÚNG thiết kế c9b (30 seed CRN 3300–3329, coverage=all, ghép cặp cùng actor trong cùng seed) và tái lập KHỚP TỪNG ĐỒNG: -15.290 / -1.158 / +26.106 và toàn đội +3.219đ.",
+  "arm_moi_N": "NULL-NOISE — advice OFF hoàn toàn, chỉ RÚT LẠI nhiễu niềm tin per-(actor,giờ,ô) bằng cách đổi khoá RNG của `_actor_demand_hint` (+7919). Cùng actor, cùng đơn, cùng lưới, cùng policy. KHÔNG có advisor, KHÔNG có allocation, KHÔNG có adherence coin ⇒ mọi mẫu hình xuất hiện ở N là HIỆN VẬT ĐO, về nguyên tắc không thể là 'phân phối lại do kênh'.",
+  "script": [
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.py",
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb1b-co-che-va-lat-cat-co-dinh.py"
+  ],
+  "artifact_so": [
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.json",
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb1b-co-che-va-lat-cat-co-dinh.json",
+   "research/audit/2026-08-07-phan-bien-sim-advisor/pb1b-raw.json.gz"
+  ]
+ },
+ "findings": [
+  {
+   "ma": "PB1-01",
+   "tieu_de": "BÁC ĐƯỢC: toàn bộ mẫu hình tercile tái lập ở arm KHÔNG CÓ ADVISOR — biên độ ±26k không phải bằng chứng phân phối lại",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.py (class NoisyWorld / bảng `idle_A (như c9b)`); số ở pb1-do-lai.json → bang['idle_A (như c9b)']",
+   "neo_noi_dung": "arm N = `_cfg_with(cfg, enabled=False, ...)` + `NoisyWorld._actor_demand_hint` đổi khoá RNG `(self.seed + 7919, actor.actor_id, hour, int(c,16))`; so với arm B `coverage=\"all\"`",
+   "hau_qua": "Kết luận 'kênh positioning lấy -15.290đ của người rảnh ít và đưa +26.106đ cho người rảnh nhiều' KHÔNG đứng. Một thế giới KHÔNG có advisor, chỉ rút lại nhiễu niềm tin của chính tài xế, cho ra CÙNG mẫu hình với biên độ tương đương hoặc lớn hơn. Câu 'lấy của người bạn -15.290đ' nếu báo cáo sẽ là báo sai bản chất: đó là hiện vật của việc điều kiện hoá trên một biến ĐO Ở ARM A có nhiễu, không phải tác động của kênh.",
+   "so_do_duoc": "arm B: t0 -15.290đ [-17.828;-12.591] SIG · t1 -1.158đ ns · t2 +26.106đ [+21.869;+30.512] SIG (tái lập khớp c9b). arm N (KHÔNG advisor): t0 -20.757đ [-24.702;-17.072] SIG · t1 -6.887đ [-10.781;-3.124] SIG · t2 +25.338đ [+21.712;+29.486] SIG. Liều xáo trộn: MAD |Δpayout|/tài xế B = 57.379đ, N = 59.983đ (N LỚN HƠN ⇒ không thể chê placebo yếu). n=30 seed.",
+   "severity": "CRITICAL",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO"
+  },
+  {
+   "ma": "PB1-02",
+   "tieu_de": "c9c là placebo VÔ HIỆU LỰC (phương sai = 0) nhưng được dùng để tuyên 9b là THẬT",
+   "file_line": "research/audit/2026-08-07-root-cause-classes/c9c-GIA-DUOC-arm-null-hoi-quy-ve-trung-binh.py:20 và :108; json cùng tên",
+   "neo_noi_dung": "dòng luận: '· Nếu arm NULL **bit-identical** với arm A ⇒ không có xáo trộn ⇒ mẫu hình của `9b` là **THẬT**.' và print 'Gần 0% ⇒ 9b là thật.'; trong json: `n_fingerprint_giong: 30`, mọi `delta_t*: 0.0`, `ty_le_hien_vat: -0.0`",
+   "hau_qua": "Quy tắc phán xử SAI LOGIC. Arm null bit-identical ⇒ không có LẦN RÚT KHÁC nào ⇒ phép thử có LỰC BẰNG 0 với chính giả thuyết nó định loại (hồi quy về trung bình cần B ≠ A). `ty_le_hien_vat = 0/(-15290) = -0,0` là tỷ số mà TỬ SỐ không có support — cùng họ lỗi mẫu-số/tử-số đã bắt ở M1 và M5, chỉ đảo chiều. Nếu c9c được trích như 'đã loại hồi quy về trung bình' thì mọi kết luận dựng trên nó sụp theo. (c9d về sau mới là placebo có nhiễu thật, và nó đã bác phần ghép cặp.)",
+   "so_do_duoc": "c9c json: 30/30 seed fingerprint giống hệt, Δ null = 0,0đ cả ba tercile, CI [0;0]. Đối chiếu: placebo có nhiễu của tôi (arm N) cho Δ null -20.757 / -6.887 / +25.338đ, tất cả SIG.",
+   "severity": "CRITICAL",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO (đọc nguồn c9c + đo arm N thay thế)"
+  },
+  {
+   "ma": "PB1-03",
+   "tieu_de": "Cơ chế 'advisor cắt 36,8 phút chờ cho nhóm rảnh nhiều' cũng tái lập ở arm không-advisor ⇒ là hồi quy về trung bình của CHÍNH biến chia nhóm",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1b-co-che-va-lat-cat-co-dinh.json → co_che.B vs co_che.N",
+   "neo_noi_dung": "bảng 'CƠ CHẾ theo tercile `idle_A`' in ra hai lần, arm B và arm N; cột Δidle′, Δtrips, Δempty′, Δoffered",
+   "hau_qua": "Không được dùng 'nhóm rảnh nhiều giảm 36,8′ chờ và +1,4 cuốc' làm bằng chứng cơ chế của kênh. Chia nhóm theo idle đo ở A rồi đo Δidle thì nhóm idle cao BẮT BUỘC giảm và nhóm idle thấp BẮT BUỘC tăng ở bất kỳ lần rút lại nào — đúng như arm N cho thấy. Toàn bộ 'câu chuyện cơ chế' đi kèm biên độ tercile phải rút.",
+   "so_do_duoc": "arm B (advisor thật): Δidle t0 +10,2′* · t1 0,0′ · t2 -36,8′* ; Δtrips -0,6* / -0,2* / +1,4* ; Δoffered -0,6* / -0,3* / +1,5*. arm N (KHÔNG advisor): Δidle +20,2′* / +10,4′* / -30,9′* ; Δtrips -0,8* / -0,5* / +1,4* ; Δoffered -0,8* / -0,6* / +1,5*. (* = CI95 bootstrap không chứa 0, n=30 seed.)",
+   "severity": "HIGH",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO"
+  },
+  {
+   "ma": "PB1-04",
+   "tieu_de": "Tercile KHÔNG phải lát cắt đúng: mọi biến ĐO ĐƯỢC ở A cho gradient còn lớn hơn và arm null tái lập; mọi biến CỐ ĐỊNH thì gradient BIẾN MẤT",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.json → bang (8 tiêu chí)",
+   "neo_noi_dung": "dict `TIEU_CHI` trong pb1-do-lai.py: 'idle_A (như c9b)', 'payout_A', 'trips_A', 'online_A', 'offered_A', 'shift_len (CỐ ĐỊNH)', 'shift_start (CỐ ĐỊNH)', 'actor_id (giả)'",
+   "hau_qua": "Đây là câu trả lời cho (c): tercile idle_min KHÔNG phải lát cắt đặc biệt — nó chỉ là một trong nhiều biến nhiễu. Gradient tỷ lệ thuận với mức NHIỄU của biến chia nhóm, không tỷ lệ với 'mức kênh nhắm vào nhóm đó'. Chia theo thuộc tính cố định (độ dài ca, giờ vào ca) — thứ KHÔNG hồi quy về trung bình được — thì hiệu ứng phẳng quanh mức toàn đội và arm null phẳng ns. Không có nhóm nào bị hại một cách nhận dạng được.",
+   "so_do_duoc": "payout_A: B +31.622 / +16.277 / -38.242đ (30/30 seed âm ở t2) — N +30.836 / +10.757 / -43.899đ, cả ba SIG. trips_A: B +24.297 / +17.765 / -32.404 — N +22.444 / +14.335 / -39.085 SIG. offered_A: B +26.181 / +9.731 / -26.254 — N +25.165 / +6.488 / -33.959 SIG. shift_len (CỐ ĐỊNH): B +3.467 / +5.357 / +834 — N -2.194 / -1.024 / +912, N toàn ns. shift_start (CỐ ĐỊNH): B +2.898 / -1.015 / +7.774 — N toàn ns. archetype (7 mức): 6/7 ns ở B, chỉ P7 +19.058đ [10.448;28.039] SIG (n≈11/seed, 1 trên 7 phép so, N ns). fleet: swap +4.276đ SIG (n≈69), charge +254đ ns; N cả hai ns.",
+   "severity": "HIGH",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO"
+  },
+  {
+   "ma": "PB1-05",
+   "tieu_de": "`idle_min` KHÔNG phải 'thời gian lãng phí' — nó là đại lượng gần với ĐỘ DÀI CA; 'rảnh ít nhất' KHÔNG phải người bận/giàu",
+   "file_line": "src/gsm_sim/entities.py:73 (định nghĩa) · src/gsm_sim/world.py:1140 (chỗ DUY NHẤT cộng) · số ở pb1-do-lai.json → tuong_quan_idleA",
+   "neo_noi_dung": "entities.py: `idle_min: float = 0.0       # chờ đơn tại chỗ` ; world.py nhánh `else:  # WAIT` có `actor.idle_min += 2.0`; relocate đi vào `actor.empty_min += t` (entities.py:71 `empty_min ... # di chuyển không khách (pickup + relocate + deadhead)`)",
+   "hau_qua": "Câu (d) trả lời: `idle_min` KHÔNG lẫn di-chuyển-rỗng (đó là `empty_min`), KHÔNG lẫn nghỉ (`rest_min`) hay đổi pin (`charge_min`) — về mặt định nghĩa nó SẠCH, tức c9b không sai ở chỗ này. NHƯNG nhãn diễn giải thì sai: trong dữ liệu, idle_min tương quan +0,765 với độ dài ca và CHỈ +0,070 với số cuốc, và tương quan với payout là DƯƠNG +0,227. Nghĩa là tercile 'rảnh ÍT nhất' phần lớn là người CA NGẮN (ít phơi nhiễm), không phải 'người đang bận/kiếm nhiều'. Diễn ngôn 'lấy của người bận đưa cho người rảnh' sai ngay ở bước đặt tên biến, độc lập với vấn đề hồi quy về trung bình.",
+   "so_do_duoc": "Pearson trong-seed, trung bình 30 seed, arm A: corr(idle, shift_len)=+0,765 · corr(idle, online)=+0,765 · corr(idle, empty)=+0,367 · corr(idle, rest)=+0,287 · corr(idle, payout)=+0,227 · corr(idle, offered)=+0,076 · corr(idle, trips)=+0,070. Giá trị key theo tercile: 74′ / 172′ / 253′ ứng với ca TB 351′ / 503′ / 617′ (bảng shift_len).",
+   "severity": "HIGH",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO (định nghĩa: đọc code; tương quan: đo lại)"
+  },
+  {
+   "ma": "PB1-06",
+   "tieu_de": "Sàn nhiễu per-tài-xế cao hơn hiệu ứng đội ~18 lần ⇒ mọi phát biểu 'ai được ai mất' đều dưới ngưỡng đo được",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.json → lieu_MAD_payout, toan_doi",
+   "neo_noi_dung": "khối `[LIỀU] |Δpayout| trung bình mỗi tài xế` trong pb1-do-lai.py",
+   "hau_qua": "Ngay cả khi bỏ qua hồi quy về trung bình, sim này KHÔNG có độ phân giải để nói ai được/ai mất. Một cú xáo trộn không mang thông tin nào cũng dịch payout mỗi người trung bình 59.983đ. Bất kỳ con số per-actor hay per-nhóm nào của kênh (kể cả +26.106đ) đều nằm sâu dưới sàn này. Đây là ràng buộc cứng cho MỌI báo cáo per-driver về sau, không riêng c9.",
+   "so_do_duoc": "MAD |Δpayout| mỗi tài xế: arm B 57.379đ · arm N (không advisor) 59.983đ. Hiệu ứng toàn đội arm B = +3.219đ ⇒ tỷ số sàn-nhiễu/hiệu-ứng ≈ 17,8×.",
+   "severity": "HIGH",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO"
+  },
+  {
+   "ma": "PB1-07",
+   "tieu_de": "Tiền đề LIỀU không tồn tại trong chính artifact c9b: nhóm được chạm NHIỀU NHẤT lại có Δ ≈ 0",
+   "file_line": "research/audit/2026-08-07-root-cause-classes/c9b-phan-ra-theo-tieu-chi-TIEN-can-thiep.json → tercile_*.ty_le_cham",
+   "neo_noi_dung": "trường `ty_le_cham` (sinh bởi `row[f\"cham_t{j}\"]` = tỷ lệ actor có event `standby_followed` ở arm B) trong c9b",
+   "hau_qua": "Chính c9b đã in ra cột kiểm tiền đề và cột đó BÁC luôn cách đọc của c9b: không có quan hệ liều–đáp ứng. Liều gần như phẳng và KHÔNG đơn điệu (nhóm giữa cao nhất), trong khi 'đáp ứng' chạy đơn điệu từ -15.290 lên +26.106. Một can thiệp thật phải để lại dấu ở liều. Đây là bằng chứng NỘI TẠI, không cần arm N.",
+   "so_do_duoc": "ty_le_cham = 27,3% (t0) · 37,7% (t1) · 35,9% (t2). Δ tương ứng -15.290đ · -1.158đ · +26.106đ. Chênh liều t2−t0 = 8,6 điểm %; chênh Δ = 41.397đ. Nhóm liều CAO NHẤT (t1, 37,7%) có Δ ns.",
+   "severity": "MEDIUM",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO (đọc lại artifact c9b)"
+  },
+  {
+   "ma": "PB1-08",
+   "tieu_de": "Chính repo đã đặt tên cho lỗi này — BUG-EVAL-ARGMAX; c9b là đúng lỗi đó ở dạng tercile",
+   "file_line": "src/gsm_sim/parallel.py:98–111 (docstring `pick_target`)",
+   "neo_noi_dung": "'⛔ BIASED-DIAGNOSTIC — BUG-EVAL-ARGMAX ... Đây là phép CHỌN CỰC TRỊ: max-offers của A là người \"may nhất\" thế giới A, nên mọi nhiễu loạn (bật bất kỳ kênh advice nào) kéo họ về trung bình ⇒ Δ(B−A) trên người này **âm bất kể nội dung can thiệp**. Chứng minh sign-flip 5 seed: argmax-A −19.654đ · argmax-B +27.416đ'",
+   "hau_qua": "c9b tự bảo vệ bằng lập luận 'chia theo biến TIỀN-can-thiệp ⇒ không có post-treatment conditioning' (c9b .py dòng 8–17). Lập luận đó đúng nhưng KHÔNG ĐỦ: post-treatment không phải mối đe doạ duy nhất; chọn theo cực trị/thứ hạng của một biến NHIỄU đo ở A là mối đe doạ thứ hai, đã có tiền lệ trả giá trong chính repo với biên độ y hệt (−19.654đ vs +27.416đ ≈ −15.290đ vs +26.106đ). Bài học cũ đã được viết ra nhưng chỉ gắn vào `pick_target`, nên tercile lách qua.",
+   "so_do_duoc": "Tiền lệ trong docstring: argmax-A −19.654đ · argmax-B +27.416đ · mean-P4 không chọn lọc +3.610đ. Đo hôm nay: tercile-thấp-idle -15.290đ · tercile-cao-idle +26.106đ · toàn đội không chọn lọc +3.219đ. Ba cặp số cùng cấu trúc.",
+   "severity": "MEDIUM",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO (đọc nguồn) + đối chiếu số tôi tự đo"
+  },
+  {
+   "ma": "PB1-09",
+   "tieu_de": "Phân tán payout giữa tài xế KHÔNG đổi — không thấy dấu 'phân phối lại' ở mức phân phối (bằng chứng phụ, không quyết định)",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1b-co-che-va-lat-cat-co-dinh.json → phan_tan",
+   "neo_noi_dung": "khối 'PHÂN TÁN payout GIỮA TÀI XẾ' trong pb1b (sd + gini per seed, so A/B/N)",
+   "hau_qua": "Nếu kênh thật sự dịch hàng chục nghìn đồng từ nhóm này sang nhóm khác một cách hệ thống thì hình dạng phân phối phải đổi. Nó không đổi. ⚠ TỰ PHẢN BIỆN: một phép HOÁN VỊ danh tính giữ nguyên phân phối biên, nên sd/gini không đổi KHÔNG loại được 'xáo trộn ai giàu ai nghèo'. Vì vậy tôi xếp finding này là bằng chứng PHỤ; sức nặng thật nằm ở PB1-01/03/04.",
+   "so_do_duoc": "arm A: sd = 96.776đ, gini = 0,2195. arm B: sd = 96.463đ, gini = 0,2163, Δsd = -313đ [-2.833;+1.994] ns. arm N: sd = 98.156đ, gini = 0,2229, Δsd = +1.381đ [-961;+3.598] ns.",
+   "severity": "LOW",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO"
+  },
+  {
+   "ma": "PB1-10",
+   "tieu_de": "KHÔNG BÁC ĐƯỢC: Δ toàn đội +3.219đ sống sót placebo không-advisor (nhưng hai placebo mâu thuẫn nhau)",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.json → toan_doi; đối chiếu research/audit/2026-08-07-root-cause-classes/c9d-THONG-TIN-hay-XAO-TRON.json → toan_doi",
+   "neo_noi_dung": "pb1: `toan_doi.B_mean` vs `toan_doi.N_mean`; c9d: khối `toan_doi` với B / SHUF / that",
+   "hau_qua": "Nói thẳng: tôi KHÔNG bác được hiệu ứng mức đội. Arm null của tôi có liều LỚN HƠN arm B mà vẫn cho -769đ ns ⇒ +3.219đ không phải sản phẩm của việc 'khuấy' thế giới. NHƯNG hai placebo cho hai câu trả lời khác nhau về cùng con số: c9d SHUF tái lập gần hết (+4.590đ), arm N của tôi không tái lập gì. Cách hoà giải (SUY, chưa kiểm trực tiếp): SHUF giữ nguyên TẬP Ô ĐÍCH mà solver chọn và chỉ phá ghép cặp; arm N không có tập ô đích nào cả. ⇒ giá trị mức đội, nếu có, nằm ở việc CHỌN Ô (có trần sức chứa), không ở Hungarian matching. ĐIỀU KIỆN ĐỂ BÁC nốt: một arm giữ nguyên liều + giữ nguyên số suất mỗi ô nhưng CHỌN TẬP Ô NGẪU NHIÊN trong zones hợp lệ; nếu arm đó cũng cho ≈ +3.2k thì phần giá trị cuối cùng của kênh cũng sụp.",
+   "so_do_duoc": "arm B toàn đội +3.219đ CI[+1.657;+4.731] SIG, median +3.675đ, 6/30 seed âm. arm N (không advisor) -769đ CI[-2.707;+1.211] ns, 16/30 seed âm, liều 59.983đ > 57.379đ của B. c9d: SHUF +4.590đ, THẬT = B−SHUF = -1.371đ CI[-3.074;+414] ns.",
+   "severity": "INFO",
+   "confidence": "cao (số) / trung bình (cách hoà giải hai placebo)",
+   "tu_do_hay_suy": "TỰ ĐO số; cách hoà giải là SUY (DERIVED)"
+  },
+  {
+   "ma": "PB1-11",
+   "tieu_de": "(a) Mẫu hình theo seed ỔN ĐỊNH, không do vài seed ngoại lai — nhưng ổn định KHÔNG phải bằng chứng nhân quả",
+   "file_line": "research/audit/2026-08-07-phan-bien-sim-advisor/pb1-do-lai.json → bang['idle_A (như c9b)'] (B_median, B_iqr, B_seed_am)",
+   "neo_noi_dung": "trường `B_median`, `B_iqr`, `B_seed_am`, `B_seed_duong` sinh trong pb1-do-lai.py",
+   "hau_qua": "Trả lời (a): không bác được bằng đường 'ngoại lai'. Median gần mean, IQR không bắc qua 0 ở t0/t2, 29/30 seed cùng dấu. Nhưng chính arm N cũng ổn định y hệt và nó KHÔNG có advisor ⇒ độ ổn định ở đây chỉ chứng minh hiện vật là hiện vật CÓ HỆ THỐNG, không chứng minh nhân quả. Cảnh báo kèm: lát cắt tercile theo `actor_id` (tiêu chí GIẢ, vô nghĩa) vẫn ra nhóm giữa -4.219đ với 20/30 seed âm ⇒ chia ba nhóm theo bất kỳ tiêu chí nào cũng dễ đẻ ra một nhóm 'trông bị hại'.",
+   "so_do_duoc": "t0: mean -15.290đ, median -15.265đ, IQR [-19.751; -10.782], 29/30 seed âm. t1: mean -1.158đ, median +1.066đ, IQR [-10.738; +6.500], 14/30 âm. t2: mean +26.106đ, median +27.394đ, IQR [+16.462; +34.872], 1/30 âm. Lát cắt giả theo actor_id: +4.738 / -4.219 (20/30 seed âm) / +9.139đ, cả ba ns ở B, arm N cả ba ns.",
+   "severity": "MEDIUM",
+   "confidence": "cao",
+   "tu_do_hay_suy": "TỰ ĐO"
+  }
+ ],
+ "cai_chua_kiem": [
+  "Arm N của tôi xáo trộn TẤT CẢ 90 tài xế, trong khi arm B chỉ ~27–38% tài xế thực sự có event `standby_followed` (c9b `ty_le_cham`). Liều tổng (MAD) khớp nhau (59.983 vs 57.379đ) nhưng PHÂN BỐ liều trên đầu người thì không khớp. Tôi chưa gắn cờ được/không-được-chạm cho từng actor trong dữ liệu thô của mình.",
+  "Chưa đo per-actor xem người được chạm và người KHÔNG được chạm ở arm B lệch nhau bao nhiêu — tức chưa tách được lan toả hệ thống khỏi tác động trực tiếp.",
+  "Giả thuyết `cash_cost_vnd_per_km = 0` ⇒ Hungarian tối ưu một đại lượng miễn phí: KHÔNG kiểm (đó là việc của pb2).",
+  "Chưa kiểm arm 'chọn tập ô NGẪU NHIÊN trong zones hợp lệ, giữ nguyên số suất' — phép thử duy nhất còn có thể bác nốt +3.219đ (xem PB1-10).",
+  "`NoisyWorld._actor_demand_hint` là BẢN SAO thân hàm gốc, chỉ đổi khoá RNG. Nếu `world._actor_demand_hint` đổi trong tương lai, bản sao sẽ trôi. Tôi đã neo bằng nội dung (`self._belief_cache`, `grid_disk(actor.cell, 2)`), chưa có test canh.",
+  "Chỉ một kịch bản: `configs/pilot_dongda.yaml`, một ngày, `coverage=all`, 30 seed 3300–3329. Chưa thử multi-day, chưa thử kịch bản mưa/sự kiện, chưa thử coverage khác.",
+  "Actor được lấy mẫu LẠI theo từng seed (`src/gsm_sim/archetypes.py:68`, `np.random.default_rng(seed ^ 0xA11CE)`) ⇒ `actor_id` không phải cùng một người giữa các seed. Ghép cặp trong-seed của c9b/pb1 vẫn hợp lệ, nhưng mọi ý định 'theo dõi một tài xế xuyên seed' đều vô nghĩa.",
+  "P7 +19.058đ SIG ở lát cắt archetype: 1 trên 7 phép so, chưa hiệu chỉnh đa phép so, n≈11 tài xế/seed. Tôi KHÔNG coi đây là phát hiện, chỉ ghi lại."
+ ],
+ "tom_tat": "BÁC ĐƯỢC phần trung tâm. Tôi dựng arm NULL-NOISE (advice tắt hoàn toàn, chỉ rút lại nhiễu niềm tin của tài xế) và nó tái lập TOÀN BỘ mẫu hình tercile của c9b với liều còn lớn hơn: -20.757 / -6.887 / +25.338đ, cả ba SIG, so với B -15.290 / -1.158 / +26.106đ. Cơ chế đi kèm cũng tái lập (Δidle t2 = -30,9′ ở arm không-advisor vs -36,8′ ở arm B). Chia theo mọi biến ĐO ĐƯỢC ở A (payout_A, trips_A, offered_A) cho gradient còn lớn hơn nữa và arm null tái lập hết; chia theo thuộc tính CỐ ĐỊNH (độ dài ca, giờ vào ca, archetype, fleet) thì gradient BIẾN MẤT. Thêm ba đòn độc lập: (i) c9c là placebo phương sai-bằng-0 nên không loại được gì, mà lại được dùng để tuyên 9b là thật; (ii) chính c9b in ra tỷ lệ được chạm 27,3/37,7/35,9% — không có quan hệ liều–đáp ứng, nhóm liều cao nhất có Δ ns; (iii) `idle_min` tương quan +0,765 với độ dài ca và +0,227 (DƯƠNG) với payout, nên 'rảnh ít nhất' là người CA NGẮN chứ không phải người bận/giàu — nhãn 'lấy của người bận' sai từ gốc. Sàn nhiễu per-tài-xế là 57–60 nghìn đồng, gấp ~18 lần hiệu ứng toàn đội +3.219đ, nên sim này không có độ phân giải cho bất kỳ phát biểu 'ai được ai mất' nào. ⇒ KHÔNG được báo cáo con số -15.290đ hay +26.106đ. Cái tôi KHÔNG bác được: Δ toàn đội +3.219đ [1.657;4.731] — arm null cho -769đ ns dù liều lớn hơn; điều kiện để bác nốt là một arm chọn TẬP Ô ngẫu nhiên trong zones hợp lệ mà vẫn giữ số suất mỗi ô."
+}

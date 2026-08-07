@@ -1,0 +1,90 @@
+{
+  "denominator": {
+    "drivers_total": 150,
+    "drivers_in_scope_bike": 110,
+    "dates_sampled": [
+      "2026-07-01",
+      "2026-07-10",
+      "2026-07-19",
+      "2026-07-28",
+      "2026-08-06",
+      "2026-08-15",
+      "2026-08-24",
+      "2026-09-02",
+      "2026-09-11",
+      "2026-09-20"
+    ]
+  },
+  "kenh_v1": {
+    "n_calls": 3300,
+    "outcome": {
+      "spoke": 3296,
+      "silent": 4
+    },
+    "item_shapes": {
+      "S1|bonus_gap|feasible_gap": 1687,
+      "S1|info|insufficient_budget_hours": 1181,
+      "S1|info|acceptance_below_threshold": 428
+    }
+  },
+  "solver_chet": {
+    "counts": {
+      "N": 1100,
+      "S3_inferred_activities_rong": 1100,
+      "S3_co_gross_va_payout": 1069,
+      "S3_co_pattern": 767,
+      "S8_notable": 482,
+      "S9_ok": 1100,
+      "S6_crash": 1100,
+      "S8_co_tien_bi_tru": 19
+    },
+    "S3_pattern_types": {
+      "bonus_progress_gap": 739,
+      "acceptance_cliff": 119
+    },
+    "errors": {
+      "S6:AttributeError": 1100
+    }
+  },
+  "rewards_shape": {
+    "in_memory": {
+      "dict": 6
+    },
+    "parquet": {
+      "str": 6
+    },
+    "loader_san_pham": {
+      "str": 6
+    }
+  },
+  "kenh_v2": {
+    "provider_mac_dinh": "UnavailableRuntimeStateProvider",
+    "ADVICE_V2_ENABLED": "0",
+    "solver_set": [
+      "S1"
+    ],
+    "reasons": {
+      "S2": "missing_state"
+    }
+  },
+  "policy": {
+    "version": "sim-policy-v0",
+    "weekly_quota": null,
+    "costs": null,
+    "track": null,
+    "effective_from": null,
+    "effective_to": null,
+    "policy_thresholds_source": "policy_v:sim-policy-v0",
+    "advice_json_item_fields": [
+      "advice_id",
+      "solver",
+      "kind",
+      "title",
+      "message",
+      "confidence",
+      "reason_code",
+      "numbers",
+      "caveat"
+    ]
+  }
+}

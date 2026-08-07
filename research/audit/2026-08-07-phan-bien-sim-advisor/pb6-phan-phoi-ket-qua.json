@@ -1,0 +1,225 @@
+{
+ "goc": "pb6 — forensics PHAN PHOI tren artifact so cua research/audit/2026-08-07-root-cause-classes/ (c9, c9b, c9c, c9d). Nhiem vu: nhin vao PHAN PHOI thay vi trung binh; kiem outlier/bimodal/bootstrap/power/loi lam lech. Moi so duoi day hoac DOC TRUC TIEP tu per_seed cua artifact, hoac DO LAI bang cach chay sim (uv run python, config configs/pilot_dongda.yaml, seed 3300-3319 = tap con cua cua so 3300-3329 goc).",
+ "findings": [
+  {
+   "ma": "PB6-01",
+   "tieu_de": "O MUC TAI XE, kenh nay la XAO TRON CUOC chu khong phai cai thien: mean|Δ| = 56.680d so voi net +3.097d = 18,3x",
+   "file_line": "do lai bang script rieng tren src/gsm_sim/runner.py::run_once + gsm_sim/parallel.py::_cfg_with (arm A enabled=False, arm B enabled=True coverage='all'), seed 3300-3319",
+   "neo_noi_dung": "Actor.payout_vnd va Actor.trips_done (src/gsm_sim/entities.py::Actor; world.py 'actor.trips_done += 1')",
+   "hau_qua": "Con so duoc trich khap noi (+6.016d / +3.219d) la SO RONG cua mot phep tai phan phoi lon gap gan hai chuc lan. Khong artifact nao trong 2026-08-07-root-cause-classes do dai luong nay: c9/c9b/c9c/c9d chi luu TRUNG BINH theo seed (per_seed[*].delta_all, delta_t0..2), nen bien do o muc ca nhan bi an hoan toan. Bao cao cho Cuong ma chi noi '+3.219d/nguoi/ngay' la mo ta sai ban chat can thiep: no khong lam ai giau them mot chut, no boc cuoc tu nguoi nay sang nguoi khac.",
+   "so_do_duoc": "n=1.800 actor-day (20 seed x 90 actor). mean Δ = +3.097d · mean |Δ| = 56.680d · median |Δ| = 40.000d · sd = 79.360d. Ty le xao-tron/rong = 56.680/3.097 = 18,3x. Chi 3,3% actor-day BIT-IDENTICAL (Δ=0); 11,0% co |Δ| < 1.000d ⇒ 89,0% tai xe bi doi thu nhap ngay >1.000d. CO CHE: 86,6% actor-day DOI SO CUOC (Δtrips ≠ 0; phan bo −11..+12 cuoc, mode +0 chi 13,4%); trong 13,4% GIU NGUYEN so cuoc thi mean Δ payout chi +992d (sd 22.680, n=241). Tuc Δ payout ≈ Δcuoc × ~20.000d.",
+   "severity": "HIGH",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (chay lai sim 20 seed x 2 arm; khong suy tu config)"
+  },
+  {
+   "ma": "PB6-02",
+   "tieu_de": "TRUNG BINH TERCILE khong dai dien cho tai xe dien hinh: o tercile 'ranh NHIEU' mean +23.566d nhung MEDIAN chi +4.426d (5,3x), va 33,7% nguoi trong nhom do VAN AM",
+   "file_line": "c9b-phan-ra-theo-tieu-chi-TIEN-can-thiep.py:74 'row[f\"delta_t{j}\"] = statistics.mean([pb[i] - pa[i] for i in grp])'",
+   "neo_noi_dung": "statistics.mean([pb[i] - pa[i] for i in grp]) — artifact chi luu MEAN cua nhom, khong luu phan vi nao",
+   "hau_qua": "Cau '+26.106d cho nhom ranh nhieu / −15.290d lay cua nhom ranh it' doc nhu mot chuyen giao co he thong. Phan phoi thuc te la mot dam may rong ±80.000d ma trung binh chi lech nhe. Neu mang cau nay ra noi voi tai xe hoac voi GSM (vd 'nguoi ranh nhieu duoc them 26k/ngay') thi 1/3 nguoi trong chinh nhom do se thay minh MAT tien. Ranh gioi san pham CLAUDE.md §5 ('khong hua chac muc thu nhap; luon neu bat dinh') bi vi pham neu chi trich mean.",
+   "so_do_duoc": "n=600 actor-day/tercile (20 seed). t0 'ranh IT': mean −14.602d · MEDIAN −8.240d · q1 −51.622 · q3 +26.468 · p5 −144.023 · p95 +84.852 · min −320.313 · max +189.126 · sd 67.589 · 58,0% am (⇒ 42,0% DUONG). t1: mean +327d · MEDIAN +1d · sd 77.389 · 47,5% am. t2 'ranh NHIEU': mean +23.566d · MEDIAN +4.426d · q1 −13.687 · q3 +71.747 · p5 −124.511 · p95 +178.458 · min −264.303 · max +339.443 · sd 87.273 · 33,7% AM. Ty le mean/median o t2 = 5,3x.",
+   "severity": "HIGH",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO"
+  },
+  {
+   "ma": "PB6-03",
+   "tieu_de": "(a)+(b) TRA LOI TRUC TIEP: KHONG co bimodal, KHONG phu thuoc outlier — mau hinh tercile cua c9b DUNG VUNG truoc moi phep bo seed",
+   "file_line": "c9b-phan-ra-theo-tieu-chi-TIEN-can-thiep.json per_seed[0..29].delta_t0/t1/t2 (30 gia tri/tercile)",
+   "neo_noi_dung": "per_seed[*]['delta_t0'] ... ['delta_t2'] trong c9b .json; va per_seed[*]['delta_all'] trong c9-phan-ra-per-actor-paired-crn.json",
+   "hau_qua": "Day la mot ket qua AM TINH va no CUNG CO c9b, khong bac. Bat ky de xuat 'bo seed le di roi ket luan doi' deu khong co co so. Nhung no cung co nghia: KHONG the do loi cho outlier de tranh doi mat voi ket luan −15.290d.",
+   "so_do_duoc": "DAU THEO SEED: t0 am 29/30 (chi seed 3307 duong, +2.892d); t2 duong 29/30 (chi seed 3300 am, −1.462d); delta_all duong 24/30 (6 seed am: 3300, 3301, 3309, 3315, 3319, 3325). BO 3 SEED CUC DOAN (|z| lon nhat): t0 −15.290→−14.936 (+354) · t1 −1.158→−17 · t2 +26.106→+26.938 (+831) · delta_all +3.219→+3.571. BO 3 SEED UNG HO MANH NHAT (adversarial): t0 −15.290→−13.875 · t2 +26.106→+23.823 · delta_all +3.219→+2.507 (van duong). BIMODAL: khe ho lon nhat trong day 30 gia tri da xep = 1,40 sd (delta_all), 1,06 sd (t0), 0,59 sd (t1), 0,65 sd (t2) — deu duoi nguong nghi ngo 1,5 sd. Histogram muc actor (n=1.800, buoc 25.000d) DON DINH, mode o [0; +25.000d) voi 362/1.800, giam don dieu ve hai phia.",
+   "severity": "INFO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (tinh lai tu per_seed cua artifact + histogram do lai)"
+  },
+  {
+   "ma": "PB6-04",
+   "tieu_de": "'ns' o tercile GIUA la NULL RONG, khong phai bang chung 'phang': power = 0,080, MDE(80%) = 6.359d",
+   "file_line": "c9b-phan-ra-theo-tieu-chi-TIEN-can-thiep.json tercile_1: delta_mean −1.158,32 · ci95 [−5.492,59; +3.124,51] · sig 'ns'",
+   "neo_noi_dung": "\"tercile_1\": {\"ten\": \"giữa\", ... \"sig\": \"ns\"}",
+   "hau_qua": "Mau hinh 'am — phang — duong' duoc doc nhu mot GRADIENT co cau truc. Nhung o muc giua phep thu khong nhin thay gi ca: bat ky hieu ung thuc trong khoang ±6.400d o nhom nay deu bi bo lot. Ket luan 'gradient don dieu theo idle' vi the KHONG duoc chong bang du lieu nay; chi hai dau la do duoc. c9b:98 in ra 'Δ phang hoac DAO ⇒ gia tri la lan toa he thong' — do la doc 'ns' thanh 'bang 0', dung bay ma CLAUDE.md §4b canh (khong duoc goi 'fixed' khi chua chung minh).",
+   "so_do_duoc": "Tu 30 gia tri delta_t1 cua c9b: sd = 12.440d, se = 2.271d, |eff|/se = 1.158/2.271 = 0,51 ⇒ power (two-sided, α=0,05) = 0,080. MDE(80%) = 2,8 × se = 6.359d. De so sanh, t0 va t2 co |eff|/se = 11,25 va 11,60 (power ≈ 1,000).",
+   "severity": "MEDIUM",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (sd/se tinh tu per_seed) + tinh (cong thuc power chuan)"
+  },
+  {
+   "ma": "PB6-05",
+   "tieu_de": "Null cua c9d CHAT o muc toan doi nhung YEU o muc tercile: du lieu van dung nap toi 16,7% bien do t2 la thong tin THAT cua solver",
+   "file_line": "c9d-THONG-TIN-hay-XAO-TRON.json tercile_2: that −633,70 · ci95 [−5.616,13; +4.372,72]; toan_doi: that −1.370,85 · ci95 [−3.074,26; +414,49]",
+   "neo_noi_dung": "\"that\": ... \"ci95\": [...] \"sig\": \"ns\" trong c9d .json; script c9d:138 'lo, hi = _boot(d, rng)' voi d = [B_tercile[j] − S_tercile[j]]",
+   "hau_qua": "Cau 'Thong tin cua solver dong gop KHONG DO DUOC' la DUNG nhung phai kem tran. Doc dung theo CAN TREN cua CI: o toan doi solver dong gop toi da +414d = 12,9% cua +3.219d — do la mot null that su chat. O tercile thi long hon nhieu: t2 can tren +4.373d = 16,7% cua +26.106d, t1 can tren +4.168d. Neu bao cao 'Hungarian bi bac' ma khong kem cac tran nay thi la over-claim ve pham vi — dung loai loi da lam hong 2/5 finding hom nay.",
+   "so_do_duoc": "CAN TREN CI 95% cua 'that = B − SHUF' (doc thang tu c9d .json) / bien do B tuong ung: t0 +641,53 / |−15.290,40| = 4,20% · t1 +4.167,65 / |−1.158,32| = 359,8% · t2 +4.372,72 / +26.106,39 = 16,75% · toan doi +414,49 / +3.219,23 = 12,88%. sd cua hieu theo cap (30 seed): 9.660 / 13.841 / 14.240 / 5.007 ⇒ se 1.764 / 2.527 / 2.600 / 914 ⇒ MDE(80%) 4.938 / 7.075 / 7.280 / 2.560d. Dau cua hieu theo seed: am 16/30 (t0), 18/30 (t1), 15/30 (t2), 19/30 (toan doi) — khong nhom nao lech han.",
+   "severity": "MEDIUM",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (can tren doc thang tu artifact; sd/se tinh lai tu per_seed)"
+  },
+  {
+   "ma": "PB6-06",
+   "tieu_de": "Khong hieu chinh da so sanh — va o c9d dieu do lam NULL trong CHAT HON thuc te (12,9% → 28,3%)",
+   "file_line": "c9d-THONG-TIN-hay-XAO-TRON.py:138 va :147 — bon khoang tin cay (3 tercile + toan doi) dung chung α=0,05, khong Bonferroni/Holm",
+   "neo_noi_dung": "for j, ten in enumerate(NHOM): ... lo, hi = _boot(d, rng) ... sig = \"SIG\" if (lo > 0 or hi < 0) else \"ns \"",
+   "hau_qua": "Voi c9b (noi hieu ung la +SIG) khong hieu chinh khong doi gi vi |z| = 11. Nhung c9d dung khoang de KHANG DINH MOT NULL — o day khoang hep la co loi cho ket luan cua chinh minh. Day dung la kieu 'claim THUAN LOI phai verify ky hon' trong MEMORY.md: ket luan 'solver khong dong gop gi' la ket luan de chiu (no don gian hoa quyet dinh ship), nen phai chiu tran chat hon chu khong long hon.",
+   "so_do_duoc": "Toan doi: mean(that) = −1.370,85 · se = 914,15 (do tu 30 gia tri per_seed). Voi Bonferroni k=4, α=0,0125, z = 2,4977 ⇒ khoang [−3.654; +912]. Can tren +912d / +3.219d = 28,3% (thay vi 12,9% khi khong hieu chinh). Voi t0: [−7.199; +1.611], can tren +1.611/15.290 = 10,5% (thay vi 4,2%).",
+   "severity": "MEDIUM",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (mean/se do tu per_seed) + tinh (phan vi normal chuan)"
+  },
+  {
+   "ma": "PB6-07",
+   "tieu_de": "(c) TRA LOI: BOOTSTRAP DUNG CAU TRUC — no lay mau lai HIEU THEO CAP, khong phai hai mau doc lap; CI hep hon t-CI 5–9% nhung khong doi ket luan nao",
+   "file_line": "c9b-...py:49-53 def _boot(xs, rng): m = sorted(statistics.mean(rng.choices(xs, k=len(xs))) for _ in range(B)); return (m[int(0.025*B)], m[int(0.975*B)])",
+   "neo_noi_dung": "rng.choices(xs, k=len(xs)) voi xs = [r[f\"delta_t{j}\"] for r in per_seed] — moi phan tu la mean cua (pb[i] − pa[i]) TRONG CUNG mot seed CRN",
+   "hau_qua": "Day la mot nghi ngo BI BAC, va can ghi lai de khong ai phi cong nghi lai. Cau truc dung: (i) don vi lay mau la SEED, khong phai actor — dung, vi actor trong cung mot the gioi canh tranh nhau nen khong doc lap; (ii) gia tri da la hieu theo cap cung actor cung seed nen bootstrap mot mau la dung. Diem yeu con lai la nho: percentile bootstrap khong BCa o n=30 hoi hep, va chi so percentile lech len 1 rank.",
+   "so_do_duoc": "Chay lai voi B=20.000 (thay vi 2.000): c9b t0 [−17.902; −12.677] vs repo [−17.828; −12.591] · c9b t2 [+21.765; +30.404] vs repo [+21.953; +30.164] · delta_all [+1.616; +4.739] vs repo [+1.652; +4.733] · c9d toan doi [−3.164; +389] vs repo [−3.074; +414]. So voi t-CI (t(29)=2,045): t0 [−18.069; −12.512] · t2 [+21.505; +30.708] · delta_all [+1.562; +4.876] · c9d toan doi [−3.240; +499] ⇒ CI percentile HEP HON t-CI khoang 5–9% be rong. Chi so percentile: int(0,025×2000)=50 va int(0,975×2000)=1950 tren list 0..1999 ⇒ phu (1950−50)/2000 = 95,00% dung, nhung lech len 1 rank so voi 0,025×1999=49,98 / 0,975×1999=1949,02.",
+   "severity": "LOW",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (chay lai bootstrap B=20.000 tren chinh per_seed cua artifact)"
+  },
+  {
+   "ma": "PB6-08",
+   "tieu_de": "(d) TRA LOI: n=30 THUA cho chinh hieu ung tercile (power ≈ 1,000) nhung THIEU cho moi ket luan NULL — them seed khong lam bien do chac hon, chi giup cac null",
+   "file_line": "c9b-...py:44 SEEDS = list(range(3300, 3330)) # CUNG cua so seed voi 9a ⇒ so sanh duoc",
+   "neo_noi_dung": "SEEDS = list(range(3300, 3330)) (xuat hien y het o c9:54, c9b:44, c9c:51, c9d:60)",
+   "hau_qua": "Dinh huong chi phi: neu ai de xuat 'chay them 70 seed cho du 100 nhu UPDATE-087' thi phai noi ro do la de siet cac NULL (c9d B−SHUF, tercile giua), KHONG phai de xac nhan −15.290d/+26.106d — hai so do da vuot xa nguong tu n=15. Voi n=100, MDE cua null toan doi ha tu 2.560d xuong ~1.402d va can tren Bonferroni tu +912d xuong ~+380d = 11,8% — do moi la buoc lam ket luan 'Hungarian khong mang thong tin' du chat de ship.",
+   "so_do_duoc": "delta_all: sd 4.439 · se 810 · |eff|/se = 3,97 · power 0,978 ⇒ n toi thieu cho 80% = 15. t0: sd 7.442 · se 1.359 · |eff|/se = 11,25 · power ≈ 1,000. t2: sd 12.324 · se 2.250 · |eff|/se = 11,60 · power ≈ 1,000. t1: power 0,080 (PB6-04). c9d B−SHUF: MDE(80%) = 4.938 (t0) / 7.075 (t1) / 7.280 (t2) / 2.560d (toan doi). Ngoai suy n=100 (chia can(100/30)=1,826): se toan doi 914→501, MDE 2.560→1.402d.",
+   "severity": "MEDIUM",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (sd tu per_seed) + tinh (power/MDE cong thuc chuan); rieng ngoai suy n=100 la DERIVED"
+  },
+  {
+   "ma": "PB6-09",
+   "tieu_de": "MAU SO SACH — toi da kiem dung dieu kien da lam hong M1/M5 va KHONG co ai ngoai pham vi trong 90 actor",
+   "file_line": "configs/pilot_dongda.yaml:236 'n: 90' + :237-250 archetype_mix P1..P7; src/gsm_sim/advice_bridge.py:305-312 def covers(self, actor) -> ... if self.coverage == \"all\": hit = True",
+   "neo_noi_dung": "archetype_mix: P1 0.14 / P2 0.20 / P3 0.06 / P4 0.18 / P5 0.12 / P6 0.18 / P7 0.12 — khong co lop xe hoi/premium nao; va 'if self.coverage == \"all\": hit = True'",
+   "hau_qua": "Canh bao trong nhiem vu ('mau so co gom ca ngoai pham vi khong?') KHONG ap duoc o day: doi xe sim la 90 tai xe hai banh thuoc 7 archetype, tat ca deu duoc advisor phu khi coverage='all'. Khong co doi tuong bi advisor.py chan ngay o cua nhu M5. Ngoai ra n=90 chia het cho 3 nen tercile la 30/30/30 chinh xac, khong co nhom nao phinh. ⇒ khong duoc dung ly do 'mau so nhiem' de bac c9b.",
+   "so_do_duoc": "n=90 actor/seed (khop 'n': 90 trong ca 30 dong per_seed cua c9b .json). 10 seed x 90 = 900 quan sat, thanh phan archetype theo tercile: t0 = P1 43% / P5 30% / P7 14% / P6 7% / P4 3% / P2 2% / P3 1%; t1 = P6 35% / P7 21% / P2 18% / P4 18% / P5 6% / P3 3%; t2 = P2 40% / P4 32% / P6 11% / P3 13% / P5 1% / P7 2%. Khong lop nao ngoai P1–P7.",
+   "severity": "INFO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (chay sim va dem thanh phan) — khong suy tu nhan config"
+  },
+  {
+   "ma": "PB6-10",
+   "tieu_de": "Tai phan phoi la NGHICH TIEN: −15.290d roi vao nhom co payout NEN THAP NHAT (231.745d), tuong duong −6,6%, con +26.106d roi vao nhom nen cao hon (+9,9%)",
+   "file_line": "c9b-...py:69-71 xep = sorted(ids, key=lambda i: idle_a[i]); t = len(xep) // 3; terciles = [xep[:t], xep[t:2*t], xep[2*t:]]",
+   "neo_noi_dung": "idle_a = {a.actor_id: float(a.idle_min) for a in ra.actors} # ⭐ CHI arm A — tieu chi chia nhom khong he mang thong tin ve MUC THU NHAP NEN",
+   "hau_qua": "c9b bao cao Δ tuyet doi ma khong bao gio bao cao mau so. Nhom 'ranh IT' khong phai nhom giau/ban — no la nhom P1 (part-time toi) + P5 voi ca ngan (383,8 phut) va thu nhap nen THAP NHAT doi. Tuc kenh dang chuyen tien tu nhom NGHEO NHAT sang nhom kha hon. Bat ky de xuat ship nao cung phai doi mat voi cai nay, va no lien quan truc tiep toi tieu chi DA-08 1b (P1 −3.863d AM-SIG tung lam station_choice bi NO-GO — xem configs/pilot_dongda.yaml:349-351). Chua ai kiem P1 tren kenh positioning theo cach nay.",
+   "so_do_duoc": "10 seed x 90. payout_A trung binh theo tercile: t0 231.745d (median 207.267d) · t1 269.464d · t2 263.149d. Toan doi 254.786d. Quy doi bien do c9b ve % nen: −15.290 / 231.745 = −6,6% (t0) · +26.106 / 263.149 = +9,9% (t2) · +3.219 / 254.786 = +1,26% (toan doi). Thanh phan t0: P1 43% + P5 30% (online_min TB 383,8 phut) vs t2: P2 40% + P4 32% + P3 13% (online_min TB 599,6 phut).",
+   "severity": "HIGH",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO"
+  },
+  {
+   "ma": "PB6-11",
+   "tieu_de": "Toi THU BAC mau hinh tercile bang gia thuyet 'chi la do dai ca' va THAT BAI — truc that la TY LE RANH, va chia theo ty le con cho mau hinh MANH HON c9b",
+   "file_line": "do lai: xep tercile theo online_min va theo idle_min/online_min thay cho c9b-...py:69 key=lambda i: idle_a[i]",
+   "neo_noi_dung": "Actor.idle_min va Actor.online_min doc tu arm A (ra.actors)",
+   "hau_qua": "Ghi lai de khoa mot huong sua sai: KHONG duoc 'giai thich' c9b bang 'tai P1 chay ca ngan nen idle thap'. Neu chia doi theo do dai ca thi mau hinh BIEN MAT (khong don dieu, dau khong khop). Nghia la c9b do dung mot thu that ve TY LE RANH. Nhung ket hop voi PB6-12 va voi ket qua SHUF cua c9d, cach doc dung la: ty le ranh o arm A la proxy tot cho 'ai vua co mot ngay xui' ⇒ chia sac hon theo no thi hoi-quy-ve-trung-binh cang manh — dung huong ma c9d ket luan.",
+   "so_do_duoc": "20 seed (3300-3319), moi kieu chia 30/30/30. Xep theo idle_min (goc c9b): −14.602 SIG [−17.961; −11.258] / +327 ns / +23.566 SIG [+18.679; +28.398]. Xep theo online_min (DO DAI CA): +4.162 SIG [+481; +8.109] / +6.722 SIG [+2.014; +11.676] / −1.594 ns [−9.219; +5.456] — KHONG don dieu, dau nguoc. Xep theo idle_min/online_min: −23.175 SIG [−26.225; −19.956] (am 20/20 seed) / −2.798 ns / +35.264 SIG [+30.790; +40.390] (am 0/20 seed) — bien do LON HON c9b ~1,4x.",
+   "severity": "INFO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO"
+  },
+  {
+   "ma": "PB6-12",
+   "tieu_de": "Tu cach thanh vien tercile KHONG BEN qua seed: chi 15/90 actor luon o cung mot tercile, 30/90 trai het ca 3 — 'nguoi ranh nhieu' khong phai mot NGUOI, no la mot LAN RUT THAM",
+   "file_line": "c9b-...py:16-18 'Chia nhom bang mot dai luong CHI doc tu arm A — Actor.idle_min ... Arm A khong chiu can thiep nao ⇒ khong co post-treatment conditioning'",
+   "neo_noi_dung": "\"Day cung dung doi tuong ma kenh vi tri nham: nguoi ranh nhieu\" (c9b docstring)",
+   "hau_qua": "Hai he qua. (1) VE KHOA HOC: day chinh la co che hoi-quy-ve-trung-binh ma c9c KHONG loai duoc va c9d moi loai duoc bang SHUF — no giai thich VI SAO ban mu tai tao toan bo hieu ung. c9b tranh duoc post-treatment conditioning (dung nhu docstring noi) nhung KHONG tranh duoc RTM, va docstring khong canh dieu do. (2) VE SAN PHAM: khong the dung idle_min de chi mat truoc ai se bi thiet — nen moi de xuat kieu 'bu tru cho nhom bi thiet' hoac 'chi bat kenh cho nhom huong loi' deu KHONG THI HANH DUOC, vi nhom do khong ton tai on dinh giua cac ngay.",
+   "so_do_duoc": "10 seed x 90 actor: 15/90 actor giu nguyen tercile qua ca 10 seed; 30/90 actor xuat hien o CA BA tercile. (Neu tercile la dac diem cua nguoi thi con so thu nhat phai gan 90.)",
+   "severity": "HIGH",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO"
+  },
+  {
+   "ma": "PB6-13",
+   "tieu_de": "(e) `n_hoan_vi` trong c9d KHONG phai lieu cua placebo va artifact khong ghi mau so — toi do lai va placebo DU MANH (nhung cho luc do nay chi la may man)",
+   "file_line": "c9d-THONG-TIN-hay-XAO-TRON.py:81-85 'if len(allocs) > 1: ... self.n += 1' — self.n chi dem luot GOI CO hoan vi, khong dem tong so luot goi solve",
+   "neo_noi_dung": "class _Hoanvi: ... if len(allocs) > 1: dich = [a[\"assigned_target\"] for a in allocs]; self.rng.shuffle(dich) ... self.n += 1",
+   "hau_qua": "c9d .json luu 'n_hoan_vi': 10..17 va header in ra '~14 luot hoan vi/seed'. Nguoi doc de hieu do la CUONG DO placebo. Thuc ra no la tu so ma khong co mau so: cac luot solve tra ve <=1 allocation bi bo qua HOAN TOAN va khong duoc ghi o dau. Neu ty le bo qua cao thi arm SHUF gan nhu la arm B va ket luan 'ban mu tai tao toan bo hieu ung' se la TAM THUONG DUNG. Toi do lai va no KHONG cao — nhung dieu do khong doc duoc tu artifact, day la lo hong truy vet.",
+   "so_do_duoc": "Do lai bang cach lap lai chinh _Hoanvi co them bo dem, 5 seed (3300, 3301, 3302, 3307, 3319): luot goi solve bi BO QUA hoan vi = 13/77 = 16,9%; nhung allocation nam trong cac luot bi bo = 13/319 = 4,1%; allocation THUC SU DOI DICH = 242/319 = 75,9% cua TOAN BO (79,1% cua so duoc dua vao hoan vi). Theo seed: 3300 66,0% · 3301 66,2% · 3302 83,6% · 3307 78,5% · 3319 81,3% — ba so dau TAI TAO DUNG con so 66,0/66,2/83,6% ma tac gia bao cao. So o KHAC NHAU/luot goi: 3,23 · 4,07 · 5,00 · 4,83 · 6,09.",
+   "severity": "LOW",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (instrument lai va chay 5 seed)"
+  },
+  {
+   "ma": "PB6-14",
+   "tieu_de": "(e) `_Hoanvi` de lai `staggered` va `assigned_bucket` LECH sau hoan vi ⇒ moi so herding/stagger doc tu log arm SHUF la SAI (payout khong bi anh huong — da kiem)",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:61-63 a = {..., \"assigned_target\": tgt, \"assigned_bucket\": bk, \"staggered\": tgt != c[\"target\"]} va :90-91 n_stag = sum(1 for a in allocations if a.get(\"staggered\")); herding_avoided = n_stag + len(unassigned)",
+   "neo_noi_dung": "\"staggered\": tgt != c[\"target\"] — tinh TRUOC khi _Hoanvi ghi de assigned_target; va world.py 'herding_avoided=sol[\"herding_avoided\"]' trong self.log(-1, \"standby_planner\", ...)",
+   "hau_qua": "Duoi arm SHUF, event `standby_planner` ghi `herding_avoided` cua LOI GIAI THAT chu khong phai cua arm dang chay. Ai do sau nay so herding/Gini/HHI giua B va SHUF tu event log se doc ra 'hai arm phan tan nhu nhau' mot cach gia tao. KET LUAN HIEN TAI KHONG BI DAO: toi doc lai vong lap thi hanh o world.py va no chi dung al[\"assigned_target\"], al[\"driver_id\"], al.get(\"safety_flags\") — khong dung `staggered` cung khong dung `assigned_bucket` ⇒ payout sach.",
+   "so_do_duoc": "Doc code: vong for al in sol[\"allocations\"] trong world.py truy cap dung 3 khoa (cell = al[\"assigned_target\"]; aid = int(al[\"driver_id\"][2:]); flags_by_cell.setdefault(cell, al.get(\"safety_flags\") or [])). `assigned_bucket` va `staggered` khong xuat hien lan nao trong vong lap do.",
+   "severity": "LOW",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (doc code, khong suy tu nhan)"
+  },
+  {
+   "ma": "PB6-15",
+   "tieu_de": "(e) MIN CHUA NO: `_Hoanvi` hoan vi tren danh sach GHEP swap+standby — hom nay sach chi vi station rong; bat `station_choice` la placebo bien thanh mot can thiep khac han",
+   "file_line": "src/gsm_core/solvers/capacity_alloc.py:88 'allocations = swap_alloc + standby_alloc'; c9d-...py:80-85 hoan vi tren toan bo `allocs`",
+   "neo_noi_dung": "allocations = swap_alloc + standby_alloc (capacity_alloc.solve) doi lai voi dich = [a[\"assigned_target\"] for a in allocs]; self.rng.shuffle(dich) (_Hoanvi)",
+   "hau_qua": "`assigned_target` cua swap la station_id, cua standby la ten o. Hoan vi tron hai loai se gan station_id lam o dung cho cua mot tai xe (va nguoc lai) ⇒ (i) placebo khong con la 'cung lieu, khac thong tin' ma la mot can thiep vo nghia khac, (ii) assert zone-veto o world.py ('zone-veto thung: co nguoi bi gan vao o fired') co the no hoac tho lot. HOM NAY KHONG CAN: world.py truyen [] cho danh sach station va moi candidate deu la advice_kind='standby_zone' ⇒ swap_alloc rong, station_caps rong. Dieu kien mo lai: bat `station_choice` (dang false, NO-GO theo UPDATE-160) hoac bat ky duong nao dua swap_window vao cung mot loi goi solve.",
+   "so_do_duoc": "world.py: derive_allocation_input(_iso(now), cands, [], zones, bucket_min=int(b)) — tham so thu ba (station) la LIST RONG; cands duoc dung voi \"advice_kind\": \"standby_zone\" duy nhat. configs/pilot_dongda.yaml: station_choice: false.",
+   "severity": "LOW",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (doc code + doc config)"
+  },
+  {
+   "ma": "PB6-16",
+   "tieu_de": "(e) TIES ngay bien tercile: 7/20 bien co `idle_min` BANG NHAU tai diem cat ⇒ thanh vien duoc quyet dinh boi actor_id chu khong phai boi tieu chi",
+   "file_line": "c9b-...py:69 xep = sorted(ids, key=lambda i: idle_a[i]) — ids da la sorted(...) nen tie-break la actor_id, khong khai bao",
+   "neo_noi_dung": "ids = sorted(set(pa) & set(pb) & set(idle_a)); xep = sorted(ids, key=lambda i: idle_a[i])",
+   "hau_qua": "Khong dao dau (anh huong toi da 1/30 thanh vien moi nhom, va Δ trung binh chenh giua hai nhom ke nhau ~14.000d ⇒ dich chuyen ~470d, nho hon nhieu so voi se 1.359–2.250d). Nhung no la mot nguon khong-xac-dinh khong duoc khai bao trong docstring, va se nang len neu ai do chia thanh quintile/decile thay vi tercile (bien nhieu hon, nhom nho hon).",
+   "so_do_duoc": "10 seed x 2 bien = 20 bien; 7 bien co idle_min[xep[t-1]] == idle_min[xep[t]] (hoac tai bien 2t). Uoc luong tac dong: 1 actor x (26.106 − (−15.290))/2 / 30 ≈ 690d o truong hop xau nhat mot bien.",
+   "severity": "LOW",
+   "confidence": "TRUNG BINH (con so 7/20 la DO; uoc luong tac dong la DERIVED)",
+   "tu_do_hay_suy": "DO (dem ties) + DERIVED (uoc luong tac dong)"
+  },
+  {
+   "ma": "PB6-17",
+   "tieu_de": "(e) `t = len(xep)//3` don phan du vao tercile CAO NHAT — khong can o n=90 nhung la min neu doi so tai xe",
+   "file_line": "c9b-...py:70-71 't = len(xep) // 3; terciles = [xep[:t], xep[t:2*t], xep[2*t:]]' (lap lai y het o c9c:84-86 va c9d:97-99)",
+   "neo_noi_dung": "t = len(xep) // 3  ...  (xep[:t], xep[t:2 * t], xep[2 * t:])",
+   "hau_qua": "Neu n khong chia het cho 3, tercile 'ranh NHIEU nhat' nhan them 1–2 nguoi — dung nhom co bien do lon nhat va do lech lon nhat, nen sai so vao dung cho dat nhat. configs/pilot_dongda.yaml da doi `actors.n` ba lan (50 → 74 → 90; xem comment SIM-1 va SIM-XANH) va 74 KHONG chia het cho 3 ⇒ neu ai chay lai bo script nay tren mot config cu/khac thi loi kich hoat im lang. Khong co assert nao canh.",
+   "so_do_duoc": "n=90 trong ca 30 dong per_seed cua c9b .json ⇒ 90 % 3 = 0 ⇒ tercile 30/30/30, khong lech. Doi chieu: 74 % 3 = 2 (config truoc do).",
+   "severity": "LOW",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (doc n tu artifact + doc config)"
+  },
+  {
+   "ma": "PB6-18",
+   "tieu_de": "c9c mang NHAN SAI: no khong 'gia duoc hoi quy ve trung binh' — cai no chung minh (va chung minh tot) la POSITIONING LA KENH DUY NHAT DANG CHAY",
+   "file_line": "ten file 'c9c-GIA-DUOC-arm-null-hoi-quy-ve-trung-binh.py' va :20 '· Neu arm NULL bit-identical voi arm A ⇒ khong co xao tron ⇒ mau hinh cua 9b la THAT.'",
+   "neo_noi_dung": "\"Neu arm NULL **bit-identical** voi arm A ⇒ khong co xao tron ⇒ mau hinh cua `9b` la **THAT**\"",
+   "hau_qua": "Suy dien in trong docstring la SAI logic: bit-identical chi noi rang tat kenh positioning thi khong con can thiep nao — no khong noi gi ve viec dieu kien hoa tren idle_min@A co sinh hoi-quy-ve-trung-binh hay khong (RTM sinh ra tu viec B la mot LAN RUT KHAC, chu khong tu viec bat co). Tac gia da tu sua bang c9d, nhung TEN FILE va docstring c9c van con nguyen trong repo va se danh lua nguoi doc sau. Gia tri THAT cua c9c thi lon: 30/30 seed bit-identical la bang chung TRUC TIEP rang khong kenh nao khac dang chay — manh hon viec doc 6 dong `false` trong yaml. Nen doi nhan thanh 'co lap kenh', khong xoa.",
+   "so_do_duoc": "c9c .json: n_fingerprint_giong = 30/30; ca 30 dong per_seed co delta_t0 = delta_t1 = delta_t2 = 0.0 chan. Khoa `positioning_overrides` TON TAI THAT: configs/pilot_dongda.yaml:357 'positioning_overrides: wait_only' (cong khoa-cau-hinh cua UPDATE-180 PASS). Placebo dung duoc dung: _cfg_with ghi vao c.data[\"advice\"] (parallel.py:81-87 adv = c.data.setdefault(\"advice\", {}); adv[\"enabled\"]=...; adv[\"coverage\"]=...) nen Config(copy.deepcopy(c.data), c.root_dir) o c9c:67 GIU NGUYEN enabled=True/coverage='all'. Doi chieu yaml: shift_plan/accept_lift/shift_extend/rest_window/swap_early/station_choice = false (6/6).",
+   "severity": "INFO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (doc artifact + doc config + doc code)"
+  },
+  {
+   "ma": "PB6-19",
+   "tieu_de": "Hai seed dang mo ra xem neu muon hieu co che (khong du de goi bimodal): 3300 la seed DUY NHAT ca doi cung thua, 3307 la seed DUY NHAT nhom 'ranh IT' co lai",
+   "file_line": "c9b .json per_seed[0] (seed 3300: delta_t0 −13.520,07 · delta_t1 −13.176,87 · delta_t2 −1.462,37) va per_seed[7] (seed 3307: delta_t0 +2.892,23 · delta_t1 −4.521,20 · delta_t2 +4.061,23)",
+   "neo_noi_dung": "{\"seed\": 3300, ... \"delta_t2\": -1462.3666666666666} va {\"seed\": 3307, ... \"delta_t0\": 2892.233333333333}",
+   "hau_qua": "PB6-03 da chung minh chung KHONG lai ket luan (bo di, so gan nhu khong doi). Nhung neu ai muon truy CO CHE (nhiem vu cho goc pb2 ve gia thuyet Hungarian toi uu mot dai luong mien phi vi cash_cost_vnd_per_km = 0) thi day la hai seed doi cuc, re nhat de dat breakpoint. Seed 3300 cung la seed co SHUF am nhat o t0 (−25.191,87 so voi B −13.520,07 ⇒ hieu +11.671,80, lon nhat trong 30 seed).",
+   "so_do_duoc": "seed 3300: delta_all −9.386,43 (thap nhat trong 30; seed thap thu hai la 3301 voi −3.153,43 ⇒ khe ho 6.233d = 1,40 sd, khe lon nhat cua day). seed 3307: delta_all +810,76; bien do moi nhom deu nho nhat/gan nhat 0. seed 3314 la cao nhat: delta_all +12.694,04.",
+   "severity": "INFO",
+   "confidence": "CAO",
+   "tu_do_hay_suy": "DO (doc thang per_seed)"
+  }
+ ],
+ "cai_chua_kiem": [
+  "TAI TAO: cac so do lai cua toi (PB6-01/02/09/10/11/12/13) chay tren 5–20 seed dau cua cua so 3300–3329, KHONG phai ca 30. Huong va do lon khop voi artifact (vd delta_all cua toi +3.097d tren 20 seed vs +3.219d cua c9 tren 30 seed; tercile idle cua toi −14.602/+327/+23.566 vs c9b −15.290/−1.158/+26.106) nhung cac con so KHONG bang y het va khong nen trich thay cho artifact goc.",
+  "TOI KHONG MO UPDATE-087 va khong kiem lai vi sao `+6.016d` khong tai tao duoc. Do khong thuoc pham vi nhiem vu nay (forensics tren phan phoi cua c9*). Moi ket luan cua toi ve '+3.219d' deu la ve con so DO HOM NAY, khong phai ve tinh dung/sai cua +6.016d.",
+  "TOI KHONG KIEM gia thuyet co che cua nhiem vu pb2 (Hungarian toi uu tong ETA trong khi cash_cost_vnd_per_km = 0). Toi khong mo cost matrix de xac nhan no toi uu dai luong nao — o capacity_alloc.py:44-50 cost chi gom priority_penalty (SOC) + phat lech target 10.0, KHONG co ETA/km nao, nhung toi KHONG do dieu do va khong ket luan; day la viec cua pb2.",
+  "PHAN PHOI Δ o muc actor toi do tren TOAN DOI va theo tercile idle, nhung KHONG tach theo archetype. Cau hoi 'P1 co bi thiet AM-SIG khong' (tieu chi DA-08 1b, thu da lam station_choice NO-GO) toi CHUA do — PB6-10 chi cho thay P1 chiem 43% cua nhom bi thiet, khong phai la mot phep do tren P1.",
+  "TOI KHONG do lai arm SHUF (c9d). Moi so B−SHUF trong PB6-05/06 la doc/tinh lai tu per_seed cua c9d .json, khong phai tu mot lan chay doc lap. Neu c9d co loi trong CHINH lan chay (khong phai trong phan tich) thi toi khong bat duoc.",
+  "SO CUOC: PB6-01 quy Δ payout ve Δtrips_done nhung khong tach phan do CHIEU DAI CUOC doi (fare khac nhau theo km). Con so '~20.000d/cuoc' la thuong so tho, khong phai fare do duoc.",
+  "Cac file .json khac trong thu muc (rc-L1..L6, mm-02/03/08/09/10, pb-L-refute, b3, c4b, m1, m5) toi CHI luot qua de xac nhan chung khong chua per-seed numerics thuoc pham vi (a)-(e). Toi KHONG lam forensics tren chung.",
+  "KHONG CHAY test suite. Theo CLAUDE.md muon noi 'suite xanh' phai chay ca `uv run pytest -q` VA `uv run pytest -q ui/backend/tests`; toi khong chay cai nao va khong khang dinh gi ve suite."
+ ],
+ "tom_tat": "TRA LOI 5 CAU HOI. (a) OUTLIER: khong co. Bo 3 seed cuc doan ⇒ t0 −15.290→−14.936, t2 +26.106→+26.938, delta_all +3.219→+3.571; bo 3 seed UNG HO NHAT ⇒ −13.875 / +23.823 / +2.507. Dau on dinh: t0 am 29/30, t2 duong 29/30. (b) BIMODAL: khong. Khe ho lon nhat trong day 30 seed da xep = 1,40 sd (delta_all) va 1,06/0,59/0,65 sd (tercile), duoi nguong 1,5; histogram muc actor (n=1.800) don dinh, mode [0;+25k). (c) BOOTSTRAP DUNG: no lay mau lai HIEU THEO CAP cung actor cung seed CRN — mot mau, khong phai hai mau doc lap; chay lai B=20.000 cho ket qua trung khop, CI percentile hep hon t-CI 5–9% (khong BCa o n=30), chi so percentile lech 1 rank. Khong ket luan nao doi. (d) POWER: n=30 THUA cho chinh hieu ung tercile (|eff|/se = 11,25 va 11,60; power ≈ 1,000; delta_all chi can n=15) nhung THIEU cho moi ket luan NULL — tercile giua co power 0,080 (MDE 6.359d), va null B−SHUF theo tercile co MDE 4.938–7.280d. (e) CHO CO THE LECH: `n_hoan_vi` khong phai lieu placebo va artifact khong ghi mau so (do lai: 16,9% luot goi bi bo qua nhung chi 4,1% allocation; 75,9% allocation THUC SU doi dich ⇒ placebo du manh); `staggered`/`assigned_bucket` lech sau hoan vi (payout sach, log herding sai); hoan vi tren danh sach ghep swap+standby la min chua no; ties tai bien tercile 7/20; `//3` don phan du vao tercile cao nhat (khong can o n=90). MAU SO SACH — da kiem dung dieu kien lam hong M1/M5: 90 actor deu la P1–P7, coverage='all' phu het, khong ai bi chan ngoai pham vi, 90 chia het 3. BA PHAT HIEN NANG NHAT KHONG NAM TRONG DE BAI. (1) O muc tai xe day khong phai cai thien ma la XAO TRON CUOC: mean|Δ| = 56.680d so voi net +3.097d = 18,3x; 89% tai xe bi doi thu nhap ngay >1.000d; 86,6% doi SO CUOC; trong 13,4% giu nguyen so cuoc thi Δ chi +992d. (2) TRUNG BINH TERCILE khong ta ai ca: o nhom 'ranh NHIEU' mean +23.566d nhung MEDIAN chi +4.426d va 33,7% van AM. (3) Tai phan phoi la NGHICH TIEN: −15.290d roi vao nhom payout nen THAP NHAT (231.745d, 43% P1 + 30% P5) = −6,6%, con +26.106d roi vao nen 263.149d = +9,9%. Va tu cach thanh vien tercile khong ben (15/90 actor giu nguyen tercile qua 10 seed, 30/90 trai het ca 3) ⇒ khong the chi mat truoc ai se bi thiet, dong thoi day chinh la co che hoi-quy-ve-trung-binh giai thich vi sao ban mu SHUF tai tao duoc toan bo. Toi da THU BAC c9b bang gia thuyet 'chi la do dai ca' va THAT BAI: chia theo online_min lam mau hinh bien mat (+4.162/+6.722/−1.594), chia theo ty le idle/online lam no MANH HON (−23.175/−2.798/+35.264) ⇒ truc that la TY LE RANH. Cuoi cung, c9c mang nhan sai: no khong dinh gia duoc hoi-quy-ve-trung-binh, nhung no chung minh rat tot mot thu khac (positioning la kenh DUY NHAT dang chay, 30/30 bit-identical) — nen doi nhan, khong xoa."
+}
