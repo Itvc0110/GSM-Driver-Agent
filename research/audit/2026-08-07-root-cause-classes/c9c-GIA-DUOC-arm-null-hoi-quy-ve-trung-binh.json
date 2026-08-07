@@ -1,0 +1,280 @@
+{
+ "seeds": [
+  3300,
+  3301,
+  3302,
+  3303,
+  3304,
+  3305,
+  3306,
+  3307,
+  3308,
+  3309,
+  3310,
+  3311,
+  3312,
+  3313,
+  3314,
+  3315,
+  3316,
+  3317,
+  3318,
+  3319,
+  3320,
+  3321,
+  3322,
+  3323,
+  3324,
+  3325,
+  3326,
+  3327,
+  3328,
+  3329
+ ],
+ "n_fingerprint_giong": 30,
+ "per_seed": [
+  {
+   "seed": 3300,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3301,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3302,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3303,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3304,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3305,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3306,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3307,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3308,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3309,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3310,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3311,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3312,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3313,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3314,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3315,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3316,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3317,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3318,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3319,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3320,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3321,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3322,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3323,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3324,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3325,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3326,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3327,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3328,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  },
+  {
+   "seed": 3329,
+   "fingerprint_giong": true,
+   "delta_t0": 0.0,
+   "delta_t1": 0.0,
+   "delta_t2": 0.0
+  }
+ ],
+ "tercile_0": {
+  "ten": "rảnh ÍT nhất",
+  "delta_null": 0.0,
+  "ci95": [
+   0.0,
+   0.0
+  ],
+  "sig": "ns",
+  "delta_9b": -15290.0,
+  "ty_le_hien_vat": -0.0
+ },
+ "tercile_1": {
+  "ten": "giữa",
+  "delta_null": 0.0,
+  "ci95": [
+   0.0,
+   0.0
+  ],
+  "sig": "ns",
+  "delta_9b": -1158.0,
+  "ty_le_hien_vat": -0.0
+ },
+ "tercile_2": {
+  "ten": "rảnh NHIỀU nhất",
+  "delta_null": 0.0,
+  "ci95": [
+   0.0,
+   0.0
+  ],
+  "sig": "ns",
+  "delta_9b": 26106.0,
+  "ty_le_hien_vat": 0.0
+ }
+}

@@ -119,3 +119,41 @@ thời gian sẽ **luôn** cho payout ns. Không phải lỗi của kênh nào c
 
 Ba việc này **chỉ đọc/đo**, không đổi hành vi, không cần duyệt — và việc (1) có thể **đổi hẳn** nội dung
 mục 3.1 nên làm trước là đúng thứ tự.
+
+---
+
+# CẬP NHẬT 2026-08-07 — sau khi Cường duyệt plan + uỷ quyền quyết
+
+## A. Cường KHÔNG còn phải quyết bốn mục này — tôi đã dùng quyền uỷ
+
+Lập luận đầy đủ: `tracking/PHAN-QUYET-2026-08-07-bon-quyet-dinh-uy-quyen.md`.
+Lật lại được bất kỳ mục nào bằng cách **bác đúng tiền đề tôi dùng** (ghi kèm từng mục).
+
+| mã | phán quyết | tiền đề có thể bác |
+| --- | --- | --- |
+| **Q-D** chờ/đổi pin có tính là nghỉ? | ❌ **PHỦ QUYẾT** | *"nó làm YẾU một lan can một chiều"* — `rest_min_total` là chính đại lượng cổng dùng để tố giác *"advice ăn vào nghỉ"* |
+| **Q-B** S5/S6/S8 | S8 **ngoài scope** (D-006) · S5 **KHÔNG THỂ KIỂM** (sim không có khoán tuần/clawback) · S6 **hoãn** tới sau cost model | *"nối một solver không kiểm chứng được vào stack sẽ được đọc là đã kiểm"* |
+| **Q-A** mở lại ĐA-07? | ✅ **CÓ, nhưng SAU khi xử lý `S2-3`** | *"cap BIND 88,6% ⇒ đo bây giờ là lặp lại đúng sai lầm đang sửa"* |
+| **Q-07** k=6 vs k=8 | ⏸ **giữ k=6 tới hết Cycle 9**; mặc định sau đó **k=8** | *"k là thuộc tính của THƯỚC ĐO, và ta đang giữa chừng sửa thước"* |
+
+## B. ❌ V-33 — TÔI ĐÃ RÚT, Cường **không cần xem**
+
+Tôi từng báo *"cần Cường mở card ca chiều/ca đêm"*. Kiểm tiếp thì **không client nào tạo được ca
+đó**: `ui/web` v1 **không gửi** `shift_start_min`/`shift_end_min`; `ui/web` v2 và `ui/driver_app`
+**chép cứng `6*60`/`22*60`**. ⇒ bản vá đúng ở boundary nhưng hôm nay **không đường nào chạm tới**
+⇒ visual gate `NOT_APPLICABLE`. → `D-A2-CLIENT`.
+
+## C. VẪN CHỜ CƯỜNG (không đổi so với bản trên)
+
+**V-32** (blocking) · **V-31** · K-01(b) ACK · D-QD4-05 · ~27 mục `V-` · Q-03/04/09/10/13 ·
+**amendment ĐA-08** cho kênh phía-cung.
+
+## D. ⚠ BA con số ai trích cũng phải kèm caveat (đo hôm nay)
+
+1. **`+6.016đ/người/ngày`** (kênh positioning, kênh DUY NHẤT đang ship) — là **trung bình TOÀN
+   ĐỘI** trong khi chỉ **30,0–40,0%** đội thực sự đi theo lời khuyên (`D-B3-LIEU`, tôi đo 3 seed).
+   Phân rã per-actor đang chạy (Cycle 9). **Tới lúc có số, chỉ trích kèm câu "~1/3 đội được chạm".**
+2. **`26,7%` driver-phút advisor im lặng** (agent L4) — **SAI**. Đó chính là **tỷ lệ đội
+   car/premium** (40/150) mà `advisor.py:227` chặn ngay ở cửa. Thực đo trên đội bike: **0,1%**.
+3. **`"sổ lan can không mang một bit thông tin về kênh"`** (agent L4) — **SAI**. Tôi đo **0/3 seed
+   giống hệt**. Vế **đứng vững**: rail bắn **trước** cổng kênh nên arm advice TẮT vẫn sinh 125 event.
