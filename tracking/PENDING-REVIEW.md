@@ -133,3 +133,25 @@ qua)** còn khung **00:40–02:00** — đúng khung vừa xin im — **vẫn n�
 
 **Trạng thái:** `DONE-CODE / WAITING-VERDICT`. Suite: `tests/` 1189P/2F (đúng 2 lỗi của Khánh) ·
 `ui/backend/tests` 216P. **Không** gộp vào V-31/V-32.
+
+### ⚠ ĐÍNH CHÍNH V-33 (cùng ngày, trước khi Cường bỏ công xem)
+
+Tôi báo *"cần Cường mở card ca chiều/ca đêm"*. **Kiểm tiếp thì KHÔNG client nào tạo được ca đó:**
+
+| client | gửi gì | kết quả |
+| --- | --- | --- |
+| `ui/web` **v1** (`api.js:41-45`, đường đang dùng) | **KHÔNG gửi** `shift_start_min` lẫn `shift_end_min` | server rơi về default **06:00–22:00** |
+| `ui/web` **v2** (`cards.js:127`) | `shiftStartMin: 6*60, shiftEndMin: 22*60` **viết cứng** | luôn 06:00–22:00 |
+| `ui/driver_app` (`home_screen.dart:47-48`, **của Khánh**) | `shiftStartMin: 6*60, shiftEndMin: 22*60` **viết cứng** | luôn 06:00–22:00 |
+
+⇒ **Bản vá A2 đúng ở BOUNDARY nhưng hôm nay KHÔNG client nào chạm tới được.** Không có gì đổi
+trên màn hình ⇒ **visual gate của V-33 là `NOT_APPLICABLE` hôm nay**, không phải BLOCKING.
+Cường **không cần bỏ công xem** — tôi rút yêu cầu đó.
+
+**Nhưng đây là một nợ MỚI, và là instance thứ ba của cùng khuôn "LỚP 0"** (nợ ngủ đông sau một
+công tắc mặc-định-tắt): một hành vi server ĐÚNG mà **không đường nào tới được**. Hai instance
+trước: bản án ĐA-07 sau `shift_plan: false`, ngân sách thẻ trọn đời sau `ADVICE_V2_ENABLED=0`.
+
+⇒ `D-A2-CLIENT` (DEFERRED): ba chỗ chép cứng 06:00–22:00 + v1 không gửi gì. Sửa **không phải
+một dòng** — cần một **nguồn sự thật cho ca của tài xế** (`driver_state` hiện không mang nó).
+`ui/driver_app` thuộc **claim của Khánh**, tôi không đụng.
