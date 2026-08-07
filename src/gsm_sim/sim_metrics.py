@@ -341,6 +341,34 @@ RAIL_ALIVE_MIN_N = 20           # dưới mức này rail "sống/chết" không
 REST_TOTAL_DROP_TOL = 0.02      # rest_min_total giảm >2% giữa hai arm ⇒ tố giác
 SPAN_P90_RISE_TOL = 0.10        # p90 quá-sức tăng >10% ⇒ tố giác (p90, KHÔNG max — nhiễu ±36%)
 
+# Sổ CAM KẾT của kênh hoãn-nghỉ (`D-M3-04-FIX`). Không phải lan can — là bằng chứng lời hứa CÓ
+# được thi hành. Bảo toàn: made ≥ kept + broken + cleared.
+COMMIT_KEYS = ("commit_made_n", "commit_kept_n", "commit_broken_n", "commit_cleared_n")
+
+# ---------------------------------------------------------------------------
+# Cycle 4 (2026-08-07) — LAN CAN KHAI TRƠ TƯỜNG MINH.
+#
+# `health_guardrail_flags` nay tố giác thêm một kịch bản mà cổng cũ MÙ: rail **chưa từng sống**
+# (0 ở CẢ HAI arm dù cổng có chạy). Cổng cũ chỉ bắt "sống ở A, chết ở B" (`va >= RAIL_ALIVE_MIN_N
+# and vb == 0`), nên một rail bất khả đạt **không bao giờ** làm nó nổ — đo được: `veto_soc_low_n`
+# = 0,0 ở cả hai arm trên 30 seed (`research/audit/2026-08-06-e1b/ladder-truoc.json`).
+#
+# Rail nào trơ CÓ CHỦ Ý thì khai ở đây kèm LÝ DO và ĐIỀU KIỆN MỞ LẠI — đúng khuôn `defer_cap`
+# đã dùng ở `tests/test_rest_rails_guardrail.py:58-62` (*"ĐỎ = TIN TỐT"*).
+# ---------------------------------------------------------------------------
+RAIL_KHAI_TRO: dict[str, str] = {
+    "veto_soc_low_n":
+        "BẤT KHẢ ĐẠT theo cấu trúc sau `D-M3-04-FIX`: `world.py` chỉ vào nhánh hoãn-nghỉ khi "
+        "`action == REST`, mà `behavior.choose_idle_action` bước 1 đã trả GO_SWAP/GO_CHARGE với "
+        "CÙNG ngưỡng `swap_soc_threshold_pct` được truyền xuống ⇒ tập rỗng. Tính AN TOÀN vẫn "
+        "đúng (chặn ở thượng nguồn); đây là lỗ hổng HIỂN THỊ. "
+        "MỞ LẠI khi: nhánh hoãn-nghỉ nhận thêm action ngoài REST, hoặc hai ngưỡng tách nhau.",
+    "veto_defer_cap_n":
+        "Trơ ở config hiện hành — đã có test khai trơ `test_t3_defer_cap_TRO_o_config_hien_hanh` "
+        "(ĐỎ = TIN TỐT). MỞ LẠI khi kênh hoãn-nghỉ nói đủ nhiều để chạm trần "
+        "`rest_defer_max_min`.",
+}
+
 
 def rest_rails_audit(result) -> dict:
     """Đếm veto lan can từ event `advice_rest_veto` (log-only, world ghi mọi kết cục
@@ -532,11 +560,51 @@ def health_guardrail_flags(a: dict, b: dict) -> list[str]:
     Không có chiều khen — veto cao hơn/nghỉ nhiều hơn KHÔNG cộng điểm (chống Goodhart).
     """
     flags: list[str] = []
-    for r in REST_RAILS:
-        va, vb = int(a.get(f"veto_{r}_n") or 0), int(b.get(f"veto_{r}_n") or 0)
-        if va >= RAIL_ALIVE_MIN_N and vb == 0:
-            flags.append(f"lan can `{r}` SỤP VỀ 0 (A={va}, B=0) — nghi xoá lan can, "
-                         f"TREO mọi Δ cho tới khi giải thích được")
+    # Cycle 4: soi CẢ HAI họ lan can. Trước đây chỉ lặp `REST_RAILS` ⇒ 3 khoá `xveto_*` mang
+    # nhãn `one_way_gate: health_guardrail_flags` trong artifact mà cổng **không hề nhìn**.
+    for tien_to, rails in (("veto", REST_RAILS), ("xveto", EXTEND_RAILS)):
+        for r in rails:
+            k = f"{tien_to}_{r}_n"
+            va, vb = int(a.get(k) or 0), int(b.get(k) or 0)
+            if va >= RAIL_ALIVE_MIN_N and vb == 0:
+                flags.append(f"lan can `{k}` SỤP VỀ 0 (A={va}, B=0) — nghi xoá lan can, "
+                             f"TREO mọi Δ cho tới khi giải thích được")
+                continue
+            # (i-b) Cycle 4 — rail CHƯA TỪNG SỐNG. Cổng cũ mù ca này vì đòi `va >= 20`.
+            #
+            # ⚠ ĐÍNH CHÍNH cùng ngày (audit L4): bản đầu đòi `calls_a > 0 AND calls_b > 0`, và
+            # điều đó làm nhánh này **CHẾT cho đúng họ `xveto_` mà nó vừa được mở rộng tới**:
+            # `check_shift_extend` trả `channel_off` NGAY ở `advice_bridge.py:1119-1120`, mà
+            # `channel_off` không thuộc `EXTEND_RAILS` ⇒ `world.py:905` không log ⇒ **arm A (đối
+            # chứng, kênh tắt) LUÔN có `xveto_calls_n = 0`**. Tôi vừa dựng đúng loại nhánh chết
+            # mà cổng này sinh ra để bắt.
+            #
+            # Đúng phải là: *"ở arm mà cổng CÓ chạy, rail này chưa từng bắn"* — tức điều kiện
+            # neo vào **arm B**; arm A chỉ tham gia khi nó cũng có chạy (nếu nó chạy mà rail có
+            # bắn thì đây là ca SỤP VỀ 0, đã do nhánh (i) ở trên xử).
+            calls_a, calls_b = int(a.get(f"{tien_to}_calls_n") or 0), \
+                int(b.get(f"{tien_to}_calls_n") or 0)
+            if (calls_b > 0 and vb == 0 and (calls_a == 0 or va == 0)
+                    and k not in RAIL_KHAI_TRO):
+                flags.append(
+                    f"lan can `{k}` CHƯA TỪNG BẮN dù cổng chạy {calls_a}/{calls_b} lượt — nó "
+                    f"đang được ĐẾM như một lan can trong khi không bảo vệ được gì. Khai vào "
+                    f"`RAIL_KHAI_TRO` kèm lý do + điều kiện mở lại, hoặc sửa cho nó đạt tới được")
+    # (i-c) Sổ CAM KẾT (`D-M3-04-FIX`). Chỉ **`commit_kept_n`** là đại lượng mà SỤP VỀ 0 nghĩa
+    # là suy giảm sức khoẻ (advisor hứa hoãn nghỉ rồi không còn giữ lời). `made`/`broken`/
+    # `cleared` KHÔNG soi riêng: `made` sụp chỉ nghĩa là kênh nói ít hơn, `broken` sụp là TỐT —
+    # tố giác chúng sẽ tạo chiều khen, đúng hướng Goodhart mà tầng 5 sinh ra để chặn.
+    ka, kb = int(a.get("commit_kept_n") or 0), int(b.get("commit_kept_n") or 0)
+    if ka >= RAIL_ALIVE_MIN_N and kb == 0:
+        flags.append(f"`commit_kept_n` SỤP VỀ 0 (A={ka}, B=0) — lời hứa hoãn nghỉ không còn được "
+                     f"thi hành; TREO mọi Δ cho tới khi giải thích được")
+    made_b, giu_b = int(b.get("commit_made_n") or 0), (
+        kb + int(b.get("commit_broken_n") or 0) + int(b.get("commit_cleared_n") or 0))
+    if made_b >= RAIL_ALIVE_MIN_N and giu_b == 0:
+        flags.append(f"sổ CAM KẾT hở: arm B ghi {made_b} cam kết nhưng KHÔNG cam kết nào có kết "
+                     f"cục (kept/broken/cleared đều 0) — lời hứa hoãn nghỉ đang sống trên giấy")
+    if made_b and giu_b > made_b:
+        flags.append(f"sổ CAM KẾT vỡ bảo toàn: kept+broken+cleared = {giu_b} > made = {made_b}")
     ra, rb = float(a.get("rest_min_total") or 0), float(b.get("rest_min_total") or 0)
     if ra > 0 and (ra - rb) / ra > REST_TOTAL_DROP_TOL:
         flags.append(f"rest_min_total giảm {(ra - rb) / ra:.1%} (A={ra:.0f}′ → B={rb:.0f}′) "

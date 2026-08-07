@@ -13,7 +13,14 @@ import numpy as np
 
 from gsm_core.policy import PolicyBundle
 
-ACTIONS = ("ONLINE", "REST", "SWAP", "END")  # thứ tự = tie-break priority
+# ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 2): tuple này là **MÃ HOÁ CHỈ SỐ** của `best_a`
+# (0=ONLINE, 1=REST, 2=SWAP, 3=END), **KHÔNG phải** thứ tự tie-break.
+# Thứ tự tie-break THẬT trong `_solve_dp` là **ONLINE → SWAP → REST → END** (`:228,244,249,254`)
+# — SWAP đứng trước REST là CÓ CHỦ Ý từ Cycle R/H3, xem comment tại `:229-237`.
+# Comment cũ ghi *"thứ tự = tie-break priority"* đã khiến người đọc (kể cả finding `S2-5`) suy ra
+# dominance đi qua ONLINE thay vì qua REST, và từ đó **ra một điều kiện reopen SAI**. Một dòng
+# comment sai trong nguồn sự thật thì người sau suy sai theo — cùng họ `D-M3-15`.
+ACTIONS = ("ONLINE", "REST", "SWAP", "END")  # ← mã hoá chỉ số của `best_a`, KHÔNG phải tie-break
 DEFAULT_PARAMS = {
     "p_accept": 0.9,               # xác suất nhận đơn — CALLER NÊN TRUYỀN số thật (AUDIT S2-4)
     "avg_dist_km": 3.0,            # quãng đường TB — CALLER NÊN TRUYỀN từ data (AUDIT S2-5)

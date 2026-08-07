@@ -554,8 +554,22 @@ def aggregate_health_guardrail(pairs: list[PairResult]) -> dict:
     """
     from .sim_metrics import health_guardrail_flags
 
-    keys = ("rest_min_total", "veto_calls_n", "veto_fired_n",
-            "veto_soc_low_n", "veto_fatigued_n", "veto_defer_cap_n",
+    # ⚠ ĐÍNH CHÍNH Cycle 4 (2026-08-07) — danh sách này TRƯỚC ĐÂY CHÉP TAY và chỉ có `veto_*`.
+    # Hệ quả đo được (`research/audit/2026-08-07-root-cause-classes/c4b-do-vung-mu-tang-5.json`):
+    # **9 khoá** (`xveto_*` ×5, `commit_*` ×4) được `_ONE_WAY_PREFIXES` đẩy RA KHỎI bảng
+    # significance hai chiều **vào một cổng không hề soi chúng**, và cũng không vào `a_mean` —
+    # trong khi artifact vẫn in cạnh chúng `"one_way_gate": "health_guardrail_flags"`, tức một
+    # LỜI KHAI QUẢN TRỊ KHÔNG CÓ THẬT. Đây là lần **thứ ba** cùng một lỗi: `parallel.py:415-419`
+    # đã chép rằng danh sách tường minh *"đã HỞ hai lần"*, và bản vá lần đó chỉ nối **chiều đi
+    # ra** (khỏi bảng hai chiều), quên **chiều đi vào** (tới cổng).
+    #
+    # Nay SUY RA từ chính các hằng rail — thêm một rail là nó tự vào đây, không phải nhớ sửa.
+    from .sim_metrics import COMMIT_KEYS, EXTEND_RAILS, REST_RAILS
+
+    keys = ("rest_min_total",
+            "veto_calls_n", "veto_fired_n", *(f"veto_{r}_n" for r in REST_RAILS),
+            "xveto_calls_n", "xveto_fired_n", *(f"xveto_{r}_n" for r in EXTEND_RAILS),
+            *COMMIT_KEYS,
             "work_span_p50", "work_span_p90", "work_span_max",
             "drive_min_p50", "drive_min_p90", "drive_min_max",
             # MẪU SỐ phải hiện trong artifact: cùng một verdict OK có nghĩa hoàn toàn khác

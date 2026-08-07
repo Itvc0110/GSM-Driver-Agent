@@ -153,6 +153,14 @@ dispatcher:
   patience_median_min: 5.0
   patience_sigma: 0.5
   patience_max_min: 10.0
+  # Cycle 3 (2026-08-07): khoá này TRƯỚC ĐÂY KHÔNG CÓ ở đây, trong khi `world.py:172` đọc
+  # `dispatcher.offer_cooldown_min` ⇒ `Config.get` trả default 10.0 IM LẶNG. Ai muốn đo ảnh
+  # hưởng của cooldown sẽ thêm khoá, sweep, thấy Δ=0 và kết luận SAI rằng nó không ảnh hưởng.
+  # Giá trị 10 = ĐÚNG default cũ ⇒ thêm khoá này là BIT-IDENTICAL, không đổi hành vi.
+  # ⛔ Đọc `D-SIM-K6` TRƯỚC KHI SWEEP: cooldown (10′) ≥ `patience_max_min` (10′) ⇒ một đơn hết
+  # kiên nhẫn trước khi được chào lại lần hai ⇒ cooldown hiện là ràng buộc CÂM. Sweep mà không
+  # biết điều đó sẽ đọc ra một đường phẳng và tưởng đã đo xong.
+  offer_cooldown_min: 10
 
 station:
   slots: 6                         # 5 pin + 1 trống
@@ -388,8 +396,15 @@ advice:
   # E4/E-01: chỉ NÓI khi trạm khác tiết kiệm ≥ X phút tổng (đường + chờ) so với bản năng —
   # chênh vặt là "không có gì để nói" (R-08).
   station_choice_min_gain_min: 3
-  # D-SIM-05 — CHỈ khuyên khi lời khuyên thực sự có ích. SIM-4 chứng minh hiệu ứng VÁCH ĐÁ:
-  # nâng tỷ lệ mà KHÔNG chạm ngưỡng ⇒ tài xế ôm cuốc rẻ, mất 34k, chẳng có thưởng bù.
+  # D-SIM-05 — CHỈ khuyên khi lời khuyên thực sự có ích.
+  # ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 2): hai dòng cũ ở đây khẳng định *"SIM-4 chứng minh hiệu ứng
+  # VÁCH ĐÁ: nâng tỷ lệ mà KHÔNG chạm ngưỡng ⇒ tài xế ôm cuốc rẻ, mất 34k"*. Khẳng định đó
+  # **ĐÃ BỊ RÚT** từ `UPDATE-048` §2 (2026-07-26): đo lại **30 seed** cho nhóm KHÔNG chạm ngưỡng
+  # Δpayout **+18.207đ — DƯƠNG**, và *"−34k là một seed cá biệt"* (seed 1000). `UPDATE-048:56-60`
+  # còn đo chính cổng dựng từ lý lẽ đó là **INERT**.
+  # Vì sao phải sửa ở ĐÂY chứ không chỉ trong UPDATE: câu này đã **lan truyền đo được** — một
+  # vòng audit sau (`mm-03 MI-8`) đọc đúng hai dòng này rồi dựng cả một finding lên chúng.
+  # Giữ tham số, BỎ lý lẽ đã bị rút.
   max_realized_accept: 0.93        # tỷ lệ nhận cao nhất ĐẠT ĐƯỢC khi lift kịch trần (ĐO, không bịa)
   min_online_min_for_rate: 30      # dưới mức này chưa đủ lịch sử trong ca → dùng ước lượng lý thuyết
   trips_per_hour_est: 1.5          # ước lượng cuốc/giờ khi chưa có lịch sử (đo được ~1.4-1.5)

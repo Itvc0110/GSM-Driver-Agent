@@ -9,27 +9,27 @@
  "rows": [
   {
    "khoa": "commit_broken_n",
-   "vao_a_mean": false,
+   "vao_a_mean": true,
    "cong_soi": false,
-   "la_lan_can": true
+   "la_lan_can": false
   },
   {
    "khoa": "commit_cleared_n",
-   "vao_a_mean": false,
+   "vao_a_mean": true,
    "cong_soi": false,
-   "la_lan_can": true
+   "la_lan_can": false
   },
   {
    "khoa": "commit_kept_n",
-   "vao_a_mean": false,
-   "cong_soi": false,
+   "vao_a_mean": true,
+   "cong_soi": true,
    "la_lan_can": true
   },
   {
    "khoa": "commit_made_n",
-   "vao_a_mean": false,
+   "vao_a_mean": true,
    "cong_soi": false,
-   "la_lan_can": true
+   "la_lan_can": false
   },
   {
    "khoa": "veto_calls_n",
@@ -63,67 +63,45 @@
   },
   {
    "khoa": "xveto_calls_n",
-   "vao_a_mean": false,
+   "vao_a_mean": true,
    "cong_soi": false,
    "la_lan_can": false
   },
   {
    "khoa": "xveto_fatigued_n",
-   "vao_a_mean": false,
-   "cong_soi": false,
+   "vao_a_mean": true,
+   "cong_soi": true,
    "la_lan_can": true
   },
   {
    "khoa": "xveto_fired_n",
-   "vao_a_mean": false,
+   "vao_a_mean": true,
    "cong_soi": false,
    "la_lan_can": false
   },
   {
    "khoa": "xveto_soc_low_n",
-   "vao_a_mean": false,
-   "cong_soi": false,
+   "vao_a_mean": true,
+   "cong_soi": true,
    "la_lan_can": true
   },
   {
    "khoa": "xveto_would_exceed_fatigue_n",
-   "vao_a_mean": false,
-   "cong_soi": false,
+   "vao_a_mean": true,
+   "cong_soi": true,
    "la_lan_can": true
   }
  ],
- "khong_vao_a_mean": [
-  "commit_broken_n",
-  "commit_cleared_n",
-  "commit_kept_n",
-  "commit_made_n",
-  "xveto_calls_n",
-  "xveto_fatigued_n",
-  "xveto_fired_n",
-  "xveto_soc_low_n",
-  "xveto_would_exceed_fatigue_n"
- ],
+ "khong_vao_a_mean": [],
  "cong_khong_soi_tho": [
   "commit_broken_n",
   "commit_cleared_n",
-  "commit_kept_n",
   "commit_made_n",
   "veto_calls_n",
   "veto_fired_n",
   "xveto_calls_n",
-  "xveto_fatigued_n",
-  "xveto_fired_n",
-  "xveto_soc_low_n",
-  "xveto_would_exceed_fatigue_n"
+  "xveto_fired_n"
  ],
- "vung_mu_that": [
-  "commit_broken_n",
-  "commit_cleared_n",
-  "commit_kept_n",
-  "commit_made_n",
-  "xveto_fatigued_n",
-  "xveto_soc_low_n",
-  "xveto_would_exceed_fatigue_n"
- ],
+ "vung_mu_that": [],
  "ghi_chu": "veto_calls_n/veto_fired_n (va ban xveto_) la MAU SO va TONG, khong phai lan can — cong soi tung rail rieng nen khong soi chung la DUNG THIET KE"
 }

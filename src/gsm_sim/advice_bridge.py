@@ -199,14 +199,21 @@ class AdviceActionBridge:
         self.rest_only_overrides_wait = bool(adv.get("rest_only_overrides_wait", False))
         # BUG-S2-PARAMS (UPDATE-078): quãng đường TB của CHÍNH thế giới này, không phải hằng
         # `avg_dist_km=3.0` trong `DEFAULT_PARAMS`. Cùng nguồn với world sinh cuốc.
-        self.avg_dist_km = float(cfg.get("orders.trip_km_median", 3.5) or 3.5)
+        # ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 3): khoá cũ là `orders.trip_km_median` — **KHÔNG TỒN
+        # TẠI**. `Config.get` trả default IM LẶNG ⇒ dòng này chưa bao giờ đọc config, và không
+        # ai biết vì default `3.5` tình cờ TRÙNG `demand.trip_km_median`. Ai sweep quãng đường
+        # để đo độ nhạy sẽ thấy Δ=0 và kết luận SAI. Cổng `tests/test_config_key_ton_tai.py`
+        # nay chặn chiều này.
+        self.avg_dist_km = float(cfg.get("demand.trip_km_median", 3.5) or 3.5)
         # B2/C1: chi phí tiền mặt/km — CÙNG khoá config với sổ chi phí của world
         # (`vehicle.cash_cost_vnd_per_km`, T-045b). Mặc định 0 = đúng chính sách hiện hành.
         self.cash_cost_km = float(cfg.get("vehicle.cash_cost_vnd_per_km", 0.0) or 0.0)
         self.swap_fee_solver = float(cfg.get("vehicle.swap_fee_vnd", 0.0) or 0.0)  # C5
         # prior hoàn thành của quần thể = 1 − tỷ lệ huỷ-sau-nhận của chính thế giới này
+        # ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 3): cùng lỗi với `avg_dist_km` ở trên — khoá thật là
+        # `behavior.cancel_after_accept_rate`, default 0.05 tình cờ trùng nên vô hại tới nay.
         self.completion_prior = round(
-            1.0 - float(cfg.get("orders.cancel_after_accept_rate", 0.05) or 0.05), 4)
+            1.0 - float(cfg.get("behavior.cancel_after_accept_rate", 0.05) or 0.05), 4)
         # T-045a b3 — kênh VỊ TRÍ (S4 capacity_alloc, batch tick). Ba mức, Cường chốt đo CẢ HAI
         # mức bật ở b4:
         #   "off"               → mặc định, KHÔNG chạy planner, trace y hệt không có cờ;
@@ -763,9 +770,14 @@ class AdviceActionBridge:
         acc = self._acc_estimate(actor)   # UPDATE-078: một nguồn với `solver_params`
 
         # --- D-SIM-05: CHỈ khuyên khi lời khuyên THỰC SỰ có ích ---
-        # SIM-4 chứng minh hiệu ứng VÁCH ĐÁ: nâng tỷ lệ mà KHÔNG chạm ngưỡng làm tài xế
-        # nhận thêm cuốc rẻ, chiếm chỗ cuốc tốt ⇒ mất 34k mà chẳng có thưởng bù. Thưởng
-        # theo ngưỡng là được-ăn-cả-ngã-về-không, nên khuyên nửa vời TỆ HƠN không khuyên.
+        # ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 2): ba dòng cũ ở đây khẳng định *"SIM-4 chứng minh hiệu
+        # ứng VÁCH ĐÁ … mất 34k"*. Khẳng định đó **ĐÃ BỊ RÚT** ở `UPDATE-048` §2 (2026-07-26):
+        # đo lại 30 seed, nhóm KHÔNG chạm ngưỡng có Δpayout **+18.207đ — DƯƠNG**; −34k là **một
+        # seed cá biệt** (1000). `UPDATE-048:56-60` còn đo chính cổng dựng từ lý lẽ đó là INERT.
+        # Đây là bản CHÉP của `configs/pilot_dongda.yaml` (nay cũng đã đính chính) — hai bản sao
+        # của một khẳng định đã rút là đúng cơ chế làm `mm-03 MI-8` dựng finding trên nó.
+        # Lý lẽ CÒN ĐỨNG cho cổng này: thưởng theo ngưỡng là được-ăn-cả-ngã-về-không, nên khuyên
+        # nửa vời (nâng tỷ lệ mà chắc chắn không tới ngưỡng) là **nói một câu không dùng được**.
         ok, why = self._advice_would_help(actor, now_min, thr, acc_est=acc)
         if not ok:
             self.skipped_advice.append((now_min, actor.actor_id, why))

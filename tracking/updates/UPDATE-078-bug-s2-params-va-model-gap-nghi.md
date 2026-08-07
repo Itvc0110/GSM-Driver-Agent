@@ -154,8 +154,26 @@ KHÔNG được implement trước khi sim có hậu quả của mệt.
 | 18/25 tài xế đổi lịch | **OBSERVED-SIM** | cùng `spi`, chỉ đổi `params`, seed 1000 | cao | — |
 | payout −24.960đ CI [−39.951, −10.334] | **OBSERVED-SIM** | 30 seed CRN, `coverage: all` | cao (trong sim) | — |
 | fatigue không ảnh hưởng năng suất | **OBSERVED-CODE** | grep `fatigue` toàn `src/` → chỉ `behavior.py:142/144/149` | cao | nếu có đường khác thì kết luận §3 yếu đi |
-| `avg_dist_km = 3.5` | **OBSERVED-CONFIG** | `orders.trip_km_median` | cao | — |
-| `completion_prior = 0.95` | **OBSERVED-CONFIG** | `1 − cancel_after_accept_rate (0,05)` | trung bình | chỉ dùng khi actor chưa nhận cuốc nào |
+| `avg_dist_km = 3.5` | ~~**OBSERVED-CONFIG**~~ → **⚠ nhãn SAI, xem đính chính dưới** | ~~`orders.trip_km_median`~~ | ~~cao~~ | — |
+| `completion_prior = 0.95` | ~~**OBSERVED-CONFIG**~~ → **⚠ nhãn SAI, xem đính chính dưới** | ~~`1 − cancel_after_accept_rate`~~ | ~~trung bình~~ | chỉ dùng khi actor chưa nhận cuốc nào |
+
+> ### ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 2/Cycle 3) — hai nhãn `OBSERVED-CONFIG` ở trên là SAI
+>
+> `orders.trip_km_median` và `orders.cancel_after_accept_rate` **KHÔNG TỒN TẠI** trong
+> `configs/pilot_dongda.yaml`. Khoá thật là `demand.trip_km_median` và
+> `behavior.cancel_after_accept_rate`. `Config.get(dotted, default)` trả default **im lặng** khi
+> path vắng ⇒ hai dòng code đó **chưa bao giờ đọc config**, và không ai phát hiện vì default
+> (`3.5` / `0.05`) **tình cờ trùng** giá trị trong yaml. Đã sửa cùng cổng thường trực
+> `tests/test_config_key_ton_tai.py`; run mặc định **BIT-IDENTICAL 5/5 seed**.
+>
+> **Nhãn đúng phải là `ASSUMED-DEFAULT`, không phải `OBSERVED-CONFIG`.**
+>
+> **Cái gì KHÔNG bị lật:** *giá trị* 3.5 vẫn đúng, nên mọi kết luận dựa trên **con số** (ví dụ
+> `mm-07-s2` suy chi phí ước NON ~40% từ 3,5 vs 5,8 km) **vẫn đứng**. Cái sai là **provenance** —
+> và provenance sai chính là thứ khiến người sau tin rằng sweep khoá đó sẽ đổi được số.
+>
+> Lý do phải đính chính tại đây chứ không chỉ trong UPDATE mới: nhãn này đã **lan sang ba
+> artifact** (`mm-07-s2.json:112`, `mm-07-s2-STAGED.md:143`, và dòng `:44` ở trên).
 
 ## Kiểm chứng
 

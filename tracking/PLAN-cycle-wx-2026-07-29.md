@@ -105,9 +105,22 @@ Verify: bit-identical (chỉ thêm metric mới) · `net_mean_all == payout_mean
   **số bịa**; C1 có **nguồn official** (9.000đ/lượt · điện 70–93đ/km) nên không vi phạm §5.
 - Sim ledger đọc **cùng một giá trị** với solver ⇒ một nguồn sự thật cho thế giới và người tối ưu.
 
-Verify: **sweep `cash_cost ∈ {0, 70, 150, 250}`** (đúng đề nghị hồ sơ chi phí §7.5), 30 seed
+~~Verify: **sweep `cash_cost ∈ {0, 70, 150, 250}`**~~ (đúng đề nghị hồ sơ chi phí §7.5), 30 seed
 CRN, `coverage: all`, đọc **`net_mean_all`** (không phải payout) + chỉ tiêu kép ĐA-08 1a+1b.
-Câu hỏi trả lời được: *lời khuyên vị trí còn dương tới mức chi phí nào?*
+
+> ### ⛔ ĐÍNH CHÍNH 2026-08-07 (Cycle 2) — phép sweep này là **NO-OP**, đừng chạy
+>
+> **ĐO (36 case × 9 mức):** `cash_cost` **bất biến TỪNG BIT** trên **[0; 4.325]đ/km**. Lý do cấu
+> trúc: `cash_km` chỉ nhân vào **nhánh ONLINE** của `shift_dp` ⇒ nó là **phép co giãn đơn điệu
+> trên phần thưởng của ONLINE**, nên `argmax` **không thể** đổi cho tới khi `online_net` đổi DẤU.
+> Ngưỡng lật = `ppo / avg_dist` = **4.325đ/km**, tức **17–62×** giá thật (70–250đ/km).
+>
+> ⇒ Cả **4 mức {0, 70, 150, 250} cho kết quả Y HỆT**, sweep trả **Δ = 0**, và Δ=0 ở đây **rất dễ
+> đọc thành *"chi phí không quan trọng"*** — một kết luận sai trông như được dữ liệu hậu thuẫn.
+> Đây đúng loại tệ nhất, và cùng họ với chính lỗi khoá-config mà `Cycle 3` vừa bịt.
+>
+> **Thay bằng:** sweep **`swap_fee_vnd`** (phanh THẬT duy nhất), hoặc sửa **CẤU TRÚC** *"chỉ một
+> nhánh có tiền"*. Xem `DEFERRED.md` mục `D-E4-01` (điều kiện mở lại đã sửa).
 
 ## B3 — bước 3: policy quyết định giá trị (đây mới là A1 phần rule)
 

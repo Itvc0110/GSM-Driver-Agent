@@ -1,0 +1,230 @@
+{
+  "lop": "L4 — cong dat SAI VI TRI trong chuoi",
+  "ngay": "2026-08-07",
+  "ghi_chu_vong": "Agent L4 cua vong 13-agent CHET giua chung (loi API) nen rc-L4.json chua ton tai. Ban nay chay lai tu dau, khong ke thua ket luan nao cua lan chet.",
+
+  "pattern_da_quet": [
+    {
+      "ten": "P1 — quet AST: side-effect NAM GIUA cac cong thoat som cua CUNG mot ham",
+      "cach_lam": "ast.walk moi FunctionDef; tim cac `If` co `Return`/`Continue` truc tiep trong body; lay [first_gate_lineno, last_gate_lineno]; bao moi Call ten trong {random,uniform,integers,normal,choice,poisson,shuffle} (RNG) hoac prefix {log,append,add,capture,note_spoken,claim,put_,create_,acquire_} (side-effect) hoac AugAssign (counter) roi vao khoang do.",
+      "pham_vi": "16 file: src/gsm_sim/{world,advice_bridge,parallel,market_state,multiday,dispatcher}.py · src/gsm_core/lifecycle/{checkpoint,projections,checkpoint_store,cadence}.py · ui/backend/app/routers/{advice,advice_v2,demo}.py · ui/backend/app/services/{advice_checkpoint,demo_session}.py · ui/backend/app/adapters/advisor.py",
+      "ket_qua": "30 ung vien; sau khi doc tay con 6 thuc the (4 moi + 2 da biet duoc do lai). Script o scratchpad, chep lai duoc tu mo ta tren.",
+      "gia_tri": "Bat duoc M3 (create_checkpoint_bundle) va M4. KHONG bat duoc M1/M2 (cong nam o HAM KHAC, khong cung mot ham) — do la gioi han that cua P1."
+    },
+    {
+      "ten": "P2 — doi chieu HAI KENH ANH EM: cung ho lan can, so vi tri bo loc",
+      "cach_lam": "`policy_locks.py` xep `should_defer_rest` va `check_shift_extend` CUNG HO ('keo dai thoi gian lam viec vi tien'). Doc song song hai duong: (a) cong KENH nam o dau chuoi hay cuoi chuoi; (b) cho LOG co loc reason khong. Bat ky bat doi xung nao la ung vien L4.",
+      "ket_qua": "Bat duoc M1 va M2 — hai loi NGUOC NHAU cua cung mot cong, tren hai kenh anh em.",
+      "gia_tri": "CAO NHAT trong 6 pattern. Repo co rat nhieu cap anh em; doc song song re hon doc tung cai."
+    },
+    {
+      "ten": "P3 — do ARM DOI CHUNG: dem event mang `channel=X` khi kenh X TAT (ky vong 0)",
+      "cach_lam": "run_once(_cfg_with(cfg, enabled=False, channels=None), seed); Counter((e.detail or {}).get('channel')).",
+      "ket_qua": "rest_window = 125/107/118 event tren 3 seed trong arm KHONG CO ADVICE. Moi kenh khac = 0.",
+      "gia_tri": "Exact, seed-independent ve dau hieu, 6s/run. Day chinh la cong de xuat o duoi."
+    },
+    {
+      "ten": "P4 — tim trang thai HAP THU roi truy nguoc ai ghi va ghi o DAU trong chuoi",
+      "cach_lam": "Doc bang `_ALLOWED_TRANSITIONS`; moi khoa co gia tri `frozenset()` la trang thai hap thu. Voi moi cai, grep nguoc toi call-site ghi ra no, roi hoi: buoc GHI dung TRUOC hay SAU khi biet ly do la TAM THOI hay VINH VIEN?",
+      "ket_qua": "`suppressed` hap thu (checkpoint.py:45) nhung duoc ghi cho MOI verdict, ke ca `topic_cooldown` (20') va `shift_budget_exhausted` (het ca) — ca hai deu TAM THOI. Bat duoc M3.",
+      "gia_tri": "Re nhat (doc mot bang hang), va bat dung loai nang nhat (mat vinh vien mot loi khuyen o duong san pham)."
+    },
+    {
+      "ten": "P5 — so `*_calls_n` (mau so) voi `*_fired_n` (tu so) cua moi ham audit",
+      "cach_lam": "Neu hai so BANG NHAU tren moi seed thi 'mau so' la gia — no khong do gi khac tu so. Neu mau so KHAC 0 trong arm doi chung thi mau so bi o nhiem.",
+      "ket_qua": "xveto: 3204/3204, 3270/3270, 3742/3742 (ty le 1.000 chinh xac 3/3 seed) => mau so GIA. veto: 125 calls trong arm doi chung => mau so O NHIEM. Hai benh nguoc nhau cua cung mot cong.",
+      "gia_tri": "Bat duoc ca M1 lan M2 mot cach dinh luong, khong can doc code."
+    },
+    {
+      "ten": "P6 — chay endpoint SAN PHAM theo chuoi POLL roi doi chieu tung event nen voi ham sinh noi dung",
+      "cach_lam": "TestClient + TELEMETRY_DIR tam; poll GET /api/v1/advice theo lich thuc te; doc lai AdviceEventLog; voi MOI event `suppressed`, goi lai `advisor.advice(driver, date, at_min, shift_end)` (ham THUAN, khong side-effect) va hoi: neu khong bi nen thi co card khong?",
+      "ket_qua": "660/660 = 100% event nen la MA tren nhanh is_driving cua doi car/premium. Bat duoc M5.",
+      "gia_tri": "Duy nhat trong 6 pattern do duoc duong SAN PHAM that su."
+    }
+  ],
+
+  "thuc_the": [
+    {
+      "id": "M1",
+      "ten": "Cong KENH cua rest_window nam DUOI bon lan can — kenh TAT van ghi so lan can",
+      "file_line": "src/gsm_sim/advice_bridge.py:902-917 (bon lan can) vs :855-856 (cong kenh, nam trong `rest_window_hour` duoc goi o :918) · src/gsm_sim/world.py:1037 (goi vo dieu kien) · src/gsm_sim/world.py:1066-1068 (log KHONG loc)",
+      "neo_noi_dung": "`def should_defer_rest(` — bon `return False, \"soc_low\"|\"fatigued\"|\"commit_broken\"|\"defer_cap\"` dung TRUOC dong `target = self.rest_window_hour(actor, now_min, demand_hint_fn)`. Cong kenh that la `if not (self.ch_rest_window and self.covers(actor)): return None` trong `rest_window_hour`. World: `if action == IdleAction.REST and not rest_forced:` roi nhanh `else:` `self.log(actor.actor_id, \"advice_rest_veto\", ...)`.",
+      "vi_sao_thuoc_lop": "Cong dung NOI DUNG (kiem `ch_rest_window`) nhung dat SAU bon lan can trong chuoi, va cho LOG khong co bo loc reason. Ket qua la mot kenh KHONG TON TAI trong arm do van tieu mot cho tren so lan can suc khoe.",
+      "hau_qua": "1) `rest_rails_audit.veto_calls_n` — MAU SO duoc KHAI BAO cua cong suc khoe tang 5 (`health_guardrail_flags`) — khong phan biet duoc kenh bat/tat. 2) `veto_fatigued_n` (mot RAIL SUC KHOE) bao 56/42/48 lan 'da ban' trong arm KHONG CO ADVICE. 3) Guard Cycle-4 them HOM NAY (sim_metrics.py, comment: 'Mau so bat buoc: *_calls_n > 0 o ca hai arm => cong CO chay ma rail van 0 (khac han \"kenh tat nen khong ai goi\", ca do khong noi len dieu gi)') dua tuong minh vao tien de 'kenh tat nen khong ai goi' — tien de do SAI cho ho nay, do duoc. 4) `no_window` mang HAI NGHIA khac han giua hai arm: trong arm tat no la 'kenh tat' (69/65 lan), trong arm bat no la 'S7 khong tim thay khung' (31/27) — cung mot reason code, hai su that.",
+      "so_do_duoc": "arm `advice.enabled=False`, coverage khong ap dung, 3 seed 5000/5001/5002: `advice_rest_veto` = 125 / 107 / 118 event; reason = {no_window: 69/65/-, fatigued: 56/42/48}. `veto_calls_n` = 125/107/118, `veto_fired_n` = 56/42/48. So sanh BAN LE: arm chi bat rest_window (seed 5000) cung ra DUNG 125 — dem event mang `channel=rest_window` KHONG DOI khi bat/tat kenh.",
+      "moi_hay_da_biet": "MOI",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": false,
+      "tren_cong_do_dang_ship": true,
+      "confidence": "CAO — exact, deterministic, 3 seed, hai chieu (tat va bat cung ra 125)"
+    },
+    {
+      "id": "M2",
+      "ten": "MAT GUONG cua M1: bo loc rail cua shift_extend dat o cho LOG thay vi o nguon => mau so ≡ tu so, va guard Cycle-4 CHET",
+      "file_line": "src/gsm_sim/world.py:905 (`elif extend_why in EXTEND_RAILS:`) · src/gsm_sim/sim_metrics.py:459-469 (`extend_rails_audit`) · src/gsm_sim/sim_metrics.py (`health_guardrail_flags`, nhanh Cycle-4 `if calls_a > 0 and calls_b > 0 and va == 0 and vb == 0`) · src/gsm_sim/parallel.py:231 (`run_once(_cfg_with(cfg, enabled=False, actor_id=None, channels=None), seed)`)",
+      "neo_noi_dung": "world: `elif extend_why in EXTEND_RAILS:` ngay tren `self.log(actor.actor_id, \"advice_extend_veto\", ...)`. sim_metrics: `out[\"xveto_calls_n\"] = calls` ngay tren `out[\"xveto_fired_n\"] = sum(...)`. advice_bridge docstring :1115-1117: `world dung reason de dem veto_calls_n (mau so). Doc count veto tran ma khong co mau so la doc sai`.",
+      "vi_sao_thuoc_lop": "Cung mot cong ('reason nay co phai lan can khong') nhung dat o buoc CUOI (log) thay vi buoc DAU (nguon). Vi chi reason-la-rail moi duoc ghi, `xveto_calls_n` chi dem duoc chinh nhung su kien da nam trong tu so.",
+      "hau_qua": "1) `xveto_calls_n ≡ xveto_fired_n` theo CAU TRUC => 'mau so' khong mang mot bit thong tin nao; ai lam theo dung chi dan cua docstring `check_shift_extend` se luon ra ty le 1.000. 2) NANG HON: guard Cycle-4 'rail CHUA TUNG BAN' — them HOM NAY voi comment 'Cycle 4: soi CA HAI ho lan can' — doi `calls_a > 0`; nhung arm A cua `run_pair` LUON la `enabled=False, channels=None` nen `xveto_calls_n` cua A luon = 0 => ba khoa `xveto_soc_low_n` / `xveto_fatigued_n` / `xveto_would_exceed_fatigue_n` KHONG BAO GIO bi co nay bat duoc trong bat ky cap A/B nao do bang `run_pair`. Cong vua duoc mo rong cho ho thu hai la CHET cho dung ho thu hai do.",
+      "so_do_duoc": "arm chi bat shift_extend, coverage=all, seed 5000/5001/5002: xveto_calls_n = 3204 / 3270 / 3742 va xveto_fired_n = 3204 / 3270 / 3742 (bang nhau CHINH XAC 3/3). Chay `run_pair` that (seed 5000, 5001): A xveto_calls=0 fired=0 | B xveto_calls=3204/3270 => `health_guardrail_flags(a,b)` tra `[]` o ca hai seed.",
+      "moi_hay_da_biet": "MOI",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": false,
+      "tren_cong_do_dang_ship": true,
+      "confidence": "CAO — dang thuc `calls ≡ fired` la he qua cau truc, da xac nhan bang so 3/3 seed; deadness cua guard xac nhan bang `run_pair` that"
+    },
+    {
+      "id": "M3",
+      "ten": "DUONG SAN PHAM — GHI checkpoint TRUOC khi biet cu nen la TAM THOI hay VINH VIEN; `suppressed` la trang thai HAP THU",
+      "file_line": "ui/backend/app/services/advice_checkpoint.py:357-369 (`checkpoint_record` → `create_checkpoint_bundle` → `append_event(policy.verdict)` chay cho MOI candidate) · ui/backend/app/services/advice_checkpoint.py:344 (`else: silent_reasons.append(\"duplicate\")`) · src/gsm_core/lifecycle/checkpoint.py:45 (`\"suppressed\": frozenset(),`) · src/gsm_core/lifecycle/checkpoint.py:346-352 (`shift_budget_exhausted` / `topic_cooldown` — hai ly do TAM THOI) · src/gsm_core/lifecycle/checkpoint.py:298 (`candidate[\"checkpoint_id\"] = f\"ckpt-{identity}\"`, identity = sha256(driver_id+fingerprint)) · :361-366 (`checkpoint_fingerprint` — docstring: 'Poll time ... khong duoc tham gia fingerprint')",
+      "neo_noi_dung": "`checkpoint = checkpoint_record(candidate)` ... `self.store.create_checkpoint_bundle(bundle, checkpoint)` ... `self.store.append_event(_event(checkpoint, policy.verdict, t_now, ..., reason_code=policy.reason))` — ba dong lien tiep, KHONG co nhanh nao tach verdict `ready` khoi verdict `suppressed`.",
+      "vi_sao_thuoc_lop": "Buoc GHI (khong dao nguoc duoc: store append-only + `suppressed` khong co canh ra) dat TRUOC khi he thong biet cu nen chi keo dai 20 phut. Vi `checkpoint_id` co Y CHU DINH la on dinh theo NOI DUNG (poll time bi loai khoi fingerprint), lan poll sau tra ve DUNG id da chet.",
+      "hau_qua": "Mot cu nen TAM THOI (cooldown 20', hoac het ngan sach ca) GIET VINH VIEN loi khuyen do — no khong bao gio quay lai duoc du con han va du cooldown da het. Va ly do bao ra cho caller/audit la `\"duplicate\"` — SAI nghia: su that la 'da bi giet 30' truoc vi mot cooldown nay da het'. Day la duong ma tai xe that se dung (routers/advice_v2.py dung CheckpointStore ben vung).",
+      "so_do_duoc": "Reproduce deterministic (script scratchpad m6.py, 0 RNG): t=09:00 loi khuyen A -> ready. t=09:10 loi khuyen B (noi dung khac, cung topic, han toi 20:00) -> silent `topic_cooldown`, state luu tru = `suppressed`. t=09:40 (cooldown 20' DA HET, B van con han) -> silent `duplicate`. t=12:00 / 15:00 / 18:00 -> silent `duplicate`. `_ALLOWED_TRANSITIONS['suppressed'] == set()` (in ra truc tiep).",
+      "moi_hay_da_biet": "MOI",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": true,
+      "confidence": "CAO — reproduce script chay duoc, khong phu thuoc seed/data mock"
+    },
+    {
+      "id": "M4",
+      "ten": "`check_shift_extend`: clamp kha thi `world_end_min` (b0-A) dung SAU cadence + coin => ngan sach CHU Y chay cho loi khuyen the gioi khong thi hanh duoc",
+      "file_line": "src/gsm_sim/advice_bridge.py:1162 (`cadence_allows`) · :1192 (`cadence_note_spoken` — R-09, vo dieu kien) · :1193 (`coin_follows`) · :1209 (`add = min(add, max(0.0, self.world_end_min - actor.shift_end_min))`) · :1210-1218 (`if add <= 0.0: ... return 0.0, \"infeasible_world_end\"`)",
+      "neo_noi_dung": "`add = min(add, max(0.0, self.world_end_min - actor.shift_end_min))` va comment b0-A ngay tren no: `Cat o day, khong cat o cho tieu thu`.",
+      "vi_sao_thuoc_lop": "`world_end_min - actor.shift_end_min <= 0` la ham THUAN cua trang thai, biet duoc TRUOC coin. Repo co luat R-08 tuong minh ('cong khong-co-gi-de-noi dung TRUOC cadence/coin') va da ap no cho `accept_lift`, `rest_window`, `swap_early`, `station_choice`, va cho ba lan can dau cua chinh ham nay. Rieng clamp b0-A thi khong.",
+      "hau_qua": "Mot phan ngan sach CHU Y cua tai xe (`max_proactive_per_shift = 6` the/ca) bi tieu cho loi khuyen co `added_min = 0` — advisor noi mot cau khong lam duoc gi, va cai suat do khong con cho kenh khac trong ca.",
+      "so_do_duoc": "arm chi bat shift_extend, coverage=all, seed 5000/5001/5002: `advice_shift_extend` = 47/58/43 lan da tieu suat; trong do `infeasible_world_end` = 5/8/4 => **10.6% / 13.8% / 9.3%** ngan sach chi cho loi khuyen vo hieu. (`not_followed` = 26/29/27 KHONG tinh la lang phi — R-09 co chu dinh: advisor NOI la da tieu.)",
+      "phan_bien_tu_than": "Doi clamp len TREN cadence/coin se DOI MAU SO adherence: repo co y giu `note_spoken_outcome(followed=True, reason=\"infeasible_world_end\")` de quyet dinh do nam trong CA tu so lan mau so (do duoc 24/121 quyet dinh, UPDATE-102 §2b; adherence 0,394 -> 0,473). Nen day la NO CO DANH DOI, khong phai mot ban va thang. Ai sua phai do lai va cong bo lai con so 0,473.",
+      "moi_hay_da_biet": "MOI",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": false,
+      "confidence": "TRUNG BINH-CAO — do that 3 seed; phan 'la loi' phu thuoc viec chap nhan luat R-08 cua chinh repo"
+    },
+    {
+      "id": "M5",
+      "ten": "DUONG SAN PHAM v1 — `evaluate()` (nhip) chay TRUOC `advisor.advice()` (noi dung) => ghi event `suppressed` cho loi khuyen KHONG TON TAI",
+      "file_line": "ui/backend/app/routers/advice.py:197-199 (`verdict = evaluate(topic, ...)`) · :241-242 (`if verdict.verdict != PRESENT: _note_suppressed(...)`) · :257 (`out = advisor.advice(...)` — CHI chay khi da qua cong) · :308 (`if not items: return` trong `_note_shown` — cong doi xung CO o nhanh 'da noi', THIEU o nhanh 'bi nen')",
+      "neo_noi_dung": "`verdict = evaluate(topic, float(now_min), phase, _cadence_memory(did, d, phase, shift_end_min), is_driving=is_driving)` dung tren `if verdict.verdict != PRESENT: _note_suppressed(...)`; `out = advisor.advice(did, d, now_min, shift_end_min)` nam DUOI.",
+      "vi_sao_thuoc_lop": "Chinh xac khuon R-08 ma sim da sua cho 5 kenh (comment `check_bonus_gate` :787-793: 'hoi NHIP o DAY, khong phai o dau ham. Dat o dau thi moi tick khong-co-gi-de-noi van ghi mot event bi nen — do duoc 130/206 lan goi (63%) va 27/58 event nen la MA'). Duong san pham giu nguyen thu tu CU.",
+      "hau_qua": "`adherence_view[...][\"suppressed\"]` cua duong san pham bi thoi phong boi nhung lan nen mot loi khuyen chua bao gio ton tai. Muc dich khai bao cua `_note_suppressed` (docstring :265-273) la de 'hai duong so duoc' voi sim — nhung sim da sua con san pham thi chua, nen phep so sanh do dang so hai so KHAC DON VI.",
+      "so_do_duoc": "(a) Quet toan bo 150 tai xe mock x 97 moc phut: `advisor.advice()` tra `items == []` o **3880/14550 = 26,7%** (driver, phut) — toan bo la `no_active_channel` (doi car/premium, advisor khong phu). (b) Chay THAT qua TestClient, 20 tai xe car/premium x 33 bucket, `is_driving=True`: **660/660 = 100%** event `suppressed` ghi vao AdviceEventLog canonical la MA (`advisor.advice()` cung se im). reason_code = `unsafe_while_moving`.",
+      "moi_hay_da_biet": "MOI",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": true,
+      "confidence": "CAO — do bang chinh endpoint, khong mo phong"
+    },
+    {
+      "id": "B2",
+      "ten": "(DA BIET — chi CITE + do lai tren arm DANG SHIP, kem MOT so moi) Hungarian tieu tran cho MOI ung vien TRUOC khi rut coin adherence",
+      "file_line": "src/gsm_sim/world.py:454 (`report = capacity_alloc.solve(ai)`) · :476-477 (`for al in sol[\"allocations\"]:` / `per_cell[cell] = per_cell.get(cell, 0) + 1`) · :495 (`if self.advice.standby_follow_draw(self.actors[aid], now, cell):`) · src/gsm_core/solvers/capacity_alloc.py `_assign_kind` (`slots.extend([(target, bucket)] * int(cap))` roi `linear_sum_assignment`)",
+      "neo_noi_dung": "`report = capacity_alloc.solve(ai)` ... `for al in sol[\"allocations\"]:` ... `if self.advice.standby_follow_draw(...)`.",
+      "vi_sao_thuoc_lop": "Tran cua o bi tieu tai buoc GAN (Hungarian), coin quyet dinh tai xe co nghe hay khong rut SAU do. Nguoi khong nghe van chiem cho.",
+      "hau_qua": "Slot bi dot; voi `cap_left = 1` o hau het o, mot lan gan trat = XOA TRANG toan bo ngan sach loi khuyen cua o do trong bucket do.",
+      "so_do_duoc": "DO LAI tren arm DANG SHIP (`positioning` ladder = wait_only, trigger capacity, coverage=all), seed 5000/5001/5002: assigned 66/71/82, coin_true 33/43/39 => slot dot **50,0% / 39,4% / 52,4%** (khop do cu 51,3/43,4/46,8 tren seed khac). **SO MOI ma phat hien cu khong co**: o-bucket bi XOA TRANG hoan toan (coin_true == 0) = 32/64, 26/68, 40/77 = **50,0% / 38,2% / 51,9%**. Va `capacity_left == 1` o 61/64, 65/68, 70/77 = **95,3% / 95,6% / 90,9%** o-bucket (chu khong phai '96%+' tron — do lai).",
+      "moi_hay_da_biet": "DA BIET (B2) — do lai + bo sung mot so",
+      "tren_kenh_dang_ship": true,
+      "tren_duong_san_pham": false,
+      "confidence": "CAO"
+    },
+    {
+      "id": "D-M3-20",
+      "ten": "(DA BIET — chi CITE) `alt_action_fn` rut RNG TRUOC cadence/coin",
+      "file_line": "src/gsm_sim/advice_bridge.py:928 (`alt = alt_action_fn(actor)`) dung truoc :934 (`cadence_allows`) va :945 (`coin_follows`); nguon RNG: src/gsm_sim/behavior.py:228 (`if best_cell != actor.cell and rng.random() < p_move:`)",
+      "neo_noi_dung": "`alt = alt_action_fn(actor)` / `if alt is None or alt[0] == IdleAction.WAIT: return False, \"no_alt_action\", None`",
+      "vi_sao_thuoc_lop": "Rut RNG tu dong chung TRUOC mot cong co the return som.",
+      "hau_qua": "Da ghi o D-M3-20.",
+      "so_do_duoc": "khong do lai vong nay",
+      "moi_hay_da_biet": "DA BIET",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": false,
+      "confidence": "CAO (theo ho so cu)"
+    },
+    {
+      "id": "M6-BAC-BO",
+      "ten": "(UNG VIEN BI BAC BANG DO — ghi lai de nguoi sau khong de xuat lai) `consult()` goi `cadence_allows` o DAU ham",
+      "file_line": "src/gsm_sim/advice_bridge.py:606 (`if not self.cadence_allows(actor, \"shift_plan\", now_min): return None`) dung truoc :611 (`buckets_remaining <= 0`), :616 (`if not schedule`), :631 (`if self.sp_end_only and ... != \"END\"`)",
+      "neo_noi_dung": "`if not self.cadence_allows(actor, \"shift_plan\", now_min):` ngay sau `if not (self.ch_shift_plan and self.covers(actor)) or not self.due(actor, now_min):`",
+      "vi_sao_thuoc_lop": "Ve CAU TRUC dung khuon M5 (nhip truoc noi dung). Comment o :628-630 tu bao chua rang 'cadence_allows o dau ham chi la cong HOI, chua tieu gi' — cau do KHONG dung: nhanh SUPPRESS cua `cadence_allows` day ban ghi vao `_suppressed_out` va world log `advice_suppressed`.",
+      "vi_sao_BAC_BO": "DO: 0 / 0 / 0 luot nen tren 3 seed (5000/5001/5002) o config dang ship. Ly do cau truc: `due()` dung `interval_min = 30`, con `CadenceConfig.effective_gap_min = max(20, DECISION_BUCKET_MIN=30) = 30` — hai so BANG NHAU, nen khi `due()` cho qua thi cooldown cung da het; va ngan sach 6 the/ca khong bao gio can trong arm nay (0 event `advice_suppressed` mang channel=shift_plan). => BAN VA SE BAT DONG 100%. Cung ho voi E-S4-3/E-S4-2 da bi bac vong truoc.",
+      "moi_hay_da_biet": "MOI (va BAC BO)",
+      "tren_kenh_dang_ship": false,
+      "tren_duong_san_pham": false,
+      "confidence": "CAO cho ket luan BAC BO"
+    }
+  ],
+
+  "ung_vien_da_kiem_va_LOAI": [
+    {
+      "ung_vien": "`choose_station` rut RNG TRUOC cong `check_swap_early` (world.py, nhanh `if action == IdleAction.WAIT and self.advice.ch_swap_early:`)",
+      "ket_luan": "LOAI — TU KIEM LAI TREN CODE, khong relay: `behavior.py` `def choose_station(` (dong 241-258) nhan `rng` nhung KHONG dung no o bat ky dong nao trong than ham. Dinh chinh 2026-08-06 ghi o world.py va behavior.py la DUNG."
+    },
+    {
+      "ung_vien": "`actor.idle_streak_min = 0.0` (world.py:648) dat TRUOC cong SOC (:654) va cong accept (:673)",
+      "ket_luan": "LOAI — ngu nghia cua bien la 'thoi gian ke tu bang chung CO CAU o day' (`T-045d`), va ca BA consumer deu can dung nghia do: bane nang sot ruot (`consider_relocate`), trigger E10b (`count_idle_wait`), va `check_swap_early` ('co hoi mat gan 0'). Duoc chao roi tu choi VAN la bang chung co cau. Reset dung cho."
+    },
+    {
+      "ung_vien": "`actor.orders_offered += 1` (world.py:647) truoc cong SOC => `acceptance_rate` (mau so cua `day_bonus`) chua ca offer bi bo qua vi pin",
+      "ket_luan": "LOAI KHOI L4 (co the la L1) — day la lua chon MO HINH ('tai xe tu choi vi pin' van la mot lan tu choi), khong phai cong dat sai vi tri. Chi con mot he qua vun: `forced` (:653) doc `acceptance_rate` da gom chinh offer dang xu ly (thien lech 1/N)."
+    },
+    {
+      "ung_vien": "E-S4-3 (TTL cho assignment) va E-S4-2 (ngan sach outflow)",
+      "ket_luan": "KHONG TAI PHAT — da doc canh bao; xac nhan lai `market_state.MarketStateProducer.view` cache theo `idx = int(now_min) // bucket_min` va planner la caller DUY NHAT, moi bucket dung mot lan => khong co duong cho TTL tac dong."
+    }
+  ],
+
+  "phat_hien_phu_NGOAI_lop_L4": [
+    {
+      "ghi_chu": "Ghi lai vi tim thay tren duong, KHONG tinh vao L4 — de agent lop khac nhat.",
+      "items": [
+        "L1/L2 — `ui/backend/app/routers/advice.py` `_note_shown`: MOT `event_id` (`f\"ui-shown-{driver_id}-{date}-{topic}-{bucket}\"`) cho TAT CA items trong vong lap => neu `advisor.advice()` tra 2 the (bonus_gap + cliff, hoac info + cliff) thi INSERT OR IGNORE nuot the thu hai, `event_decided` hut. (Tren dataset mock hien tai do duoc 0/10670 truong hop >1 item, nen la lo TIEM AN chu chua sinh so sai.)",
+        "L1 — `ui/backend/app/services/advice_checkpoint.py` `_cadence_memory`: `proactive_count = len(offered_ids)` duyet `self.store.checkpoints(driver_id)` KHONG loc theo ngay/ca, trong khi ban v1 (`routers/advice.py:_cadence_memory`) CO loc `payload[\"date\"] == date`. Ngan sach mang ten 'per shift' nhung o v2 la per-LIFETIME.",
+        "L3/L5 — kenh `rest_window` sinh 0 event `advice_rest_window` tren moi arm da chay (3 seed): `no_window`/`window_past`/`fatigued` an het. Kenh dang o trang thai TRO."
+      ]
+    }
+  ],
+
+  "lop_co_that": "MOT_PHAN",
+  "ly_do_phan_xu": "KHONG co mot co che RUNTIME chung. Sau thuc the tieu SAU tai nguyen KHAC NHAU truoc cong: dong RNG dung chung (D-M3-20), tran capacity cua o (B2), ngan sach CHU Y cua tai xe (M4), so lan can suc khoe (M1), so mau-so cua audit (M2), va mot hang store append-only o trang thai hap thu (M3, M5). Khong co object nao ma ca sau cung cham vao, nen mot assertion runtime khong the phu het — day la ly do KHONG co mot cong duy nhat cho ca lop. NHUNG chung KHONG chi la cach ke chuyen gon: chung chia se mot DAU HIEU QUAN SAT DUOC va chung mot huong sai — moi cai deu tao ra mot BAT DOI XUNG SO SACH: dem 'X da xay ra' > dem 'X co tac dung', va phan chenh KHONG DUOC KHAI o dau ca. Ba trong sau (M1, M2, B2) do duoc truc tiep bang chinh bat doi xung do ma KHONG can doc code (pattern P5). Va co mot bang chung manh rang do la CAU TRUC chu khong phai trung hop: repo da tu tim ra khuon nay hai lan doc lap va dat ten cho no — R-08 ('cong khong-co-gi-de-noi dung TRUOC cadence/coin', sua 5 kenh) va L1-04 ('`_claim_effect` phai dung SAU clamp kha thi', do duoc 38/135 = 28% quyet dinh bien mat). M4 va M5 la DUNG hai luat do bi vi pham o cho khac; M1/M2 la cung mot cong dat sai o hai kenh anh em, sai NGUOC CHIEU NHAU. Mot khuon duoc phat hien lai bon lan boc lap la cau truc, khong phai cach ke chuyen. => MOT_PHAN: co that o tang DAU HIEU va o tang LUAT DA THANH VAN cua repo, khong co that o tang co che runtime.",
+
+  "cong_chan_tai_dien": {
+    "ten": "test_kenh_TAT_khong_de_lai_dau_vet — arm DOI CHUNG phai SACH, doi voi TUNG kenh",
+    "phat_bieu": "Voi moi kenh c thuoc {shift_plan, accept_lift, shift_extend, rest_window, swap_early, station_choice, positioning}: (a) chay `run_once(_cfg_with(cfg, enabled=False, actor_id=None, channels=None), SEED_GHIM)` va assert so event mang `detail['channel'] == c` BANG 0; (b) chay `run_once` voi DUY NHAT kenh c bat va assert so event mang `channel == c` LON HON 0. Ve (b) la de cong khong the xanh bang cach kenh khong bao gio ghi gi (chong test-ghim-vo-hieu — dung ho L2 ma vong nay vua liet ke).",
+    "trang_thai_hom_nay": "DO cho `rest_window` (arm doi chung sinh 125/107/118 event mang channel=rest_window tren seed 5000/5001/5002; ve (b) cung DO vi kenh sinh 0 event `advice_rest_window` — no dang TRO). XANH cho 6 kenh con lai (arm doi chung sinh dung 0 event mang channel cua chung).",
+    "chi_phi": "2 lan `run_once` cho ve (a) + 1 lan/kenh cho ve (b). `run_once` do duoc 5,8s tren may nay. Ve (a) la 1 run cho CA 7 kenh (dem mot lan, assert 7 lan) => ~6s. Ve (b) la 7 run => ~40s; co the ghim 1 seed va danh dau slow. Repo da co tien le chay sim trong test (`tests/test_rest_rails_guardrail.py`)."
+  },
+
+  "vi_sao_cong_kha_thi": [
+    "KHONG PHAI 'nhac moi nguoi can than hon' — no la mot assertion so hoc tren event log, chay duoc, khong can nguoi doc code.",
+    "EXACT, khong thong ke: khong CI, khong tolerance, khong bootstrap => khong flaky => khong bi ai tat vi nhieu. Day la ly do toi chon no thay vi cong 'hoa so TIEU vs GIAO' (xem phan phan bien duoi).",
+    "DO NGAY HOM NAY tren ma nguon hien tai (125 event) => KHONG VACUOUS. Mot cong moc ma xanh ngay tu dau la cong chua chung minh duoc gi.",
+    "Khong the lam xanh bang cach khai bao: khong co registry de nhet vao. Muon xanh phai HOAC dua cong kenh len dau `should_defer_rest`, HOAC loc reason o cho log giong `world.py:905`. Ca hai deu la sua dung root cause.",
+    "Phu duoc ca kenh TUONG LAI: bat ky ai them kenh moi ma de no cham vao the gioi khi tat se DO ngay, khong can ai nho luat.",
+    "No la ban CHAY DUOC cua mot bai hoc da co trong memory cua du an ('Arm doi chung phai SACH' — loi that DET-01, da tung bao so sai cho Cuong). Bien mot bai hoc thanh mot assertion la dung viec cua mot cong."
+  ],
+
+  "phan_bien_CACH_SUA_cua_chinh_toi": [
+    {
+      "phuong_an_da_can_nhac": "Cong 'HOA SO': voi moi kenh, assert `so lan TIEU (tran/ngan sach/RNG/ghi so) == so lan loi khuyen THAT SU toi tay tai xe`, phan chenh phai khai o mot registry kem SO DO + dieu kien mo lai (khuon `RAIL_KHAI_TRO`).",
+      "vi_sao_KHONG_chon": "Phu rong hon (bat duoc CA B2 lan M4 lan M1), nhung: (1) cac so la NGAU NHIEN theo seed (coin_true 33/43/39 tren 3 seed) => phai ghim seed + dai dung sai => co nguy co flaky => co nguy co bi tat, dung so phan ma vong truoc canh bao; (2) no doi mot bo dem 'da tieu' MOI o tung call-site — ai them call-site ma quen dem thi cong MU, tuc chinh no lai la mot co che 'song tren giay'; (3) `RAIL_KHAI_TRO` hom nay chi chua CHUOI, khong chua so, nen registry kieu do da chung minh la de bien thanh con dau cao su — va do duoc: no dang bao ve `veto_soc_low_n` trong khi chinh `veto_calls_n` (mau so cua no) da bi o nhiem (M1). GHI LAI de nguoi sau muon lam thi phai sua ca ba diem tren truoc.",
+      "de_xuat": "Neu sau nay van muon, hay lam no thanh mot SCRIPT DO (`scripts/`) co prereg, khong phai mot test trong `pytest -q`."
+    },
+    {
+      "phuong_an_da_can_nhac": "Cong 'ly do TAM THOI khong duoc sinh trang thai HAP THU': liet ke moi reason_code ma `cadence.evaluate` + `evaluate_checkpoint` co the sinh, bat buoc phan loai TRANSIENT/PERMANENT trong mot registry (fail-closed nhu `advice_topics.classify`), roi assert reason TRANSIENT khong dan toi trang thai co `_ALLOWED_TRANSITIONS[state] == frozenset()`.",
+      "danh_gia": "Day la cong DUNG cho M3 va chi cho M3 — no re (~ms), fail-closed, khong flaky, va DO ngay hom nay (`topic_cooldown` va `shift_budget_exhausted` deu TAM THOI ma dan toi `suppressed` hap thu). Toi de xuat no nhu cong THU HAI, doc lap, chi cho nua san pham. Toi KHONG gop no vao cong chinh vi gop hai assertion khac ban chat vao mot test lam ca hai kho doc va de bi skip ca cum.",
+      "trang_thai": "DE XUAT PHU — chua do chi phi, chua viet"
+    },
+    {
+      "canh_bao_that": "KHONG co cong nao trong hai cai tren bat duoc B2 (kenh DANG SHIP) va M4. Ly do da noi o `ly_do_phan_xu`: chung tieu tai nguyen khac. Toi noi thang dieu do thay vi mo rong cong cho co ve phu het."
+    }
+  ],
+
+  "cai_chua_kiem": [
+    "M1/M2: chua do tren 30 seed. Cac so 125/107/118 va 3204/3270/3742 la 3 seed; DAU HIEU (khac 0 / bang nhau) la cau truc nen khong doi theo seed, nhung DO LON thi chua co CI.",
+    "M1: chua truy xem con so `veto_*` da bi o nhiem nay DA vao artifact/ban bao cao nao chua (toi chi chung minh no o nhiem, chua chung minh no da lam ai ket luan sai).",
+    "M2: chua kiem `run_pair_multiday` — no nhan `channels_a` tuy y, nen ve ly thuyet co the co caller truyen shift_extend vao arm A va lam guard song lai. Chua grep het caller.",
+    "M3: chua kiem duong `routers/advice_v2.py` end-to-end qua HTTP (toi goi thang `AdviceCheckpointService`). Chua kiem `dismissed_for_window` (nghi la con nang hon vi ten no HUA la 'theo cua so' nhung `_cadence_memory` v2 khong co cua so nao).",
+    "M4: chua do voi `coverage=single` (chi do `coverage=all`).",
+    "M5: chua do nhanh tai xe CO duoc phu (`d-`/`r-`) — tren dataset mock nay `advisor.advice()` luon co card cho ho (0/10670 lan im), nen ty le MA cho nhom do la ~0 HOM NAY. Ma phat sinh tu nhom KHONG duoc phu (26,7% cohort) va tu nhanh `is_driving`.",
+    "Cong de xuat: chua viet thanh test that, chua do thoi gian ve (b) tren may CI, chua kiem lieu co kenh nao co LY DO CHINH DANG de cham vao arm tat (neu co thi cong can mot registry — va luc do no thua huong dung nhuoc diem cua phuong an 'hoa so' ma toi vua bac).",
+    "Toan bo so lieu tren la MOCK (`configs/pilot_dongda.yaml`, `data_mode: synthetic` / `mock-realdata`), khong phai so that cua GSM."
+  ]
+}

@@ -12,8 +12,20 @@
 |---|---|
 | Nguyên tắc | KHÔNG bịa hàm phạt phi tuyến (số bịa — lý do C2-fatigue bị bác). Giá THẬT của sự kiện swap từ policy; "phi tuyến" nổi nội sinh: DP tự tránh swap thừa, tự xếp swap theo giá |
 | `policy.py` | battery term mang `per: "swap"`; **CHỐNG ĐẾM KÉP**: cash_per_km chỉ còn nền by_track, khấu hao fee/range (150đ/km) chuyển vào `reason` làm tham khảo — một đồng trừ đúng một lần |
-| `shift_dp` | `DEFAULT_PARAMS["swap_fee_vnd"]=0`; nhánh SWAP `v = −fee + V[...]` (fee=0 giữ tie-break Cycle R); đường `policy_costs_as_of`: battery ACTIVE ⇒ tự điền fee (explicit thắng); solution expose `expected_swap_cost_vnd` + `baseline_swap_cost_vnd` — **delta/payout GIỮ GROSS** (§5), consumer đủ số để tính net công bằng cho CẢ HAI lịch |
+| `shift_dp` | `DEFAULT_PARAMS["swap_fee_vnd"]=0`; nhánh SWAP `v = −fee + V[...]` (fee=0 giữ tie-break Cycle R); đường `policy_costs_as_of`: battery ACTIVE ⇒ tự điền fee (explicit thắng); solution expose `expected_swap_cost_vnd` + `baseline_swap_cost_vnd` — **delta/payout GIỮ GROSS** (§5), ~~consumer đủ số để tính net công bằng cho CẢ HAI lịch~~ ⚠ **xem đính chính dưới** |
 | bridge | `swap_fee_vnd` từ `vehicle.swap_fee_vnd` — cùng khoá với sổ chi phí world |
+
+> ### ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 2) — câu *"consumer đủ số để tính net"* SAI dưới config ship
+>
+> `expected_swap_cost_vnd = n_swaps × swap_fee_vnd`. Ở config ship **`swap_fee_vnd = 0`** ⇒ tích
+> **luôn bằng 0.0**, và `n_swaps` **KHÔNG được expose** trong `solution`. Hệ quả: một lịch có
+> **7 SWAP** báo `expected_swap_cost_vnd: 0.0` — **giống hệt** một lịch có **0 SWAP**. Consumer
+> **không phân biệt được hai lịch**, nên **không** tự tính net công bằng được như câu trên hứa.
+>
+> Cái đúng còn giữ: **delta/payout GIỮ GROSS** (§5) là quyết định đúng và không đổi.
+> Cái phải sửa: hoặc **expose `n_swaps`**, hoặc khai rõ *"số hạng chi phí đang TẮT"* thay vì phát
+> ra một số 0 im lặng — một `0.0` không nhãn không phân biệt được *"không tốn"* với *"chưa tính"*.
+> Việc này thuộc **Cycle 7**, chưa làm trong Cycle 2 (Cycle 2 là docs-only).
 
 Hành vi pin bằng test: fee làm DP **dời swap lên đầu ca** ở thế hoà (cùng thành phần lịch,
 cùng gross — vị trí đổi do tie-break); fee > lãi đuôi mỏng ⇒ **bỏ hẳn swap** (REST/END).

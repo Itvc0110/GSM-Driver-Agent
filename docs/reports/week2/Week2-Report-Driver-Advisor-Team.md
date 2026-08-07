@@ -158,20 +158,25 @@ tốt hơn một trợ lý nói nhiều. Đây cũng là lý do §9.2 thiết k�
 
 ### 4.1 Chín solver — phát biểu toán học
 
-Mọi con số tài chính hiển thị cho tài xế **phải** đi qua một trong chín solver này. Solver là code
-thuần, tất định, có test — không phải LLM.
+Đây là **quy tắc thiết kế**: mọi con số tài chính hiển thị cho tài xế **phải** đi qua một trong
+chín solver này — solver là code thuần, tất định, có test, **không phải LLM**.
 
-| Solver | Bài toán | Phương pháp |
-| --- | --- | --- |
-| **S1** `bonus_feasibility` | Còn *h* giờ và *p* điểm hiện tại, có kịp mốc thưởng kế tiếp không? Cần thêm bao nhiêu cuốc/giờ? | Đại số đóng trên tốc độ điểm/giờ theo khung giờ + kiểm khả thi so quỹ giờ |
-| **S2** `shift_dp` | Phân bổ các khoảng `ONLINE / REST / SWAP / END` trong thời gian còn lại | **Dynamic programming** trên trạng thái (thời gian còn lại, SOC, điểm, nợ nghỉ) |
-| **S3** `f3_patterns` | Ca vừa rồi có mẫu hành vi nào làm giảm hiệu quả? | Thống kê mô tả trên chuỗi phân đoạn |
-| **S4** `capacity_alloc` | Nếu **nhiều** tài xế cùng nhận một gợi ý thì trạm/khu có chịu được không? | **Linear assignment** (`scipy.optimize.linear_sum_assignment`) chống dồn cục |
-| **S5** `weekly_khoan` | Khoán tuần: còn thiếu bao nhiêu, có khả thi không? | Đại số + kiểm ràng buộc, tách gross/payout |
-| **S6** `mission_knapsack` | Chọn tổ hợp nhiệm vụ nào trong quỹ thời gian còn lại? | **0/1 knapsack** (reward vs effort, capacity = giờ còn) |
-| **S7** `idle_reduction` | Khoảng chờ dài nào đáng chuyển thành di chuyển/nghỉ? | Phát hiện đoạn + so sánh chi phí cơ hội theo cầu giờ |
-| **S8** `penalty_explain` | Khoản trừ đến từ đâu, ngưỡng chính sách nào? | Tra cứu + đối chiếu `PolicyBundle` có version |
-| **S9** `anomaly_alert` | Chỉ số nào lệch bất thường so với chính tài xế đó? | So sánh với phân phối lịch sử cá nhân |
+⚠ **Trạng thái thi công thì khác quy tắc, và chúng tôi nói thẳng ở cột cuối.** Ở bản build hiện
+tại, **5/9 solver chưa có lời gọi `.solve()` nào** ngoài chính test của nó; đường sản phẩm thực
+sự chạy **S1** (và **S2** khi có đủ runtime state). Bảng dưới đây đếm bằng lệnh, không bằng trí
+nhớ — cột *Trạng thái* là số lời gọi `.solve()` ngoài package `solvers/`.
+
+| Solver | Bài toán | Phương pháp | Trạng thái |
+| --- | --- | --- | --- |
+| **S1** `bonus_feasibility` | Còn *h* giờ và *p* điểm hiện tại, có kịp mốc thưởng kế tiếp không? Cần thêm bao nhiêu cuốc/giờ? | Đại số đóng trên tốc độ điểm/giờ theo khung giờ + kiểm khả thi so quỹ giờ | ✅ **chạy ở SẢN PHẨM** + sim |
+| **S2** `shift_dp` | Phân bổ các khoảng `ONLINE / REST / SWAP / END` trong thời gian còn lại | **Dynamic programming** trên trạng thái (thời gian còn lại, SOC, điểm, nợ nghỉ) | ⚠ **đã đi dây ở sản phẩm** nhưng bị chặn bởi thiếu runtime state; kênh sim **TẮT** theo ĐA-07 |
+| **S3** `f3_patterns` | Ca vừa rồi có mẫu hành vi nào làm giảm hiệu quả? | Thống kê mô tả trên chuỗi phân đoạn | ❌ **0 lời gọi** |
+| **S4** `capacity_alloc` | Nếu **nhiều** tài xế cùng nhận một gợi ý thì trạm/khu có chịu được không? | **Linear assignment** (`scipy.optimize.linear_sum_assignment`) chống dồn cục | ✅ chạy trong **sim** (kênh vị trí — kênh duy nhất bật mặc định) |
+| **S5** `weekly_khoan` | Khoán tuần: còn thiếu bao nhiêu, có khả thi không? | Đại số + kiểm ràng buộc, tách gross/payout | ❌ **0 lời gọi** · ⚠ **chưa kiểm chứng được**: sim không mô hình hoá khoán tuần/clawback |
+| **S6** `mission_knapsack` | Chọn tổ hợp nhiệm vụ nào trong quỹ thời gian còn lại? | **0/1 knapsack** (reward vs effort, capacity = giờ còn) | ❌ **0 lời gọi** |
+| **S7** `idle_reduction` | Khoảng chờ dài nào đáng chuyển thành di chuyển/nghỉ? | Phát hiện đoạn + so sánh chi phí cơ hội theo cầu giờ | ✅ chạy trong **sim** (kênh `rest_window`, hiện TẮT) |
+| **S8** `penalty_explain` | Khoản trừ đến từ đâu, ngưỡng chính sách nào? | Tra cứu bảng ngưỡng trong input; **không** nhận `PolicyBundle` (`solve(pi)`), và nhãn nguồn `policy_v:threshold` **chưa mang số version** | ❌ **0 lời gọi** · ⚠ **ngoài scope**: luồng giải trình vi phạm thuộc **dự án khác** |
+| **S9** `anomaly_alert` | Chỉ số nào lệch bất thường so với chính tài xế đó? | So sánh với phân phối lịch sử cá nhân | ❌ **0 lời gọi** |
 
 Mỗi solver trả về một **`SolverReport`** gồm: `problem_digest` (phát biểu bài toán), *numbers with
 source* (mỗi số kèm nguồn), `sensitivity`, và `infeasible_reason` khi bài toán không khả thi.

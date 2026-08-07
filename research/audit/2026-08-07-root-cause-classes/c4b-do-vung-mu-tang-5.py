@@ -15,10 +15,8 @@ Chạy:  uv run python research/audit/2026-08-07-root-cause-classes/c4b-do-vung-
 """
 from __future__ import annotations
 
-import inspect
 import json
 import pathlib
-import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "src"))
@@ -32,9 +30,18 @@ from gsm_sim.sim_metrics import (EXTEND_RAILS, REST_RAILS,  # noqa: E402
 
 OUT = pathlib.Path(__file__).with_suffix(".json")
 
-# Hai khoá này KHÔNG phải lan can: `*_calls_n` là MẪU SỐ, `*_fired_n` là TỔNG.
-# Cổng soi từng rail riêng thay vì soi tổng — không soi chúng là ĐÚNG THIẾT KẾ.
-KHONG_PHAI_LAN_CAN = {"veto_calls_n", "veto_fired_n", "xveto_calls_n", "xveto_fired_n"}
+# ⚠ CẬP NHẬT 2026-08-07 sau khi Cycle 4 thi công. Cổng THƯỜNG TRỰC nay là
+# `tests/test_tang5_khong_co_vung_mu.py`; file này giữ lại làm HỒ SƠ tái tạo được của phép đo
+# đã tìm ra vùng mù, và được cập nhật để không để lại một con số đã lỗi thời (đúng họ lỗi
+# "bề mặt bằng chứng phân rã" mà Cycle 2 đi sửa).
+#
+# Khoá KHÔNG được soi riêng — ĐÚNG THIẾT KẾ, không phải vùng mù:
+#   `*_calls_n` MẪU SỐ · `*_fired_n` TỔNG (cổng soi từng rail riêng)
+#   `commit_made_n` kênh nói ít hơn ≠ suy giảm · `commit_broken_n` sụp về 0 là TỐT
+#   `commit_cleared_n` nghỉ sớm tự nguyện ≠ suy giảm
+# Soi bất kỳ khoá nào ở đây sẽ tạo **chiều khen**, đúng hướng Goodhart mà tầng 5 chặn.
+KHONG_PHAI_LAN_CAN = {"veto_calls_n", "veto_fired_n", "xveto_calls_n", "xveto_fired_n",
+                      "commit_made_n", "commit_broken_n", "commit_cleared_n"}
 
 
 def khoa_mot_chieu() -> set[str]:
@@ -46,18 +53,26 @@ def khoa_mot_chieu() -> set[str]:
 
 
 def vao_a_mean() -> set[str]:
-    """`aggregate_health_guardrail` chép cứng danh sách `keys` — đọc ra bằng inspect."""
-    src = inspect.getsource(aggregate_health_guardrail)
-    m = re.search(r"keys = \((.*?)\)\n", src, re.S)
-    if not m:
-        raise RuntimeError("khong doc duoc `keys` — ham da doi hinh dang, sua probe nay")
-    return set(re.findall(r'"([a-z0-9_]+)"', m.group(1)))
+    """Khoá nào thực sự vào `a_mean`.
+
+    ⚠ Bản đầu đọc danh sách `keys` bằng **regex trên source** — và nó vỡ ngay khi Cycle 4 đổi
+    danh sách từ chép-tay sang SUY-RA-từ-hằng (regex khớp nhầm, báo 10 khoá vắng). Nay **gọi
+    hàm thật** trên một cặp stub: đo cái hàm LÀM, không đo cái nó TRÔNG NHƯ."""
+    class _Pair:
+        pass
+
+    p = _Pair()
+    p.system_a = {**{k: 1.0 for k in khoa_mot_chieu()}, "rest_min_total": 10.0}
+    p.system_b = dict(p.system_a)
+    return set(aggregate_health_guardrail([p])["a_mean"])
 
 
 def cong_co_soi(k: str, moi: set[str]) -> bool:
     """TIÊM: b[k] sụp về 0 so với a. Cổng lành mạnh phải tố giác."""
-    a = {kk: 100.0 for kk in moi}
-    a.update({"rest_min_total": 1000.0, "work_span_p90": 100.0, "drive_min_p90": 100.0})
+    a = {kk: 50.0 for kk in moi}
+    a.update({"rest_min_total": 1000.0, "work_span_p90": 100.0, "drive_min_p90": 100.0,
+              "commit_made_n": 100.0, "commit_kept_n": 40.0,
+              "commit_broken_n": 30.0, "commit_cleared_n": 20.0})  # bao toan OK
     b = dict(a)
     b[k] = 0.0
     return len(health_guardrail_flags(a, b)) > 0

@@ -64,6 +64,29 @@ def _src_blob() -> str:
     return "\n".join(parts)
 
 
+def _co_nguoi_doc(blob: str, path: tuple[str, ...]) -> bool:
+    """Cờ `path` có người đọc không — khớp theo ĐƯỜNG DẪN, không theo tên lá.
+
+    Không thể đòi *"phải xuất hiện dạng `a.b.c`"*: rất nhiều chỗ đọc hợp lệ qua block cha đã
+    lấy ra trước (`veh = cfg["vehicle"]` rồi `veh["swap_consume_pct_per_km"]`). Nên luật là:
+
+      lần xuất hiện **hỏng** = tên lá đi ngay sau `<namespace>.` với namespace **KHÁC** block
+      cha thật. Cờ được coi là có người đọc khi có **ít nhất một** lần xuất hiện KHÔNG hỏng.
+
+    Đúng bằng cơ chế đã sập: `"orders.trip_km_median"` là lần xuất hiện hỏng của
+    `demand.trip_km_median`, và nó là lần xuất hiện DUY NHẤT.
+    """
+    name = path[-1]
+    cha = path[-2] if len(path) >= 2 else None
+    pat = re.compile(rf"(?<![A-Za-z0-9_])(?:([A-Za-z0-9_]+)\.)?{re.escape(name)}(?![A-Za-z0-9_])")
+    for m in pat.finditer(blob):
+        tien_to = m.group(1)
+        if tien_to is not None and cha is not None and tien_to != cha:
+            continue                     # `orders.trip_km_median` — namespace SAI, không tính
+        return True
+    return False
+
+
 def test_moi_co_config_deu_co_nguoi_doc():
     cfg = yaml.safe_load((ROOT / "configs/pilot_dongda.yaml").read_text(encoding="utf-8"))
     blob = _src_blob()
@@ -75,13 +98,41 @@ def test_moi_co_config_deu_co_nguoi_doc():
         dotted = ".".join(path)
         if dotted in CHUA_DUNG:
             continue
-        # tên phải xuất hiện như một TOKEN (không phải substring của tên khác — bẫy đã gặp:
-        # `swap_range_km` khớp nhờ `swap_range_km_per_pack`, một khoá hoàn toàn khác)
-        if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", blob):
+        # ⚠ ĐÍNH CHÍNH 2026-08-07 (Cycle 3) — KHỚP THEO ĐƯỜNG DẪN ĐẦY ĐỦ, KHÔNG theo tên lá.
+        #
+        # Bản cũ chỉ tìm token `name` (đoạn cuối) trong toàn bộ source. Hệ quả đo được: code
+        # viết `cfg.get("orders.trip_km_median")` — một khoá KHÔNG TỒN TẠI — nhưng chuỗi đó
+        # CHỨA token `trip_km_median`, nên cổng kết luận `demand.trip_km_median` "đã có người
+        # đọc". **Chính dòng hỏng bảo lãnh cho khoá đúng, và cổng bị con bug nó đi bắt qua mặt.**
+        #
+        # Nay: chấp nhận HOẶC đường dẫn đầy đủ (`"a.b.c"`, cách đọc phổ biến qua `Config.get`),
+        # HOẶC tên lá đứng cạnh một dấu ngoặc/dấu chấm của chính block cha (`["a"]["b"]`,
+        # `.b`) — nhưng KHÔNG chấp nhận tên lá đứng sau một namespace KHÁC.
+        if not _co_nguoi_doc(blob, path):
             mo_coi.append(dotted)
     assert not mo_coi, (
         "cờ config KHÔNG có người đọc — sweep nó sẽ ra Δ=0 và cho kết luận SAI rằng tham số "
         f"không ảnh hưởng: {mo_coi}. Nếu cố ý khai trước, thêm vào CHUA_DUNG kèm lý do.")
+
+
+def test_khop_theo_DUONG_DAN_that_su_bat_duoc_namespace_SAI():
+    """Đối chứng DƯƠNG TÍNH cho `_co_nguoi_doc` — bắt buộc.
+
+    Cổng bản cũ khớp tên lá nên **xanh** với đúng con bug nó phải bắt. Test này dựng lại tình
+    huống đó nguyên văn và đòi cổng mới ĐỎ; không có nó thì không ai biết bản sửa có tác dụng
+    hay chỉ đang xanh vì repo tình cờ sạch."""
+    # blob giả lập ĐÚNG dòng hỏng của Cycle 3
+    blob_hong = 'self.avg_dist_km = float(cfg.get("orders.trip_km_median", 3.5))'
+    assert not _co_nguoi_doc(blob_hong, ("demand", "trip_km_median")), (
+        "cổng KHÔNG bắt được namespace sai — đây chính là lỗ hổng đã để `orders.trip_km_median` "
+        "bảo lãnh cho `demand.trip_km_median` suốt nhiều tháng")
+    # và phải XANH khi đọc đúng
+    assert _co_nguoi_doc('cfg.get("demand.trip_km_median", 3.5)', ("demand", "trip_km_median"))
+    # cách đọc hợp lệ qua block cha đã lấy ra trước — KHÔNG được coi là hỏng
+    assert _co_nguoi_doc('veh["swap_consume_pct_per_km"]',
+                         ("vehicle", "swap_consume_pct_per_km"))
+    # khoá cấp 1 (không có cha) — mọi lần xuất hiện đều tính
+    assert _co_nguoi_doc('x = cfg.get("matching")', ("matching",))
 
 
 def test_CHUA_DUNG_khong_duoc_chua_co_DA_noi():
