@@ -1,0 +1,47 @@
+{
+ "utilization": {
+  "target": [
+   0.45,
+   0.55
+  ],
+  "sim": 0.34135983326076025,
+  "verdict": "❌ THẤP HƠN (-24% so mép dưới)",
+  "nguon": "ngành 30–60%, ~50% peak (dojobusiness); UberX +30% vs taxi (NBER w22083); guardrail: <35% THỪA CUNG, >65% thiếu cung"
+ },
+ "trips": {
+  "target": [
+   18,
+   22
+  ],
+  "sim": 10.0,
+  "verdict": "❌ THẤP HƠN (-44% so mép dưới)",
+  "nguon": "Sàn ĐBTN ~13–15/ngày; GrabBike FT 20–30 cuốc (danviet); target median 18–22"
+ },
+ "payout": {
+  "target": [
+   380000,
+   480000
+  ],
+  "sim": 262500.0,
+  "verdict": "❌ THẤP HƠN (-31% so mép dưới)",
+  "nguon": "Sàn ĐBTN 8h=320k, 10h=400k (VnExpress 11/2023); bike 9,2h→318k (Znews); guarantee 15tr/tháng ≈500–580k/ngày"
+ },
+ "idle_giua_cuoc": {
+  "target": [
+   10,
+   15
+  ],
+  "sim": 14.64102564102564,
+  "verdict": "✅ TRONG DẢI",
+  "nguon": "Austin mean 12,8′ (SD 14,5); Toronto <25′ đa số"
+ },
+ "decline": {
+  "target": [
+   0.02,
+   0.05
+  ],
+  "sim": 0.16035386823681053,
+  "verdict": "❌ CAO HƠN (+221% so mép trên)",
+  "nguon": "DiDi \"seldom decline\" khi auto-dispatch; giữ 2–5%"
+ }
+}
