@@ -145,6 +145,43 @@ chặt thị trường đã thử**, và tác dụng **lớn dần khi cung dư*
 tăng từ 20 lên 60 seed. Bốn mức còn lại vẫn ở **20 seed** ⇒ **độ lớn từng mức có sai số thật**;
 chỉ được trích **xu hướng đơn điệu**, không được trích con số từng mức như giá trị chính xác.
 
+### 3e. P2b — ô solver CHỌN không hơn ô NGẪU NHIÊN, đo ở mức LƯỢT GÁN
+
+Phép đo trả lời câu Cường đã chọn (*"S4 — chưa đổi hàm mục tiêu, ĐO TRƯỚC ĐÃ"*). Arm `SHUF`
+hoán vị đích **giữa chính các allocation** cùng lượt ⇒ giữ đa tập đích, giữ trần ô/zone-veto,
+cùng số người được điều, cùng cường độ xáo trộn — **chỉ khác: không biết đi đâu**.
+
+**Cổng 0 (dụng cụ đo phải trung tính):** recorder của arm B chứng minh **bằng vân tay payout
+trùng khít**, không bằng lập luận. 61 lượt gán ghi được ở seed 3300.
+
+| | B (solver chọn) | SHUF (mù) |
+| --- | --- | --- |
+| có đơn ≤20′ sau khi được điều | **57,52%** [55,42; 59,62] | **57,13%** [55,06; 59,24] |
+| n lượt gán | 2.234 | 2.223 |
+| chờ tới đơn kế (median, censor 45′) | 16,67′ | 16,75′ |
+
+**⭐ Hiệu (B − SHUF) = +0,39đp [−2,48; +3,17] `ns`** ⇒ **HOÀ**, đúng phán quyết đã ghi trước.
+
+**Bốn đường bằng chứng độc lập nay hội tụ:**
+1. suy luận ma trận cost (tôi tự dẫn): `cost[i,j] = pen_i (+10)`, `pen_i` **hằng theo hàng** ⇒
+   cộng hằng vào cả hàng **không đổi lời giải** bài toán gán ⇒ tương đương **chỉ báo 0/1**;
+2. `greedy ≡ Hungarian` **472/472** (agent đo);
+3. `B − SHUF` **ns** ở mức **ngày** (`c9d`);
+4. `B − SHUF` **ns** ở mức **lượt gán**, n ≈ 2.200 (phép đo này).
+
+#### ⚠ Phạm vi kết luận — hẹp hơn nhiều so với cách dễ đọc nhầm
+
+`SHUF` **giữ nguyên tập ô đích và số người được điều**; nó chỉ hoán vị **ai đi ô nào**.
+⇒ Cái được chứng minh là: **phép GÁN (tài xế nào → ô nào) không mang giá trị đo được.**
+⇒ Cái **KHÔNG** được chứng minh: rằng kênh vị trí vô giá trị. Việc **điều người rảnh đi đâu đó
+có trần còn lại** vẫn tạo ra hiệu ứng hệ thống đã đo (−15,8 đơn hết hạn, +3.097đ). `ranked_cells`
+và `slots` (chọn TẬP ô) **không** bị phép đo này chạm tới.
+
+**Giới hạn lực, phải nói ra:** CI hiệu rộng **5,66đp** ⇒ chỉ loại được hiệu ứng **lớn hơn ~3,2đp**
+trên nền 57,5%. Và mỗi tài xế được điều **1,42 lần/ngày** ⇒ quan sát **không độc lập**, CI
+bootstrap **hẹp hơn sự thật**. ⇒ Câu đúng là *"không phát hiện được lợi ích của phép gán, với
+lực đủ bắt ~3đp trở lên"*, **không** phải *"đã chứng minh bằng không"*.
+
 ### 4. Phân phối chờ ghép — tôi nêu `D-WAIT-4S` rồi tự bác
 
 Đo đầy đủ (seed 3300): đội 90 → p50 **0,07′** · p75 **0,96′** · p90 **2,87′** · p99 6,48′ ·
