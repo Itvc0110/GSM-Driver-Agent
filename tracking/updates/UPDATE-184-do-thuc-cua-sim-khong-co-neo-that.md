@@ -122,9 +122,28 @@ và ở đúng đó `Δpayout` là **ns**.
 
 ⚠ **KHÔNG được đọc thành *"advisor vô dụng trong thế giới thực tế"*.** CI ở n=60 rộng
 [−1.280; +4.284], điểm ước lượng **dương**; 20 seed có thể **thiếu lực**, không phân biệt được
-*"hiệu ứng nhỏ hơn"* với *"chưa đủ mẫu"*. Và `Δ đơn hết hạn` **SIG ở CẢ n=60** (−6,7) ⇒ lợi ích
-**mức hệ thống** vẫn có ở mọi mức; chỉ lợi ích **payout theo đầu người** là không phân giải được
-ở mức thực tế nhất.
+*"hiệu ứng nhỏ hơn"* với *"chưa đủ mẫu"*. Và `Δ đơn hết hạn` **SIG ở CẢ n=60** (−6,7).
+
+### 3d. ĐÃ GIẢI QUYẾT — chạy thêm 60 seed tại đúng mức đó, câu trả lời là THIẾU LỰC
+
+`tang-luc-tai-muc-thuc-te.py`, seed **3320–3379** (mới, không chồng lấn), tổng **80 seed** tại
+đội 60. Tiêu chí đọc đã ghi **trước** khi thấy số:
+
+| chỉ số | 20 seed (cũ) | **60 seed (mới)** | gộp 80 |
+| --- | --- | --- | --- |
+| `payout` | +1.572đ **ns** [−1.280; +4.284] | **+2.370đ SIG** [+657; +4.114] | **+2.171đ** |
+| `expired_n` | −6,7 SIG | −6,5 SIG [−10; −3] | −6,5 |
+| `idle` | −4,4′ SIG | −6,5′ SIG [−8; −5] | −6,0′ |
+
+✅ Arm NULL tại mức này: **−988đ ns**, **0/60** trùng khít ⇒ cổng placebo vẫn PASS ở cỡ mẫu lớn.
+
+⇒ **Kết luận: hiệu ứng payout CÓ ở mức đội thực tế nhất.** Cái `ns` ban đầu là **thiếu mẫu**,
+không phải hiệu ứng biến mất. Bức tranh sau hiệu chỉnh: advisor **có tác dụng trên toàn dải độ
+chặt thị trường đã thử**, và tác dụng **lớn dần khi cung dư**.
+
+⚠ **Hệ quả về độ tin của các mức khác:** ước lượng tại n=60 dịch **+1.572 → +2.370đ (+51%)** khi
+tăng từ 20 lên 60 seed. Bốn mức còn lại vẫn ở **20 seed** ⇒ **độ lớn từng mức có sai số thật**;
+chỉ được trích **xu hướng đơn điệu**, không được trích con số từng mức như giá trị chính xác.
 
 ### 4. Phân phối chờ ghép — tôi nêu `D-WAIT-4S` rồi tự bác
 
