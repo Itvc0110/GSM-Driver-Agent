@@ -67,10 +67,14 @@ def _digest(result) -> dict:
 
     by_arch: dict[str, list[int]] = {}
     for a in result.actors:
-        if a.orders_offered:
+        # Cycle 1: mẫu số là `orders_decided` (lượt tài xế THẬT SỰ được hỏi), không phải
+        # `orders_offered`. Dùng `offered` thì cổng này đo một đại lượng NHIỄM: 7/7 archetype
+        # lệch âm trung bình −0,0246, mà **80% khoảng lệch của P7 là lượt bị chặn vì pin** —
+        # tức cổng đang tố giác tài xế về những đơn họ chưa từng được hỏi.
+        if a.orders_decided:
             cur = by_arch.setdefault(a.archetype, [0, 0])
             cur[0] += a.orders_accepted
-            cur[1] += a.orders_offered
+            cur[1] += a.orders_decided
 
     censored = sum(1 for s in result.order_states.values() if s[0] == "CENSORED_END_OF_RUN")
     return {

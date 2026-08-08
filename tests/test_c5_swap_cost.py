@@ -166,6 +166,10 @@ def test_bridge_passes_swap_fee_from_config():
         acceptance_rate = 0.9
         completion_rate = 0.95
         orders_offered = 10
+        # Cycle 1: `_acc_estimate` gác cổng đủ-mẫu trên `orders_decided` (lượt tài xế THẬT SỰ
+        # được hỏi = offered − soc_skipped). Stub không có skip nào ⇒ decided == offered.
+        orders_soc_skipped = 0
+        orders_decided = 10
         orders_accepted = 9
         orders_completed = 9
         rest_taken_min = 0.0

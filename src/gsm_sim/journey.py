@@ -217,6 +217,11 @@ def build_journey(result, actor_id: int) -> DriverJourney:
     occupied = by_kind.get("on_trip", 0.0)
     n_offer = len(offers)
     n_accept = sum(1 for o in offers if o.decision == "accept")
+    n_skip_soc = sum(1 for o in offers if o.decision == "skip_soc")
+    # Cycle 1: mẫu số của tỷ lệ nhận là các lượt tài xế THẬT SỰ được hỏi. File này vốn đã BÁO
+    # CÁO RIÊNG `skipped_soc` ở dưới mà vẫn để nó trong mẫu số — cùng một mâu thuẫn với
+    # `entities.acceptance_rate`, nay dùng chung một định nghĩa (`Actor.orders_decided`).
+    n_decided = max(0, n_offer - n_skip_soc)
     n_done = sum(1 for o in offers if o.outcome == "completed")
     n_cancel = sum(1 for o in offers if o.outcome == "cancelled_after_accept")
 
@@ -229,10 +234,11 @@ def build_journey(result, actor_id: int) -> DriverJourney:
         "offers": n_offer,
         "accepted": n_accept,
         "declined": sum(1 for o in offers if o.decision == "decline"),
-        "skipped_soc": sum(1 for o in offers if o.decision == "skip_soc"),
+        "skipped_soc": n_skip_soc,
+        "decided": n_decided,
         "trips_completed": n_done,
         "cancelled_after_accept": n_cancel,
-        "acceptance_rate": round(n_accept / n_offer, 4) if n_offer else None,
+        "acceptance_rate": round(n_accept / n_decided, 4) if n_decided else None,
         "completion_rate": round(n_done / n_accept, 4) if n_accept else None,
         "payout_vnd": actor.payout_vnd,
         # SIM-XANH P2: tách 4 nguồn tiền — advisor tối ưu chủ yếu ở phần NGOÀI cuốc

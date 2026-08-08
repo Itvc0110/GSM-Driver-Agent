@@ -14,67 +14,66 @@
   1200
  ],
  "n_luot": 990,
- "n_trong_dai": 96,
- "n_toi_tay": 0,
+ "n_trong_dai": 81,
+ "n_toi_tay": 81,
  "k_phan_bo": {
-  "1": 66,
-  "2": 27,
-  "3": 3
+  "1": 69,
+  "2": 12
  },
  "vi_du": [
   {
-   "driver": "d-0",
+   "driver": "d-2",
    "date": "2026-09-26",
    "now_min": 840,
-   "acc": 0.8545,
+   "acc": 0.8753,
    "a": 8,
-   "o": 8,
-   "k_tu_choi": 2
+   "o": 9,
+   "k_tu_choi": 1
   },
   {
-   "driver": "d-0",
+   "driver": "d-2",
    "date": "2026-09-26",
    "now_min": 1020,
-   "acc": 0.8545,
+   "acc": 0.8753,
    "a": 8,
-   "o": 8,
-   "k_tu_choi": 2
+   "o": 9,
+   "k_tu_choi": 1
   },
   {
-   "driver": "d-0",
+   "driver": "d-2",
    "date": "2026-09-26",
    "now_min": 1200,
-   "acc": 0.8545,
+   "acc": 0.8753,
    "a": 8,
-   "o": 8,
-   "k_tu_choi": 2
+   "o": 9,
+   "k_tu_choi": 1
   },
   {
-   "driver": "d-1",
+   "driver": "d-6",
    "date": "2026-09-26",
    "now_min": 840,
-   "acc": 0.8714,
-   "a": 12,
-   "o": 12,
-   "k_tu_choi": 3
+   "acc": 0.8678,
+   "a": 5,
+   "o": 8,
+   "k_tu_choi": 1
   },
   {
-   "driver": "d-1",
+   "driver": "d-6",
    "date": "2026-09-26",
    "now_min": 1020,
-   "acc": 0.8714,
-   "a": 12,
-   "o": 12,
-   "k_tu_choi": 3
+   "acc": 0.8678,
+   "a": 5,
+   "o": 8,
+   "k_tu_choi": 1
   },
   {
-   "driver": "d-1",
+   "driver": "d-6",
    "date": "2026-09-26",
    "now_min": 1200,
-   "acc": 0.8714,
-   "a": 12,
-   "o": 12,
-   "k_tu_choi": 3
+   "acc": 0.8678,
+   "a": 5,
+   "o": 8,
+   "k_tu_choi": 1
   }
  ],
  "canh_bao": "accepted_count/total_request_* la so CA NGAY (end-of-day) con gi.acceptance_rate la as-of => k la XAP XI TREN. Chi doi bike."

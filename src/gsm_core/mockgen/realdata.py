@@ -136,7 +136,16 @@ def _emit_day(out: dict, drv: str, d: str, trips: list, prof: dict, online_h: fl
     completed = len(trips)
     if sim_stats is not None:
         accepted = max(completed, int(sim_stats["accepted"]))
-        req_accept = max(accepted, int(sim_stats["offered"]))
+        # Cycle 1 — MẪU SỐ là lượt tài xế THẬT SỰ ĐƯỢC HỎI, không phải mọi lượt dispatcher
+        # định tuyến tới. `offered` gồm cả lượt bị chặn vì pin (`world.py:647` đếm trước cổng
+        # SOC ở `:654`), mà ở đó `decide_accept` KHÔNG BAO GIỜ được gọi. Để nguyên thì
+        # `acceptance_rate` của `driver_statistic_daily` bị nhiễm, và ĐƯỜNG SẢN PHẨM đọc số
+        # nhiễm đó — advisor thật sẽ tưởng tài xế đang từ chối nhiều.
+        # `.get(...)` có fallback: snapshot sim CŨ (trước Cycle 1) không có khoá `decided`.
+        _decided = sim_stats.get("decided")
+        if _decided is None:
+            _decided = int(sim_stats["offered"]) - int(sim_stats.get("soc_skipped", 0))
+        req_accept = max(accepted, int(_decided))
         declined = req_accept - accepted
         cancelled = accepted - completed          # gồm huỷ-sau-nhận + đơn bị censor 24:00
     else:

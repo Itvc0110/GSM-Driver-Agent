@@ -119,8 +119,34 @@ class Actor:
     demand_prior: dict = field(default_factory=dict)
 
     @property
+    def orders_decided(self) -> int:
+        """Số lần tài xế THẬT SỰ được hỏi = tập `decide_accept` được gọi.
+
+        Cycle 1 (2026-08-08). `orders_offered` đếm ở `world.py:647`, **TRƯỚC** cổng pin ở
+        `:654-664`; pin không đủ ⇒ `orders_soc_skipped += 1` rồi `continue` ⇒ `decide_accept`
+        **không bao giờ** được gọi. Hai đại lượng khác nhau, nay có tên riêng cho từng cái:
+
+        - `orders_offered`  — dispatcher đã định tuyến bao nhiêu đơn tới đây (giữ nguyên; đúng
+          đại lượng mà `advice_bridge.py:974` cần để ước lượng TỐC ĐỘ đơn tới).
+        - `orders_decided`  — bao nhiêu lần tài xế được hỏi. **Đây mới là mẫu số của tỷ lệ nhận.**
+        """
+        return max(0, self.orders_offered - self.orders_soc_skipped)
+
+    @property
     def acceptance_rate(self) -> float:
-        return self.orders_accepted / self.orders_offered if self.orders_offered else 1.0
+        """Tỷ lệ nhận trên các lượt tài xế THẬT SỰ được hỏi.
+
+        ⚠ Trước Cycle 1, mẫu số là `orders_offered` ⇒ lượt bị chặn vì pin bị tính vào tài xế như
+        một lần từ chối. Đó KHÔNG chỉ là sai số báo cáo: `world.py:552`/`:1092` đưa giá trị này
+        thẳng vào `policy.day_bonus`, mà hàm đó trả **0** khi `acceptance < bonus_min_acceptance`
+        **bất kể điểm**. Đo được: **46/900 driver-day (5,11%)** bị đẩy xuống dưới ngưỡng CHỈ vì
+        skip-pin, **33** thực sự mất tiền, **108.000đ/ngày** trên đội 90.
+
+        Quy ước 0/0 → 1.0 **giữ nguyên** (`BUG-DSIM13-02`): consumer nào cần phân biệt "chưa
+        biết" với "hoàn hảo" phải đi qua `_acc_estimate`, không đọc thẳng property này.
+        """
+        d = self.orders_decided
+        return self.orders_accepted / d if d else 1.0
 
     @property
     def completion_rate(self) -> float:

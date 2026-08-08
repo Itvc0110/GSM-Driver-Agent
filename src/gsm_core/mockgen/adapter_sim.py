@@ -90,6 +90,10 @@ def _tables_from_run(r, cfg: Config, date: str) -> dict[str, list[dict]]:
         "date": date,
         "stats": {f"d-{a.actor_id}": {
             "offered": a.orders_offered, "accepted": a.orders_accepted,
+            # Cycle 1: `offered` gồm CẢ lượt bị chặn vì pin (`world.py:647` đếm trước cổng SOC ở
+            # `:654`) — những lượt tài xế CHƯA TỪNG được hỏi. Xuất thêm `decided` để tầng data
+            # không phải tự trừ tay và lệch định nghĩa với `Actor.orders_decided`.
+            "soc_skipped": a.orders_soc_skipped, "decided": a.orders_decided,
             "completed": a.orders_completed, "cancelled": a.orders_cancelled,
             # SIM-XANH P2: rating + mission + tân binh — SỰ KIỆN sim, không phải gauss tầng data
             "ratings_n": a.ratings_n, "ratings_sum": a.ratings_sum, "ratings_5": a.ratings_5,

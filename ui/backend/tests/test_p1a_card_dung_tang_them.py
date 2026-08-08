@@ -24,24 +24,63 @@ import pytest
 
 from app.adapters import advisor
 
-# Ca THẬT lấy từ artifact đo trước: điểm 60 ⇒ đã chốt mốc 30.000đ, mốc kế 60.000đ ⇒ biên 30.000đ
-CA = ("d-13", "2026-09-26", 14 * 60)
 SHIFT_END = 22 * 60
 
+# ⚠ Bản đầu NEO CỨNG ca `("d-13", "2026-09-26", 14*60)` lấy từ artifact đo trước. Sau khi
+# `scripts/regen_mock.py` chạy lại (Cycle 1 — sửa mẫu số tỷ lệ nhận), ca đó **không còn** là ca
+# "đã chốt mốc" (`bien == tong == 30.000`) ⇒ test đỏ vì DỮ LIỆU đổi, không phải vì code sai.
+# Chốt chặn `assert bien < tong` đã bắt đúng chuyện đó — nó làm đúng việc của nó.
+#
+# Nay fixture **TỰ TÌM** một ca đã-chốt-mốc trên mock hiện hành. Nội dung khẳng định giữ
+# nguyên từng chữ; chỉ cách chọn ca là động ⇒ test sống qua mọi lần regen sau.
+
+
+def _tim_ca_da_chot_moc():
+    """Quét mock tìm (driver, ngày, giờ) mà tài xế ĐÃ chốt một mốc và vẫn còn mốc kế.
+
+    Đó là hình dạng DUY NHẤT mà lỗi P1a biểu hiện: `bonus_at(points_now) > 0` nên
+    `tier_delta < tier_vnd`, tức có hai con số tiền khác nhau để đặt nhầm chỗ.
+    """
+    from app.adapters import mockdata
+    pol = advisor.policy()
+    cat = mockdata.catalog()
+    ds = [r["driver_id"] for r in cat["drivers"]
+          if str(r["driver_id"]).startswith(("d-", "r-"))]      # CHỈ bike — `ce-*` là bẫy mm-03
+    for ngay in reversed(cat["dates"]):
+        for did in ds:
+            for gio in (14 * 60, 17 * 60, 20 * 60):
+                try:
+                    gi = advisor.build_gi(did, ngay, gio, SHIFT_END)
+                except Exception:
+                    continue
+                if not gi.get("next_tiers") or int(pol.bonus_at(int(gi["points_now"]))) <= 0:
+                    continue
+                out = advisor.advice(did, ngay, gio, SHIFT_END)
+                items = [i for i in (out.get("items") or [])
+                         if i.get("reason_code") == "feasible_gap"]
+                if items:
+                    return (did, ngay, gio), items[0], gi
+    return None, None, None
+
 
 @pytest.fixture(scope="module")
-def the():
-    out = advisor.advice(*CA, SHIFT_END)
-    items = [i for i in (out.get("items") or []) if i.get("reason_code") == "feasible_gap"]
-    if not items:
-        pytest.skip(f"ca {CA} không còn ra thẻ feasible_gap trên mock hiện tại — "
-                    f"đo lại artifact p1a trước khi tin test này")
-    return items[0]
+def _ca():
+    ca, item, gi = _tim_ca_da_chot_moc()
+    if item is None:
+        pytest.fail("không tìm được ca 'ĐÃ chốt mốc + còn mốc kế' nào trên mock hiện hành ⇒ "
+                    "nhóm mà lỗi P1a biểu hiện đã BIẾN MẤT khỏi dữ liệu; đo lại artifact p1a "
+                    "trước khi tin bộ test này (KHÔNG được skip im lặng)")
+    return ca, item, gi
 
 
 @pytest.fixture(scope="module")
-def bien_that():
-    gi = advisor.build_gi(*CA, SHIFT_END)
+def the(_ca):
+    return _ca[1]
+
+
+@pytest.fixture(scope="module")
+def bien_that(_ca):
+    _ca_id, _item, gi = _ca
     pol = advisor.policy()
     tier = gi["next_tiers"][0][1]
     return int(tier) - int(pol.bonus_at(int(gi["points_now"]))), int(tier)

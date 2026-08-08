@@ -543,8 +543,12 @@ class AdviceActionBridge:
         tài xế), thiếu nữa thì `accept_base` (đại diện cho tỷ lệ lịch sử mà hệ thật đọc từ
         `driver_statistic_daily`). KHÔNG dùng property `actor.acceptance_rate` khi chưa có offer:
         nó trả 1.0 cho 0/0 (BUG-DSIM13-02) — "chưa biết" bị hiểu thành "hoàn hảo".
+
+        Cycle 1: cổng đủ-mẫu đếm trên `orders_decided`, **cùng đại lượng** với thứ nó đang gác.
+        Đếm trên `orders_offered` thì một tài xế bị chặn vì pin 4/5 lượt sẽ được coi là "đã đủ
+        mẫu" trong khi thật ra mới được hỏi **một** lần.
         """
-        if actor.orders_offered < self.min_offers_before_lift:
+        if actor.orders_decided < self.min_offers_before_lift:
             mem = (self.memory or {}).get(actor.actor_id)
             return float(mem.acceptance_avg if mem is not None and mem.acceptance_avg is not None
                          else actor.accept_base)
