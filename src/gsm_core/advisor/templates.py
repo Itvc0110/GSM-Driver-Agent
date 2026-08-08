@@ -270,7 +270,17 @@ def render_template(feature: str, solver_reports: list[dict], kb_excerpts: list[
     _s1 = _rep(solver_reports, "bonus_feasibility")
     _sol1 = (_s1 or {}).get("solution") or {}
     n1 = _vn(reg, _sol1.get("gap_points"), "points")
-    n2 = _vn(reg, _sol1.get("tier_vnd"), "vnd")
+    # ⭐ P1a (2026-08-07) — dùng phần KIẾM THÊM, không dùng TỔNG mốc.
+    #
+    # `day_bonus_tiers` là thang **THAY THẾ** (`policy.bonus_at` ghi đè `bonus = tier_vnd`, không
+    # `+=`) ⇒ với tài xế ĐÃ CHỐT một mốc, `tier_vnd` là **tên mốc**, không phải phần đổi được
+    # bằng công sức thêm. Câu render dưới đây (`"cần thêm {n1} để đạt mốc thưởng {n2}"`) đặt số
+    # ngay cạnh cụm NỖ LỰC ⇒ dùng TỔNG là hứa gấp đôi. Đo trên đường v1: **131/426 thẻ = 30,75%**
+    # rơi vào ca này, tiền bị thổi **4.440.000đ**, bội số **2,00×**.
+    #
+    # `tier_delta_vnd` do `bonus_feasibility` tính sẵn; fallback về `tier_vnd` cho report CŨ
+    # (chưa có khoá) — không có nó thì câu này im lặng đổi nghĩa khi gặp artifact cũ.
+    n2 = _vn(reg, _sol1.get("tier_delta_vnd", _sol1.get("tier_vnd")), "vnd")
 
     disclaimer = " Lưu ý: đây là ước tính theo dữ liệu lịch sử, không phải cam kết thu nhập."
     citations: list[str] = []

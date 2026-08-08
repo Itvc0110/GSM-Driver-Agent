@@ -146,7 +146,30 @@ def solve(gi: dict, policy: PolicyBundle) -> dict:
 
     tier_pts, tier_vnd = gi["next_tiers"][0]
     gap_pts = tier_pts - points_now
+
+    # ⭐ P1a (2026-08-07) — PHẦN KIẾM THÊM, không phải TỔNG MỐC.
+    #
+    # `day_bonus_tiers` là thang **THAY THẾ**, không cộng dồn: `bonus_at` ghi đè
+    # `bonus = tier_vnd` chứ không `+=` (`gsm_core/policy.py:104-110`). Nên phần tài xế thật sự
+    # đổi được bằng CÔNG SỨC THÊM là `tier_vnd − (đã chốt)`, không phải `tier_vnd`.
+    #
+    # Trước bản này, tầng sản phẩm đặt `tier_vnd` ngay cạnh *"khoảng X giờ chạy nữa"* ⇒ một tài
+    # xế đã chốt mốc 30.000đ đọc *"còn với được 60.000đ — 2 giờ nữa"* và hiểu 2 giờ đó đổi được
+    # 60.000đ; sự thật là **30.000đ**. ĐO trên mock (990 lượt, chỉ đội bike):
+    # **131/426 thẻ `feasible_gap` = 30,75%**, tổng tiền bị thổi **4.440.000đ**, bội số **2,00×**.
+    #
+    # ⚠ An toàn của phép trừ: thẻ này CHỈ hiện khi `feasible`, mà
+    # `feasible = enough_hours and ok_acc and ok_comp` (dưới) ⇒ tài xế ĐỦ ĐIỀU KIỆN ⇒ `bonus_at`
+    # đúng là phần họ **thật sự sẽ nhận**. Với người KHÔNG đủ điều kiện, `day_bonus` trả 0 và
+    # thẻ đi nhánh infeasible — nên ở đây không có ca "trừ đi một khoản họ không được nhận".
+    bonus_now = int(policy.bonus_at(points_now))
+    tier_delta = int(tier_vnd) - bonus_now
+
     numbers: list[dict] = [_num(gap_pts, "points", pv), _num(tier_vnd, "vnd", pv)]
+    if bonus_now > 0:
+        # chỉ khai khi KHÁC tổng — tài xế chưa chốt mốc nào thì hai số bằng nhau, thêm một số
+        # trùng lặp vào thẻ chỉ làm rối (và làm `numbers` của v2 dài ra vô ích)
+        numbers.append(_num(tier_delta, "vnd", pv))
 
     # AUDIT S1-2/3/5: walk từng giờ còn lại — giờ ngoài khung điểm đóng góp 0
     walk = _walk(policy, hist, start_h, gap_pts)
@@ -235,6 +258,10 @@ def solve(gi: dict, policy: PolicyBundle) -> dict:
             "trips_needed": trips_needed,
             "hours_needed": round(hours_needed, 2) if not math.isinf(hours_needed) else None,
             "tier_points": tier_pts, "tier_vnd": tier_vnd,
+            # P1a: `tier_vnd` là TÊN/TỔNG của mốc; `tier_delta_vnd` là phần tài xế THẬT SỰ
+            # đổi được bằng công sức thêm. Consumer nào đặt số cạnh "chạy thêm X giờ" thì
+            # PHẢI dùng `tier_delta_vnd`.
+            "bonus_now_vnd": bonus_now, "tier_delta_vnd": tier_delta,
             "constraints": {"enough_hours": enough_hours, "ok_acceptance": ok_acc,
                             "ok_completion": ok_comp},
         },

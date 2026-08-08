@@ -1,0 +1,81 @@
+{
+ "cau_hoi": "canh bao sat nguong co HANH DONG DUOC khong? (con may lan tu choi thi roi)",
+ "nguong": 0.85,
+ "cliff_margin": 0.03,
+ "ngay": [
+  "2026-09-26",
+  "2026-09-27",
+  "2026-09-28"
+ ],
+ "n_tai_xe_bike": 110,
+ "moc_gio": [
+  840,
+  1020,
+  1200
+ ],
+ "n_luot": 990,
+ "n_trong_dai": 96,
+ "n_toi_tay": 0,
+ "k_phan_bo": {
+  "1": 66,
+  "2": 27,
+  "3": 3
+ },
+ "vi_du": [
+  {
+   "driver": "d-0",
+   "date": "2026-09-26",
+   "now_min": 840,
+   "acc": 0.8545,
+   "a": 8,
+   "o": 8,
+   "k_tu_choi": 2
+  },
+  {
+   "driver": "d-0",
+   "date": "2026-09-26",
+   "now_min": 1020,
+   "acc": 0.8545,
+   "a": 8,
+   "o": 8,
+   "k_tu_choi": 2
+  },
+  {
+   "driver": "d-0",
+   "date": "2026-09-26",
+   "now_min": 1200,
+   "acc": 0.8545,
+   "a": 8,
+   "o": 8,
+   "k_tu_choi": 2
+  },
+  {
+   "driver": "d-1",
+   "date": "2026-09-26",
+   "now_min": 840,
+   "acc": 0.8714,
+   "a": 12,
+   "o": 12,
+   "k_tu_choi": 3
+  },
+  {
+   "driver": "d-1",
+   "date": "2026-09-26",
+   "now_min": 1020,
+   "acc": 0.8714,
+   "a": 12,
+   "o": 12,
+   "k_tu_choi": 3
+  },
+  {
+   "driver": "d-1",
+   "date": "2026-09-26",
+   "now_min": 1200,
+   "acc": 0.8714,
+   "a": 12,
+   "o": 12,
+   "k_tu_choi": 3
+  }
+ ],
+ "canh_bao": "accepted_count/total_request_* la so CA NGAY (end-of-day) con gi.acceptance_rate la as-of => k la XAP XI TREN. Chi doi bike."
+}

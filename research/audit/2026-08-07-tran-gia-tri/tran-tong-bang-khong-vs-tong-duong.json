@@ -1,0 +1,78 @@
+{
+ "cau_hoi": "kenh nao TONG BANG KHONG, kenh nao TONG DUONG, tran moi ben bao nhieu?",
+ "seeds": [
+  3300,
+  3301,
+  3302,
+  3303,
+  3304
+ ],
+ "rows": [
+  {
+   "seed": 3300,
+   "n_actor": 90,
+   "het_han": 202,
+   "trips": 1004,
+   "payout_tb_chuyen": 24196.083665338647,
+   "tran_vi_tri": 4887608.900398406,
+   "n_sat_moc": 24,
+   "tran_thuong": 745000.0,
+   "n_bi_cong_chan": 10,
+   "tran_cong_dieu_kien": 330000.0
+  },
+  {
+   "seed": 3301,
+   "n_actor": 90,
+   "het_han": 183,
+   "trips": 1025,
+   "payout_tb_chuyen": 23551.259512195124,
+   "tran_vi_tri": 4309880.490731708,
+   "n_sat_moc": 24,
+   "tran_thuong": 720000.0,
+   "n_bi_cong_chan": 11,
+   "tran_cong_dieu_kien": 360000.0
+  },
+  {
+   "seed": 3302,
+   "n_actor": 90,
+   "het_han": 188,
+   "trips": 941,
+   "payout_tb_chuyen": 23629.280552603614,
+   "tran_vi_tri": 4442304.743889479,
+   "n_sat_moc": 22,
+   "tran_thuong": 660000.0,
+   "n_bi_cong_chan": 14,
+   "tran_cong_dieu_kien": 480000.0
+  },
+  {
+   "seed": 3303,
+   "n_actor": 90,
+   "het_han": 172,
+   "trips": 922,
+   "payout_tb_chuyen": 24037.506507592192,
+   "tran_vi_tri": 4134451.119305857,
+   "n_sat_moc": 20,
+   "tran_thuong": 600000.0,
+   "n_bi_cong_chan": 8,
+   "tran_cong_dieu_kien": 240000.0
+  },
+  {
+   "seed": 3304,
+   "n_actor": 90,
+   "het_han": 147,
+   "trips": 1015,
+   "payout_tb_chuyen": 23321.82857142857,
+   "tran_vi_tri": 3428308.8,
+   "n_sat_moc": 24,
+   "tran_thuong": 720000.0,
+   "n_bi_cong_chan": 12,
+   "tran_cong_dieu_kien": 420000.0
+  }
+ ],
+ "tran_vi_tri_tb": 4240510.81086509,
+ "tran_thuong_tb": 689000.0,
+ "n_actor": 90,
+ "het_han_tb": 178.4,
+ "n_sat_moc_tb": 22.8,
+ "canh_bao": "MOCK; TRAN cau truc, khong phai du bao; 'sat moc' = thieu <= 15 diem"
+}

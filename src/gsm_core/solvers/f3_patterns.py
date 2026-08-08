@@ -95,17 +95,28 @@ def solve(ss: dict, policy: PolicyBundle, params: dict | None = None) -> dict:
     gap = policy.next_tier_gap(points_end)
     if gap is not None and gap[0] <= p["bonus_gap_max_points"]:
         gap_pts, tier_vnd = gap
+        # ⭐ P1a (2026-08-07) — CÙNG lỗi ngữ nghĩa với đường v1, sửa luôn cho khỏi tái sinh.
+        #
+        # `day_bonus_tiers` là thang **THAY THẾ** (`bonus_at` ghi đè, không `+=`) ⇒ với người đã
+        # chốt một mốc, `tier_vnd` là **TÊN mốc**, không phải phần đổi được bằng công sức thêm.
+        # Câu dưới đặt số ngay cạnh *"chạy thêm ít cuốc là chốt được"* ⇒ dùng TỔNG là hứa gấp đôi.
+        # Trên đường v1 lỗi này chiếm **131/426 thẻ = 30,75%** (`UPDATE-183`).
+        # ⚠ S3 hiện **0 caller sản phẩm** — sửa ở đây là **phòng ngừa**, không phải vá bán kính.
+        tang_them = int(tier_vnd) - int(policy.bonus_at(points_end))
         patterns.append({
             "type": "bonus_progress_gap",
             "observed": {"points_end": points_end, "gap_points": gap_pts},
             "severity": "MED" if gap_pts <= 15 else "LOW", "us_ref": "US-F3-02",
             "label": "OBSERVED",
             "heuristic_note": (f"kết ca với {points_end}đ — chỉ thiếu {gap_pts}đ nữa là đạt "
-                               f"mốc thưởng {tier_vnd:,}đ. Ca sau chạy thêm ít cuốc là chốt được."),
+                               f"mốc thưởng {tier_vnd:,}đ (được thêm {tang_them:,}đ so với mức "
+                               f"đã chốt). Ca sau chạy thêm ít cuốc là chốt được."),
         })
         numbers.append(_num(points_end, "points", "observed:day_state_end"))
         numbers.append(_num(gap_pts, "points", "observed:day_state_end"))
         numbers.append(_num(tier_vnd, "vnd", pv))
+        if tang_them != int(tier_vnd):
+            numbers.append(_num(tang_them, "vnd", pv))
 
     # 4. idle_peak — idle dài giờ cao điểm (cảnh báo, KHÔNG chỉ vùng — ranh giới F2-04)
     for a in inferred:

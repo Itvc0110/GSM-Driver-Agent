@@ -280,6 +280,14 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
         ("diem_con_thieu", sol["gap_points"], "điểm", "MOCK"),
         ("thuong_moc_ke", sol["tier_vnd"], "vnd", "MOCK"),
     ]]
+    # ⭐ P1a (2026-08-07): `thuong_moc_ke` là TÊN/TỔNG của mốc. Phần tài xế THẬT SỰ đổi được bằng
+    # công sức thêm là `tier_delta_vnd` — xem lý lẽ ở `bonus_feasibility.solve`. Chỉ khai khi
+    # KHÁC tổng: người chưa chốt mốc nào thì hai số bằng nhau, thêm số trùng chỉ làm rối thẻ
+    # (và làm `numbers` của đường v2 dài ra vô ích — v2 render numbers TỔNG QUÁT theo chỉ số).
+    _tang_them = sol.get("tier_delta_vnd")
+    if _tang_them is not None and _tang_them != sol["tier_vnd"]:
+        numbers.append({"name": "thuong_tang_them", "value": _tang_them, "unit": "vnd",
+                        "source": "MOCK"})
     # AUDIT S1: hours_needed = None nghĩa là "không đạt được trong hôm nay" — không ép thành số
     if sol.get("hours_needed") is not None:
         numbers.append({"name": "gio_can_them", "value": sol["hours_needed"], "unit": "giờ",
@@ -299,14 +307,45 @@ def _advice_raw(driver_id: str, date: str, now_min: int,
                              "đừng dồn hết giờ vào nó")
         caveat = f"{caveat} · {canh_bao_sat_bien}" if caveat else canh_bao_sat_bien
 
+    # ⭐ P1b (2026-08-07) — CẢNH BÁO SÁT NGƯỠNG phải TỚI ĐƯỢC tài xế.
+    #
+    # `_cliff_item` sinh một thẻ RIÊNG, và thẻ đó bị giết **hai lần độc lập**:
+    #   (a) `_verify_item` đòi mọi số trong text trace về `numbers`, mà `_cliff_item` cố ý để
+    #       `numbers: []` ⇒ note của solver luôn chứa "0.85"/"0.86" ⇒ V1 luôn bắn;
+    #   (b) `cards.js` chỉ vẽ `items[0]`, mà cliff luôn được `append` thứ hai.
+    # ĐO: **246/2.310 lượt sinh · 0/246 sống · 0/246 được vẽ** (`pb5`); tôi đo lại trên đội bike:
+    # **96/990 lượt (9,70%) ở trong dải · 0/96 tới tay tài xế**.
+    #
+    # Vì sao đáng ship (đo, không phỏng đoán —
+    # `research/audit/2026-08-07-p1-tien-tren-card/p1b-*.json`): **100%** số ca chỉ cần **≤3 lần
+    # từ chối** là mất **TOÀN BỘ** thưởng ngày, **68,8% chỉ cần MỘT**, và trung vị vẫn còn
+    # **5,0 giờ** ca phía trước để những cú từ chối đó xảy ra.
+    #
+    # Cách sửa RẺ NHẤT và không đụng contract: gộp vào `caveat` của thẻ ĐẦU — trường này đã có
+    # và đã được render, nên cảnh báo tới tay ngay mà không cần `cards.js` vẽ thẻ thứ hai.
+    # Giữ nguyên `_cliff_item` (thẻ riêng) cho consumer nào đọc `items[1]`; ở đây chỉ bảo đảm
+    # nội dung KHÔNG BỊ MẤT trên đường v1.
+    # ⚠ KHÔNG thêm số nào vào câu này — `check_bare_numbers` sẽ bắn nếu có số không khai, và đó
+    # đúng là cơ chế đã giết thẻ cliff 246/246.
+    if any(s.get("param") == "acceptance_cliff" for s in (report.get("sensitivity") or [])):
+        canh_bao_cliff = ("tỷ lệ nhận đang sát ngưỡng thưởng — thêm vài lần từ chối nữa có thể "
+                          "mất toàn bộ thưởng ngày dù đủ điểm")
+        caveat = f"{caveat} · {canh_bao_cliff}" if caveat else canh_bao_cliff
+
     if sol["feasible"]:
         item = {
             "advice_id": f"s1-{driver_id}-{date}-{now_min}",
             "solver": "S1", "kind": "bonus_gap",
+            # P1a: TIÊU ĐỀ giữ TÊN mốc; câu nói về NỖ LỰC phải mang phần TĂNG THÊM.
+            # Thang thưởng là THAY THẾ chứ không cộng dồn, nên với người đã chốt một mốc,
+            # đặt TỔNG cạnh "chạy thêm ~X giờ" là hứa gấp đôi (đo: 131/426 thẻ = 30,75%).
             "title": f"Còn với được mốc thưởng {_vn(sol['tier_vnd'], 'vnd')} hôm nay",
             "message": (f"Bạn thiếu {_vn(sol['gap_points'], 'points')} để chạm mốc kế "
                         f"(khoảng {_vn(sol['hours_needed'], 'hours')} chạy nữa, "
-                        f"{_vn(sol['trips_needed'], 'trips')}). Quỹ giờ còn lại đủ."),
+                        f"{_vn(sol['trips_needed'], 'trips')})"
+                        + (f", được thêm {_vn(_tang_them, 'vnd')} so với mức đã chốt"
+                           if _tang_them is not None and _tang_them != sol["tier_vnd"] else "")
+                        + ". Quỹ giờ còn lại đủ."),
             "confidence": report["confidence"],
             "reason_code": "feasible_gap",
             "numbers": numbers, "caveat": caveat,

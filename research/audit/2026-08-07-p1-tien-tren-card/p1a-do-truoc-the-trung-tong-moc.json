@@ -1,0 +1,22 @@
+{
+ "cau_hoi": "bao nhieu the feasible_gap trung TONG moc thay vi phan KIEM THEM?",
+ "ngay": [
+  "2026-09-26",
+  "2026-09-27",
+  "2026-09-28"
+ ],
+ "n_tai_xe_bike": 110,
+ "moc_gio": [
+  840,
+  1020,
+  1200
+ ],
+ "n_luot": 990,
+ "n_feasible": 426,
+ "n_sai": 0,
+ "ty_le_sai": 0.0,
+ "tong_tien_thoi_vnd": 0,
+ "boi_so": {},
+ "vi_du": [],
+ "canh_bao": "CHI doi bike (d-/r-); dem ca ce-* la bay da lam mm-03 sai ~2x. Do LAI sau Cycle B0 vi B0 doi phan phoi feasible."
+}
